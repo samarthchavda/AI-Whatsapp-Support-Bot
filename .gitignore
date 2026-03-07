@@ -25,3 +25,7 @@ frontend/build/
 # Coverage
 coverage/
 backend/coverage/
+
+# Ignore local video assets
+video/
+video /

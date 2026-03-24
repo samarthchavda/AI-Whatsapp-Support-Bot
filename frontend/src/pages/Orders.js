@@ -86,27 +86,34 @@ function Orders() {
 
   return (
     <div className="container">
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-        <h1>Orders</h1>
-        <button 
-          className="btn btn-primary" 
-          onClick={() => setShowCreateForm(!showCreateForm)}
-        >
-          {showCreateForm ? 'Cancel' : 'Create Order'}
-        </button>
+      <div className="page-header">
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div>
+            <h1 className="page-title">Orders</h1>
+            <p className="page-subtitle">Manage and track all customer orders</p>
+          </div>
+          <button 
+            className="btn-primary" 
+            onClick={() => setShowCreateForm(!showCreateForm)}
+            style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
+          >
+            <span style={{ fontSize: '18px' }}>{showCreateForm ? '✕' : '+'}</span>
+            {showCreateForm ? 'Cancel' : 'Add Order'}
+          </button>
+        </div>
       </div>
 
       {/* Create Order Form */}
       {showCreateForm && (
-        <div className="table-container" style={{ marginBottom: '20px' }}>
+        <div className="table-container" style={{ marginBottom: '28px' }}>
           <div className="table-header">
             <h2>Create New Order</h2>
           </div>
-          <form onSubmit={handleCreateOrder} style={{ padding: '20px' }}>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
+          <form onSubmit={handleCreateOrder} style={{ padding: '28px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '20px', marginBottom: '20px' }}>
               <div className="filter-group">
                 <label>Customer Name *</label>
-                <input type="text" name="customerName" required />
+                <input type="text" name="customerName" required placeholder="John Doe" />
               </div>
               <div className="filter-group">
                 <label>Customer Phone *</label>
@@ -114,11 +121,11 @@ function Orders() {
               </div>
               <div className="filter-group">
                 <label>Customer Email</label>
-                <input type="email" name="customerEmail" />
+                <input type="email" name="customerEmail" placeholder="customer@example.com" />
               </div>
               <div className="filter-group">
                 <label>Product Name *</label>
-                <input type="text" name="productName" required />
+                <input type="text" name="productName" required placeholder="Product name" />
               </div>
               <div className="filter-group">
                 <label>Quantity *</label>
@@ -126,12 +133,21 @@ function Orders() {
               </div>
               <div className="filter-group">
                 <label>Total Amount ($) *</label>
-                <input type="number" name="totalAmount" required min="0" step="0.01" />
+                <input type="number" name="totalAmount" required min="0" step="0.01" placeholder="99.99" />
               </div>
             </div>
-            <button type="submit" className="btn btn-success" style={{ marginTop: '15px' }}>
-              Create Order
-            </button>
+            <div style={{ display: 'flex', gap: '12px' }}>
+              <button type="submit" className="btn-primary">
+                Create Order
+              </button>
+              <button 
+                type="button" 
+                className="btn btn-secondary" 
+                onClick={() => setShowCreateForm(false)}
+              >
+                Cancel
+              </button>
+            </div>
           </form>
         </div>
       )}

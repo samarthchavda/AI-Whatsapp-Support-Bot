@@ -4,6 +4,8 @@ const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
 const rateLimit = require('express-rate-limit');
+const http = require('http');
+const socketIo = require('socket.io');
 require('dotenv').config();
 
 // Import routes
@@ -23,6 +25,17 @@ try {
 }
 
 const app = express();
+const server = http.createServer(app);
+const io = socketIo(server, {
+  cors: {
+    origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+    methods: ['GET', 'POST']
+  }
+});
+
+// Make io accessible to other modules
+app.set('io', io);
+global.io = io;
 
 // Security middleware
 app.use(helmet());
@@ -40,6 +53,21 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(morgan('dev'));
 
+// Socket.IO connection handling
+io.on('connection', (socket) => {
+  console.log('🔌 Frontend connected to Socket.IO');
+  
+  // Send current WhatsApp status
+  if (whatsappWebBot) {
+    const status = whatsappWebBot.getStatus();
+    socket.emit('whatsapp-status', status);
+  }
+  
+  socket.on('disconnect', () => {
+    console.log('🔌 Frontend disconnected from Socket.IO');
+  });
+});
+
 // MongoDB Connection
 mongoose.connect(process.env.MONGODB_URI, {
   useNewUrlParser: true,
@@ -50,7 +78,7 @@ mongoose.connect(process.env.MONGODB_URI, {
   // Initialize WhatsApp bot after DB connection (if available)
   if (whatsappWebBot) {
     try {
-      whatsappWebBot.initialize();
+      whatsappWebBot.initialize(io);
     } catch (error) {
       console.log('⚠️  Could not initialize WhatsApp bot:', error.message);
     }
@@ -98,9 +126,10 @@ app.use('*', (req, res) => {
 
 const PORT = process.env.PORT || 5000;
 
-app.listen(PORT, () => {
+server.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
-  console.log(`📱 Environment: ${process.env.NODE_ENV}`);
+  console.log(`📱 Environment: ${process.env.NODE_ENV || 'development'}`);
+  console.log(`🔌 Socket.IO ready for real-time updates`);
 });
 
 module.exports = app;

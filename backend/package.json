@@ -7,6 +7,9 @@
     "start": "node server.js",
     "dev": "nodemon server.js || node server.js",
     "reset-session": "rm -rf .wwebjs_auth .wwebjs_cache && npm run dev",
+    "clear-data": "node scripts/clearUserData.js",
+    "seed": "node scripts/seedData.js",
+    "reset-demo": "node scripts/clearUserData.js && node scripts/seedData.js",
     "test": "jest --runInBand",
     "test:watch": "jest --watch"
   },
@@ -32,6 +35,7 @@
     "openai": "^4.14.0",
     "puppeteer": "^24.38.0",
     "qrcode-terminal": "^0.12.0",
+    "socket.io": "^4.8.3",
     "whatsapp-web.js": "^1.34.6"
   },
   "devDependencies": {

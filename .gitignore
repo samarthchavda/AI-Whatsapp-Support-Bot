@@ -26,6 +26,26 @@ frontend/build/
 coverage/
 backend/coverage/
 
-# Ignore local video assets
+# Assets and Media Files
+assets/
+assets/**
 video/
 video /
+*.mp4
+*.avi
+*.mov
+*.wmv
+*.flv
+*.mkv
+*.webm
+*.zip
+*.rar
+*.7z
+video.zip
+video .zip
+*.svg
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.ico

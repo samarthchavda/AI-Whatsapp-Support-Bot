@@ -4,6 +4,10 @@ const Invoice = require('../models/Invoice');
 const Customer = require('../models/Customer');
 const ReturnPolicy = require('../models/ReturnPolicy');
 const PaymentPolicy = require('../models/PaymentPolicy');
+const Conversation = require('../models/Conversation');
+const Escalation = require('../models/Escalation');
+const AILog = require('../models/AILog');
+const Counter = require('../models/Counter');
 require('dotenv').config();
 
 const seedData = async () => {
@@ -22,6 +26,10 @@ const seedData = async () => {
     await Customer.deleteMany({});
     await ReturnPolicy.deleteMany({});
     await PaymentPolicy.deleteMany({});
+    await Conversation.deleteMany({});
+    await Escalation.deleteMany({});
+    await AILog.deleteMany({});
+    await Counter.deleteMany({});
     
     console.log('🗑️  Cleared existing data');
 
@@ -595,8 +603,284 @@ const seedData = async () => {
     const createdPaymentPolicies = await PaymentPolicy.insertMany(paymentPolicies);
     console.log(`✅ Created ${createdPaymentPolicies.length} payment policies`);
 
+    // Create sample conversations
+    const conversations = [
+      {
+        customerPhone: createdCustomers[0].phone,
+        customerName: createdCustomers[0].name,
+        messages: [
+          {
+            role: 'user',
+            content: 'Hi, I want to check my order status',
+            timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000),
+            intent: 'order_status'
+          },
+          {
+            role: 'assistant',
+            content: 'Hello! I can help you check your order status. Could you please provide your order ID or I can look up your recent orders?',
+            timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000 + 5000),
+            intent: 'order_status'
+          },
+          {
+            role: 'user',
+            content: 'ORD-002',
+            timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000 + 30000),
+            intent: 'order_status'
+          },
+          {
+            role: 'assistant',
+            content: 'Your order ORD-002 (Smart Watch) is currently shipped and on its way! Tracking number: TRK987654321. Estimated delivery in 2 days.',
+            timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000 + 35000),
+            intent: 'order_status'
+          }
+        ],
+        status: 'resolved',
+        resolvedAt: new Date(Date.now() - 2 * 60 * 60 * 1000 + 40000),
+        relatedOrderIds: ['ORD-002'],
+        satisfaction: 5,
+        tags: ['order_inquiry', 'resolved_quickly']
+      },
+      {
+        customerPhone: createdCustomers[1].phone,
+        customerName: createdCustomers[1].name,
+        messages: [
+          {
+            role: 'user',
+            content: 'I need to return my laptop stand, it doesn\'t fit my desk',
+            timestamp: new Date(Date.now() - 24 * 60 * 60 * 1000),
+            intent: 'return_policy'
+          },
+          {
+            role: 'assistant',
+            content: 'I understand you\'d like to return your laptop stand. Our return policy allows returns within 30 days. The item must be unused and in original packaging. Would you like me to initiate a return for order ORD-003?',
+            timestamp: new Date(Date.now() - 24 * 60 * 60 * 1000 + 10000),
+            intent: 'return_policy'
+          },
+          {
+            role: 'user',
+            content: 'Yes please, how do I send it back?',
+            timestamp: new Date(Date.now() - 24 * 60 * 60 * 1000 + 60000),
+            intent: 'return_policy'
+          },
+          {
+            role: 'assistant',
+            content: 'I\'ll create a return label for you. You\'ll receive it via email within 24 hours. Pack the item securely and drop it off at any shipping location. Refund will be processed within 5-7 business days after we receive it.',
+            timestamp: new Date(Date.now() - 24 * 60 * 60 * 1000 + 65000),
+            intent: 'return_policy'
+          }
+        ],
+        status: 'resolved',
+        resolvedAt: new Date(Date.now() - 24 * 60 * 60 * 1000 + 70000),
+        relatedOrderIds: ['ORD-003'],
+        satisfaction: 4,
+        tags: ['return_request', 'resolved']
+      },
+      {
+        customerPhone: createdCustomers[2].phone,
+        customerName: createdCustomers[2].name,
+        messages: [
+          {
+            role: 'user',
+            content: 'URGENT! My keyboard arrived damaged and I need it for work tomorrow!',
+            timestamp: new Date(Date.now() - 3 * 60 * 60 * 1000),
+            intent: 'complaint'
+          },
+          {
+            role: 'assistant',
+            content: 'I\'m very sorry to hear your keyboard arrived damaged. This is definitely a priority issue. Let me escalate this to our support team immediately so we can arrange a replacement with expedited shipping.',
+            timestamp: new Date(Date.now() - 3 * 60 * 60 * 1000 + 8000),
+            intent: 'complaint'
+          },
+          {
+            role: 'user',
+            content: 'Thank you, I really need this resolved quickly',
+            timestamp: new Date(Date.now() - 3 * 60 * 60 * 1000 + 120000),
+            intent: 'complaint'
+          }
+        ],
+        status: 'escalated',
+        escalated: true,
+        escalationReason: 'high_priority',
+        escalatedAt: new Date(Date.now() - 3 * 60 * 60 * 1000 + 10000),
+        relatedOrderIds: ['ORD-005'],
+        tags: ['damaged_product', 'urgent', 'escalated']
+      },
+      {
+        customerPhone: createdCustomers[0].phone,
+        customerName: createdCustomers[0].name,
+        messages: [
+          {
+            role: 'user',
+            content: 'What\'s your return policy?',
+            timestamp: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000),
+            intent: 'return_policy'
+          },
+          {
+            role: 'assistant',
+            content: 'We offer a 30-day return policy for most items. Items must be unused, in original packaging, and with all tags attached. Electronics have a 14-day return window. Refunds are processed within 5-7 business days after we receive your return.',
+            timestamp: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000 + 5000),
+            intent: 'return_policy'
+          }
+        ],
+        status: 'resolved',
+        resolvedAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000 + 10000),
+        satisfaction: 5,
+        tags: ['policy_inquiry', 'quick_resolution']
+      },
+      {
+        customerPhone: createdCustomers[1].phone,
+        customerName: createdCustomers[1].name,
+        messages: [
+          {
+            role: 'user',
+            content: 'I want a refund for my USB cables, they don\'t work properly',
+            timestamp: new Date(Date.now() - 6 * 60 * 60 * 1000),
+            intent: 'refund_request'
+          },
+          {
+            role: 'assistant',
+            content: 'I apologize for the issue with your USB cables. I\'m escalating this refund request to our support team who will process this for you right away. You should hear back within 24 hours.',
+            timestamp: new Date(Date.now() - 6 * 60 * 60 * 1000 + 7000),
+            intent: 'refund_request'
+          }
+        ],
+        status: 'escalated',
+        escalated: true,
+        escalationReason: 'refund_request',
+        escalatedAt: new Date(Date.now() - 6 * 60 * 60 * 1000 + 8000),
+        relatedOrderIds: ['ORD-004'],
+        tags: ['refund', 'product_issue', 'escalated']
+      }
+    ];
+
+    const createdConversations = await Conversation.insertMany(conversations);
+    console.log(`✅ Created ${createdConversations.length} conversations`);
+
+    // Create sample escalations
+    const escalations = [
+      {
+        conversationId: createdConversations[2]._id,
+        customerPhone: createdCustomers[2].phone,
+        customerName: createdCustomers[2].name,
+        reason: 'high_priority',
+        priority: 'urgent',
+        description: 'Customer received damaged mechanical keyboard and needs urgent replacement for work. Order ORD-005.',
+        status: 'in_progress',
+        assignedTo: 'Support Team',
+        relatedOrderIds: ['ORD-005'],
+        notificationSent: true,
+        notificationMethod: 'both'
+      },
+      {
+        conversationId: createdConversations[4]._id,
+        customerPhone: createdCustomers[1].phone,
+        customerName: createdCustomers[1].name,
+        reason: 'refund_request',
+        priority: 'high',
+        description: 'Customer requesting refund for defective USB-C cables. Order ORD-004.',
+        status: 'pending',
+        relatedOrderIds: ['ORD-004'],
+        notificationSent: true,
+        notificationMethod: 'email'
+      }
+    ];
+
+    const createdEscalations = await Escalation.insertMany(escalations);
+    console.log(`✅ Created ${createdEscalations.length} escalations`);
+
+    // Create sample AI logs
+    const aiLogs = [
+      {
+        conversationId: createdConversations[0]._id,
+        customerPhone: createdCustomers[0].phone,
+        userMessage: 'Hi, I want to check my order status',
+        intent: 'order_status',
+        aiModel: 'gemini-pro',
+        assistantMessage: 'Hello! I can help you check your order status. Could you please provide your order ID or I can look up your recent orders?',
+        aiResponse: 'Hello! I can help you check your order status. Could you please provide your order ID or I can look up your recent orders?',
+        promptTokens: 25,
+        completionTokens: 20,
+        totalTokens: 45,
+        temperature: 0.7,
+        structuredOutput: {
+          intent: 'order_status',
+          confidence: 0.95,
+          escalated: false,
+          metadata: {
+            responseTime: 1200,
+            usedAI: true,
+            dataSource: ['conversation_history']
+          }
+        },
+        error: {
+          occurred: false
+        },
+        duration: 1200
+      },
+      {
+        conversationId: createdConversations[1]._id,
+        customerPhone: createdCustomers[1].phone,
+        userMessage: 'I need to return my laptop stand, it doesn\'t fit my desk',
+        intent: 'return_policy',
+        aiModel: 'gemini-pro',
+        assistantMessage: 'I understand you\'d like to return your laptop stand. Our return policy allows returns within 30 days. The item must be unused and in original packaging. Would you like me to initiate a return for order ORD-003?',
+        aiResponse: 'I understand you\'d like to return your laptop stand. Our return policy allows returns within 30 days. The item must be unused and in original packaging. Would you like me to initiate a return for order ORD-003?',
+        promptTokens: 35,
+        completionTokens: 43,
+        totalTokens: 78,
+        temperature: 0.7,
+        structuredOutput: {
+          intent: 'return_policy',
+          confidence: 0.92,
+          escalated: false,
+          relatedOrderIds: ['ORD-003'],
+          metadata: {
+            responseTime: 1450,
+            usedAI: true,
+            dataSource: ['return_policy', 'order_database']
+          }
+        },
+        error: {
+          occurred: false
+        },
+        duration: 1450
+      },
+      {
+        conversationId: createdConversations[2]._id,
+        customerPhone: createdCustomers[2].phone,
+        userMessage: 'URGENT! My keyboard arrived damaged and I need it for work tomorrow!',
+        intent: 'complaint',
+        aiModel: 'gemini-pro',
+        assistantMessage: 'I\'m very sorry to hear your keyboard arrived damaged. This is definitely a priority issue. Let me escalate this to our support team immediately so we can arrange a replacement with expedited shipping.',
+        aiResponse: 'I\'m very sorry to hear your keyboard arrived damaged. This is definitely a priority issue. Let me escalate this to our support team immediately so we can arrange a replacement with expedited shipping.',
+        promptTokens: 30,
+        completionTokens: 32,
+        totalTokens: 62,
+        temperature: 0.7,
+        structuredOutput: {
+          intent: 'complaint',
+          confidence: 0.98,
+          escalated: true,
+          escalationReason: 'high_priority',
+          relatedOrderIds: ['ORD-005'],
+          metadata: {
+            responseTime: 1350,
+            usedAI: true,
+            dataSource: ['conversation_history', 'order_database']
+          }
+        },
+        error: {
+          occurred: false
+        },
+        duration: 1350
+      }
+    ];
+
+    const createdAILogs = await AILog.insertMany(aiLogs);
+    console.log(`✅ Created ${createdAILogs.length} AI logs`);
+
     console.log('');
-    console.log('🎉 Sample data seeded successfully!');
+    console.log('🎉 Demo data seeded successfully!');
     console.log('');
     console.log('📋 Summary:');
     console.log(`   - ${createdCustomers.length} customers`);
@@ -604,11 +888,16 @@ const seedData = async () => {
     console.log(`   - ${createdInvoices.length} invoices`);
     console.log(`   - ${createdPolicies.length} return policies`);
     console.log(`   - ${createdPaymentPolicies.length} payment policies`);
+    console.log(`   - ${createdConversations.length} conversations`);
+    console.log(`   - ${createdEscalations.length} escalations`);
+    console.log(`   - ${createdAILogs.length} AI logs`);
     console.log('');
-    console.log('💡 You can now test the bot with these phone numbers:');
+    console.log('💡 Demo phone numbers for testing:');
     createdCustomers.forEach(customer => {
       console.log(`   - ${customer.name}: ${customer.phone}`);
     });
+    console.log('');
+    console.log('📱 WhatsApp session data has been cleared. Scan QR code on next bot startup.');
 
     mongoose.connection.close();
     process.exit(0);

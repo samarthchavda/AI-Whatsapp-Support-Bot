@@ -11,9 +11,11 @@ class WhatsAppWebBot {
     this.isReady = false;
     this.client = null;
     this.startedAt = Date.now();
+    this.io = null;
   }
 
-  initialize() {
+  initialize(io) {
+    this.io = io;
     console.log('🚀 Initializing WhatsApp Web Bot...');
     
     // Try to load whatsapp-web.js if available
@@ -28,8 +30,10 @@ class WhatsAppWebBot {
       
       if (hasExistingSession) {
         console.log('📱 Found existing WhatsApp session - attempting to restore...');
+        this.emitStatus('restoring', 'Restoring previous session...');
       } else {
         console.log('⚠️  No previous session found - you will need to scan QR code');
+        this.emitStatus('waiting_qr', 'Waiting for QR code...');
       }
       
       console.log('📱 Starting WhatsApp Web Session...');
@@ -58,15 +62,20 @@ class WhatsAppWebBot {
           console.log('\n' + '='.repeat(50));
           console.log('After scanning, the bot will connect automatically');
           console.log('='.repeat(50) + '\n');
+          
+          // Emit QR code to frontend
+          this.emitQRCode(qr);
         } catch (err) {
           console.error('❌ Error displaying QR code:', err.message);
           console.log('QR Code String:', qr);
+          this.emitQRCode(qr);
         }
       });
 
       // Authenticated Event
       this.client.on('authenticated', () => {
         console.log('✅ Session authenticated successfully!');
+        this.emitStatus('authenticated', 'Session authenticated successfully!');
       });
 
       // Ready Event
@@ -78,12 +87,14 @@ class WhatsAppWebBot {
         console.log('='.repeat(60) + '\n');
         this.isReady = true;
         this.startedAt = Date.now();
+        this.emitStatus('ready', 'WhatsApp Bot is ready and listening for messages!');
       });
 
       // Disconnected Event
-      this.client.on('disconnected', () => {
-        console.log('🔴 WhatsApp disconnected. Attempting to reconnect...');
+      this.client.on('disconnected', (reason) => {
+        console.log('🔴 WhatsApp disconnected. Reason:', reason);
         this.isReady = false;
+        this.emitStatus('disconnected', 'WhatsApp disconnected. Please restart the server.');
       });
 
       // Message Event
@@ -312,6 +323,25 @@ class WhatsAppWebBot {
       isReady: this.isReady,
       timestamp: new Date()
     };
+  }
+
+  emitQRCode(qr) {
+    if (this.io) {
+      this.io.emit('whatsapp-qr', { qr, timestamp: new Date() });
+      console.log('📤 QR code sent to frontend');
+    }
+  }
+
+  emitStatus(status, message) {
+    if (this.io) {
+      this.io.emit('whatsapp-status', {
+        status,
+        message,
+        isReady: this.isReady,
+        timestamp: new Date()
+      });
+      console.log(`📤 Status update sent to frontend: ${status}`);
+    }
   }
 }
 

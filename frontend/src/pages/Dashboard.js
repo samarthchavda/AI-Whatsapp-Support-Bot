@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { getDashboardStats } from '../services/api';
-import { FaComments, FaBox, FaExclamationTriangle, FaCheckCircle, FaStar } from 'react-icons/fa';
+import { FaComments, FaBox, FaExclamationTriangle, FaCheckCircle, FaStar, FaArrowUp, FaArrowDown } from 'react-icons/fa';
 
 function Dashboard() {
   const [stats, setStats] = useState(null);
@@ -9,7 +9,6 @@ function Dashboard() {
 
   useEffect(() => {
     fetchStats();
-    // Refresh stats every 30 seconds
     const interval = setInterval(fetchStats, 30000);
     return () => clearInterval(interval);
   }, []);
@@ -28,11 +27,32 @@ function Dashboard() {
     }
   };
 
+  const getInitials = (name) => {
+    return name
+      .split(' ')
+      .map(n => n[0])
+      .join('')
+      .toUpperCase()
+      .slice(0, 2);
+  };
+
+  const getAvatarColor = (name) => {
+    const colors = [
+      'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+      'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
+      'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
+      'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)',
+      'linear-gradient(135deg, #fa709a 0%, #fee140 100%)',
+    ];
+    const index = name.charCodeAt(0) % colors.length;
+    return colors[index];
+  };
+
   if (loading) {
     return (
       <div className="loading">
         <div className="spinner"></div>
-        Loading dashboard...
+        <span>Loading dashboard...</span>
       </div>
     );
   }
@@ -47,56 +67,66 @@ function Dashboard() {
 
   return (
     <div className="container">
-      <h1>Dashboard Overview</h1>
+      <div className="page-header">
+        <h1 className="page-title">Dashboard</h1>
+        <p className="page-subtitle">Welcome back! Here's what's happening with your support bot today.</p>
+      </div>
       
       {/* Stats Cards */}
       <div className="stats-grid">
         <div className="stat-card">
           <div className="stat-card-header">
             <h3>Total Conversations</h3>
-            <FaComments className="stat-icon" style={{ color: '#667eea' }} />
+            <div className="stat-icon" style={{ background: '#eff6ff', color: '#2563eb' }}>
+              <FaComments />
+            </div>
           </div>
           <div className="stat-value">{stats.conversations.total}</div>
-          <div style={{ fontSize: '14px', color: '#666', marginTop: '10px' }}>
-            Active: {stats.conversations.active}
+          <div className="stat-change positive">
+            <FaArrowUp /> <span>Active: {stats.conversations.active}</span>
           </div>
         </div>
 
         <div className="stat-card">
           <div className="stat-card-header">
             <h3>Total Orders</h3>
-            <FaBox className="stat-icon" style={{ color: '#28a745' }} />
+            <div className="stat-icon" style={{ background: '#d1fae5', color: '#10b981' }}>
+              <FaBox />
+            </div>
           </div>
           <div className="stat-value">{stats.orders.total}</div>
-          <div style={{ fontSize: '14px', color: '#666', marginTop: '10px' }}>
-            Pending: {stats.orders.pending}
+          <div className="stat-change">
+            <span style={{ color: '#6b7280' }}>Pending: {stats.orders.pending}</span>
           </div>
         </div>
 
         <div className="stat-card">
           <div className="stat-card-header">
             <h3>Escalations</h3>
-            <FaExclamationTriangle className="stat-icon" style={{ color: '#dc3545' }} />
+            <div className="stat-icon" style={{ background: '#fee2e2', color: '#dc2626' }}>
+              <FaExclamationTriangle />
+            </div>
           </div>
           <div className="stat-value">{stats.escalations.total}</div>
-          <div style={{ fontSize: '14px', color: '#666', marginTop: '10px' }}>
-            Urgent: {stats.escalations.urgent}
+          <div className="stat-change negative">
+            <FaArrowDown /> <span>Urgent: {stats.escalations.urgent}</span>
           </div>
         </div>
 
         <div className="stat-card">
           <div className="stat-card-header">
             <h3>Resolved</h3>
-            <FaCheckCircle className="stat-icon" style={{ color: '#17a2b8' }} />
+            <div className="stat-icon" style={{ background: '#dbeafe', color: '#1d4ed8' }}>
+              <FaCheckCircle />
+            </div>
           </div>
           <div className="stat-value">{stats.conversations.resolved}</div>
-          <div style={{ fontSize: '14px', color: '#666', marginTop: '10px' }}>
-            {stats.conversations.avgSatisfaction && (
-              <>
-                <FaStar style={{ color: '#ffc107' }} /> {stats.conversations.avgSatisfaction}/5
-              </>
-            )}
-          </div>
+          {stats.conversations.avgSatisfaction && (
+            <div className="stat-change positive">
+              <FaStar style={{ color: '#fbbf24' }} /> 
+              <span>{stats.conversations.avgSatisfaction}/5 avg rating</span>
+            </div>
+          )}
         </div>
       </div>
 
@@ -108,8 +138,7 @@ function Dashboard() {
         <table>
           <thead>
             <tr>
-              <th>Customer Name</th>
-              <th>Phone</th>
+              <th>Customer</th>
               <th>Status</th>
               <th>Last Updated</th>
             </tr>
@@ -118,14 +147,23 @@ function Dashboard() {
             {stats.recentConversations && stats.recentConversations.length > 0 ? (
               stats.recentConversations.map((conv) => (
                 <tr key={conv._id}>
-                  <td>{conv.customerName}</td>
-                  <td>{conv.customerPhone}</td>
+                  <td>
+                    <div className="customer-cell">
+                      <div className="avatar" style={{ background: getAvatarColor(conv.customerName) }}>
+                        {getInitials(conv.customerName)}
+                      </div>
+                      <div className="customer-info">
+                        <span className="customer-name">{conv.customerName}</span>
+                        <span className="customer-phone">{conv.customerPhone}</span>
+                      </div>
+                    </div>
+                  </td>
                   <td>
                     <span className={`badge badge-${conv.status}`}>
                       {conv.status}
                     </span>
                     {conv.escalated && (
-                      <span className="badge badge-urgent" style={{ marginLeft: '5px' }}>
+                      <span className="badge badge-urgent" style={{ marginLeft: '8px' }}>
                         Escalated
                       </span>
                     )}
@@ -135,7 +173,7 @@ function Dashboard() {
               ))
             ) : (
               <tr>
-                <td colSpan="4" style={{ textAlign: 'center', padding: '20px' }}>
+                <td colSpan="3" style={{ textAlign: 'center', padding: '40px', color: '#9ca3af' }}>
                   No conversations yet
                 </td>
               </tr>
@@ -152,7 +190,7 @@ function Dashboard() {
         <table>
           <thead>
             <tr>
-              <th>Customer Name</th>
+              <th>Customer</th>
               <th>Reason</th>
               <th>Priority</th>
               <th>Status</th>
@@ -163,7 +201,16 @@ function Dashboard() {
             {stats.recentEscalations && stats.recentEscalations.length > 0 ? (
               stats.recentEscalations.map((esc) => (
                 <tr key={esc._id}>
-                  <td>{esc.customerName}</td>
+                  <td>
+                    <div className="customer-cell">
+                      <div className="avatar" style={{ background: getAvatarColor(esc.customerName) }}>
+                        {getInitials(esc.customerName)}
+                      </div>
+                      <div className="customer-info">
+                        <span className="customer-name">{esc.customerName}</span>
+                      </div>
+                    </div>
+                  </td>
                   <td>{esc.reason.replace(/_/g, ' ')}</td>
                   <td>
                     <span className={`badge badge-${esc.priority}`}>
@@ -180,7 +227,7 @@ function Dashboard() {
               ))
             ) : (
               <tr>
-                <td colSpan="5" style={{ textAlign: 'center', padding: '20px' }}>
+                <td colSpan="5" style={{ textAlign: 'center', padding: '40px', color: '#9ca3af' }}>
                   No escalations
                 </td>
               </tr>

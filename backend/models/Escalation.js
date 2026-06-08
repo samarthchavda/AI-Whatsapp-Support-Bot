@@ -51,6 +51,12 @@ const escalationSchema = new mongoose.Schema({
     type: String,
     enum: ['email', 'whatsapp', 'both'],
     default: 'email'
+  },
+  admin: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Admin',
+    required: true,
+    index: true
   }
 }, { 
   timestamps: true 
@@ -60,5 +66,6 @@ const escalationSchema = new mongoose.Schema({
 escalationSchema.index({ status: 1, priority: -1 });
 escalationSchema.index({ customerPhone: 1 });
 escalationSchema.index({ createdAt: -1 });
+escalationSchema.index({ admin: 1, createdAt: -1 });
 
 module.exports = mongoose.model('Escalation', escalationSchema);

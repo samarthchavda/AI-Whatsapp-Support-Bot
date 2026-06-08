@@ -35,9 +35,18 @@ const customerSchema = new mongoose.Schema({
     type: Date
   },
   tags: [String],
-  notes: String
+  notes: String,
+  admin: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Admin',
+    required: true,
+    index: true
+  }
 }, { 
   timestamps: true 
 });
+
+// Index for faster queries
+customerSchema.index({ admin: 1, phone: 1 });
 
 module.exports = mongoose.model('Customer', customerSchema);

@@ -6,19 +6,31 @@ function Orders() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [showCreateForm, setShowCreateForm] = useState(false);
+  const [showBulkUpload, setShowBulkUpload] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(null);
   const [filters, setFilters] = useState({
     status: '',
     search: ''
   });
+  const [searchInput, setSearchInput] = useState('');
+
+  // Debounce search input
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setFilters(prev => ({ ...prev, search: searchInput }));
+    }, 500); // Wait 500ms after user stops typing
+
+    return () => clearTimeout(timer);
+  }, [searchInput]);
 
   useEffect(() => {
     fetchOrders();
-  }, [filters]);
+  }, [filters.status, filters.search]);
 
   const fetchOrders = async () => {
     try {
       setLoading(true);
-      const params = {};
+      const params = { limit: 100 }; // Fetch up to 100 orders
       if (filters.status) params.status = filters.status;
       if (filters.search) params.search = filters.search;
 
@@ -48,31 +60,92 @@ function Orders() {
     e.preventDefault();
     const formData = new FormData(e.target);
     
-    const orderData = {
-      customerName: formData.get('customerName'),
-      customerPhone: formData.get('customerPhone'),
-      customerEmail: formData.get('customerEmail'),
-      totalAmount: parseFloat(formData.get('totalAmount')),
-      status: 'pending',
-      items: [
-        {
-          productName: formData.get('productName'),
-          quantity: parseInt(formData.get('quantity')),
-          price: parseFloat(formData.get('totalAmount'))
-        }
-      ]
-    };
-
+    // Get token from localStorage
+    const token = localStorage.getItem('token');
+    
     try {
-      await createOrder(orderData);
-      setShowCreateForm(false);
-      fetchOrders();
-      alert('Order created successfully');
-      e.target.reset();
+      const response = await fetch('http://localhost:5001/api/orders', {
+        method: 'POST',
+        headers: {
+          'Authorization': token ? `Bearer ${token}` : ''
+        },
+        body: formData
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setShowCreateForm(false);
+        fetchOrders();
+        alert('Order created successfully');
+        e.target.reset();
+      } else {
+        alert(data.error || 'Failed to create order');
+      }
     } catch (err) {
       alert('Failed to create order');
       console.error('Error creating order:', err);
     }
+  };
+
+  const handleBulkUpload = async (e) => {
+    e.preventDefault();
+    const formData = new FormData(e.target);
+    const file = formData.get('bulkCsvFile');
+
+    if (!file) {
+      alert('Please select a CSV file');
+      return;
+    }
+
+    // Get token from localStorage
+    const token = localStorage.getItem('token');
+    
+    try {
+      setUploadProgress('Uploading...');
+      
+      const response = await fetch('http://localhost:5001/api/orders/bulk-upload', {
+        method: 'POST',
+        headers: {
+          'Authorization': token ? `Bearer ${token}` : ''
+        },
+        body: formData
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setShowBulkUpload(false);
+        setUploadProgress(null);
+        fetchOrders();
+        alert(`Successfully imported ${data.data.successCount} orders!\n${data.data.failedCount > 0 ? `Failed: ${data.data.failedCount}` : ''}`);
+        e.target.reset();
+      } else {
+        setUploadProgress(null);
+        alert(data.error || 'Failed to upload CSV');
+      }
+    } catch (err) {
+      setUploadProgress(null);
+      alert('Failed to upload CSV file');
+      console.error('Error uploading CSV:', err);
+    }
+  };
+
+  const downloadSampleCSV = () => {
+    const csvContent = `customerName,customerPhone,customerEmail,productName,quantity,totalAmount,status
+John Doe,+1234567890,john@example.com,Premium Widget,2,199.99,pending
+Jane Smith,+1234567891,jane@example.com,Deluxe Package,1,299.99,processing
+Bob Johnson,+1234567892,bob@example.com,Standard Item,3,149.99,shipped`;
+
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'sample_orders.csv';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
   };
 
   if (loading && orders.length === 0) {
@@ -92,16 +165,123 @@ function Orders() {
             <h1 className="page-title">Orders</h1>
             <p className="page-subtitle">Manage and track all customer orders</p>
           </div>
-          <button 
-            className="btn-primary" 
-            onClick={() => setShowCreateForm(!showCreateForm)}
-            style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
-          >
-            <span style={{ fontSize: '18px' }}>{showCreateForm ? '✕' : '+'}</span>
-            {showCreateForm ? 'Cancel' : 'Add Order'}
-          </button>
+          <div style={{ display: 'flex', gap: '12px' }}>
+            <button 
+              className="btn-secondary" 
+              onClick={() => setShowBulkUpload(!showBulkUpload)}
+              style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
+            >
+              <span style={{ fontSize: '18px' }}>📤</span>
+              Bulk Upload CSV
+            </button>
+            <button 
+              className="btn-primary" 
+              onClick={() => setShowCreateForm(!showCreateForm)}
+              style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
+            >
+              <span style={{ fontSize: '18px' }}>{showCreateForm ? '✕' : '+'}</span>
+              {showCreateForm ? 'Cancel' : 'Add Order'}
+            </button>
+          </div>
         </div>
       </div>
+
+      {/* Bulk Upload Modal */}
+      {showBulkUpload && (
+        <div className="table-container" style={{ marginBottom: '28px', background: 'rgba(99, 102, 241, 0.05)' }}>
+          <div className="table-header" style={{ background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.2) 0%, rgba(139, 92, 246, 0.2) 100%)' }}>
+            <h2>📤 Bulk Upload Orders from CSV</h2>
+          </div>
+          <form onSubmit={handleBulkUpload} style={{ padding: '28px' }} encType="multipart/form-data">
+            <div style={{ marginBottom: '24px' }}>
+              <div style={{ 
+                background: 'rgba(99, 102, 241, 0.1)', 
+                border: '1px solid rgba(99, 102, 241, 0.3)',
+                borderRadius: '12px',
+                padding: '16px',
+                marginBottom: '20px'
+              }}>
+                <h3 style={{ color: '#a5b4fc', fontSize: '14px', fontWeight: '600', marginBottom: '12px' }}>
+                  📋 CSV Format Requirements:
+                </h3>
+                <ul style={{ color: '#a1a1aa', fontSize: '13px', lineHeight: '1.8', paddingLeft: '20px', margin: 0 }}>
+                  <li><strong>Required columns:</strong> customerName, customerPhone, productName, quantity, totalAmount</li>
+                  <li><strong>Optional columns:</strong> customerEmail, status (default: pending)</li>
+                  <li><strong>Status values:</strong> pending, processing, shipped, delivered, cancelled</li>
+                  <li><strong>Phone format:</strong> Include country code (e.g., +1234567890)</li>
+                  <li><strong>Amount format:</strong> Numbers only (e.g., 199.99)</li>
+                </ul>
+              </div>
+
+              <div className="filter-group">
+                <label style={{ fontSize: '14px', fontWeight: '600', marginBottom: '12px', display: 'block' }}>
+                  Select CSV File *
+                </label>
+                <input 
+                  type="file" 
+                  name="bulkCsvFile" 
+                  accept=".csv"
+                  required
+                  style={{
+                    width: '100%',
+                    padding: '14px',
+                    border: '2px dashed rgba(99, 102, 241, 0.5)',
+                    borderRadius: '12px',
+                    fontSize: '14px',
+                    background: 'rgba(39, 39, 42, 0.6)',
+                    color: '#fafafa',
+                    cursor: 'pointer'
+                  }}
+                />
+                <small style={{ color: '#71717a', fontSize: '12px', marginTop: '8px', display: 'block' }}>
+                  Upload a CSV file with multiple orders (max 10MB)
+                </small>
+              </div>
+            </div>
+
+            {uploadProgress && (
+              <div style={{
+                background: 'rgba(99, 102, 241, 0.1)',
+                border: '1px solid rgba(99, 102, 241, 0.3)',
+                padding: '12px 16px',
+                borderRadius: '10px',
+                color: '#a5b4fc',
+                fontSize: '14px',
+                marginBottom: '16px',
+                textAlign: 'center'
+              }}>
+                {uploadProgress}
+              </div>
+            )}
+
+            <div style={{ display: 'flex', gap: '12px' }}>
+              <button 
+                type="submit" 
+                className="btn-primary"
+                disabled={uploadProgress !== null}
+                style={{ flex: 1 }}
+              >
+                {uploadProgress ? 'Uploading...' : 'Upload & Import Orders'}
+              </button>
+              <button 
+                type="button" 
+                className="btn-secondary" 
+                onClick={downloadSampleCSV}
+                style={{ flex: 1 }}
+              >
+                📥 Download Sample CSV
+              </button>
+              <button 
+                type="button" 
+                className="btn btn-secondary" 
+                onClick={() => setShowBulkUpload(false)}
+              >
+                Cancel
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
 
       {/* Create Order Form */}
       {showCreateForm && (
@@ -109,7 +289,7 @@ function Orders() {
           <div className="table-header">
             <h2>Create New Order</h2>
           </div>
-          <form onSubmit={handleCreateOrder} style={{ padding: '28px' }}>
+          <form onSubmit={handleCreateOrder} style={{ padding: '28px' }} encType="multipart/form-data">
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '20px', marginBottom: '20px' }}>
               <div className="filter-group">
                 <label>Customer Name *</label>
@@ -134,6 +314,27 @@ function Orders() {
               <div className="filter-group">
                 <label>Total Amount ($) *</label>
                 <input type="number" name="totalAmount" required min="0" step="0.01" placeholder="99.99" />
+              </div>
+              <div className="filter-group" style={{ gridColumn: 'span 2' }}>
+                <label>CSV File (Optional)</label>
+                <input 
+                  type="file" 
+                  name="csvFile" 
+                  accept=".csv"
+                  style={{
+                    width: '100%',
+                    padding: '10px 14px',
+                    border: '1px solid rgba(63, 63, 70, 0.5)',
+                    borderRadius: '10px',
+                    fontSize: '14px',
+                    background: 'rgba(39, 39, 42, 0.6)',
+                    color: '#fafafa',
+                    cursor: 'pointer'
+                  }}
+                />
+                <small style={{ color: '#71717a', fontSize: '12px', marginTop: '6px', display: 'block' }}>
+                  Upload a CSV file with additional order data (max 5MB)
+                </small>
               </div>
             </div>
             <div style={{ display: 'flex', gap: '12px' }}>
@@ -171,14 +372,59 @@ function Orders() {
           </select>
         </div>
 
-        <div className="filter-group">
+        <div className="filter-group" style={{ flex: 1, minWidth: '300px' }}>
           <label>Search</label>
-          <input 
-            type="text" 
-            placeholder="Order ID, Customer Name, Phone"
-            value={filters.search}
-            onChange={(e) => setFilters({ ...filters, search: e.target.value })}
-          />
+          <div style={{ position: 'relative', display: 'flex', gap: '8px', alignItems: 'flex-end' }}>
+            <div style={{ flex: 1, position: 'relative' }}>
+              <input 
+                type="text" 
+                placeholder="Order ID, Customer Name, Phone"
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
+                style={{ width: '100%', paddingRight: searchInput ? '36px' : '14px' }}
+              />
+              {searchInput && (
+                <button
+                  onClick={() => setSearchInput('')}
+                  style={{
+                    position: 'absolute',
+                    right: '8px',
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    background: 'rgba(63, 63, 70, 0.5)',
+                    border: 'none',
+                    borderRadius: '6px',
+                    width: '24px',
+                    height: '24px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    cursor: 'pointer',
+                    color: '#a1a1aa',
+                    fontSize: '14px'
+                  }}
+                  title="Clear search"
+                >
+                  ✕
+                </button>
+              )}
+            </div>
+          </div>
+          {loading && searchInput && (
+            <small style={{ color: '#6366f1', fontSize: '11px', marginTop: '4px', display: 'block' }}>
+              🔍 Searching...
+            </small>
+          )}
+          {!loading && searchInput && orders.length === 0 && (
+            <small style={{ color: '#ef4444', fontSize: '11px', marginTop: '4px', display: 'block' }}>
+              No results found for "{searchInput}"
+            </small>
+          )}
+          {!loading && searchInput && orders.length > 0 && (
+            <small style={{ color: '#10b981', fontSize: '11px', marginTop: '4px', display: 'block' }}>
+              Found {orders.length} result{orders.length !== 1 ? 's' : ''}
+            </small>
+          )}
         </div>
       </div>
 

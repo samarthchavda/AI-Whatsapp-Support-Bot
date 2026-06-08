@@ -6,7 +6,7 @@ exports.getAllConversations = async (req, res) => {
   try {
     const { page = 1, limit = 10, status, escalated } = req.query;
     
-    let query = {};
+    let query = { admin: req.admin._id }; // Filter by logged-in admin
     
     if (status) {
       query.status = status;
@@ -54,6 +54,7 @@ exports.getConversationById = async (req, res) => {
 exports.getConversationsByPhone = async (req, res) => {
   try {
     const conversations = await Conversation.find({ 
+      admin: req.admin._id, // Filter by logged-in admin
       customerPhone: req.params.phone 
     }).sort({ createdAt: -1 });
 
@@ -96,14 +97,16 @@ exports.updateConversationStatus = async (req, res) => {
 // Get conversation statistics
 exports.getConversationStats = async (req, res) => {
   try {
-    const total = await Conversation.countDocuments();
-    const active = await Conversation.countDocuments({ status: 'active' });
-    const escalated = await Conversation.countDocuments({ escalated: true });
-    const resolved = await Conversation.countDocuments({ status: 'resolved' });
+    const adminFilter = { admin: req.admin._id };
+    
+    const total = await Conversation.countDocuments(adminFilter);
+    const active = await Conversation.countDocuments({ ...adminFilter, status: 'active' });
+    const escalated = await Conversation.countDocuments({ ...adminFilter, escalated: true });
+    const resolved = await Conversation.countDocuments({ ...adminFilter, status: 'resolved' });
     
     // Average satisfaction
     const satisfactionAgg = await Conversation.aggregate([
-      { $match: { satisfaction: { $exists: true, $ne: null } } },
+      { $match: { ...adminFilter, satisfaction: { $exists: true, $ne: null } } },
       { $group: { _id: null, avgSatisfaction: { $avg: '$satisfaction' } } }
     ]);
     
@@ -113,6 +116,7 @@ exports.getConversationStats = async (req, res) => {
 
     // Intent distribution
     const intentDistribution = await Conversation.aggregate([
+      { $match: adminFilter },
       { $unwind: '$messages' },
       { $match: { 'messages.role': 'user' } },
       { $group: { _id: '$messages.intent', count: { $sum: 1 } } },
@@ -129,5 +133,97 @@ exports.getConversationStats = async (req, res) => {
     });
   } catch (error) {
     res.status(500).json({ error: error.message });
+  }
+};
+
+// Send admin message to customer
+exports.sendAdminMessage = async (req, res) => {
+  try {
+    const { customerPhone, message } = req.body;
+
+    if (!customerPhone || !message) {
+      return res.status(400).json({
+        success: false,
+        error: 'Customer phone and message are required'
+      });
+    }
+
+    // Find conversation for this admin
+    let conversation = await Conversation.findOne({ 
+      admin: req.admin._id,
+      customerPhone 
+    });
+
+    if (!conversation) {
+      return res.status(404).json({
+        success: false,
+        error: 'Conversation not found'
+      });
+    }
+
+    // Add admin message to conversation
+    conversation.messages.push({
+      role: 'system', // Admin messages are 'system' role
+      content: message,
+      timestamp: new Date()
+    });
+
+    conversation.lastMessageAt = new Date();
+    await conversation.save();
+
+    // TODO: Send message via WhatsApp Cloud API
+    // For now, we'll just save it to the database
+    // In production, you would integrate with WhatsApp Cloud API here
+    
+    // Emit socket event for real-time update
+    const io = req.app.get('io');
+    if (io) {
+      io.emit('new_message', {
+        customerPhone,
+        role: 'system',
+        content: message,
+        timestamp: new Date()
+      });
+    }
+
+    res.json({
+      success: true,
+      message: 'Message sent successfully',
+      data: conversation
+    });
+  } catch (error) {
+    console.error('Error sending admin message:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to send message',
+      message: error.message
+    });
+  }
+};
+
+// Get single conversation by phone
+exports.getConversationByPhone = async (req, res) => {
+  try {
+    const conversation = await Conversation.findOne({ 
+      admin: req.admin._id, // Filter by logged-in admin
+      customerPhone: req.params.phone 
+    });
+
+    if (!conversation) {
+      return res.status(404).json({ 
+        success: false,
+        error: 'Conversation not found' 
+      });
+    }
+
+    res.json({
+      success: true,
+      conversation
+    });
+  } catch (error) {
+    res.status(500).json({ 
+      success: false,
+      error: error.message 
+    });
   }
 };

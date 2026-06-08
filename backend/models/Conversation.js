@@ -1,6 +1,12 @@
 const mongoose = require('mongoose');
 
 const conversationSchema = new mongoose.Schema({
+  admin: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Admin',
+    required: true,
+    index: true
+  },
   customerPhone: {
     type: String,
     required: true,
@@ -68,6 +74,9 @@ const conversationSchema = new mongoose.Schema({
 });
 
 // Index for faster queries
+conversationSchema.index({ admin: 1, customerPhone: 1, createdAt: -1 });
+conversationSchema.index({ admin: 1, status: 1 });
+conversationSchema.index({ admin: 1, escalated: 1 });
 conversationSchema.index({ customerPhone: 1, createdAt: -1 });
 conversationSchema.index({ status: 1 });
 conversationSchema.index({ escalated: 1 });

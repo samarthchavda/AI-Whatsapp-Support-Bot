@@ -6,6 +6,8 @@ const ReturnPolicy = require('../models/ReturnPolicy');
 const Escalation = require('../models/Escalation');
 const Conversation = require('../models/Conversation');
 const AILog = require('../models/AILog');
+const KnowledgeBase = require('../models/KnowledgeBase');
+const knowledgeBaseService = require('./knowledgeBaseService');
 
 class AIService {
   constructor() {
@@ -683,33 +685,110 @@ class AIService {
     let aiLog = null;
     let model = null;
 
-    const systemPrompt = `You are a friendly and helpful customer service assistant for an e-commerce company specializing in sustainable products.
-Your role is to:
-- Provide helpful and accurate information
-- Be friendly and professional in tone
-- Keep responses concise (under 200 characters)
-- For policy questions, suggest contacting support
-- For urgent matters, recommend escalation
-Follow these guidelines:
-1. Always be courteous and professional
-2. Provide clear, actionable information
-3. If unsure, recommend contacting support`;
+    // First, try to answer from knowledge base
+    try {
+      const knowledgeBases = await KnowledgeBase.find({ isActive: true });
+      
+      if (knowledgeBases.length > 0) {
+        const texts = knowledgeBases.map(kb => kb.extractedText);
+        const kbResult = await knowledgeBaseService.queryKnowledgeBase(message, texts);
+        
+        if (kbResult.foundInKB && kbResult.confidence > 0.5) {
+          return {
+            message: kbResult.answer,
+            usedAI: true,
+            model: 'gemini-kb',
+            aiLog: {
+              systemPrompt: 'Knowledge Base Query',
+              userPrompt: message,
+              aiResponse: kbResult.answer,
+              promptTokens: 0,
+              completionTokens: 0,
+              totalTokens: 0,
+              temperature: 0.3
+            },
+            usedKnowledgeBase: true
+          };
+        }
+      }
+    } catch (kbError) {
+      console.error('Knowledge base query error:', kbError);
+      // Continue to regular AI if KB fails
+    }
+
+    const systemInstruction = `You are an intelligent e-commerce customer support assistant for an AI-powered WhatsApp Support Bot platform.
+
+CORE RESPONSIBILITIES:
+- Answer customer questions about orders, products, shipping, and policies
+- Provide accurate, helpful information in a friendly, professional tone
+- Keep responses concise and WhatsApp-friendly (under 200 characters when possible)
+- Use emojis sparingly to enhance readability (📦 for orders, ✅ for confirmations, etc.)
+
+RESPONSE GUIDELINES:
+1. Be warm and conversational, not robotic
+2. Address the customer by name when appropriate
+3. If you don't have specific information, guide them to contact support
+4. For urgent issues (refunds, complaints), acknowledge and suggest escalation
+5. Never make up order details or policies
+6. Always maintain a positive, solution-oriented tone
+
+EXAMPLE RESPONSES:
+- "Hi ${customerName}! 👋 I'd be happy to help with that. Could you provide your order number?"
+- "Great question! Our standard shipping takes 3-5 business days. Need help with anything else?"
+- "I understand your concern. Let me connect you with our support team who can assist you better."
+
+Remember: You're representing a modern, AI-powered brand. Be helpful, efficient, and human.`;
 
     const userPrompt = message;
 
-    // Use Gemini first if configured
+    // Use Gemini first if configured (prioritized)
     if (this.gemini) {
       try {
-        const modelClient = this.gemini.getGenerativeModel({ model: this.geminiModelName });
-        const prompt = `${systemPrompt}\n\nCustomer Name: ${customerName}\nCustomer Message: ${userPrompt}`;
+        const modelClient = this.gemini.getGenerativeModel({ 
+          model: this.geminiModelName,
+          systemInstruction: systemInstruction,
+          generationConfig: {
+            temperature: 0.7,
+            topP: 0.95,
+            topK: 40,
+            maxOutputTokens: 200,
+          },
+          safetySettings: [
+            {
+              category: 'HARM_CATEGORY_HARASSMENT',
+              threshold: 'BLOCK_NONE',
+            },
+            {
+              category: 'HARM_CATEGORY_HATE_SPEECH',
+              threshold: 'BLOCK_NONE',
+            },
+            {
+              category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT',
+              threshold: 'BLOCK_NONE',
+            },
+            {
+              category: 'HARM_CATEGORY_DANGEROUS_CONTENT',
+              threshold: 'BLOCK_NONE',
+            },
+          ],
+        });
+
+        const prompt = `Customer Name: ${customerName}\nCustomer Message: ${userPrompt}`;
         const result = await modelClient.generateContent(prompt);
+        
+        // Check if response was blocked by safety filters
+        if (result.response.promptFeedback?.blockReason) {
+          console.warn('Gemini blocked response:', result.response.promptFeedback.blockReason);
+          throw new Error(`Content blocked: ${result.response.promptFeedback.blockReason}`);
+        }
+
         const aiResponse = result.response.text();
 
         usedAI = true;
         model = this.geminiModelName;
 
         aiLog = {
-          systemPrompt,
+          systemPrompt: systemInstruction,
           userPrompt,
           aiResponse,
           promptTokens: result.response.usageMetadata?.promptTokenCount || 0,
@@ -726,10 +805,21 @@ Follow these guidelines:
         };
       } catch (error) {
         console.error('Gemini API error:', error.message);
+        
+        // If safety filter blocked, provide a safe fallback
+        if (error.message.includes('blocked') || error.message.includes('SAFETY')) {
+          return {
+            message: `Hi ${customerName}! I'm here to help with your order questions. Could you please rephrase your message or let me know your order number?`,
+            usedAI: false,
+            model: null,
+            aiLog: null
+          };
+        }
+        // Continue to OpenAI fallback if Gemini fails
       }
     }
 
-    // If OpenAI is configured, use it for general inquiries
+    // If OpenAI is configured, use it as fallback
     if (this.openai) {
       try {
         const completion = await this.openai.chat.completions.create({
@@ -737,24 +827,24 @@ Follow these guidelines:
           messages: [
             {
               role: "system",
-              content: systemPrompt
+              content: systemInstruction
             },
             {
               role: "user",
               content: userPrompt
             }
           ],
-          max_tokens: 150,
+          max_tokens: 200,
           temperature: 0.7
         });
 
         const aiResponse = completion.choices[0].message.content;
         usedAI = true;
-  model = this.openaiModelName;
+        model = this.openaiModelName;
 
         // Log the AI interaction
         aiLog = {
-          systemPrompt,
+          systemPrompt: systemInstruction,
           userPrompt,
           aiResponse,
           promptTokens: completion.usage?.prompt_tokens || 0,
@@ -821,7 +911,8 @@ Follow these guidelines:
         priority,
         description: message,
         relatedOrderIds: relatedOrderIds || [],
-        status: 'pending'
+        status: 'pending',
+        admin: conversation.admin
       });
 
       await escalation.save();

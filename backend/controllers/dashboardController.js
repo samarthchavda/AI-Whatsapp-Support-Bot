@@ -5,34 +5,37 @@ const Order = require('../models/Order');
 // Get dashboard statistics
 exports.getDashboardStats = async (req, res) => {
   try {
+    const adminQuery = { admin: req.admin._id };
+    
     // Order statistics
-    const totalOrders = await Order.countDocuments();
-    const pendingOrders = await Order.countDocuments({ status: 'pending' });
-    const shippedOrders = await Order.countDocuments({ status: 'shipped' });
-    const deliveredOrders = await Order.countDocuments({ status: 'delivered' });
+    const totalOrders = await Order.countDocuments(adminQuery);
+    const pendingOrders = await Order.countDocuments({ ...adminQuery, status: 'pending' });
+    const shippedOrders = await Order.countDocuments({ ...adminQuery, status: 'shipped' });
+    const deliveredOrders = await Order.countDocuments({ ...adminQuery, status: 'delivered' });
 
     // Conversation statistics
-    const totalConversations = await Conversation.countDocuments();
-    const activeConversations = await Conversation.countDocuments({ status: 'active' });
-    const escalatedConversations = await Conversation.countDocuments({ escalated: true });
-    const resolvedConversations = await Conversation.countDocuments({ status: 'resolved' });
+    const totalConversations = await Conversation.countDocuments(adminQuery);
+    const activeConversations = await Conversation.countDocuments({ ...adminQuery, status: 'active' });
+    const escalatedConversations = await Conversation.countDocuments({ ...adminQuery, escalated: true });
+    const resolvedConversations = await Conversation.countDocuments({ ...adminQuery, status: 'resolved' });
 
     // Escalation statistics
-    const totalEscalations = await Escalation.countDocuments();
-    const pendingEscalations = await Escalation.countDocuments({ status: 'pending' });
+    const totalEscalations = await Escalation.countDocuments(adminQuery);
+    const pendingEscalations = await Escalation.countDocuments({ ...adminQuery, status: 'pending' });
     const urgentEscalations = await Escalation.countDocuments({ 
+      ...adminQuery,
       status: { $in: ['pending', 'in_progress'] }, 
       priority: 'urgent' 
     });
 
     // Recent conversations
-    const recentConversations = await Conversation.find()
+    const recentConversations = await Conversation.find(adminQuery)
       .sort({ updatedAt: -1 })
       .limit(5)
       .select('customerName customerPhone status updatedAt escalated');
 
     // Recent escalations
-    const recentEscalations = await Escalation.find()
+    const recentEscalations = await Escalation.find(adminQuery)
       .sort({ createdAt: -1 })
       .limit(5)
       .select('customerName reason priority status createdAt');
@@ -42,7 +45,7 @@ exports.getDashboardStats = async (req, res) => {
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
     const intentDistribution = await Conversation.aggregate([
-      { $match: { createdAt: { $gte: thirtyDaysAgo } } },
+      { $match: { admin: req.admin._id, createdAt: { $gte: thirtyDaysAgo } } },
       { $unwind: '$messages' },
       { $match: { 'messages.role': 'user' } },
       { $group: { _id: '$messages.intent', count: { $sum: 1 } } },
@@ -51,7 +54,7 @@ exports.getDashboardStats = async (req, res) => {
 
     // Average satisfaction score
     const satisfactionAgg = await Conversation.aggregate([
-      { $match: { satisfaction: { $exists: true, $ne: null } } },
+      { $match: { admin: req.admin._id, satisfaction: { $exists: true, $ne: null } } },
       { $group: { _id: null, avgSatisfaction: { $avg: '$satisfaction' } } }
     ]);
     
@@ -92,7 +95,7 @@ exports.getEscalations = async (req, res) => {
   try {
     const { page = 1, limit = 10, status, priority } = req.query;
     
-    let query = {};
+    let query = { admin: req.admin._id };
     
     if (status) {
       query.status = status;
@@ -127,7 +130,10 @@ exports.updateEscalation = async (req, res) => {
   try {
     const { status, assignedTo, resolution } = req.body;
 
-    const escalation = await Escalation.findById(req.params.id);
+    const escalation = await Escalation.findOne({
+      _id: req.params.id,
+      admin: req.admin._id
+    });
     
     if (!escalation) {
       return res.status(404).json({ error: 'Escalation not found' });

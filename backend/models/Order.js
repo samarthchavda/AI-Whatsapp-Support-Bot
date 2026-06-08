@@ -67,12 +67,29 @@ const orderSchema = new mongoose.Schema({
   returnedDate: {
     type: Date
   },
-  notes: String
+  notes: String,
+  csvFile: {
+    filename: String,
+    path: String,
+    uploadedAt: Date
+  },
+  createdBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Admin'
+  },
+  createdByName: String,
+  admin: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Admin',
+    required: true,
+    index: true
+  }
 }, { 
   timestamps: true 
 });
 
 // Index for faster queries
 orderSchema.index({ customerPhone: 1, orderDate: -1 });
+orderSchema.index({ admin: 1, orderDate: -1 });
 
 module.exports = mongoose.model('Order', orderSchema);

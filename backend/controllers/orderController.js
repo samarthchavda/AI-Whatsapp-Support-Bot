@@ -8,7 +8,7 @@ exports.getAllOrders = async (req, res) => {
   try {
     const { page = 1, limit = 10, status, search } = req.query;
     
-    let query = {};
+    let query = { admin: req.admin._id };
     
     if (status) {
       query.status = status;
@@ -44,7 +44,10 @@ exports.getAllOrders = async (req, res) => {
 // Get order by ID
 exports.getOrderById = async (req, res) => {
   try {
-    const order = await Order.findOne({ orderId: req.params.id });
+    const order = await Order.findOne({ 
+      orderId: req.params.id,
+      admin: req.admin._id 
+    });
     
     if (!order) {
       return res.status(404).json({ error: 'Order not found' });
@@ -59,7 +62,10 @@ exports.getOrderById = async (req, res) => {
 // Get orders by customer phone
 exports.getOrdersByPhone = async (req, res) => {
   try {
-    const orders = await Order.find({ customerPhone: req.params.phone })
+    const orders = await Order.find({ 
+      customerPhone: req.params.phone,
+      admin: req.admin._id 
+    })
       .sort({ orderDate: -1 });
 
     res.json({ orders, count: orders.length });
@@ -85,7 +91,8 @@ exports.createOrder = async (req, res) => {
       customer = new Customer({
         name: orderData.customerName,
         phone: orderData.customerPhone,
-        email: orderData.customerEmail
+        email: orderData.customerEmail,
+        admin: req.admin._id
       });
       await customer.save();
     }
@@ -99,11 +106,30 @@ exports.createOrder = async (req, res) => {
         CounterModel: Counter,
         OrderModel: Order
       });
-      order = new Order({
+      
+      // Add admin info if authenticated
+      const orderPayload = {
         ...orderData,
         orderId: nextOrderId,
-        customerId: customer._id
-      });
+        customerId: customer._id,
+        admin: req.admin._id
+      };
+
+      if (req.admin) {
+        orderPayload.createdBy = req.admin._id;
+        orderPayload.createdByName = req.admin.name;
+      }
+
+      // Add CSV file info if uploaded
+      if (req.file) {
+        orderPayload.csvFile = {
+          filename: req.file.filename,
+          path: req.file.path,
+          uploadedAt: new Date()
+        };
+      }
+
+      order = new Order(orderPayload);
 
       try {
         await order.save();
@@ -138,7 +164,10 @@ exports.updateOrderStatus = async (req, res) => {
   try {
     const { status, trackingNumber, estimatedDelivery, notes } = req.body;
 
-    const order = await Order.findOne({ orderId: req.params.id });
+    const order = await Order.findOne({ 
+      orderId: req.params.id,
+      admin: req.admin._id 
+    });
     
     if (!order) {
       return res.status(404).json({ error: 'Order not found' });
@@ -172,7 +201,10 @@ exports.updateOrderStatus = async (req, res) => {
 // Delete order
 exports.deleteOrder = async (req, res) => {
   try {
-    const order = await Order.findOneAndDelete({ orderId: req.params.id });
+    const order = await Order.findOneAndDelete({ 
+      orderId: req.params.id,
+      admin: req.admin._id 
+    });
     
     if (!order) {
       return res.status(404).json({ error: 'Order not found' });
@@ -181,5 +213,142 @@ exports.deleteOrder = async (req, res) => {
     res.json({ message: 'Order deleted successfully' });
   } catch (error) {
     res.status(500).json({ error: error.message });
+  }
+};
+
+// Bulk upload orders from CSV
+exports.bulkUploadOrders = async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({
+        success: false,
+        error: 'No CSV file uploaded'
+      });
+    }
+
+    const fs = require('fs');
+    const csv = require('csv-parser');
+    const results = [];
+    const errors = [];
+
+    // Read and parse CSV file
+    await new Promise((resolve, reject) => {
+      fs.createReadStream(req.file.path)
+        .pipe(csv())
+        .on('data', (data) => results.push(data))
+        .on('end', resolve)
+        .on('error', reject);
+    });
+
+    if (results.length === 0) {
+      return res.status(400).json({
+        success: false,
+        error: 'CSV file is empty'
+      });
+    }
+
+    let successCount = 0;
+    let failedCount = 0;
+
+    // Process each row
+    for (let i = 0; i < results.length; i++) {
+      const row = results[i];
+      
+      try {
+        // Validate required fields
+        if (!row.customerName || !row.customerPhone || !row.productName || !row.quantity || !row.totalAmount) {
+          errors.push({
+            row: i + 2, // +2 because CSV is 1-indexed and has header
+            error: 'Missing required fields',
+            data: row
+          });
+          failedCount++;
+          continue;
+        }
+
+        // Normalize phone number
+        const normalizedPhone = (row.customerPhone || '')
+          .replace(/\s+/g, '')
+          .replace(/[^\d+]/g, '');
+
+        // Find or create customer
+        let customer = await Customer.findOne({ phone: normalizedPhone });
+        
+        if (!customer) {
+          customer = new Customer({
+            name: row.customerName,
+            phone: normalizedPhone,
+            email: row.customerEmail || '',
+            admin: req.admin._id
+          });
+          await customer.save();
+        }
+
+        // Generate unique order ID
+        const nextOrderId = await getNextOrderId({
+          CounterModel: Counter,
+          OrderModel: Order
+        });
+
+        // Create order
+        const orderData = {
+          orderId: nextOrderId,
+          customerId: customer._id,
+          customerName: row.customerName,
+          customerPhone: normalizedPhone,
+          customerEmail: row.customerEmail || '',
+          productName: row.productName,
+          quantity: parseInt(row.quantity) || 1,
+          totalAmount: parseFloat(row.totalAmount) || 0,
+          status: row.status || 'pending',
+          admin: req.admin._id
+        };
+
+        // Add admin info if authenticated
+        if (req.admin) {
+          orderData.createdBy = req.admin._id;
+          orderData.createdByName = req.admin.name;
+        }
+
+        const order = new Order(orderData);
+        await order.save();
+
+        // Update customer stats
+        customer.totalOrders += 1;
+        customer.totalSpent += orderData.totalAmount;
+        customer.lastOrderDate = new Date();
+        await customer.save();
+
+        successCount++;
+      } catch (error) {
+        errors.push({
+          row: i + 2,
+          error: error.message,
+          data: row
+        });
+        failedCount++;
+      }
+    }
+
+    // Delete uploaded file after processing
+    fs.unlinkSync(req.file.path);
+
+    res.json({
+      success: true,
+      message: `Bulk upload completed. Success: ${successCount}, Failed: ${failedCount}`,
+      data: {
+        successCount,
+        failedCount,
+        totalRows: results.length,
+        errors: errors.length > 0 ? errors.slice(0, 10) : [] // Return first 10 errors
+      }
+    });
+  } catch (error) {
+    console.error('Bulk upload error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to process CSV file',
+      message: error.message
+    });
   }
 };

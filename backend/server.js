@@ -13,8 +13,16 @@ const orderRoutes = require('./routes/orderRoutes');
 const invoiceRoutes = require('./routes/invoiceRoutes');
 const conversationRoutes = require('./routes/conversationRoutes');
 const webhookRoutes = require('./routes/webhookRoutes');
+const externalWebhookRoutes = require('./routes/externalWebhookRoutes');
 const dashboardRoutes = require('./routes/dashboardRoutes');
 const aiRoutes = require('./routes/aiRoutes');
+const authRoutes = require('./routes/authRoutes');
+const demoRequestRoutes = require('./routes/demoRequestRoutes');
+const knowledgeBaseRoutes = require('./routes/knowledgeBaseRoutes');
+const broadcastRoutes = require('./routes/broadcastRoutes');
+const analyticsRoutes = require('./routes/analyticsRoutes');
+const integrationRoutes = require('./routes/integrationRoutes');
+const superAdminRoutes = require('./routes/superAdminRoutes');
 
 // Import WhatsApp bot (optional - only if available)
 let whatsappWebBot = null;
@@ -75,6 +83,7 @@ mongoose.connect(process.env.MONGODB_URI, {
 })
 .then(() => {
   console.log('✅ Connected to MongoDB');
+  
   // Initialize WhatsApp bot after DB connection (if available)
   if (whatsappWebBot) {
     try {
@@ -85,6 +94,12 @@ mongoose.connect(process.env.MONGODB_URI, {
   } else {
     console.log('📱 WhatsApp Web Bot not available - using demo mode');
   }
+  
+  // Initialize broadcast scheduler
+  const { initializeScheduler, startScheduler } = require('./services/broadcastScheduler');
+  initializeScheduler().then(() => {
+    startScheduler();
+  });
 })
 .catch((err) => {
   console.error('❌ MongoDB connection error:', err);
@@ -101,12 +116,20 @@ app.get('/', (req, res) => {
 });
 
 // API Routes
+app.use('/api/auth', authRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/invoices', invoiceRoutes);
 app.use('/api/conversations', conversationRoutes);
 app.use('/api/webhook', webhookRoutes);
+app.use('/api/webhooks', externalWebhookRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/ai', aiRoutes);
+app.use('/api/demo-requests', demoRequestRoutes);
+app.use('/api/knowledge-base', knowledgeBaseRoutes);
+app.use('/api/broadcasts', broadcastRoutes);
+app.use('/api/analytics', analyticsRoutes);
+app.use('/api/integrations', integrationRoutes);
+app.use('/api/super-admin', superAdminRoutes);
 
 // Error handling middleware
 app.use((err, req, res, next) => {

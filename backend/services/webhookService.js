@@ -2,6 +2,9 @@ const Order = require('../models/Order');
 const Customer = require('../models/Customer');
 const WebhookLog = require('../models/WebhookLog');
 const Counter = require('../models/Counter');
+const Admin = require('../models/Admin');
+const Template = require('../models/Template');
+const whatsappCloudAPI = require('./whatsappCloudAPI');
 const { getNextOrderId } = require('./orderIdService');
 const whatsappWebBot = require('./whatsappWebBot');
 
@@ -48,6 +51,42 @@ class WebhookService {
    * Map WooCommerce order data to our Order schema
    */
   mapWooCommerceOrder(wooData) {
+    let trackingNumber = null;
+    let carrier = null;
+    let trackingUrl = null;
+    
+    if (wooData.meta_data && Array.isArray(wooData.meta_data)) {
+      // Find Advanced Shipment Tracking meta
+      const astMeta = wooData.meta_data.find(m => m.key === '_wc_shipment_tracking_items');
+      if (astMeta) {
+        const value = astMeta.value;
+        if (Array.isArray(value) && value[0]) {
+          trackingNumber = value[0].tracking_number;
+          carrier = value[0].tracking_provider;
+          trackingUrl = value[0].custom_tracking_link || value[0].tracking_link;
+        } else if (typeof value === 'object' && value) {
+          trackingNumber = value.tracking_number;
+          carrier = value.tracking_provider;
+          trackingUrl = value.custom_tracking_link || value.tracking_link;
+        }
+      }
+      
+      // Simple tracking key fallback
+      if (!trackingNumber) {
+        const trackingNumMeta = wooData.meta_data.find(m => m.key === '_tracking_number');
+        if (trackingNumMeta) {
+          trackingNumber = trackingNumMeta.value;
+        }
+      }
+      
+      if (!carrier) {
+        const carrierMeta = wooData.meta_data.find(m => m.key === '_tracking_provider' || m.key === '_tracking_company');
+        if (carrierMeta) {
+          carrier = carrierMeta.value;
+        }
+      }
+    }
+
     return {
       externalOrderId: wooData.id?.toString() || wooData.number?.toString(),
       customerName: `${wooData.billing?.first_name || ''} ${wooData.billing?.last_name || ''}`.trim() || 'Customer',
@@ -73,7 +112,10 @@ class WebhookService {
       paymentStatus: this.mapWooCommercePaymentStatus(wooData.status),
       status: this.mapWooCommerceOrderStatus(wooData.status),
       notes: wooData.customer_note,
-      orderDate: wooData.date_created ? new Date(wooData.date_created) : new Date()
+      orderDate: wooData.date_created ? new Date(wooData.date_created) : new Date(),
+      trackingNumber,
+      carrier,
+      trackingUrl
     };
   }
 
@@ -211,54 +253,118 @@ class WebhookService {
         throw new Error(`Unsupported webhook source: ${source}`);
     }
 
-    // Validate required fields
-    if (!mappedData.customerPhone) {
-      throw new Error('Customer phone number is required');
+    // Find default/demo admin
+    let adminDoc = await Admin.findOne({ email: 'demo@store.com' });
+    if (!adminDoc) adminDoc = await Admin.findOne();
+    const adminId = adminDoc ? adminDoc._id : null;
+
+    if (!adminId) {
+      throw new Error('No admin user found in database. Please seed or create an admin first.');
     }
+
     if (!mappedData.externalOrderId) {
       throw new Error('External order ID is required');
     }
 
-    // Find or create customer
-    let customer = await Customer.findOne({ phone: mappedData.customerPhone });
-    
-    if (!customer) {
-      customer = new Customer({
-        name: mappedData.customerName,
-        phone: mappedData.customerPhone,
-        email: mappedData.customerEmail
+    // Check if order already exists
+    let order = await Order.findOne({ 
+      externalOrderId: mappedData.externalOrderId, 
+      admin: adminId 
+    });
+
+    let isUpdate = false;
+    let oldStatus = null;
+    let customer = null;
+
+    if (order) {
+      isUpdate = true;
+      oldStatus = order.status;
+
+      // Update existing order details
+      if (mappedData.status) order.status = mappedData.status;
+      if (mappedData.paymentStatus) order.paymentStatus = mappedData.paymentStatus;
+      if (mappedData.totalAmount !== undefined && mappedData.totalAmount !== null) {
+        order.totalAmount = mappedData.totalAmount;
+      }
+      if (mappedData.items && mappedData.items.length > 0) {
+        order.items = mappedData.items;
+      }
+      
+      if (mappedData.notes) order.notes = mappedData.notes;
+      if (mappedData.trackingNumber) order.trackingNumber = mappedData.trackingNumber;
+      if (mappedData.shippingAddress) order.shippingAddress = mappedData.shippingAddress;
+      
+      if (mappedData.status === 'delivered' && oldStatus !== 'delivered') {
+        order.deliveredDate = new Date();
+      }
+      
+      await order.save();
+
+      // Retrieve customer
+      customer = await Customer.findById(order.customerId);
+
+      // If totalAmount changed, adjust customer spent stats
+      if (mappedData.totalAmount !== undefined && mappedData.totalAmount !== null && customer) {
+        const spentDiff = mappedData.totalAmount - (order.totalAmount || 0);
+        if (spentDiff !== 0) {
+          customer.totalSpent += spentDiff;
+          await customer.save();
+        }
+      }
+    } else {
+      // It is a new order creation, so validate required fields!
+      if (!mappedData.customerPhone) {
+        throw new Error('Customer phone number is required');
+      }
+
+      // Find or create customer
+      customer = await Customer.findOne({ phone: mappedData.customerPhone });
+      
+      if (!customer) {
+        customer = new Customer({
+          name: mappedData.customerName,
+          phone: mappedData.customerPhone,
+          email: mappedData.customerEmail,
+          admin: adminId
+        });
+        await customer.save();
+      }
+
+      // Generate internal order ID
+      const orderId = await getNextOrderId({
+        CounterModel: Counter,
+        OrderModel: Order
       });
+
+      // Create new order
+      order = new Order({
+        orderId,
+        customerId: customer._id,
+        customerPhone: mappedData.customerPhone,
+        customerName: mappedData.customerName,
+        externalOrderId: mappedData.externalOrderId,
+        items: mappedData.items,
+        totalAmount: mappedData.totalAmount,
+        status: mappedData.status,
+        shippingAddress: mappedData.shippingAddress,
+        paymentStatus: mappedData.paymentStatus,
+        orderDate: mappedData.orderDate,
+        notes: mappedData.notes,
+        admin: adminId
+      });
+
+      if (mappedData.trackingNumber) {
+        order.trackingNumber = mappedData.trackingNumber;
+      }
+
+      await order.save();
+
+      // Update customer stats
+      customer.totalOrders += 1;
+      customer.totalSpent += mappedData.totalAmount;
+      customer.lastOrderDate = new Date();
       await customer.save();
     }
-
-    // Generate internal order ID
-    const orderId = await getNextOrderId({
-      CounterModel: Counter,
-      OrderModel: Order
-    });
-
-    // Create order
-    const order = new Order({
-      orderId,
-      customerId: customer._id,
-      customerPhone: mappedData.customerPhone,
-      customerName: mappedData.customerName,
-      items: mappedData.items,
-      totalAmount: mappedData.totalAmount,
-      status: mappedData.status,
-      shippingAddress: mappedData.shippingAddress,
-      paymentStatus: mappedData.paymentStatus,
-      orderDate: mappedData.orderDate,
-      notes: mappedData.notes
-    });
-
-    await order.save();
-
-    // Update customer stats
-    customer.totalOrders += 1;
-    customer.totalSpent += mappedData.totalAmount;
-    customer.lastOrderDate = new Date();
-    await customer.save();
 
     const processingTime = Date.now() - startTime;
 
@@ -266,8 +372,174 @@ class WebhookService {
       order,
       customer,
       externalOrderId: mappedData.externalOrderId,
-      processingTime
+      processingTime,
+      isUpdate,
+      oldStatus
     };
+  }
+
+  /**
+   * Process fulfillment update webhook
+   */
+  async processFulfillmentUpdate(source, externalOrderId, trackingInfo) {
+    const startTime = Date.now();
+
+    // Find default/demo admin
+    let adminDoc = await Admin.findOne({ email: 'demo@store.com' });
+    if (!adminDoc) adminDoc = await Admin.findOne();
+    const adminId = adminDoc ? adminDoc._id : null;
+
+    if (!adminId) {
+      throw new Error('No admin user found in database.');
+    }
+
+    // Find the order
+    const order = await Order.findOne({ 
+      externalOrderId: externalOrderId.toString(), 
+      admin: adminId 
+    });
+
+    if (!order) {
+      throw new Error(`Order not found for external ID: ${externalOrderId}`);
+    }
+
+    const oldStatus = order.status;
+
+    // Update tracking info
+    if (trackingInfo.trackingNumber) order.trackingNumber = trackingInfo.trackingNumber;
+    if (trackingInfo.status) order.status = trackingInfo.status;
+    if (trackingInfo.estimatedDelivery) order.estimatedDelivery = trackingInfo.estimatedDelivery;
+
+    if (trackingInfo.status === 'delivered' && oldStatus !== 'delivered') {
+      order.deliveredDate = new Date();
+    }
+
+    await order.save();
+
+    // Find customer to trigger WhatsApp message
+    const customer = await Customer.findById(order.customerId);
+
+    let whatsappResult = { success: false, error: 'Customer not found' };
+    if (customer && (order.status !== oldStatus || trackingInfo.trackingNumber)) {
+      whatsappResult = await this.sendTrackingUpdate(order, customer, trackingInfo);
+    }
+
+    return {
+      order,
+      customer,
+      oldStatus,
+      whatsappSent: whatsappResult.success,
+      whatsappError: whatsappResult.error,
+      processingTime: Date.now() - startTime
+    };
+  }
+
+  /**
+   * Send WhatsApp tracking update message
+   */
+  async sendTrackingUpdate(order, customer, trackingInfo = {}) {
+    try {
+      // Determine the event type
+      const eventType = order.status === 'delivered' ? 'order_delivered' : 'order_shipped';
+
+      // Find mapped template for this event
+      const template = await Template.findOne({
+        adminId: order.admin,
+        mappedEvent: eventType,
+        status: 'APPROVED'
+      });
+
+      if (template) {
+        console.log(`📋 Mapped template found for ${eventType}: ${template.name}`);
+        
+        let parameters = [];
+        if (eventType === 'order_shipped') {
+          // {{1}} = Customer Name, {{2}} = Order ID, {{3}} = Carrier, {{4}} = Tracking Number
+          const carrier = trackingInfo.carrier || order.carrier || 'our courier partner';
+          const trackingNumber = order.trackingNumber || trackingInfo.trackingNumber || 'N/A';
+          parameters = [
+            customer.name || 'Customer',
+            order.orderId,
+            carrier,
+            trackingNumber
+          ];
+        } else { // order_delivered
+          // {{1}} = Customer Name, {{2}} = Order ID
+          parameters = [
+            customer.name || 'Customer',
+            order.orderId
+          ];
+        }
+
+        const result = await whatsappCloudAPI.sendTemplateMessage(
+          order.customerPhone,
+          template.name,
+          template.language || 'en_US',
+          parameters
+        );
+
+        return {
+          success: result.success,
+          error: result.error || null
+        };
+      }
+
+      // Fallback to plain text message via Web Bot if no template is mapped
+      const message = this.generateTrackingMessage(order, customer, trackingInfo);
+      const result = await whatsappWebBot.sendMessage(order.customerPhone, message);
+      
+      return {
+        success: result.success,
+        error: result.error || null
+      };
+    } catch (error) {
+      console.error('Error sending WhatsApp tracking update:', error);
+      return {
+        success: false,
+        error: error.message
+      };
+    }
+  }
+
+  /**
+   * Generate tracking/shipment update message
+   */
+  generateTrackingMessage(order, customer, trackingInfo = {}) {
+    const carrier = trackingInfo.carrier || 'our courier partner';
+    const trackingNumber = order.trackingNumber || trackingInfo.trackingNumber || 'N/A';
+    
+    // Check if delivered
+    if (order.status === 'delivered') {
+      return `📦 *Order Delivered!*
+
+Hi ${customer.name}! 👋
+
+Great news! Your order *${order.orderId}* has been successfully delivered.
+
+*Delivered Items:*
+${order.items.map(item => `• ${item.productName} (x${item.quantity})`).join('\n')}
+
+We hope you love your purchase! If you have any feedback or questions, please feel free to reply directly to this message.
+
+Thank you for shopping with us! 🙏`;
+    }
+
+    // Default to Shipped/In Transit
+    return `🚚 *Your Order has Shipped!*
+
+Hi ${customer.name}! 👋
+
+Exciting news! Your order *${order.orderId}* has been shipped and is on its way to you.
+
+*Shipping Details:*
+📦 Tracking Number: *${trackingNumber}*
+🚚 Carrier: *${carrier}*
+${trackingInfo.trackingUrl ? `🔗 Track here: ${trackingInfo.trackingUrl}\n` : ''}
+*Status:* ${order.status.charAt(0).toUpperCase() + order.status.slice(1)}
+
+We hope you receive it soon! If you have any questions, you can reply directly to this message.
+
+Thank you! 🙏`;
   }
 
   /**
@@ -275,9 +547,36 @@ class WebhookService {
    */
   async sendOrderConfirmation(order, customer) {
     try {
+      // Find mapped template for 'order_confirmation' event
+      const template = await Template.findOne({
+        adminId: order.admin,
+        mappedEvent: 'order_confirmation',
+        status: 'APPROVED'
+      });
+
+      if (template) {
+        console.log(`📋 Mapped template found for order_confirmation: ${template.name}`);
+        // Default placeholders: {{1}} is Customer Name, {{2}} is Order ID
+        const parameters = [
+          customer.name || 'Customer',
+          order.orderId
+        ];
+
+        const result = await whatsappCloudAPI.sendTemplateMessage(
+          order.customerPhone,
+          template.name,
+          template.language || 'en_US',
+          parameters
+        );
+
+        return {
+          success: result.success,
+          error: result.error || null
+        };
+      }
+
+      // Fallback to plain text message via Web Bot if no template is mapped
       const message = this.generateConfirmationMessage(order, customer);
-      
-      // Try to send via WhatsApp Web Bot
       const result = await whatsappWebBot.sendMessage(order.customerPhone, message);
       
       return {

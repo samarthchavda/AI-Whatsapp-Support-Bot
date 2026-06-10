@@ -207,7 +207,7 @@ function Broadcast() {
                 <label>Upload Recipients CSV *</label>
                 <input 
                   type="file" 
-                  name="recipientsFile" 
+                  name="csvFile" 
                   accept=".csv"
                   required
                   style={{

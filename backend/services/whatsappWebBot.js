@@ -4,6 +4,7 @@
 const Order = require('../models/Order');
 const Conversation = require('../models/Conversation');
 const Escalation = require('../models/Escalation');
+const Admin = require('../models/Admin');
 const aiService = require('./aiService');
 
 class WhatsAppWebBot {
@@ -12,10 +13,13 @@ class WhatsAppWebBot {
     this.client = null;
     this.startedAt = Date.now();
     this.io = null;
+    this.status = 'disconnected';
+    this.qrCode = null;
   }
 
   initialize(io) {
     this.io = io;
+    this.status = 'connecting';
     console.log('🚀 Initializing WhatsApp Web Bot...');
     
     // Try to load whatsapp-web.js if available
@@ -40,13 +44,18 @@ class WhatsAppWebBot {
       
       this.client = new Client({
         authStrategy: new LocalAuth(),
+        webVersionCache: {
+          type: 'remote',
+          remotePath: 'https://raw.githubusercontent.com/wppconnect-team/wa-version/main/html/2.3000.1041096482-alpha.html',
+        },
         puppeteer: {
           headless: true,
           args: [
             '--no-sandbox',
             '--disable-setuid-sandbox',
             '--disable-dev-shm-usage',
-            '--disable-gpu'
+            '--disable-gpu',
+            '--user-agent=Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36'
           ]
         }
       });
@@ -151,37 +160,92 @@ class WhatsAppWebBot {
       
       console.log(`\n📨 ${senderName} (${normalizedPhone}): ${message.body}`);
 
+      // Check if the customer has any orders in the database
+      const phoneFormats = aiService.getPhoneFormats(normalizedPhone);
+      const exactClauses = phoneFormats.map((value) => ({ customerPhone: value }));
+      const regexClauses = phoneFormats
+        .map((value) => value.replace(/\D/g, ''))
+        .filter((value) => value.length >= 10)
+        .map((digits) => {
+          const flexiblePattern = digits.split('').join('\\D*');
+          return { customerPhone: { $regex: flexiblePattern } };
+        });
+      const phoneQuery = { $or: [...exactClauses, ...regexClauses] };
+      const orderExists = await Order.exists(phoneQuery);
+
+      if (!orderExists) {
+        // If they don't have orders, check if they provided a valid Order ID in their message
+        const requestedOrderId = aiService.extractOrderId(messageText);
+        let orderByOrderId = null;
+        if (requestedOrderId) {
+          orderByOrderId = await Order.findOne({ orderId: requestedOrderId });
+        }
+
+        if (!orderByOrderId) {
+          console.log(`⚠️ Phone number ${normalizedPhone} not found in database. Sending professional fallback response.`);
+          const professionalFallbackMsg = `Dear ${senderName},\n\nThank you for contacting our customer support.\n\nWe were unable to find any active orders associated with your phone number (${normalizedPhone}) in our database.\n\nTo help us assist you, please:\n• Verify that you are messaging from the same phone number used during checkout.\n• If you checked out using a different number, please reply directly with your Order ID (e.g., ORD-001).\n\nIf you have any questions or need further assistance, please let us know.\n\nBest regards,\nCustomer Support Team`;
+          
+          const sentMsg = await this.client.sendMessage(message.from, professionalFallbackMsg);
+          
+          // Log conversation
+          await this.logConversation({
+            customerPhone: normalizedPhone,
+            customerName: senderName,
+            userMessage: messageText,
+            assistantMessage: professionalFallbackMsg,
+            intent: 'other',
+            escalated: false,
+            userMessageId: message.id?.id,
+            assistantMessageId: sentMsg?.id?.id
+          });
+          return;
+        }
+      }
+
       // Use AI Service to process message
       const result = await aiService.processMessage({
         customerPhone: normalizedPhone,
         customerName: senderName,
-        message: messageText
+        message: messageText,
+        messageId: message.id?.id
       });
+      
+      if (result.botPaused) {
+        console.log(`🔕 Conversation with ${normalizedPhone} is in agent takeover. AI response skipped.`);
+        return;
+      }
       
       const botReply = result.message;
       
       // Send reply
       if (botReply && botReply.trim()) {
-        await message.reply(botReply);
+        const sentMsg = await this.client.sendMessage(message.from, botReply);
         console.log(`🤖 Reply sent: "${botReply.substring(0, 50)}..." (intent: ${result.intent})`);
         
-        // Log conversation
-        await this.logConversation({
-          customerPhone: normalizedPhone,
-          customerName: senderName,
-          userMessage: messageText,
-          assistantMessage: botReply,
-          intent: result.intent,
-          escalated: result.escalated,
-          escalationReason: result.escalationReason,
-          relatedOrderIds: result.relatedOrderIds || []
-        });
+        // Update the assistant message in conversation with the actual WhatsApp messageId
+        if (sentMsg && sentMsg.id && sentMsg.id.id) {
+          const conversation = await Conversation.findOne({ customerPhone: normalizedPhone }).sort({ updatedAt: -1 });
+          if (conversation && conversation.messages.length > 0) {
+            for (let i = conversation.messages.length - 1; i >= 0; i--) {
+              if (conversation.messages[i].role === 'assistant') {
+                conversation.messages[i].messageId = sentMsg.id.id;
+                conversation.messages[i].status = 'sent';
+                await conversation.save();
+                break;
+              }
+            }
+          }
+        }
       } else {
         console.error('⚠️ Empty bot reply received');
       }
     } catch (error) {
       console.error('❌ Error handling message:', error);
-      await message.reply('Sorry, I encountered an error. Please try again or contact support.');
+      try {
+        await this.client.sendMessage(message.from, 'Sorry, I encountered an error. Please try again or contact support.');
+      } catch (sendErr) {
+        console.error('❌ Failed to send error message:', sendErr.message);
+      }
     }
   }
 
@@ -227,7 +291,9 @@ class WhatsAppWebBot {
     intent = 'other',
     escalated = false,
     escalationReason = null,
-    relatedOrderIds = []
+    relatedOrderIds = [],
+    userMessageId = null,
+    assistantMessageId = null
   }) {
     try {
       const allowedIntents = new Set([
@@ -255,7 +321,11 @@ class WhatsAppWebBot {
       });
 
       if (!conversation) {
+        let adminDoc = await Admin.findOne({ email: 'demo@store.com' });
+        if (!adminDoc) adminDoc = await Admin.findOne();
+
         conversation = new Conversation({
+          admin: adminDoc ? adminDoc._id : null,
           customerPhone,
           customerName,
           messages: [],
@@ -270,7 +340,8 @@ class WhatsAppWebBot {
         role: 'user',
         content: userMessage.trim(),
         timestamp: new Date(),
-        intent: safeIntent
+        intent: safeIntent,
+        messageId: userMessageId
       });
 
       // Add assistant response
@@ -278,7 +349,9 @@ class WhatsAppWebBot {
         role: 'assistant',
         content: assistantMessage.trim(),
         timestamp: new Date(),
-        intent: safeIntent
+        intent: safeIntent,
+        messageId: assistantMessageId,
+        status: assistantMessageId ? 'sent' : 'sent'
       });
 
       if (escalated) {
@@ -304,12 +377,26 @@ class WhatsAppWebBot {
 
   async sendMessage(phoneNumber, message) {
     try {
-      if (!this.client) {
-        return { success: false, error: 'Bot not available' };
+      if (!this.client || !this.isReady) {
+        return { success: false, error: 'Bot not available or not ready' };
       }
       
-      const chatId = phoneNumber.includes('@c.us') ? phoneNumber : `${phoneNumber}@c.us`;
-      await this.client.sendMessage(chatId, message);
+      let chatId = phoneNumber;
+      if (!chatId.includes('@c.us')) {
+        try {
+          const numberId = await this.client.getNumberId(phoneNumber);
+          if (numberId) {
+            chatId = numberId._serialized;
+          } else {
+            chatId = `${phoneNumber}@c.us`;
+          }
+        } catch (err) {
+          console.warn(`⚠️ Failed to resolve number JID for ${phoneNumber}, using fallback:`, err.message);
+          chatId = `${phoneNumber}@c.us`;
+        }
+      }
+      
+      await this.client.sendMessage(chatId, message, { sendSeen: false });
       return { success: true };
     } catch (error) {
       return { success: false, error: error.message };
@@ -319,13 +406,16 @@ class WhatsAppWebBot {
   getStatus() {
     return {
       service: 'WhatsApp Web Bot',
-      status: this.isReady ? '🟢 Online' : '⚠️ Demo Mode',
+      status: this.status || (this.isReady ? 'ready' : 'disconnected'),
       isReady: this.isReady,
+      qrCode: this.qrCode,
       timestamp: new Date()
     };
   }
 
   emitQRCode(qr) {
+    this.qrCode = qr;
+    this.status = 'qr_ready';
     if (this.io) {
       this.io.emit('whatsapp-qr', { qr, timestamp: new Date() });
       console.log('📤 QR code sent to frontend');
@@ -333,6 +423,10 @@ class WhatsAppWebBot {
   }
 
   emitStatus(status, message) {
+    this.status = status;
+    if (status === 'ready' || status === 'disconnected' || status === 'error') {
+      this.qrCode = null;
+    }
     if (this.io) {
       this.io.emit('whatsapp-status', {
         status,

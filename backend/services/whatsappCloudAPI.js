@@ -157,8 +157,28 @@ class WhatsAppCloudAPI {
 
   // Send template message
   async sendTemplateMessage(phoneNumber, templateName, templateLanguage = 'en_US', parameters = []) {
+    // If not configured, return mock success (helpful for local dev / testing)
+    if (!this.isConfigured) {
+      console.log(`⚠️ WhatsApp Cloud API not configured. Simulating template message dispatch:`);
+      console.log(`   To: ${phoneNumber}`);
+      console.log(`   Template: ${templateName} [${templateLanguage}]`);
+      console.log(`   Parameters:`, JSON.stringify(parameters, null, 2));
+      return { 
+        success: true, 
+        messageId: 'mock_tpl_wamid_' + Math.random().toString(36).substr(2, 9) 
+      };
+    }
+
     try {
       const url = `${this.baseUrl}/${this.phoneNumberId}/messages`;
+
+      // Map parameters to Meta format components (body text placeholders)
+      const formattedParameters = parameters.map(p => {
+        if (typeof p === 'object' && p !== null && p.type) {
+          return p;
+        }
+        return { type: 'text', text: String(p) };
+      });
 
       const data = {
         messaging_product: 'whatsapp',
@@ -169,11 +189,12 @@ class WhatsAppCloudAPI {
           language: {
             code: templateLanguage
           },
-          parameters: {
-            body: {
-              parameters: parameters
+          components: [
+            {
+              type: 'body',
+              parameters: formattedParameters
             }
-          }
+          ]
         }
       };
 
@@ -189,8 +210,8 @@ class WhatsAppCloudAPI {
       return { success: true, messageId: response.data.messages[0].id };
 
     } catch (error) {
-      console.error('❌ Error sending template:', error);
-      return { success: false, error: error.message };
+      console.error('❌ Error sending template:', error.response?.data || error.message);
+      return { success: false, error: error.response?.data || error.message };
     }
   }
 
@@ -325,6 +346,116 @@ class WhatsAppCloudAPI {
       status: statusType,
       timestamp: new Date(status.timestamp * 1000)
     };
+  }
+
+  // Fetch templates from Meta Graph API
+  async fetchTemplates() {
+    if (!this.isConfigured) {
+      console.log('⚠️ WhatsApp Cloud API not configured. Returning seeded default templates.');
+      return this.getSeededTemplates();
+    }
+
+    try {
+      const url = `${this.baseUrl}/${this.businessAccountId}/message_templates`;
+      const config = {
+        headers: {
+          'Authorization': `Bearer ${this.accessToken}`
+        }
+      };
+
+      const response = await axios.get(url, config);
+      console.log('✅ Templates fetched from Meta:', response.data.data?.length || 0);
+      return response.data.data || [];
+    } catch (error) {
+      console.error('❌ Error fetching templates from Meta:', error.response?.data || error.message);
+      // Fallback to seeded templates on network/auth error during development
+      return this.getSeededTemplates();
+    }
+  }
+
+  // Seed default templates for demo/development
+  getSeededTemplates() {
+    return [
+      {
+        id: 'mock_tpl_order_confirm',
+        name: 'order_confirmation',
+        category: 'UTILITY',
+        language: 'en_US',
+        status: 'APPROVED',
+        components: [
+          {
+            type: 'HEADER',
+            format: 'TEXT',
+            text: 'Order Confirmed! 🎉'
+          },
+          {
+            type: 'BODY',
+            text: 'Hello {{1}}, thank you for your order! Your order ID is {{2}} and we are preparing it. We will notify you once it ships.'
+          },
+          {
+            type: 'FOOTER',
+            text: 'Thank you for shopping with us.'
+          }
+        ]
+      },
+      {
+        id: 'mock_tpl_order_shipped',
+        name: 'order_shipped',
+        category: 'UTILITY',
+        language: 'en_US',
+        status: 'APPROVED',
+        components: [
+          {
+            type: 'HEADER',
+            format: 'TEXT',
+            text: 'Your Order has Shipped! 🚚'
+          },
+          {
+            type: 'BODY',
+            text: 'Hi {{1}}, good news! Your order {{2}} has been shipped via {{3}}. You can track it using number: {{4}}.'
+          },
+          {
+            type: 'FOOTER',
+            text: 'Need help? Contact support.'
+          }
+        ]
+      },
+      {
+        id: 'mock_tpl_order_delivered',
+        name: 'order_delivered',
+        category: 'UTILITY',
+        language: 'en_US',
+        status: 'APPROVED',
+        components: [
+          {
+            type: 'HEADER',
+            format: 'TEXT',
+            text: 'Order Delivered! 🎁'
+          },
+          {
+            type: 'BODY',
+            text: 'Hi {{1}}, your order {{2}} has been delivered. We hope you love your products!'
+          },
+          {
+            type: 'FOOTER',
+            text: 'Share your feedback with us.'
+          }
+        ]
+      },
+      {
+        id: 'mock_tpl_feedback',
+        name: 'feedback_request',
+        category: 'MARKETING',
+        language: 'en_US',
+        status: 'APPROVED',
+        components: [
+          {
+            type: 'BODY',
+            text: 'Hello {{1}}, how was your shopping experience with us? Please let us know if you have any feedback!'
+          }
+        ]
+      }
+    ];
   }
 }
 

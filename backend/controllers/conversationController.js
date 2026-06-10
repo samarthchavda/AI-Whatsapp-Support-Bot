@@ -16,13 +16,15 @@ exports.getAllConversations = async (req, res) => {
       query.escalated = escalated === 'true';
     }
 
-    const conversations = await Conversation.find(query)
-      .sort({ updatedAt: -1 })
-      .limit(limit * 1)
-      .skip((page - 1) * limit)
-      .exec();
-
-    const count = await Conversation.countDocuments(query);
+    const [conversations, count] = await Promise.all([
+      Conversation.find(query)
+        .sort({ updatedAt: -1 })
+        .limit(limit * 1)
+        .skip((page - 1) * limit)
+        .lean()
+        .exec(),
+      Conversation.countDocuments(query)
+    ]);
 
     res.json({
       conversations,
@@ -67,7 +69,7 @@ exports.getConversationsByPhone = async (req, res) => {
 // Update conversation status
 exports.updateConversationStatus = async (req, res) => {
   try {
-    const { status, satisfaction } = req.body;
+    const { status, satisfaction, botPaused } = req.body;
 
     const conversation = await Conversation.findById(req.params.id);
     
@@ -79,6 +81,8 @@ exports.updateConversationStatus = async (req, res) => {
       conversation.status = status;
       if (status === 'resolved' || status === 'closed') {
         conversation.resolvedAt = new Date();
+        conversation.botPaused = false;
+        conversation.escalated = false;
       }
     }
     
@@ -86,7 +90,26 @@ exports.updateConversationStatus = async (req, res) => {
       conversation.satisfaction = satisfaction;
     }
 
+    if (botPaused !== undefined) {
+      conversation.botPaused = botPaused;
+      if (!botPaused && conversation.status === 'escalated') {
+        conversation.status = 'active';
+        conversation.escalated = false;
+      }
+    }
+
     await conversation.save();
+
+    // Emit socket event for real-time update
+    const io = req.app.get('io') || global.io;
+    if (io) {
+      io.emit('new_message', {
+        customerPhone: conversation.customerPhone,
+        status: conversation.status,
+        botPaused: conversation.botPaused
+      });
+      io.emit('conversation_updated', conversation);
+    }
 
     res.json(conversation);
   } catch (error) {
@@ -161,6 +184,9 @@ exports.sendAdminMessage = async (req, res) => {
       });
     }
 
+    // Automatically pause the bot as the admin has taken over
+    conversation.botPaused = true;
+    
     // Add admin message to conversation
     conversation.messages.push({
       role: 'system', // Admin messages are 'system' role
@@ -171,19 +197,55 @@ exports.sendAdminMessage = async (req, res) => {
     conversation.lastMessageAt = new Date();
     await conversation.save();
 
-    // TODO: Send message via WhatsApp Cloud API
-    // For now, we'll just save it to the database
-    // In production, you would integrate with WhatsApp Cloud API here
+    // Send message via WhatsApp Web Bot or WhatsApp Cloud API
+    let sentSuccess = false;
+    let errorMsg = null;
+
+    try {
+      const whatsappWebBot = require('../services/whatsappWebBot');
+      if (whatsappWebBot && whatsappWebBot.isReady) {
+        console.log(`Sending manual message via WhatsApp Web Bot to ${customerPhone}`);
+        const webResult = await whatsappWebBot.sendMessage(customerPhone, message);
+        if (webResult.success) {
+          sentSuccess = true;
+        } else {
+          errorMsg = webResult.error;
+        }
+      }
+    } catch (e) {
+      console.log('WhatsApp Web Bot not available for sending admin message:', e.message);
+    }
+
+    if (!sentSuccess) {
+      try {
+        const whatsappCloudAPI = require('../services/whatsappCloudAPI');
+        console.log(`Sending manual message via WhatsApp Cloud API to ${customerPhone}`);
+        const cloudResult = await whatsappCloudAPI.sendMessage(customerPhone, message);
+        if (cloudResult.success) {
+          sentSuccess = true;
+        } else {
+          errorMsg = cloudResult.error || 'Failed to send via Cloud API';
+        }
+      } catch (e) {
+        console.log('WhatsApp Cloud API not available for sending admin message:', e.message);
+      }
+    }
+
+    if (!sentSuccess) {
+      console.log(`⚠️ Manual message simulated (not sent to actual WhatsApp): "${message}". Reason: ${errorMsg || 'No active clients'}`);
+    }
     
     // Emit socket event for real-time update
-    const io = req.app.get('io');
+    const io = req.app.get('io') || global.io;
     if (io) {
       io.emit('new_message', {
         customerPhone,
         role: 'system',
         content: message,
-        timestamp: new Date()
+        timestamp: new Date(),
+        botPaused: conversation.botPaused
       });
+      io.emit('conversation_updated', conversation);
     }
 
     res.json({

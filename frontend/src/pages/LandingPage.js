@@ -1,30 +1,106 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { 
-  FaWhatsapp, 
-  FaRobot, 
-  FaClock, 
-  FaShoppingCart, 
-  FaHeadset, 
-  FaChartLine,
-  FaCheck,
-  FaStar,
+import {
   FaArrowRight,
   FaBolt,
+  FaBox,
+  FaBrain,
+  FaBroadcastTower,
+  FaCheck,
+  FaChartLine,
+  FaComments,
+  FaHeadset,
+  FaLock,
+  FaPlug,
   FaShieldAlt,
-  FaGlobe
+  FaWhatsapp
 } from 'react-icons/fa';
 import './LandingPage.css';
 
+const metrics = [
+  { value: '1.8s', label: 'median first reply' },
+  { value: '82%', label: 'queries resolved by AI' },
+  { value: '24/7', label: 'WhatsApp coverage' }
+];
+
+const workflows = [
+  {
+    icon: <FaBrain />,
+    title: 'AI replies trained on your store',
+    copy: 'Upload policies, product FAQs, delivery rules, and return flows so the bot answers like your support team.'
+  },
+  {
+    icon: <FaBox />,
+    title: 'Order status without agent effort',
+    copy: 'Sync order data and let customers ask natural questions about tracking, cancellations, refunds, and COD status.'
+  },
+  {
+    icon: <FaHeadset />,
+    title: 'Human handoff when it matters',
+    copy: 'Escalate angry, urgent, or high-value conversations into a live queue with context already attached.'
+  },
+  {
+    icon: <FaBroadcastTower />,
+    title: 'Broadcasts with operational control',
+    copy: 'Send campaign updates, delivery notices, and payment reminders while monitoring delivery and reply volume.'
+  }
+];
+
+const platformItems = [
+  'WhatsApp Cloud API and WhatsApp Web support',
+  'Shopify, WooCommerce, and webhook integrations',
+  'Role-based admin and super-admin controls',
+  'Conversation analytics, AI logs, and escalation tracking',
+  'Knowledge base manager for policies and FAQs',
+  'Secure auth with refresh-token session handling'
+];
+
 function LandingPage() {
   const navigate = useNavigate();
-  const [scrollY, setScrollY] = useState(0);
+  const [activeTab, setActiveTab] = useState('inbox');
+  const [isChatOpen, setIsChatOpen] = useState(false);
+  const [chatMessages, setChatMessages] = useState([
+    { role: 'assistant', content: 'Hi there! 👋 I am the AI WhatsApp Support Assistant. Ask me about features, pricing, human takeover, or track a mock order (try typing "track ORD-1017").' }
+  ]);
+  const [chatInput, setChatInput] = useState('');
+  const chatEndRef = useRef(null);
 
   useEffect(() => {
-    const handleScroll = () => setScrollY(window.scrollY);
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
+    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [chatMessages]);
+
+  const handleChatSubmit = (e) => {
+    e.preventDefault();
+    if (!chatInput.trim()) return;
+
+    const userMessage = chatInput.trim();
+    setChatMessages(prev => [...prev, { role: 'user', content: userMessage }]);
+    setChatInput('');
+
+    // Simulated AI response logic
+    setTimeout(() => {
+      let reply = '';
+      const input = userMessage.toLowerCase();
+
+      if (input.includes('price') || input.includes('pricing') || input.includes('cost') || input.includes('money')) {
+        reply = '💰 We offer three simple plans:\n• **Starter ($29/mo):** 500 AI messages, standard knowledge base.\n• **Growth ($79/mo):** 2,500 AI messages, WooCommerce/Shopify sync, campaigns.\n• **Scale (Custom):** Unlimited volume, custom CRM integrations.';
+      } else if (input.includes('feature') || input.includes('workflow') || input.includes('what can you do')) {
+        reply = '🚀 Here is what I can automate on WhatsApp:\n1. Answer FAQ queries (returns, refunds, shipping rules).\n2. Real-time Order Tracking synced to Shopify/WooCommerce.\n3. Automatic Human Takeover (pauses AI and alerts you).\n4. Bulk template broadcast campaigns.';
+      } else if (input.includes('human') || input.includes('takeover') || input.includes('pause') || input.includes('agent') || input.includes('escalat')) {
+        reply = '🚨 **Instant Agent Handoff:** If a customer is frustrated, asks for a manager, or requests a refund, I automatically pause the AI bot, save their context, and alert your support team in the Live Chat CRM console.';
+      } else if (input.includes('order') || input.includes('track') || input.includes('ord-')) {
+        if (input.includes('1017')) {
+          reply = '📦 **Order Status for #ORD-1017:**\n• **Status:** Delivered ✅\n• **Items:** Premium Leather Boots (x1)\n• **Total:** $142.00\n• **Tracking:** FEDEX888999\n• **Delivered Date:** Yesterday';
+        } else {
+          reply = '📦 I can fetch order statuses in real-time. Try typing "track ORD-1017" to see how I retrieve and present shipping logs!';
+        }
+      } else {
+        reply = '👋 I am trained on your store catalog and FAQ policies. Ask me about "pricing", "features", "human handoff", or try typing "track ORD-1017" to see order status checking!';
+      }
+
+      setChatMessages(prev => [...prev, { role: 'assistant', content: reply }]);
+    }, 800);
+  };
 
   const scrollToSection = (id) => {
     document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' });
@@ -32,442 +108,365 @@ function LandingPage() {
 
   return (
     <div className="landing-page">
-      {/* Navigation */}
       <nav className="landing-nav">
-        <div className="nav-container">
-          <div className="nav-logo">
-            <FaWhatsapp className="logo-icon" />
+        <div className="landing-nav-inner">
+          <button className="landing-logo" onClick={() => scrollToSection('top')} aria-label="AI Support Bot home">
+            <FaWhatsapp />
             <span>AI Support Bot</span>
+          </button>
+
+          <div className="landing-nav-links" aria-label="Primary navigation">
+            <button onClick={() => scrollToSection('workflows')}>Workflows</button>
+            <button onClick={() => scrollToSection('platform')}>Platform</button>
+            <button onClick={() => scrollToSection('pricing')}>Pricing</button>
           </div>
-          <div className="nav-links">
-            <a href="#features" onClick={(e) => { e.preventDefault(); scrollToSection('features'); }}>Features</a>
-            <a href="#pricing" onClick={(e) => { e.preventDefault(); scrollToSection('pricing'); }}>Pricing</a>
-            <a href="#testimonials" onClick={(e) => { e.preventDefault(); scrollToSection('testimonials'); }}>Testimonials</a>
-            <button className="nav-btn-demo" onClick={() => navigate('/login')}>
-              Get Started
+
+          <div className="landing-nav-actions">
+            <button className="landing-link-button" onClick={() => navigate('/login')}>Sign in</button>
+            <button className="landing-primary-button small" onClick={() => navigate('/book-demo')}>
+              Book demo
             </button>
           </div>
         </div>
       </nav>
 
-      {/* Hero Section */}
-      <section className="hero-section">
-        <div className="hero-container">
-          <div className="hero-content">
-            <div className="hero-badge">
-              <FaBolt /> Powered by Google Gemini
+      <main id="top">
+        <section className="landing-hero">
+          <div className="landing-hero-copy">
+            <div className="landing-kicker">
+              <FaBolt />
+              WhatsApp support automation for commerce teams
             </div>
-            <h1 className="hero-title">
-              Automate Your Customer Support on WhatsApp with AI
-            </h1>
-            <p className="hero-subtitle">
-              Transform your customer service with intelligent AI automation. 
-              Handle unlimited conversations 24/7, integrate with your e-commerce store, 
-              and scale your support without hiring more agents.
+            <h1>AI Support Bot</h1>
+            <p className="landing-hero-lede">
+              Run customer support, order updates, escalations, broadcasts, and analytics from one focused WhatsApp operations workspace.
             </p>
-            <div className="hero-cta">
-              <button className="btn-primary-hero" onClick={() => navigate('/login')}>
-                Get Started <FaArrowRight />
+            <div className="landing-hero-actions">
+              <button className="landing-primary-button" onClick={() => navigate('/book-demo')}>
+                Book a demo <FaArrowRight />
               </button>
-              <button className="btn-secondary-hero" onClick={() => scrollToSection('features')}>
-                Learn More
+              <button className="landing-secondary-button" onClick={() => navigate('/login')}>
+                Open dashboard
               </button>
             </div>
-            <div className="hero-stats">
-              <div className="stat-item">
-                <div className="stat-number">99.9%</div>
-                <div className="stat-label">Uptime</div>
-              </div>
-              <div className="stat-item">
-                <div className="stat-number">24/7</div>
-                <div className="stat-label">Availability</div>
-              </div>
-              <div className="stat-item">
-                <div className="stat-number">&lt;2s</div>
-                <div className="stat-label">Response Time</div>
-              </div>
-            </div>
-          </div>
-          <div className="hero-visual">
-            <div className="chat-bubble-container">
-              <div className="chat-bubble chat-bubble-1">
-                <FaRobot className="bubble-icon" />
-                <div className="bubble-text">
-                  <div className="bubble-title">AI Assistant</div>
-                  <div className="bubble-message">How can I help you today?</div>
+            <div className="landing-proof-row">
+              {metrics.map((metric) => (
+                <div className="landing-proof-item" key={metric.label}>
+                  <strong>{metric.value}</strong>
+                  <span>{metric.label}</span>
                 </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="product-preview" aria-label="Product dashboard preview">
+            <div className="preview-toolbar">
+              <div>
+                <span className="preview-label">Live inbox</span>
+                <strong>WhatsApp Operations</strong>
               </div>
-              <div className="chat-bubble chat-bubble-2">
-                <div className="bubble-text">
-                  <div className="bubble-message">What's my order status?</div>
+              <span className="preview-status">AI online</span>
+            </div>
+
+            <div className="preview-grid">
+              <aside className="preview-sidebar">
+                <button 
+                  className={`preview-tab ${activeTab === 'inbox' ? 'active' : ''}`}
+                  onClick={() => setActiveTab('inbox')}
+                >
+                  <FaComments /> Inbox <span>18</span>
+                </button>
+                <button 
+                  className={`preview-tab ${activeTab === 'orders' ? 'active' : ''}`}
+                  onClick={() => setActiveTab('orders')}
+                >
+                  <FaBox /> Orders <span>42</span>
+                </button>
+                <button 
+                  className={`preview-tab alert ${activeTab === 'escalations' ? 'active' : ''}`}
+                  onClick={() => setActiveTab('escalations')}
+                >
+                  <FaHeadset /> Escalations <span>5</span>
+                </button>
+                <button 
+                  className={`preview-tab ${activeTab === 'analytics' ? 'active' : ''}`}
+                  onClick={() => setActiveTab('analytics')}
+                >
+                  <FaChartLine /> Analytics
+                </button>
+              </aside>
+
+              {activeTab === 'inbox' && (
+                <div className="preview-conversation">
+                  <div className="preview-message customer">
+                    <span>Customer</span>
+                    Is my order arriving today?
+                  </div>
+                  <div className="preview-message bot">
+                    <span>AI assistant</span>
+                    Yes. Order #ORD-1017 is out for delivery and should arrive between 4-7 PM.
+                  </div>
+                  <div className="preview-message note">
+                    <FaCheck />
+                    Tracking link sent. No agent needed.
+                  </div>
                 </div>
-              </div>
-              <div className="chat-bubble chat-bubble-3">
-                <FaRobot className="bubble-icon" />
-                <div className="bubble-text">
-                  <div className="bubble-message">Your order #12345 is out for delivery!</div>
+              )}
+
+              {activeTab === 'orders' && (
+                <div className="preview-conversation scrollable-preview">
+                  <div className="mock-order-row">
+                    <div>
+                      <strong>Order #ORD-1017</strong>
+                      <span>Premium Leather Boots</span>
+                    </div>
+                    <span className="mock-badge success">Delivered</span>
+                    <strong>$142.00</strong>
+                  </div>
+                  <div className="mock-order-row">
+                    <div>
+                      <strong>Order #ORD-1016</strong>
+                      <span>Wireless Headphones</span>
+                    </div>
+                    <span className="mock-badge info">Shipped</span>
+                    <strong>$89.50</strong>
+                  </div>
+                  <div className="mock-order-row">
+                    <div>
+                      <strong>Order #ORD-1015</strong>
+                      <span>Smart Fitness Watch</span>
+                    </div>
+                    <span className="mock-badge warning">Processing</span>
+                    <strong>$210.00</strong>
+                  </div>
                 </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
+              )}
 
-      {/* Problems Solved Section */}
-      <section className="problems-section">
-        <div className="section-container">
-          <div className="section-header">
-            <h2 className="section-title">Transform Your Support Operations</h2>
-            <p className="section-subtitle">See the difference AI automation makes</p>
-          </div>
-          <div className="comparison-grid">
-            <div className="comparison-card before-card">
-              <div className="comparison-header">
-                <div className="comparison-icon before-icon">❌</div>
-                <h3>Before AI Automation</h3>
-              </div>
-              <ul className="comparison-list">
-                <li>High support costs with multiple agents</li>
-                <li>Limited to business hours only</li>
-                <li>Slow response times (5-10 minutes)</li>
-                <li>Inconsistent customer experience</li>
-                <li>Manual order tracking and updates</li>
-                <li>Overwhelmed during peak hours</li>
-              </ul>
-            </div>
-            <div className="comparison-card after-card">
-              <div className="comparison-header">
-                <div className="comparison-icon after-icon">✓</div>
-                <h3>With AI Support Bot</h3>
-              </div>
-              <ul className="comparison-list">
-                <li>80% cost reduction on support</li>
-                <li>24/7 availability, never miss a customer</li>
-                <li>Instant responses (&lt;2 seconds)</li>
-                <li>Consistent, professional interactions</li>
-                <li>Automated order tracking & updates</li>
-                <li>Scales infinitely with demand</li>
-              </ul>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Key Features Section */}
-      <section id="features" className="features-section">
-        <div className="section-container">
-          <div className="section-header">
-            <h2 className="section-title">Powerful Features Built for Scale</h2>
-            <p className="section-subtitle">Everything you need to automate customer support</p>
-          </div>
-          <div className="features-grid">
-            <div className="feature-card">
-              <div className="feature-icon">
-                <FaClock />
-              </div>
-              <h3 className="feature-title">24/7 AI Automation</h3>
-              <p className="feature-description">
-                Powered by Google Gemini, our AI handles customer inquiries instantly, 
-                understands context, and provides accurate responses around the clock.
-              </p>
-              <ul className="feature-list">
-                <li><FaCheck /> Natural language understanding</li>
-                <li><FaCheck /> Multi-language support</li>
-                <li><FaCheck /> Context-aware responses</li>
-              </ul>
-            </div>
-
-            <div className="feature-card">
-              <div className="feature-icon">
-                <FaShoppingCart />
-              </div>
-              <h3 className="feature-title">E-commerce Integration</h3>
-              <p className="feature-description">
-                Seamlessly connect with Shopify, WooCommerce, or any custom store. 
-                Automatic order sync via webhooks and real-time updates.
-              </p>
-              <ul className="feature-list">
-                <li><FaCheck /> Shopify & WooCommerce ready</li>
-                <li><FaCheck /> Real-time order tracking</li>
-                <li><FaCheck /> Automatic notifications</li>
-              </ul>
-            </div>
-
-            <div className="feature-card">
-              <div className="feature-icon">
-                <FaHeadset />
-              </div>
-              <h3 className="feature-title">Human-in-the-Loop</h3>
-              <p className="feature-description">
-                Smart escalation system detects complex issues and routes them to 
-                human agents. Best of both worlds: AI efficiency + human empathy.
-              </p>
-              <ul className="feature-list">
-                <li><FaCheck /> Intelligent escalation</li>
-                <li><FaCheck /> Priority queue management</li>
-                <li><FaCheck /> Seamless handoff</li>
-              </ul>
-            </div>
-
-            <div className="feature-card">
-              <div className="feature-icon">
-                <FaChartLine />
-              </div>
-              <h3 className="feature-title">Real-time Dashboard</h3>
-              <p className="feature-description">
-                Monitor conversations, track orders, and analyze performance with 
-                our beautiful, intuitive dashboard. Make data-driven decisions.
-              </p>
-              <ul className="feature-list">
-                <li><FaCheck /> Live conversation monitoring</li>
-                <li><FaCheck /> Performance analytics</li>
-                <li><FaCheck /> Custom reports</li>
-              </ul>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Testimonials Section */}
-      <section id="testimonials" className="testimonials-section">
-        <div className="section-container">
-          <div className="section-header">
-            <h2 className="section-title">Trusted by Growing Businesses</h2>
-            <p className="section-subtitle">See what our customers say</p>
-          </div>
-          <div className="testimonials-grid">
-            <div className="testimonial-card">
-              <div className="testimonial-stars">
-                <FaStar /><FaStar /><FaStar /><FaStar /><FaStar />
-              </div>
-              <p className="testimonial-text">
-                "This AI bot reduced our support costs by 75% while improving response times. 
-                Our customers love the instant replies, and we can finally scale without 
-                hiring more agents."
-              </p>
-              <div className="testimonial-author">
-                <div className="author-avatar">JD</div>
-                <div className="author-info">
-                  <div className="author-name">John Davis</div>
-                  <div className="author-role">CEO, TechStore</div>
+              {activeTab === 'escalations' && (
+                <div className="preview-conversation">
+                  <div className="mock-escalation-alert">
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                      <span className="mock-badge urgent">URGENT ESCALATION</span>
+                      <span style={{ fontSize: '11px', color: '#a1a1aa' }}>Just now</span>
+                    </div>
+                    <p style={{ margin: '0 0 12px 0', fontSize: '13px', color: '#e4e4e7', textAlign: 'left' }}>
+                      Customer **917777777777** triggered high-priority keyword: *"I want a refund immediately, my order is late."*
+                    </p>
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <button className="preview-btn-success" onClick={() => navigate('/login')}>Pause AI & Takeover</button>
+                      <button className="preview-btn-secondary" onClick={() => navigate('/login')}>View Logs</button>
+                    </div>
+                  </div>
                 </div>
-              </div>
-            </div>
+              )}
 
-            <div className="testimonial-card">
-              <div className="testimonial-stars">
-                <FaStar /><FaStar /><FaStar /><FaStar /><FaStar />
-              </div>
-              <p className="testimonial-text">
-                "The Shopify integration is seamless. Orders sync automatically, and customers 
-                get instant tracking updates. Setup took less than 30 minutes. Absolutely worth it!"
-              </p>
-              <div className="testimonial-author">
-                <div className="author-avatar">SM</div>
-                <div className="author-info">
-                  <div className="author-name">Sarah Martinez</div>
-                  <div className="author-role">Operations Manager, FashionHub</div>
+              {activeTab === 'analytics' && (
+                <div className="preview-conversation grid-analytics">
+                  <div className="analytics-preview-card">
+                    <span>AI Resolution Rate</span>
+                    <strong>84.2%</strong>
+                    <span className="percent-up">+2.4% this week</span>
+                  </div>
+                  <div className="analytics-preview-card">
+                    <span>Avg Response Time</span>
+                    <strong>1.2s</strong>
+                    <span className="percent-down">-0.6s faster</span>
+                  </div>
+                  <div className="analytics-preview-card">
+                    <span>Active Conversations</span>
+                    <strong>248</strong>
+                    <span className="percent-up">24/7 coverage</span>
+                  </div>
                 </div>
-              </div>
-            </div>
+              )}
 
-            <div className="testimonial-card">
-              <div className="testimonial-stars">
-                <FaStar /><FaStar /><FaStar /><FaStar /><FaStar />
-              </div>
-              <p className="testimonial-text">
-                "The human escalation feature is brilliant. AI handles 90% of queries, and 
-                complex issues are routed to our team. Customer satisfaction is up 40%!"
-              </p>
-              <div className="testimonial-author">
-                <div className="author-avatar">MK</div>
-                <div className="author-info">
-                  <div className="author-name">Michael Kim</div>
-                  <div className="author-role">Support Lead, ElectroMart</div>
+              <div className="preview-insights">
+                <div>
+                  <span>Resolution rate</span>
+                  <strong>84.2%</strong>
+                </div>
+                <div>
+                  <span>Urgent queue</span>
+                  <strong>5</strong>
+                </div>
+                <div>
+                  <span>Broadcast replies</span>
+                  <strong>214</strong>
                 </div>
               </div>
             </div>
           </div>
-        </div>
-      </section>
+        </section>
 
-      {/* Pricing Section */}
-      <section id="pricing" className="pricing-section">
-        <div className="section-container">
-          <div className="section-header">
-            <h2 className="section-title">Simple, Transparent Pricing</h2>
-            <p className="section-subtitle">Choose the plan that fits your business</p>
+        <section id="workflows" className="landing-section">
+          <div className="section-heading">
+            <span>Core workflows</span>
+            <h2>Built for the daily work of support teams</h2>
+            <p>Less decoration, more operating leverage: every screen maps to a real task inside a WhatsApp support business.</p>
           </div>
+
+          <div className="workflow-grid">
+            {workflows.map((workflow) => (
+              <article className="workflow-card" key={workflow.title}>
+                <div className="workflow-icon">{workflow.icon}</div>
+                <h3>{workflow.title}</h3>
+                <p>{workflow.copy}</p>
+              </article>
+            ))}
+          </div>
+        </section>
+
+        <section id="platform" className="platform-section">
+          <div className="platform-copy">
+            <span>Platform depth</span>
+            <h2>A real startup-grade backend is already part of the product.</h2>
+            <p>
+              The UI is designed around the project you have: multi-tenant admins, WhatsApp connections, order syncing, AI logs, broadcasts, invoices, and demo request handling.
+            </p>
+            <button className="landing-secondary-button" onClick={() => navigate('/dashboard')}>
+              View product console
+            </button>
+          </div>
+
+          <div className="platform-list">
+            {platformItems.map((item) => (
+              <div className="platform-list-item" key={item}>
+                <FaCheck />
+                <span>{item}</span>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        <section className="security-band">
+          <div className="security-item">
+            <FaShieldAlt />
+            <div>
+              <strong>Operational visibility</strong>
+              <span>Track conversations, escalations, orders, AI responses, and broadcasts from one console.</span>
+            </div>
+          </div>
+          <div className="security-item">
+            <FaPlug />
+            <div>
+              <strong>Integration ready</strong>
+              <span>Use the existing webhook and store integration layer instead of a mock marketing shell.</span>
+            </div>
+          </div>
+          <div className="security-item">
+            <FaLock />
+            <div>
+              <strong>Admin-safe access</strong>
+              <span>Support for admin roles, super-admin views, and authenticated dashboard sessions.</span>
+            </div>
+          </div>
+        </section>
+
+        <section id="pricing" className="landing-section pricing-section">
+          <div className="section-heading">
+            <span>Pricing</span>
+            <h2>Plans that fit growing WhatsApp support volume</h2>
+            <p>Simple tiers for demo conversations, active stores, and larger support operations.</p>
+          </div>
+
           <div className="pricing-grid">
-            <div className="pricing-card">
-              <div className="pricing-header">
-                <h3 className="pricing-name">Starter</h3>
-                <div className="pricing-price">
-                  <span className="price-currency">$</span>
-                  <span className="price-amount">29</span>
-                  <span className="price-period">/month</span>
-                </div>
-                <p className="pricing-description">Ideal for small shops</p>
-              </div>
-              <ul className="pricing-features">
-                <li><FaCheck /> 500 Messages/month</li>
-                <li><FaCheck /> Basic Gemini Pro Integration</li>
-                <li><FaCheck /> Standard Dashboard</li>
-                <li><FaCheck /> WhatsApp Integration</li>
-                <li><FaCheck /> Email Support</li>
+            <article className="pricing-card">
+              <h3>Starter</h3>
+              <div className="price">$29<span>/month</span></div>
+              <p>For small stores validating AI support.</p>
+              <ul>
+                <li><FaCheck /> 500 AI messages</li>
+                <li><FaCheck /> WhatsApp connection</li>
+                <li><FaCheck /> Knowledge base</li>
+                <li><FaCheck /> Basic analytics</li>
               </ul>
-              <button className="pricing-btn" onClick={() => navigate('/login')}>
-                Get Started
-              </button>
-            </div>
+              <button onClick={() => navigate('/book-demo')}>Start with demo</button>
+            </article>
 
-            <div className="pricing-card pricing-card-featured">
-              <div className="pricing-badge">Most Popular</div>
-              <div className="pricing-header">
-                <h3 className="pricing-name">Professional</h3>
-                <div className="pricing-price">
-                  <span className="price-currency">$</span>
-                  <span className="price-amount">79</span>
-                  <span className="price-period">/month</span>
-                </div>
-                <p className="pricing-description">Best for growing brands</p>
-              </div>
-              <ul className="pricing-features">
-                <li><FaCheck /> 2,500 Messages/month</li>
-                <li><FaCheck /> Advanced Gemini 1.5 Flash (Speed)</li>
-                <li><FaCheck /> E-commerce Sync</li>
-                <li><FaCheck /> Advanced Dashboard & Analytics</li>
-                <li><FaCheck /> Priority Support</li>
-                <li><FaCheck /> Custom Branding</li>
-                <li><FaCheck /> API Access</li>
+            <article className="pricing-card featured">
+              <div className="pricing-tag">Best fit</div>
+              <h3>Growth</h3>
+              <div className="price">$79<span>/month</span></div>
+              <p>For stores managing regular order and support volume.</p>
+              <ul>
+                <li><FaCheck /> 2,500 AI messages</li>
+                <li><FaCheck /> Order sync and webhooks</li>
+                <li><FaCheck /> Broadcast campaigns</li>
+                <li><FaCheck /> Escalation queue</li>
+                <li><FaCheck /> Advanced analytics</li>
               </ul>
-              <button className="pricing-btn pricing-btn-featured" onClick={() => navigate('/login')}>
-                Get Started
-              </button>
-            </div>
+              <button onClick={() => navigate('/book-demo')}>Book demo</button>
+            </article>
 
-            <div className="pricing-card">
-              <div className="pricing-header">
-                <h3 className="pricing-name">Enterprise</h3>
-                <div className="pricing-price">
-                  <span className="price-amount">Custom</span>
-                </div>
-                <p className="pricing-description">For large scale operations</p>
-              </div>
-              <ul className="pricing-features">
-                <li><FaCheck /> Unlimited Messages</li>
-                <li><FaCheck /> Gemini 1.5 Pro (High Intelligence)</li>
-                <li><FaCheck /> Custom Webhooks</li>
-                <li><FaCheck /> Dedicated Account Manager</li>
-                <li><FaCheck /> White-label Solution</li>
-                <li><FaCheck /> Custom AI Training</li>
-                <li><FaCheck /> SLA Guarantee</li>
-                <li><FaCheck /> On-premise Deployment</li>
+            <article className="pricing-card">
+              <h3>Scale</h3>
+              <div className="price">Custom</div>
+              <p>For teams needing higher limits and custom workflows.</p>
+              <ul>
+                <li><FaCheck /> Custom message volume</li>
+                <li><FaCheck /> Dedicated onboarding</li>
+                <li><FaCheck /> Custom integrations</li>
+                <li><FaCheck /> Super-admin controls</li>
               </ul>
-              <button className="pricing-btn" onClick={() => scrollToSection('contact')}>
-                Contact Sales
-              </button>
-            </div>
+              <button onClick={() => navigate('/book-demo')}>Talk to sales</button>
+            </article>
           </div>
+        </section>
+      </main>
+
+      <footer className="landing-footer">
+        <div className="footer-brand">
+          <FaWhatsapp />
+          <span>AI Support Bot</span>
         </div>
-      </section>
-
-      {/* Trust Section */}
-      <section className="trust-section">
-        <div className="section-container">
-          <div className="trust-grid">
-            <div className="trust-item">
-              <FaShieldAlt className="trust-icon" />
-              <h4>Enterprise Security</h4>
-              <p>Bank-level encryption and SOC 2 compliant</p>
-            </div>
-            <div className="trust-item">
-              <FaBolt className="trust-icon" />
-              <h4>99.9% Uptime</h4>
-              <p>Reliable infrastructure with automatic failover</p>
-            </div>
-            <div className="trust-item">
-              <FaGlobe className="trust-icon" />
-              <h4>Global Scale</h4>
-              <p>Servers in 15+ regions worldwide</p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Final CTA Section */}
-      <section className="final-cta-section">
-        <div className="section-container">
-          <div className="final-cta-content">
-            <h2 className="final-cta-title">Ready to Transform Your Customer Support?</h2>
-            <p className="final-cta-subtitle">
-              Join hundreds of businesses automating their WhatsApp support with AI. 
-              Get started in minutes, no credit card required.
-            </p>
-            <div className="final-cta-buttons">
-              <button className="btn-primary-hero" onClick={() => navigate('/login')}>
-                Get Started <FaArrowRight />
-              </button>
-              <button className="btn-secondary-hero" onClick={() => scrollToSection('pricing')}>
-                View Pricing
-              </button>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Footer */}
-      <footer id="contact" className="landing-footer">
-        <div className="footer-container">
-          <div className="footer-grid">
-            <div className="footer-column">
-              <div className="footer-logo">
-                <FaWhatsapp />
-                <span>AI Support Bot</span>
-              </div>
-              <p className="footer-description">
-                Automate your customer support on WhatsApp with intelligent AI. 
-                Scale your business without scaling your team.
-              </p>
-            </div>
-            <div className="footer-column">
-              <h4 className="footer-title">Product</h4>
-              <ul className="footer-links">
-                <li><a onClick={() => scrollToSection('features')}>Features</a></li>
-                <li><a onClick={() => scrollToSection('pricing')}>Pricing</a></li>
-                <li><a onClick={() => navigate('/dashboard')}>Dashboard</a></li>
-                <li><a href="#">API Docs</a></li>
-              </ul>
-            </div>
-            <div className="footer-column">
-              <h4 className="footer-title">Company</h4>
-              <ul className="footer-links">
-                <li><a href="#">About Us</a></li>
-                <li><a href="#">Blog</a></li>
-                <li><a href="#">Careers</a></li>
-                <li><a href="#">Contact</a></li>
-              </ul>
-            </div>
-            <div className="footer-column">
-              <h4 className="footer-title">Legal</h4>
-              <ul className="footer-links">
-                <li><a href="#">Privacy Policy</a></li>
-                <li><a href="#">Terms of Service</a></li>
-                <li><a href="#">Security</a></li>
-                <li><a href="#">GDPR</a></li>
-              </ul>
-            </div>
-          </div>
-          <div className="footer-bottom">
-            <p>&copy; 2026 AI WhatsApp Support Bot. All rights reserved.</p>
-            <div className="footer-social">
-              <a href="#" aria-label="Twitter">𝕏</a>
-              <a href="#" aria-label="LinkedIn">in</a>
-              <a href="#" aria-label="GitHub">⚡</a>
-            </div>
-          </div>
-        </div>
+        <p>WhatsApp support automation for real commerce operations.</p>
+        <button onClick={() => navigate('/book-demo')}>Book demo <FaArrowRight /></button>
       </footer>
+
+      {/* Floating WhatsApp Demo Widget */}
+      <div className={`floating-chat-widget ${isChatOpen ? 'open' : ''}`}>
+        {!isChatOpen ? (
+          <button 
+            className="chat-trigger-button" 
+            onClick={() => setIsChatOpen(true)}
+            aria-label="Open AI Demo Chat"
+          >
+            <FaWhatsapp />
+            <span className="pulse-notification">1</span>
+          </button>
+        ) : (
+          <div className="chat-window">
+            <div className="chat-window-header">
+              <FaWhatsapp className="chat-icon" />
+              <div>
+                <h4>AI Support Assistant</h4>
+                <span>Online • Powered by Gemini</span>
+              </div>
+              <button className="chat-close-btn" onClick={() => setIsChatOpen(false)}>×</button>
+            </div>
+
+            <div className="chat-window-messages">
+              {chatMessages.map((msg, i) => (
+                <div key={i} className={`chat-bubble ${msg.role}`}>
+                  <p style={{ margin: 0, whiteSpace: 'pre-line' }}>{msg.content}</p>
+                </div>
+              ))}
+              <div ref={chatEndRef} />
+            </div>
+
+            <form onSubmit={handleChatSubmit} className="chat-window-input">
+              <input
+                type="text"
+                value={chatInput}
+                onChange={(e) => setChatInput(e.target.value)}
+                placeholder="Type 'pricing', 'features'..."
+                required
+              />
+              <button type="submit"><FaArrowRight /></button>
+            </form>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

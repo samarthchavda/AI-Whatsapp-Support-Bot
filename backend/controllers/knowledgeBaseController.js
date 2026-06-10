@@ -42,6 +42,13 @@ exports.uploadKnowledgeBase = async (req, res) => {
 
     await knowledgeBase.save();
 
+    // Chunk and save embeddings for RAG
+    try {
+      await knowledgeBaseService.processAndSaveChunks(knowledgeBase);
+    } catch (chunkError) {
+      console.error('Failed to chunk and embed document:', chunkError);
+    }
+
     res.status(201).json({
       success: true,
       message: 'Knowledge base uploaded successfully',
@@ -178,11 +185,12 @@ exports.deleteKnowledgeBase = async (req, res) => {
     }
 
     // Delete the file
+    // Delete associated vector chunks
     try {
-      await fs.unlink(knowledgeBase.filePath);
-    } catch (fileError) {
-      console.error('Error deleting file:', fileError);
-      // Continue with database deletion even if file deletion fails
+      const KnowledgeBaseChunk = require('../models/KnowledgeBaseChunk');
+      await KnowledgeBaseChunk.deleteMany({ knowledgeBaseId: req.params.id });
+    } catch (chunkError) {
+      console.error('Error deleting chunks:', chunkError);
     }
 
     await KnowledgeBase.findByIdAndDelete(req.params.id);
@@ -229,8 +237,8 @@ exports.queryKnowledgeBase = async (req, res) => {
     // Extract texts from all active knowledge bases
     const texts = knowledgeBases.map(kb => kb.extractedText);
 
-    // Query using the knowledge base service
-    const result = await knowledgeBaseService.queryKnowledgeBase(question, texts);
+    // Query using the knowledge base service with RAG (adminId context)
+    const result = await knowledgeBaseService.queryKnowledgeBase(question, req.admin._id);
 
     res.json({
       success: true,
@@ -242,6 +250,68 @@ exports.queryKnowledgeBase = async (req, res) => {
       success: false,
       error: 'Failed to query knowledge base',
       message: error.message
+    });
+  }
+};
+
+/**
+ * Ingest website URL content into knowledge base
+ */
+exports.ingestURL = async (req, res) => {
+  try {
+    const { title, url, description } = req.body;
+
+    if (!title || !url) {
+      return res.status(400).json({
+        success: false,
+        error: 'Title and URL are required'
+      });
+    }
+
+    console.log(`🌐 Scraping text from URL: ${url}...`);
+
+    // Scrape URL
+    const text = await knowledgeBaseService.extractTextFromURL(url);
+
+    // Create knowledge base entry of type 'url'
+    const knowledgeBase = new KnowledgeBase({
+      title,
+      description: description || '',
+      fileType: 'url',
+      fileName: url,
+      filePath: url,
+      fileSize: text.length,
+      extractedText: text,
+      textLength: text.length,
+      uploadedBy: req.admin._id,
+      uploadedByName: req.admin.name
+    });
+
+    await knowledgeBase.save();
+
+    // Chunk and save embeddings for RAG
+    try {
+      await knowledgeBaseService.processAndSaveChunks(knowledgeBase);
+    } catch (chunkError) {
+      console.error('Failed to chunk and embed URL:', chunkError);
+    }
+
+    return res.status(201).json({
+      success: true,
+      message: 'URL content ingested successfully',
+      data: {
+        id: knowledgeBase._id,
+        title: knowledgeBase.title,
+        fileType: knowledgeBase.fileType,
+        textLength: knowledgeBase.textLength,
+        isActive: knowledgeBase.isActive
+      }
+    });
+  } catch (error) {
+    console.error('Error ingesting URL:', error);
+    return res.status(500).json({
+      success: false,
+      error: error.message || 'Failed to ingest URL'
     });
   }
 };

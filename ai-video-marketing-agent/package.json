@@ -1,0 +1,25 @@
+{
+  "name": "ai-video-marketing-agent",
+  "version": "1.0.0",
+  "description": "Standalone AI Video Marketing Agent that records user flows, generates audio voiceovers, compiles 9:16 reels, and posts to socials",
+  "main": "app.js",
+  "scripts": {
+    "start": "node app.js",
+    "dev": "nodemon app.js",
+    "test": "node scripts/testAgent.js"
+  },
+  "dependencies": {
+    "@ffmpeg-installer/ffmpeg": "^1.1.0",
+    "axios": "^1.5.1",
+    "dotenv": "^16.3.1",
+    "express": "^4.18.2",
+    "node-cron": "^4.2.1",
+    "openai": "^4.14.0",
+    "puppeteer": "^24.38.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1"
+  },
+  "author": "",
+  "license": "ISC"
+}

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { FaUpload, FaTrash, FaEye, FaToggleOn, FaToggleOff, FaFileAlt, FaFilePdf, FaRobot } from 'react-icons/fa';
+import { FaUpload, FaTrash, FaEye, FaToggleOn, FaToggleOff, FaFileAlt, FaFilePdf, FaFileCsv, FaGlobe, FaRobot } from 'react-icons/fa';
 
 function KnowledgeBase() {
   const [knowledgeBases, setKnowledgeBases] = useState([]);
@@ -231,6 +231,7 @@ function KnowledgeBase() {
               <ul style={{ color: '#a1a1aa', fontSize: '13px', lineHeight: '1.8', paddingLeft: '20px', margin: 0 }}>
                 <li><strong>PDF files:</strong> Business FAQs, policies, product catalogs</li>
                 <li><strong>TXT files:</strong> Plain text documents with Q&A</li>
+                <li><strong>CSV files:</strong> Tabular Q&A data or product lists</li>
                 <li><strong>Max size:</strong> 10MB per file</li>
                 <li><strong>Best practice:</strong> Use clear, structured content with questions and answers</li>
               </ul>
@@ -271,7 +272,7 @@ function KnowledgeBase() {
               <input 
                 type="file" 
                 name="file" 
-                accept=".pdf,.txt"
+                accept=".pdf,.txt,.csv"
                 required
                 style={{
                   width: '100%',
@@ -357,7 +358,15 @@ function KnowledgeBase() {
                 <tr key={kb._id}>
                   <td>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      {kb.fileType === 'pdf' ? <FaFilePdf color="#ef4444" /> : <FaFileAlt color="#10b981" />}
+                      {kb.fileType === 'pdf' ? (
+                        <FaFilePdf color="#ef4444" />
+                      ) : kb.fileType === 'csv' ? (
+                        <FaFileCsv color="#10b981" />
+                      ) : kb.fileType === 'url' ? (
+                        <FaGlobe color="#3b82f6" />
+                      ) : (
+                        <FaFileAlt color="#a1a1aa" />
+                      )}
                       <div>
                         <strong>{kb.title}</strong>
                         {kb.description && (
@@ -369,7 +378,15 @@ function KnowledgeBase() {
                     </div>
                   </td>
                   <td>
-                    <span className="badge" style={{ background: kb.fileType === 'pdf' ? 'rgba(239, 68, 68, 0.2)' : 'rgba(16, 185, 129, 0.2)' }}>
+                    <span className="badge" style={{ 
+                      background: kb.fileType === 'pdf' 
+                        ? 'rgba(239, 68, 68, 0.2)' 
+                        : kb.fileType === 'csv' 
+                        ? 'rgba(16, 185, 129, 0.2)' 
+                        : kb.fileType === 'url' 
+                        ? 'rgba(59, 130, 246, 0.2)' 
+                        : 'rgba(161, 161, 170, 0.2)' 
+                    }}>
                       {kb.fileType.toUpperCase()}
                     </span>
                   </td>

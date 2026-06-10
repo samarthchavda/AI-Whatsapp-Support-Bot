@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Link, useLocation, useNavigate, Navigate } from 'react-router-dom';
-import { FaWhatsapp, FaHome, FaComments, FaBox, FaExclamationTriangle, FaPlug, FaRobot, FaSearch, FaBell, FaPlus, FaSignOutAlt, FaUser, FaBrain, FaCommentDots, FaBroadcastTower, FaChartLine, FaCog, FaCrown } from 'react-icons/fa';
+import { FaWhatsapp, FaHome, FaComments, FaBox, FaExclamationTriangle, FaPlug, FaRobot, FaSearch, FaBell, FaPlus, FaSignOutAlt, FaUser, FaBrain, FaCommentDots, FaBroadcastTower, FaChartLine, FaCog, FaCrown, FaFileAlt, FaSun, FaMoon } from 'react-icons/fa';
+import api, { clearAuthState, refreshAuth, updateAdminProfile } from './services/api';
 import Dashboard from './pages/Dashboard';
+import Profile from './pages/Profile';
 import Conversations from './pages/Conversations';
 import Orders from './pages/Orders';
 import Escalations from './pages/Escalations';
@@ -19,6 +21,8 @@ import SuperAdmin from './pages/SuperAdmin';
 import SuperAdminUserDetail from './pages/SuperAdminUserDetail';
 import PlanManager from './pages/PlanManager';
 import DemoRequests from './pages/DemoRequests';
+import Billing from './pages/Billing';
+import Templates from './pages/Templates';
 import './App.css';
 
 function Sidebar({ admin, onLogout }) {
@@ -100,6 +104,16 @@ function Sidebar({ admin, onLogout }) {
                     <FaExclamationTriangle /> Escalations
                   </Link>
                 </li>
+                <li>
+                  <Link to="/dashboard/billing" className={isActive('/dashboard/billing')}>
+                    <FaCrown style={{ color: '#fbbf24' }} /> Billing & Plans
+                  </Link>
+                </li>
+                <li>
+                  <Link to="/dashboard/profile" className={isActive('/dashboard/profile')}>
+                    <FaUser /> Profile & Store
+                  </Link>
+                </li>
               </ul>
             </div>
             
@@ -130,6 +144,11 @@ function Sidebar({ admin, onLogout }) {
                   </Link>
                 </li>
                 <li>
+                  <Link to="/dashboard/templates" className={isActive('/dashboard/templates')}>
+                    <FaFileAlt /> Templates
+                  </Link>
+                </li>
+                <li>
                   <Link to="/dashboard/demo-chat" className={isActive('/dashboard/demo-chat')}>
                     <FaRobot /> Demo Chat
                   </Link>
@@ -142,20 +161,22 @@ function Sidebar({ admin, onLogout }) {
 
       {admin && (
         <div className="sidebar-footer">
-          <div className="sidebar-user">
-            <div className="sidebar-user-avatar">
-              {admin.name?.charAt(0)?.toUpperCase() || <FaUser />}
+          <Link to="/dashboard/profile" style={{ textDecoration: 'none', display: 'block' }}>
+            <div className="sidebar-user">
+              <div className="sidebar-user-avatar">
+                {admin.name?.charAt(0)?.toUpperCase() || <FaUser />}
+              </div>
+              <div className="sidebar-user-info">
+                <div className="sidebar-user-name">{admin.name}</div>
+                <div className="sidebar-user-email">{admin.email}</div>
+                {admin.role && (
+                  <span className={`sidebar-role-badge role-${admin.role}`}>
+                    {admin.role.replace('_', ' ')}
+                  </span>
+                )}
+              </div>
             </div>
-            <div className="sidebar-user-info">
-              <div className="sidebar-user-name">{admin.name}</div>
-              <div className="sidebar-user-email">{admin.email}</div>
-              {admin.role && (
-                <span className={`sidebar-role-badge role-${admin.role}`}>
-                  {admin.role.replace('_', ' ')}
-                </span>
-              )}
-            </div>
-          </div>
+          </Link>
           <button className="sidebar-logout-btn" onClick={onLogout}>
             <FaSignOutAlt /> Sign out
           </button>
@@ -165,13 +186,26 @@ function Sidebar({ admin, onLogout }) {
   );
 }
 
-function TopBar({ admin }) {
+function TopBar({ admin, onUpdateAdmin }) {
   const navigate = useNavigate();
   const greeting = () => {
     const hour = new Date().getHours();
     if (hour < 12) return 'Good morning';
     if (hour < 17) return 'Good afternoon';
     return 'Good evening';
+  };
+
+  const toggleTheme = async () => {
+    if (!admin) return;
+    const newTheme = admin.theme === 'dark' ? 'light' : 'dark';
+    try {
+      const response = await updateAdminProfile({ theme: newTheme });
+      if (response.data?.success) {
+        onUpdateAdmin(response.data.data.admin);
+      }
+    } catch (error) {
+      console.error('Failed to toggle theme:', error);
+    }
   };
 
   return (
@@ -195,6 +229,15 @@ function TopBar({ admin }) {
       </div>
 
       <div className="top-bar-actions">
+        <button 
+          className="icon-button theme-toggle" 
+          onClick={toggleTheme} 
+          title={`Switch to ${admin?.theme === 'dark' ? 'light' : 'dark'} theme`}
+          aria-label="Toggle Theme"
+        >
+          {admin?.theme === 'dark' ? <FaSun /> : <FaMoon />}
+        </button>
+
         <button className="icon-button" title="Notifications" aria-label="Notifications">
           <FaBell />
         </button>
@@ -217,32 +260,98 @@ function ProtectedRoute({ children, isAuthenticated }) {
   return isAuthenticated ? children : <Navigate to="/login" replace />;
 }
 
+const ACCESS_TOKEN_KEY = 'accessToken';
+const LEGACY_TOKEN_KEY = 'token';
+
+const getStoredAccessToken = () => localStorage.getItem(ACCESS_TOKEN_KEY) || localStorage.getItem(LEGACY_TOKEN_KEY);
+
+const decodeJwtPayload = (token) => {
+  const payload = token.split('.')[1];
+
+  if (!payload) {
+    return null;
+  }
+
+  const base64 = payload.replace(/-/g, '+').replace(/_/g, '/');
+  const paddedBase64 = base64.padEnd(base64.length + ((4 - (base64.length % 4)) % 4), '=');
+  return JSON.parse(window.atob(paddedBase64));
+};
+
+const isJwtExpired = (token) => {
+  try {
+    const decodedPayload = decodeJwtPayload(token);
+    return !decodedPayload || (typeof decodedPayload.exp === 'number' && decodedPayload.exp * 1000 <= Date.now());
+  } catch (error) {
+    return true;
+  }
+};
+
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [admin, setAdmin] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Check if user is already logged in
-    const token = localStorage.getItem('token');
-    const storedAdmin = localStorage.getItem('admin');
-    
-    if (token && storedAdmin) {
-      setIsAuthenticated(true);
-      setAdmin(JSON.parse(storedAdmin));
-    }
-    
-    setLoading(false);
+    const initializeAuth = async () => {
+      const storedAdmin = localStorage.getItem('admin');
+      const storedToken = getStoredAccessToken();
+
+      if (storedToken && storedAdmin && !isJwtExpired(storedToken)) {
+        setIsAuthenticated(true);
+        setAdmin(JSON.parse(storedAdmin));
+        setLoading(false);
+        return;
+      }
+
+      try {
+        const response = await refreshAuth();
+        const refreshedToken = response;
+        const refreshedAdmin = localStorage.getItem('admin');
+
+        if (refreshedToken && refreshedAdmin) {
+          setIsAuthenticated(true);
+          setAdmin(JSON.parse(refreshedAdmin));
+          setLoading(false);
+          return;
+        }
+      } catch (error) {
+        clearAuthState();
+      }
+
+      setIsAuthenticated(false);
+      setAdmin(null);
+      setLoading(false);
+    };
+
+    initializeAuth();
   }, []);
+
+  useEffect(() => {
+    if (admin && admin.theme) {
+      document.body.classList.toggle('dark-theme', admin.theme === 'dark');
+    } else {
+      document.body.classList.remove('dark-theme');
+    }
+  }, [admin]);
+
+  const handleUpdateAdmin = (updatedAdmin) => {
+    setAdmin(updatedAdmin);
+    localStorage.setItem('admin', JSON.stringify(updatedAdmin));
+  };
 
   const handleLogin = (adminData) => {
     setIsAuthenticated(true);
     setAdmin(adminData);
   };
 
-  const handleLogout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('admin');
+  const handleLogout = async () => {
+    try {
+      await api.post('/auth/logout');
+    } catch (error) {
+      // Ignore logout API failures and continue clearing local state.
+    }
+
+    clearAuthState();
     setIsAuthenticated(false);
     setAdmin(null);
   };
@@ -287,7 +396,7 @@ function App() {
                 <Sidebar admin={admin} onLogout={handleLogout} />
                 
                 <div className="main-content">
-                  <TopBar admin={admin} />
+                  <TopBar admin={admin} onUpdateAdmin={handleUpdateAdmin} />
 
                   <div className="page-content">
                   <Routes>
@@ -309,7 +418,10 @@ function App() {
                     <Route path="/knowledge-base" element={<KnowledgeBase />} />
                     <Route path="/integrations" element={<Integrations />} />
                     <Route path="/whatsapp-connect" element={<WhatsAppConnect />} />
+                    <Route path="/templates" element={<Templates />} />
                     <Route path="/demo-chat" element={<DemoChat />} />
+                    <Route path="/billing" element={<Billing />} />
+                    <Route path="/profile" element={<Profile admin={admin} onUpdateAdmin={handleUpdateAdmin} />} />
                     
                     {/* Super Admin Routes */}
                     <Route path="/super-admin" element={<SuperAdmin />} />

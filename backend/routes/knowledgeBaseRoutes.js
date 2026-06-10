@@ -24,14 +24,14 @@ const storage = multer.diskStorage({
 });
 
 const fileFilter = (req, file, cb) => {
-  // Accept PDF and TXT files only
-  const allowedTypes = ['.pdf', '.txt'];
+  // Accept PDF, TXT, and CSV files
+  const allowedTypes = ['.pdf', '.txt', '.csv'];
   const ext = path.extname(file.originalname).toLowerCase();
   
   if (allowedTypes.includes(ext)) {
     cb(null, true);
   } else {
-    cb(new Error('Only PDF and TXT files are allowed'), false);
+    cb(new Error('Only PDF, TXT, and CSV files are allowed'), false);
   }
 };
 
@@ -45,6 +45,7 @@ const upload = multer({
 
 // All routes require authentication
 router.post('/', verifyToken, upload.single('file'), knowledgeBaseController.uploadKnowledgeBase);
+router.post('/url', verifyToken, knowledgeBaseController.ingestURL);
 router.get('/', verifyToken, knowledgeBaseController.getAllKnowledgeBases);
 router.get('/:id', verifyToken, knowledgeBaseController.getKnowledgeBaseById);
 router.put('/:id', verifyToken, knowledgeBaseController.updateKnowledgeBase);

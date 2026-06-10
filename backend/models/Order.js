@@ -73,6 +73,10 @@ const orderSchema = new mongoose.Schema({
     path: String,
     uploadedAt: Date
   },
+  externalOrderId: {
+    type: String,
+    index: true
+  },
   createdBy: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Admin'

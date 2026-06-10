@@ -54,7 +54,7 @@ class WebhookAuth {
       });
     }
 
-    const body = JSON.stringify(req.body);
+    const body = req.rawBody ? req.rawBody.toString('utf8') : JSON.stringify(req.body);
     const hash = crypto
       .createHmac('sha256', shopifySecret)
       .update(body, 'utf8')
@@ -89,7 +89,7 @@ class WebhookAuth {
       });
     }
 
-    const body = JSON.stringify(req.body);
+    const body = req.rawBody ? req.rawBody.toString('utf8') : JSON.stringify(req.body);
     const hash = crypto
       .createHmac('sha256', wooSecret)
       .update(body, 'utf8')

@@ -28,26 +28,47 @@ exports.handleExternalOrder = async (req, res) => {
     const result = await webhookService.processWebhook(source, webhookData);
     order = result.order;
 
-    console.log(`✅ Order created: ${order.orderId} (External: ${result.externalOrderId})`);
-
-    // Send WhatsApp confirmation
     let whatsappResult = { success: false, error: 'Not attempted' };
-    
-    if (order.customerPhone) {
-      console.log(`📱 Sending WhatsApp confirmation to ${order.customerPhone}...`);
-      whatsappResult = await webhookService.sendOrderConfirmation(order, result.customer);
-      
-      if (whatsappResult.success) {
-        console.log('✅ WhatsApp confirmation sent successfully');
-      } else {
-        console.warn('⚠️ WhatsApp confirmation failed:', whatsappResult.error);
+
+    if (result.isUpdate) {
+      console.log(`✅ Order updated: ${order.orderId} (External: ${result.externalOrderId})`);
+
+      const statusChanged = result.oldStatus !== order.status;
+      const isShippedOrDelivered = order.status === 'shipped' || order.status === 'delivered';
+
+      if (order.customerPhone && (statusChanged && isShippedOrDelivered)) {
+        console.log(`📱 Sending WhatsApp tracking update to ${order.customerPhone}...`);
+        whatsappResult = await webhookService.sendTrackingUpdate(order, result.customer, {
+          trackingNumber: order.trackingNumber,
+          status: order.status
+        });
+
+        if (whatsappResult.success) {
+          console.log('✅ WhatsApp tracking update sent successfully');
+        } else {
+          console.warn('⚠️ WhatsApp tracking update failed:', whatsappResult.error);
+        }
+      }
+    } else {
+      console.log(`✅ Order created: ${order.orderId} (External: ${result.externalOrderId})`);
+
+      // Send WhatsApp confirmation
+      if (order.customerPhone) {
+        console.log(`📱 Sending WhatsApp confirmation to ${order.customerPhone}...`);
+        whatsappResult = await webhookService.sendOrderConfirmation(order, result.customer);
+
+        if (whatsappResult.success) {
+          console.log('✅ WhatsApp confirmation sent successfully');
+        } else {
+          console.warn('⚠️ WhatsApp confirmation failed:', whatsappResult.error);
+        }
       }
     }
 
     // Log webhook
     webhookLog = new WebhookLog({
       source,
-      eventType: 'order_created',
+      eventType: result.isUpdate ? 'order_updated' : 'order_created',
       orderId: order.orderId,
       externalOrderId: result.externalOrderId,
       status: 'success',
@@ -55,7 +76,9 @@ exports.handleExternalOrder = async (req, res) => {
       responsePayload: {
         orderId: order.orderId,
         externalOrderId: result.externalOrderId,
-        customerPhone: order.customerPhone
+        customerPhone: order.customerPhone,
+        isUpdate: result.isUpdate,
+        whatsappSent: whatsappResult.success
       },
       whatsappSent: whatsappResult.success,
       whatsappError: whatsappResult.error,
@@ -67,9 +90,9 @@ exports.handleExternalOrder = async (req, res) => {
     await webhookLog.save();
 
     // Return success response
-    return res.status(201).json({
+    return res.status(result.isUpdate ? 200 : 201).json({
       success: true,
-      message: 'Order created successfully',
+      message: result.isUpdate ? 'Order updated successfully' : 'Order created successfully',
       data: {
         orderId: order.orderId,
         externalOrderId: result.externalOrderId,
@@ -78,6 +101,7 @@ exports.handleExternalOrder = async (req, res) => {
         totalAmount: order.totalAmount,
         status: order.status,
         whatsappSent: whatsappResult.success,
+        isUpdate: result.isUpdate,
         processingTime: `${Date.now() - startTime}ms`
       }
     });
@@ -328,4 +352,186 @@ exports.testWebhook = async (req, res) => {
   req.body = testData[source] || testData.custom;
   
   return exports.handleExternalOrder(req, res);
+};
+
+/**
+ * Handle Shopify fulfillment webhook
+ */
+exports.handleShopifyFulfillment = async (req, res) => {
+  const startTime = Date.now();
+  const webhookData = req.body;
+  
+  let webhookLog = null;
+  
+  try {
+    if (!webhookData || Object.keys(webhookData).length === 0) {
+      return res.status(400).json({ success: false, error: 'Empty payload' });
+    }
+    
+    console.log('📦 Processing Shopify fulfillment webhook...');
+    
+    const fulfillment = webhookData.fulfillment || webhookData;
+    const externalOrderId = fulfillment.order_id?.toString();
+    
+    if (!externalOrderId) {
+      return res.status(400).json({ success: false, error: 'Order ID is missing in fulfillment payload' });
+    }
+    
+    const trackingInfo = {
+      trackingNumber: fulfillment.tracking_number || (fulfillment.tracking_numbers && fulfillment.tracking_numbers[0]),
+      carrier: fulfillment.tracking_company,
+      trackingUrl: fulfillment.tracking_url || (fulfillment.tracking_urls && fulfillment.tracking_urls[0]),
+      status: fulfillment.shipment_status === 'delivered' ? 'delivered' : 'shipped'
+    };
+    
+    const result = await webhookService.processFulfillmentUpdate('shopify', externalOrderId, trackingInfo);
+    
+    // Log webhook
+    webhookLog = new WebhookLog({
+      source: 'shopify',
+      eventType: 'fulfillment_updated',
+      orderId: result.order.orderId,
+      externalOrderId,
+      status: 'success',
+      requestPayload: webhookData,
+      responsePayload: {
+        orderId: result.order.orderId,
+        externalOrderId,
+        status: result.order.status,
+        whatsappSent: result.whatsappSent
+      },
+      whatsappSent: result.whatsappSent,
+      whatsappError: result.whatsappError,
+      ipAddress: req.webhookMeta?.ipAddress,
+      userAgent: req.webhookMeta?.userAgent,
+      processingTime: Date.now() - startTime
+    });
+    await webhookLog.save();
+    
+    return res.status(200).json({
+      success: true,
+      message: 'Fulfillment processed successfully',
+      data: {
+        orderId: result.order.orderId,
+        status: result.order.status,
+        whatsappSent: result.whatsappSent,
+        processingTime: `${Date.now() - startTime}ms`
+      }
+    });
+  } catch (error) {
+    console.error('❌ Shopify fulfillment webhook error:', error.message);
+    
+    try {
+      webhookLog = new WebhookLog({
+        source: 'shopify',
+        eventType: 'fulfillment_updated',
+        externalOrderId: webhookData?.fulfillment?.order_id?.toString() || webhookData?.order_id?.toString() || 'unknown',
+        status: 'failed',
+        requestPayload: webhookData,
+        errorMessage: error.message,
+        whatsappSent: false,
+        ipAddress: req.webhookMeta?.ipAddress,
+        userAgent: req.webhookMeta?.userAgent,
+        processingTime: Date.now() - startTime
+      });
+      await webhookLog.save();
+    } catch (logError) {
+      console.error('Failed to log webhook error:', logError.message);
+    }
+    
+    return res.status(500).json({ success: false, error: error.message });
+  }
+};
+
+/**
+ * Handle Generic/Custom fulfillment update
+ */
+exports.handleGenericFulfillment = async (req, res) => {
+  const startTime = Date.now();
+  const source = req.params.source || 'custom';
+  const webhookData = req.body;
+  
+  let webhookLog = null;
+  
+  try {
+    if (!webhookData || Object.keys(webhookData).length === 0) {
+      return res.status(400).json({ success: false, error: 'Empty payload' });
+    }
+    
+    console.log(`📦 Processing ${source} generic fulfillment update...`);
+    
+    const externalOrderId = webhookData.order_id || webhookData.externalOrderId || webhookData.orderId;
+    const trackingNumber = webhookData.tracking_number || webhookData.trackingNumber;
+    const carrier = webhookData.carrier || webhookData.tracking_company;
+    const trackingUrl = webhookData.tracking_url || webhookData.trackingUrl;
+    const status = webhookData.status || 'shipped';
+    
+    if (!externalOrderId) {
+      return res.status(400).json({ success: false, error: 'order_id is required' });
+    }
+    
+    const trackingInfo = {
+      trackingNumber,
+      carrier,
+      trackingUrl,
+      status: status.toLowerCase() === 'delivered' ? 'delivered' : 'shipped'
+    };
+    
+    const result = await webhookService.processFulfillmentUpdate(source, externalOrderId, trackingInfo);
+    
+    // Log webhook
+    webhookLog = new WebhookLog({
+      source,
+      eventType: 'fulfillment_updated',
+      orderId: result.order.orderId,
+      externalOrderId: externalOrderId.toString(),
+      status: 'success',
+      requestPayload: webhookData,
+      responsePayload: {
+        orderId: result.order.orderId,
+        externalOrderId: externalOrderId.toString(),
+        status: result.order.status,
+        whatsappSent: result.whatsappSent
+      },
+      whatsappSent: result.whatsappSent,
+      whatsappError: result.whatsappError,
+      ipAddress: req.webhookMeta?.ipAddress,
+      userAgent: req.webhookMeta?.userAgent,
+      processingTime: Date.now() - startTime
+    });
+    await webhookLog.save();
+    
+    return res.status(200).json({
+      success: true,
+      message: 'Fulfillment update processed successfully',
+      data: {
+        orderId: result.order.orderId,
+        status: result.order.status,
+        whatsappSent: result.whatsappSent,
+        processingTime: `${Date.now() - startTime}ms`
+      }
+    });
+  } catch (error) {
+    console.error(`❌ ${source} generic fulfillment update error:`, error.message);
+    
+    try {
+      webhookLog = new WebhookLog({
+        source,
+        eventType: 'fulfillment_updated',
+        externalOrderId: webhookData?.order_id?.toString() || 'unknown',
+        status: 'failed',
+        requestPayload: webhookData,
+        errorMessage: error.message,
+        whatsappSent: false,
+        ipAddress: req.webhookMeta?.ipAddress,
+        userAgent: req.webhookMeta?.userAgent,
+        processingTime: Date.now() - startTime
+      });
+      await webhookLog.save();
+    } catch (logError) {
+      console.error('Failed to log webhook error:', logError.message);
+    }
+    
+    return res.status(500).json({ success: false, error: error.message });
+  }
 };

@@ -30,10 +30,13 @@ exports.handleWebhook = async (req, res) => {
       const changes = entry.changes[0];
       const webhookValue = changes.value;
 
+      // Extract customer name safely
+      const contactName = webhookValue.contacts?.[0]?.profile?.name || 'Customer';
+
       // Handle messages
       if (webhookValue.messages) {
         for (const message of webhookValue.messages) {
-          await handleIncomingMessage(message);
+          await handleIncomingMessage(message, contactName);
         }
       }
 
@@ -56,7 +59,7 @@ exports.handleWebhook = async (req, res) => {
 };
 
 // Process incoming message
-async function handleIncomingMessage(message) {
+async function handleIncomingMessage(message, contactName) {
   try {
     const customerPhone = message.from;
     const messageId = message.id;
@@ -82,9 +85,15 @@ async function handleIncomingMessage(message) {
     // Process with AI service
     const aiResponse = await aiService.processMessage({
       customerPhone,
-      customerName: message.profile?.name || 'Customer',
-      message: messageContent
+      customerName: contactName,
+      message: messageContent,
+      messageId
     });
+
+    if (aiResponse.botPaused) {
+      console.log(`🔕 Conversation for ${customerPhone} is in agent takeover. AI response skipped.`);
+      return;
+    }
 
     console.log(`🤖 AI Response: ${aiResponse.message}`);
 
@@ -96,20 +105,22 @@ async function handleIncomingMessage(message) {
       console.error('💡 Check WHATSAPP_ACCESS_TOKEN and WHATSAPP_PHONE_NUMBER_ID in .env');
     } else {
       console.log('✅ Reply sent successfully');
+      
+      // Update assistant message with outgoing message ID
+      if (sendResult.messageId) {
+        const conversation = await Conversation.findOne({ customerPhone }).sort({ updatedAt: -1 });
+        if (conversation && conversation.messages.length > 0) {
+          for (let i = conversation.messages.length - 1; i >= 0; i--) {
+            if (conversation.messages[i].role === 'assistant') {
+              conversation.messages[i].messageId = sendResult.messageId;
+              conversation.messages[i].status = 'sent';
+              await conversation.save();
+              break;
+            }
+          }
+        }
+      }
     }
-
-    // Log conversation
-    await logConversation({
-      customerPhone,
-      customerName: message.profile?.name || 'Customer',
-      userMessage: messageContent,
-      assistantMessage: aiResponse.message,
-      intent: aiResponse.intent,
-      escalated: aiResponse.escalated,
-      escalationReason: aiResponse.escalationReason,
-      messageId,
-      timestamp: new Date(timestamp * 1000)
-    });
 
   } catch (error) {
     console.error('❌ Error processing message:', error);
@@ -124,61 +135,15 @@ async function handleStatusUpdate(status) {
 
     console.log(`📊 Message ${messageId} - Status: ${statusType}`);
 
-    // Update conversation with delivery status
+    // Update conversation message status using messageId
     await Conversation.updateOne(
-      { 'messages._id': messageId },
-      { 'messages.$.status': statusType }
+      { 'messages.messageId': messageId },
+      { $set: { 'messages.$.status': statusType } }
     );
 
     return { messageId, status: statusType };
   } catch (error) {
     console.error('Error handling status:', error);
-  }
-}
-
-// Log conversation
-async function logConversation(data) {
-  try {
-    let conversation = await Conversation.findOne({
-      customerPhone: data.customerPhone,
-      status: { $in: ['active', 'escalated'] }
-    });
-
-    if (!conversation) {
-      conversation = new Conversation({
-        customerPhone: data.customerPhone,
-        customerName: data.customerName,
-        messages: [],
-        status: 'active'
-      });
-    }
-
-    conversation.messages.push({
-      role: 'user',
-      content: data.userMessage,
-      intent: data.intent,
-      messageId: data.messageId,
-      timestamp: data.timestamp
-    });
-
-    conversation.messages.push({
-      role: 'assistant',
-      content: data.assistantMessage,
-      intent: data.intent,
-      timestamp: new Date()
-    });
-
-    if (data.escalated) {
-      conversation.escalated = true;
-      conversation.escalationReason = data.escalationReason;
-      conversation.escalatedAt = new Date();
-      conversation.status = 'escalated';
-    }
-
-    await conversation.save();
-    console.log('💾 Conversation logged');
-  } catch (error) {
-    console.error('Error logging conversation:', error);
   }
 }
 
@@ -222,11 +187,17 @@ exports.sendMessage = async (req, res) => {
 // Get WhatsApp status
 exports.getStatus = async (req, res) => {
   try {
-    const phoneDetails = await whatsappCloudAPI.getPhoneNumberDetails();
+    const isConfigured = whatsappCloudAPI.isConfigured;
+    let phoneDetails = null;
+    
+    if (isConfigured) {
+      phoneDetails = await whatsappCloudAPI.getPhoneNumberDetails();
+    }
 
     res.json({
       service: 'WhatsApp Cloud API',
-      status: 'active',
+      status: isConfigured ? 'active' : 'disconnected',
+      isConfigured,
       phoneNumber: phoneDetails?.phone_number || 'N/A',
       verified: phoneDetails?.verified_name || 'Not verified',
       displayName: phoneDetails?.display_phone_number || 'N/A'

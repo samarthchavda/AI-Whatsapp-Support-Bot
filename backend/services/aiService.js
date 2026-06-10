@@ -7,6 +7,7 @@ const Escalation = require('../models/Escalation');
 const Conversation = require('../models/Conversation');
 const AILog = require('../models/AILog');
 const KnowledgeBase = require('../models/KnowledgeBase');
+const Admin = require('../models/Admin');
 const knowledgeBaseService = require('./knowledgeBaseService');
 
 class AIService {
@@ -27,6 +28,196 @@ class AIService {
       .toLowerCase()
       .split(',')
       .map(k => k.trim());
+
+    // In-memory cache keeps repeated WhatsApp questions off the Gemini/OpenAI path.
+    // This can be swapped for Redis later without changing the public AIService API.
+    this.responseCache = new Map();
+    this.responseCacheTtlMs = Number(process.env.AI_RESPONSE_CACHE_TTL_MS || 10 * 60 * 1000);
+    this.responseCacheMaxEntries = Number(process.env.AI_RESPONSE_CACHE_MAX_ENTRIES || 2000);
+
+    // Simple sliding-window rate limit per customer phone number.
+    this.customerRateLimits = new Map();
+    this.maxMessagesPerMinute = Number(process.env.AI_MAX_MESSAGES_PER_MINUTE || 10);
+    this.rateLimitWindowMs = 60 * 1000;
+
+    this.maxRecentMessages = Number(process.env.AI_RECENT_MESSAGES || 5);
+    this.minTypingDelayMs = Number(process.env.AI_MIN_TYPING_DELAY_MS || 300);
+    this.maxTypingDelayMs = Number(process.env.AI_MAX_TYPING_DELAY_MS || 800);
+    this.maxResponseSplitLength = Number(process.env.AI_RESPONSE_SPLIT_LENGTH || 220);
+    this.maxOutputTokens = Number(process.env.AI_MAX_OUTPUT_TOKENS || 180);
+  }
+
+  normalizeMessage(message = '') {
+    return message.toLowerCase().trim().replace(/\s+/g, ' ');
+  }
+
+  getCacheKey(customerPhone, message) {
+    return `${customerPhone}::${this.normalizeMessage(message)}`;
+  }
+
+  cleanupExpiredCacheEntries() {
+    const now = Date.now();
+
+    for (const [key, entry] of this.responseCache.entries()) {
+      if (entry.expiresAt <= now) {
+        this.responseCache.delete(key);
+      }
+    }
+  }
+
+  getCachedResponse(cacheKey) {
+    this.cleanupExpiredCacheEntries();
+    const entry = this.responseCache.get(cacheKey);
+
+    if (!entry) {
+      console.log(`CACHE MISS | key=${cacheKey}`);
+      return null;
+    }
+
+    console.log(`CACHE HIT | key=${cacheKey}`);
+    return entry.payload;
+  }
+
+  setCachedResponse(cacheKey, payload) {
+    this.cleanupExpiredCacheEntries();
+
+    if (this.responseCache.size >= this.responseCacheMaxEntries) {
+      const oldestKey = this.responseCache.keys().next().value;
+      if (oldestKey) {
+        this.responseCache.delete(oldestKey);
+      }
+    }
+
+    this.responseCache.set(cacheKey, {
+      payload,
+      expiresAt: Date.now() + this.responseCacheTtlMs
+    });
+  }
+
+  checkCustomerRateLimit(customerPhone) {
+    const now = Date.now();
+    const windowStart = now - this.rateLimitWindowMs;
+    const timestamps = this.customerRateLimits.get(customerPhone) || [];
+    const activeTimestamps = timestamps.filter((timestamp) => timestamp > windowStart);
+
+    if (activeTimestamps.length >= this.maxMessagesPerMinute) {
+      const oldestInWindow = activeTimestamps[0];
+      const retryAfterMs = Math.max(0, this.rateLimitWindowMs - (now - oldestInWindow));
+
+      return {
+        allowed: false,
+        retryAfterMs,
+        remaining: 0,
+        limit: this.maxMessagesPerMinute
+      };
+    }
+
+    activeTimestamps.push(now);
+    this.customerRateLimits.set(customerPhone, activeTimestamps);
+
+    return {
+      allowed: true,
+      retryAfterMs: 0,
+      remaining: Math.max(0, this.maxMessagesPerMinute - activeTimestamps.length),
+      limit: this.maxMessagesPerMinute
+    };
+  }
+
+  sleep(ms) {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+  }
+
+  getTypingDelayMs() {
+    return Math.floor(
+      Math.random() * (this.maxTypingDelayMs - this.minTypingDelayMs + 1)
+    ) + this.minTypingDelayMs;
+  }
+
+  truncateText(text = '', maxLength = 160) {
+    if (text.length <= maxLength) {
+      return text;
+    }
+
+    return `${text.slice(0, maxLength - 1).trim()}…`;
+  }
+
+  getRecentConversationMessages(conversation, limit = this.maxRecentMessages) {
+    const recentMessages = Array.isArray(conversation?.messages)
+      ? conversation.messages.slice(-limit)
+      : [];
+
+    return recentMessages.map((message) => ({
+      role: message.role,
+      content: this.truncateText(message.content || '', 180),
+      intent: message.intent || 'other',
+      timestamp: message.timestamp
+    }));
+  }
+
+  buildContextualPrompt({ customerName, message, recentMessages }) {
+    const contextLines = recentMessages.length > 0
+      ? recentMessages.map((entry, index) => {
+          return `${index + 1}. ${entry.role}: ${entry.content}`;
+        }).join('\n')
+      : 'No prior conversation context.';
+
+    return [
+      `Customer: ${customerName}`,
+      `Recent context:\n${contextLines}`,
+      `Current message: ${message}`,
+      'Reply in a concise, helpful WhatsApp-friendly style. Do not invent order or policy details.'
+    ].join('\n\n');
+  }
+
+  buildSystemInstruction(customerName) {
+    return `You are a WhatsApp customer support assistant.
+
+Rules:
+- Keep replies short, clear, and helpful.
+- Use the recent conversation context.
+- Never invent order, refund, or policy details.
+- Escalate refunds and complaints when appropriate.
+- Address the customer naturally: ${customerName}.`;
+  }
+
+  buildResponseParts(message) {
+    if (!message || message.length <= this.maxResponseSplitLength) {
+      return [message];
+    }
+
+    const midpoint = Math.floor(message.length / 2);
+    const leftBreak = message.lastIndexOf(' ', midpoint);
+    const splitIndex = leftBreak > message.length * 0.35 ? leftBreak : midpoint;
+
+    return [
+      message.slice(0, splitIndex).trim(),
+      message.slice(splitIndex).trim()
+    ].filter(Boolean);
+  }
+
+  buildResponsePlan(message) {
+    const typingDelayMs = this.getTypingDelayMs();
+    const responseParts = this.buildResponseParts(message);
+
+    return {
+      typingDelayMs,
+      responseParts,
+      shouldSplit: responseParts.length > 1
+    };
+  }
+
+  buildAiLogPayload({ conversationId, customerPhone, intent, userMessage, assistantMessage, aiModel, structuredOutput, duration, error }) {
+    return {
+      conversationId,
+      customerPhone,
+      intent,
+      userMessage,
+      assistantMessage,
+      aiModel: aiModel || 'none',
+      structuredOutput,
+      duration,
+      error
+    };
   }
 
   validateInput({ customerPhone, customerName, message }) {
@@ -51,10 +242,10 @@ class AIService {
     return { valid: errors.length === 0, errors };
   }
 
-  async processMessage({ customerPhone, customerName, message }) {
+  async processMessage({ customerPhone, customerName, message, messageId }) {
     const startTime = Date.now();
     let conversation = null;
-    let aiLog = null;
+    let aiLogDoc = null;
 
     try {
       // Validate input
@@ -64,6 +255,43 @@ class AIService {
         throw new Error(validation.errors.join(', '));
       }
 
+      // Rate limit per customer to prevent spam and protect AI spend.
+      const rateLimit = this.checkCustomerRateLimit(customerPhone);
+      if (!rateLimit.allowed) {
+        console.warn(`RATE LIMIT | phone=${customerPhone} retryAfterMs=${rateLimit.retryAfterMs}`);
+        return {
+          message: `You're sending messages too quickly. Please wait a moment and try again.`,
+          intent: 'rate_limited',
+          escalated: false,
+          escalationReason: null,
+          relatedOrderIds: [],
+          structuredOutput: {
+            intent: 'rate_limited',
+            confidence: 1,
+            escalated: false,
+            escalationReason: null,
+            relatedOrderIds: [],
+            metadata: {
+              responseTime: Date.now() - startTime,
+              usedAI: false,
+              cacheHit: false,
+              modelUsed: 'RateLimit',
+              tokenUsage: {
+                promptTokens: 0,
+                completionTokens: 0,
+                totalTokens: 0
+              },
+              typingDelayMs: 0,
+              responseParts: 1,
+              retryAfterMs: rateLimit.retryAfterMs,
+              dataSource: ['Rate Limiter']
+            }
+          },
+          responseParts: [`You're sending messages too quickly. Please wait a moment and try again.`],
+          typingDelayMs: 0
+        };
+      }
+
       // Get or create conversation for logging
       conversation = await Conversation.findOne({
         customerPhone,
@@ -71,13 +299,181 @@ class AIService {
       });
 
       if (!conversation) {
+        let adminDoc = await Admin.findOne({ email: 'demo@store.com' });
+        if (!adminDoc) adminDoc = await Admin.findOne();
+
         conversation = new Conversation({
+          admin: adminDoc ? adminDoc._id : null,
           customerPhone,
           customerName,
           messages: [],
           status: 'active'
         });
         await conversation.save();
+      }
+
+      // Retrieve Admin document
+      let adminDoc = null;
+      if (conversation.admin) {
+        adminDoc = await Admin.findById(conversation.admin);
+      }
+      if (!adminDoc) {
+        adminDoc = await Admin.findOne({ email: 'demo@store.com' }) || await Admin.findOne();
+      }
+
+      // Check subscription active and token limit checks
+      if (adminDoc) {
+        const isSubscriptionSuspended = 
+          !adminDoc.isActive || 
+          adminDoc.subscriptionStatus === 'inactive' || 
+          adminDoc.subscriptionStatus === 'suspended' || 
+          adminDoc.subscriptionStatus === 'cancelled';
+
+        if (isSubscriptionSuspended) {
+          console.log(`🔕 Subscription suspended/inactive for tenant: ${adminDoc.email}. Skipping AI response.`);
+          
+          const currentIntent = this.detectIntent(message);
+          conversation.messages = conversation.messages || [];
+          conversation.messages.push({
+            role: 'user',
+            content: message,
+            timestamp: new Date(),
+            intent: currentIntent,
+            messageId
+          });
+          conversation.updatedAt = new Date();
+          await conversation.save();
+
+          if (global.io) {
+            global.io.emit('new_message', {
+              customerPhone,
+              role: 'user',
+              content: message,
+              timestamp: new Date(),
+              intent: currentIntent
+            });
+          }
+
+          return {
+            botPaused: true,
+            serviceSuspended: true,
+            message: "I apologize, but this store's automated support assistant is currently offline. Please check back later or contact customer support directly.",
+            intent: currentIntent,
+            escalated: conversation.escalated || conversation.status === 'escalated',
+            escalationReason: conversation.escalationReason,
+            relatedOrderIds: conversation.relatedOrderIds || [],
+            structuredOutput: {
+              intent: currentIntent,
+              metadata: {
+                responseTime: Date.now() - startTime,
+                usedAI: false,
+                serviceSuspended: true
+              }
+            },
+            responseParts: [],
+            typingDelayMs: 0
+          };
+        }
+
+        const isLimitExceeded = adminDoc.geminiTokensUsed >= adminDoc.geminiTokensLimit;
+        if (isLimitExceeded) {
+          console.log(`🔕 Monthly token limit exceeded for tenant: ${adminDoc.email}. Skipping AI response.`);
+          
+          const currentIntent = this.detectIntent(message);
+          conversation.messages = conversation.messages || [];
+          conversation.messages.push({
+            role: 'user',
+            content: message,
+            timestamp: new Date(),
+            intent: currentIntent,
+            messageId
+          });
+          conversation.updatedAt = new Date();
+          await conversation.save();
+
+          if (global.io) {
+            global.io.emit('new_message', {
+              customerPhone,
+              role: 'user',
+              content: message,
+              timestamp: new Date(),
+              intent: currentIntent
+            });
+          }
+
+          return {
+            botPaused: true,
+            limitExceeded: true,
+            message: "I apologize, but the automated support assistant is temporarily unavailable due to high query volume. A customer service representative will contact you shortly.",
+            intent: currentIntent,
+            escalated: conversation.escalated || conversation.status === 'escalated',
+            escalationReason: conversation.escalationReason,
+            relatedOrderIds: conversation.relatedOrderIds || [],
+            structuredOutput: {
+              intent: currentIntent,
+              metadata: {
+                responseTime: Date.now() - startTime,
+                usedAI: false,
+                limitExceeded: true
+              }
+            },
+            responseParts: [],
+            typingDelayMs: 0
+          };
+        }
+      }
+
+      // If the conversation is paused or escalated, skip AI generation and save the message
+      if (conversation.botPaused || conversation.escalated || conversation.status === 'escalated') {
+        console.log(`🔕 Bot is PAUSED/ESCALATED for ${customerPhone}. Skipping AI response generation.`);
+        
+        const currentIntent = this.detectIntent(message);
+        
+        conversation.messages = conversation.messages || [];
+        conversation.messages.push({
+          role: 'user',
+          content: message,
+          timestamp: new Date(),
+          intent: currentIntent,
+          messageId
+        });
+        
+        if (conversation.messages.length > 50) {
+          conversation.messages = conversation.messages.slice(-50);
+        }
+        
+        conversation.updatedAt = new Date();
+        await conversation.save();
+        
+        // Emit socket event so frontend updates in real-time
+        if (global.io) {
+          global.io.emit('new_message', {
+            customerPhone,
+            role: 'user',
+            content: message,
+            timestamp: new Date(),
+            intent: currentIntent
+          });
+        }
+        
+        return {
+          botPaused: true,
+          message: null,
+          intent: currentIntent,
+          escalated: conversation.escalated || conversation.status === 'escalated',
+          escalationReason: conversation.escalationReason,
+          relatedOrderIds: conversation.relatedOrderIds || [],
+          structuredOutput: {
+            intent: currentIntent,
+            metadata: {
+              responseTime: Date.now() - startTime,
+              usedAI: false,
+              botPaused: true
+            }
+          },
+          responseParts: [],
+          typingDelayMs: 0
+        };
       }
 
       // Detect intent
@@ -92,6 +488,16 @@ class AIService {
       let escalationReason = null;
       let usedAI = false;
       let aiModel = null;
+      let modelUsed = 'Fallback';
+      let cacheHit = false;
+      let cacheRecord = null;
+      let tokenUsage = {
+        promptTokens: 0,
+        completionTokens: 0,
+        totalTokens: 0
+      };
+      let typingDelayMs = 0;
+      let responseParts = [];
 
       // Process based on intent
       switch (intent) {
@@ -132,14 +538,41 @@ class AIService {
             escalated = true;
             escalationReason = 'high_priority';
           } else {
-            const aiResult = await this.handleGeneralInquiry(message, customerName);
-            response = aiResult.message;
-            usedAI = aiResult.usedAI;
-            aiModel = aiResult.model || null;
-            
-            // Log AI usage for general inquiry
-            if (usedAI && aiResult.aiLog) {
-              aiLog = aiResult.aiLog;
+            const cacheKey = this.getCacheKey(customerPhone, message);
+            const cachedResponse = this.getCachedResponse(cacheKey);
+
+            if (cachedResponse) {
+              cacheHit = true;
+              response = cachedResponse.message;
+              usedAI = cachedResponse.usedAI;
+              aiModel = cachedResponse.model || null;
+              modelUsed = cachedResponse.modelUsed || 'Cache';
+              tokenUsage = cachedResponse.tokenUsage || tokenUsage;
+              typingDelayMs = cachedResponse.typingDelayMs || 0;
+              responseParts = cachedResponse.responseParts || [];
+              cacheRecord = cachedResponse;
+            } else {
+              const recentMessages = this.getRecentConversationMessages(conversation, this.maxRecentMessages);
+              const aiResult = await this.handleGeneralInquiry(message, customerName, recentMessages, conversation.admin);
+              response = aiResult.message;
+              usedAI = aiResult.usedAI;
+              aiModel = aiResult.model || null;
+              modelUsed = aiResult.modelUsed || (aiResult.usedAI ? 'AI' : 'Fallback');
+              tokenUsage = aiResult.tokenUsage || tokenUsage;
+              typingDelayMs = aiResult.typingDelayMs || 0;
+              responseParts = aiResult.responseParts || [];
+
+              cacheRecord = {
+                message: response,
+                usedAI,
+                model: aiModel,
+                modelUsed,
+                tokenUsage,
+                responseParts,
+                typingDelayMs
+              };
+
+              this.setCachedResponse(cacheKey, cacheRecord);
             }
           }
           break;
@@ -156,6 +589,48 @@ class AIService {
         });
       }
 
+      // Simulate streaming-like UX for WhatsApp by adding a short typing delay.
+      if (!typingDelayMs) {
+        typingDelayMs = this.getTypingDelayMs();
+      }
+
+      if (!responseParts || responseParts.length === 0) {
+        responseParts = this.buildResponseParts(response);
+      }
+
+      if (typingDelayMs > 0) {
+        await this.sleep(typingDelayMs);
+      }
+
+      // Persist the latest exchange so future prompts can use only the last few messages.
+      conversation.messages = conversation.messages || [];
+      conversation.messages.push({
+        role: 'user',
+        content: message,
+        timestamp: new Date(),
+        intent,
+        messageId
+      });
+      conversation.messages.push({
+        role: 'assistant',
+        content: response,
+        timestamp: new Date(),
+        intent
+      });
+
+      if (conversation.messages.length > 50) {
+        conversation.messages = conversation.messages.slice(-50);
+      }
+
+      if (escalated) {
+        conversation.status = 'escalated';
+        conversation.escalated = true;
+        conversation.escalatedAt = new Date();
+        conversation.escalationReason = escalationReason;
+      }
+
+      await conversation.save();
+
       const duration = Date.now() - startTime;
       
       // Create structured output
@@ -168,23 +643,38 @@ class AIService {
         metadata: {
           responseTime: duration,
           usedAI,
-          dataSource: this.getDataSources(intent, usedAI)
+          cacheHit,
+          modelUsed: cacheHit ? 'Cache' : modelUsed,
+          tokenUsage,
+          typingDelayMs,
+          responseParts: responseParts.length,
+          dataSource: cacheHit ? ['Response Cache'] : this.getDataSources(intent, usedAI)
         }
       };
 
       // Log this interaction in AILog collection
-      aiLog = new AILog({
+      aiLogDoc = new AILog(this.buildAiLogPayload({
         conversationId: conversation._id,
         customerPhone,
         intent,
         userMessage: message,
         assistantMessage: response,
-        aiModel: aiModel || 'none',
+        aiModel: aiModel || structuredOutput.metadata.modelUsed,
         structuredOutput,
         duration,
         error: { occurred: false }
-      });
-      await aiLog.save();
+      }));
+      await aiLogDoc.save();
+
+      // Increment admin usage metrics in database
+      if (adminDoc) {
+        adminDoc.totalMessagesProcessed = (adminDoc.totalMessagesProcessed || 0) + 1;
+        if (tokenUsage && tokenUsage.totalTokens > 0) {
+          adminDoc.geminiTokensUsed = (adminDoc.geminiTokensUsed || 0) + tokenUsage.totalTokens;
+        }
+        await adminDoc.save();
+        console.log(`📊 Updated usage for admin ${adminDoc.email}: tokensUsed=${adminDoc.geminiTokensUsed}, messages=${adminDoc.totalMessagesProcessed}`);
+      }
 
       return {
         message: response,
@@ -192,21 +682,23 @@ class AIService {
         escalated,
         escalationReason,
         relatedOrderIds,
-        structuredOutput
+        structuredOutput,
+        responseParts,
+        typingDelayMs
       };
 
     } catch (error) {
       console.error('Error processing message:', error);
       
       // Log error
-      if (aiLog) {
-        aiLog.error = {
+      if (aiLogDoc) {
+        aiLogDoc.error = {
           occurred: true,
           message: error.message,
           code: 'MESSAGE_PROCESSING_ERROR'
         };
-        aiLog.duration = Date.now() - startTime;
-        await aiLog.save().catch(e => console.error('Failed to log error:', e));
+        aiLogDoc.duration = Date.now() - startTime;
+        await aiLogDoc.save().catch(e => console.error('Failed to log error:', e));
       }
 
       return {
@@ -680,204 +1172,262 @@ class AIService {
     return response;
   }
 
-  async handleGeneralInquiry(message, customerName) {
-    let usedAI = false;
-    let aiLog = null;
-    let model = null;
+  async handleGeneralInquiry(message, customerName, recentMessages = [], adminId = null) {
+    const tokenUsageZero = {
+      promptTokens: 0,
+      completionTokens: 0,
+      totalTokens: 0
+    };
 
-    // First, try to answer from knowledge base
+    // 1) Knowledge base first: fastest response and no model spend.
     try {
-      const knowledgeBases = await KnowledgeBase.find({ isActive: true });
-      
-      if (knowledgeBases.length > 0) {
-        const texts = knowledgeBases.map(kb => kb.extractedText);
-        const kbResult = await knowledgeBaseService.queryKnowledgeBase(message, texts);
-        
+      if (adminId) {
+        const kbResult = await knowledgeBaseService.queryKnowledgeBase(message, adminId);
+
         if (kbResult.foundInKB && kbResult.confidence > 0.5) {
+          const responsePlan = this.buildResponsePlan(kbResult.answer);
+
           return {
             message: kbResult.answer,
-            usedAI: true,
-            model: 'gemini-kb',
-            aiLog: {
-              systemPrompt: 'Knowledge Base Query',
-              userPrompt: message,
+            usedAI: false,
+            model: 'KnowledgeBase',
+            modelUsed: 'KnowledgeBase',
+            tokenUsage: tokenUsageZero,
+            aiLogPayload: {
+              systemPrompt: 'Knowledge Base Query (RAG)',
+              userPrompt: this.buildContextualPrompt({ customerName, message, recentMessages }),
               aiResponse: kbResult.answer,
               promptTokens: 0,
               completionTokens: 0,
               totalTokens: 0,
               temperature: 0.3
             },
-            usedKnowledgeBase: true
+            responseParts: responsePlan.responseParts,
+            typingDelayMs: responsePlan.typingDelayMs,
+            cacheable: true
           };
         }
+      } else {
+        const knowledgeBases = await KnowledgeBase.find({ isActive: true });
+
+        if (knowledgeBases.length > 0) {
+          const texts = knowledgeBases.map((kb) => kb.extractedText);
+          const kbResult = await knowledgeBaseService.queryKnowledgeBase(message, texts);
+
+          if (kbResult.foundInKB && kbResult.confidence > 0.5) {
+            const responsePlan = this.buildResponsePlan(kbResult.answer);
+
+            return {
+              message: kbResult.answer,
+              usedAI: false,
+              model: 'KnowledgeBase',
+              modelUsed: 'KnowledgeBase',
+              tokenUsage: tokenUsageZero,
+              aiLogPayload: {
+                systemPrompt: 'Knowledge Base Query (Full Text Fallback)',
+                userPrompt: this.buildContextualPrompt({ customerName, message, recentMessages }),
+                aiResponse: kbResult.answer,
+                promptTokens: 0,
+                completionTokens: 0,
+                totalTokens: 0,
+                temperature: 0.3
+              },
+              responseParts: responsePlan.responseParts,
+              typingDelayMs: responsePlan.typingDelayMs,
+              cacheable: true
+            };
+          }
+        }
       }
-    } catch (kbError) {
-      console.error('Knowledge base query error:', kbError);
-      // Continue to regular AI if KB fails
+    } catch (error) {
+      console.error('Error querying knowledge base first:', error);
+      // Fall through to Gemini/OpenAI if KB lookup fails.
     }
 
-    const systemInstruction = `You are an intelligent e-commerce customer support assistant for an AI-powered WhatsApp Support Bot platform.
+    const systemInstruction = this.buildSystemInstruction(customerName);
+    const systemPrompt = systemInstruction;
+    const userPrompt = this.buildContextualPrompt({ customerName, message, recentMessages });
 
-CORE RESPONSIBILITIES:
-- Answer customer questions about orders, products, shipping, and policies
-- Provide accurate, helpful information in a friendly, professional tone
-- Keep responses concise and WhatsApp-friendly (under 200 characters when possible)
-- Use emojis sparingly to enhance readability (📦 for orders, ✅ for confirmations, etc.)
-
-RESPONSE GUIDELINES:
-1. Be warm and conversational, not robotic
-2. Address the customer by name when appropriate
-3. If you don't have specific information, guide them to contact support
-4. For urgent issues (refunds, complaints), acknowledge and suggest escalation
-5. Never make up order details or policies
-6. Always maintain a positive, solution-oriented tone
-
-EXAMPLE RESPONSES:
-- "Hi ${customerName}! 👋 I'd be happy to help with that. Could you provide your order number?"
-- "Great question! Our standard shipping takes 3-5 business days. Need help with anything else?"
-- "I understand your concern. Let me connect you with our support team who can assist you better."
-
-Remember: You're representing a modern, AI-powered brand. Be helpful, efficient, and human.`;
-
-    const userPrompt = message;
-
-    // Use Gemini first if configured (prioritized)
+    // 2) Gemini preferred model for low-cost AI answers.
     if (this.gemini) {
       try {
-        const modelClient = this.gemini.getGenerativeModel({ 
+        const modelClient = this.gemini.getGenerativeModel({
           model: this.geminiModelName,
-          systemInstruction: systemInstruction,
+          systemInstruction,
           generationConfig: {
-            temperature: 0.7,
+            temperature: 0.6,
             topP: 0.95,
             topK: 40,
-            maxOutputTokens: 200,
+            maxOutputTokens: this.maxOutputTokens
           },
           safetySettings: [
             {
               category: 'HARM_CATEGORY_HARASSMENT',
-              threshold: 'BLOCK_NONE',
+              threshold: 'BLOCK_NONE'
             },
             {
               category: 'HARM_CATEGORY_HATE_SPEECH',
-              threshold: 'BLOCK_NONE',
+              threshold: 'BLOCK_NONE'
             },
             {
               category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT',
-              threshold: 'BLOCK_NONE',
+              threshold: 'BLOCK_NONE'
             },
             {
               category: 'HARM_CATEGORY_DANGEROUS_CONTENT',
-              threshold: 'BLOCK_NONE',
-            },
-          ],
+              threshold: 'BLOCK_NONE'
+            }
+          ]
         });
 
-        const prompt = `Customer Name: ${customerName}\nCustomer Message: ${userPrompt}`;
-        const result = await modelClient.generateContent(prompt);
-        
-        // Check if response was blocked by safety filters
+        const result = await modelClient.generateContent(userPrompt);
+
         if (result.response.promptFeedback?.blockReason) {
           console.warn('Gemini blocked response:', result.response.promptFeedback.blockReason);
           throw new Error(`Content blocked: ${result.response.promptFeedback.blockReason}`);
         }
 
         const aiResponse = result.response.text();
+        const responsePlan = this.buildResponsePlan(aiResponse);
 
-        usedAI = true;
-        model = this.geminiModelName;
-
-        aiLog = {
-          systemPrompt: systemInstruction,
-          userPrompt,
-          aiResponse,
+        const tokenUsage = {
           promptTokens: result.response.usageMetadata?.promptTokenCount || 0,
           completionTokens: result.response.usageMetadata?.candidatesTokenCount || 0,
-          totalTokens: result.response.usageMetadata?.totalTokenCount || 0,
-          temperature: 0.7
+          totalTokens: result.response.usageMetadata?.totalTokenCount || 0
         };
+
+        console.log(`AI MODEL | Gemini | tokens=${tokenUsage.totalTokens} | prompt=${tokenUsage.promptTokens} | completion=${tokenUsage.completionTokens}`);
 
         return {
           message: aiResponse,
-          usedAI,
-          model,
-          aiLog
+          usedAI: true,
+          model: this.geminiModelName,
+          modelUsed: 'Gemini',
+          tokenUsage,
+          aiLogPayload: {
+            systemPrompt,
+            userPrompt,
+            aiResponse,
+            promptTokens: tokenUsage.promptTokens,
+            completionTokens: tokenUsage.completionTokens,
+            totalTokens: tokenUsage.totalTokens,
+            temperature: 0.6
+          },
+          responseParts: responsePlan.responseParts,
+          typingDelayMs: responsePlan.typingDelayMs,
+          cacheable: true
         };
       } catch (error) {
         console.error('Gemini API error:', error.message);
-        
-        // If safety filter blocked, provide a safe fallback
+
         if (error.message.includes('blocked') || error.message.includes('SAFETY')) {
+          const fallbackMessage = `Hi ${customerName}! I'm here to help with your order questions. Could you please rephrase your message or let me know your order number?`;
+          const responsePlan = this.buildResponsePlan(fallbackMessage);
+
           return {
-            message: `Hi ${customerName}! I'm here to help with your order questions. Could you please rephrase your message or let me know your order number?`,
+            message: fallbackMessage,
             usedAI: false,
             model: null,
-            aiLog: null
+            modelUsed: 'Fallback',
+            tokenUsage: tokenUsageZero,
+            aiLogPayload: {
+              systemPrompt,
+              userPrompt,
+              aiResponse: fallbackMessage,
+              promptTokens: 0,
+              completionTokens: 0,
+              totalTokens: 0,
+              temperature: 0.6
+            },
+            responseParts: responsePlan.responseParts,
+            typingDelayMs: responsePlan.typingDelayMs,
+            cacheable: true
           };
         }
-        // Continue to OpenAI fallback if Gemini fails
+        // Continue to OpenAI fallback if Gemini fails.
       }
     }
 
-    // If OpenAI is configured, use it as fallback
+    // 3) OpenAI fallback for resilience when Gemini is unavailable or fails.
     if (this.openai) {
       try {
         const completion = await this.openai.chat.completions.create({
           model: this.openaiModelName,
           messages: [
             {
-              role: "system",
+              role: 'system',
               content: systemInstruction
             },
             {
-              role: "user",
+              role: 'user',
               content: userPrompt
             }
           ],
-          max_tokens: 200,
-          temperature: 0.7
+          max_tokens: this.maxOutputTokens,
+          temperature: 0.6
         });
 
         const aiResponse = completion.choices[0].message.content;
-        usedAI = true;
-        model = this.openaiModelName;
-
-        // Log the AI interaction
-        aiLog = {
-          systemPrompt: systemInstruction,
-          userPrompt,
-          aiResponse,
+        const responsePlan = this.buildResponsePlan(aiResponse);
+        const tokenUsage = {
           promptTokens: completion.usage?.prompt_tokens || 0,
           completionTokens: completion.usage?.completion_tokens || 0,
-          totalTokens: completion.usage?.total_tokens || 0,
-          temperature: 0.7
+          totalTokens: completion.usage?.total_tokens || 0
         };
+
+        console.log(`AI MODEL | OpenAI | tokens=${tokenUsage.totalTokens} | prompt=${tokenUsage.promptTokens} | completion=${tokenUsage.completionTokens}`);
 
         return {
           message: aiResponse,
-          usedAI,
-          model,
-          aiLog
+          usedAI: true,
+          model: this.openaiModelName,
+          modelUsed: 'OpenAI',
+          tokenUsage,
+          aiLogPayload: {
+            systemPrompt,
+            userPrompt,
+            aiResponse,
+            promptTokens: tokenUsage.promptTokens,
+            completionTokens: tokenUsage.completionTokens,
+            totalTokens: tokenUsage.totalTokens,
+            temperature: 0.6
+          },
+          responseParts: responsePlan.responseParts,
+          typingDelayMs: responsePlan.typingDelayMs,
+          cacheable: true
         };
       } catch (error) {
         console.error('OpenAI API error:', error);
-        // Fall through to fallback
       }
     }
 
-    // Fallback response if OpenAI not available or failed
+    // 4) Static fallback message if both model providers are unavailable or fail.
     const fallbackMessage = `Hi ${customerName}! 👋\n\nI'm here to help with:\n` +
       `📦 Order status and tracking\n` +
       `↩️ Returns and exchanges\n` +
       `💰 Refund requests\n` +
       `❓ General questions\n\n` +
       `How can I assist you today?`;
+    const responsePlan = this.buildResponsePlan(fallbackMessage);
 
     return {
       message: fallbackMessage,
       usedAI: false,
       model: null,
-      aiLog: null
+      modelUsed: 'Fallback',
+      tokenUsage: tokenUsageZero,
+      aiLogPayload: {
+        systemPrompt,
+        userPrompt,
+        aiResponse: fallbackMessage,
+        promptTokens: 0,
+        completionTokens: 0,
+        totalTokens: 0,
+        temperature: 0.6
+      },
+      responseParts: responsePlan.responseParts,
+      typingDelayMs: responsePlan.typingDelayMs,
+      cacheable: true
     };
   }
 
@@ -927,16 +1477,197 @@ Remember: You're representing a modern, AI-powered brand. Be helpful, efficient,
   }
 
   async notifySupport(escalation) {
-    // Placeholder for notification logic
-    // In production, integrate with email service (SendGrid, AWS SES, etc.)
-    console.log(`📧 Support notification sent for escalation ${escalation._id}`);
+    console.log(`📧 Support notification triggering for escalation ${escalation._id}...`);
     console.log(`   Customer: ${escalation.customerName} (${escalation.customerPhone})`);
     console.log(`   Reason: ${escalation.reason}`);
     console.log(`   Priority: ${escalation.priority}`);
     
-    // Mark notification as sent
-    escalation.notificationSent = true;
-    await escalation.save();
+    try {
+      const nodemailer = require('nodemailer');
+      
+      // Get Admin User details
+      let recipientEmail = process.env.ESCALATION_EMAIL || process.env.ADMIN_EMAIL || 'support@store.com';
+      let adminName = 'Store Administrator';
+
+      if (escalation.admin) {
+        const Admin = require('../models/Admin');
+        const adminDoc = await Admin.findById(escalation.admin);
+        if (adminDoc && adminDoc.email) {
+          recipientEmail = adminDoc.email;
+          adminName = adminDoc.name || 'Store Administrator';
+        }
+      }
+
+      // Configure email transporter
+      const transporter = nodemailer.createTransport({
+        host: process.env.SMTP_HOST || 'smtp.gmail.com',
+        port: process.env.SMTP_PORT || 587,
+        secure: false,
+        auth: {
+          user: process.env.SMTP_USER,
+          pass: process.env.SMTP_PASS
+        }
+      });
+
+      const emailHtml = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <style>
+            body { font-family: 'Inter', Arial, sans-serif; background: #f3f4f6; margin: 0; padding: 0; }
+            .container { max-width: 600px; margin: 40px auto; background: white; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 24px rgba(0,0,0,0.1); }
+            .header { background: linear-gradient(135deg, #ef4444 0%, #b91c1c 100%); padding: 30px; text-align: center; }
+            .header h1 { color: white; margin: 0; font-size: 24px; font-weight: 700; }
+            .content { padding: 40px; }
+            .content h2 { color: #1f2937; font-size: 20px; margin-bottom: 16px; }
+            .content p { color: #4b5563; line-height: 1.6; margin-bottom: 16px; }
+            .details { background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 12px; padding: 20px; margin: 24px 0; }
+            .details-row { display: flex; border-bottom: 1px solid #f3f4f6; padding: 10px 0; }
+            .details-row:last-child { border-bottom: none; }
+            .label { font-weight: 600; color: #4b5563; width: 150px; }
+            .value { color: #1f2937; flex: 1; }
+            .priority-badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 12px; font-weight: 600; text-transform: uppercase; }
+            .priority-urgent { background: #fee2e2; color: #ef4444; }
+            .priority-high { background: #ffedd5; color: #f97316; }
+            .priority-medium { background: #fef9c3; color: #ca8a04; }
+            .priority-low { background: #f0fdf4; color: #22c55e; }
+            .button { display: inline-block; background: linear-gradient(135deg, #ef4444 0%, #b91c1c 100%); color: white; padding: 12px 28px; border-radius: 8px; text-decoration: none; font-weight: 600; margin: 20px 0; text-align: center; }
+            .footer { background: #f9fafb; padding: 20px; text-align: center; color: #9ca3af; font-size: 12px; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <h1>🚨 WhatsApp Chat Escalation Alert!</h1>
+            </div>
+            <div class="content">
+              <h2>Hello ${adminName},</h2>
+              <p>An ongoing customer conversation has been escalated to manual support. The AI response helper has been paused, and the customer is waiting for a response.</p>
+              
+              <div class="details">
+                <div class="details-row">
+                  <div class="label">Customer Name</div>
+                  <div class="value">${escalation.customerName}</div>
+                </div>
+                <div class="details-row">
+                  <div class="label">Phone Number</div>
+                  <div class="value">${escalation.customerPhone}</div>
+                </div>
+                <div class="details-row">
+                  <div class="label">Reason</div>
+                  <div class="value"><strong>${escalation.reason}</strong></div>
+                </div>
+                <div class="details-row">
+                  <div class="label">Priority</div>
+                  <div class="value">
+                    <span class="priority-badge priority-${escalation.priority}">${escalation.priority}</span>
+                  </div>
+                </div>
+                <div class="details-row">
+                  <div class="label">Escalated At</div>
+                  <div class="value">${new Date().toLocaleString('en-IN')}</div>
+                </div>
+                <div class="details-row">
+                  <div class="label">Trigger Message</div>
+                  <div class="value">"${escalation.description}"</div>
+                </div>
+              </div>
+
+              <div style="text-align: center;">
+                <a href="${process.env.FRONTEND_URL || 'http://localhost:3000'}/live-chat" class="button" style="color: white !important;">Take Over Conversation</a>
+              </div>
+            </div>
+            <div class="footer">
+              <p>© ${new Date().getFullYear()} WhatsApp Support Bot. All rights reserved.</p>
+              <p>This is an automated system notification.</p>
+            </div>
+          </div>
+        </body>
+        </html>
+      `;
+
+      if (process.env.SMTP_USER && process.env.SMTP_PASS && process.env.SMTP_USER !== 'your_email@gmail.com') {
+        await transporter.sendMail({
+          from: `"WhatsApp Support Bot" <${process.env.SMTP_USER}>`,
+          to: recipientEmail,
+          subject: `🚨 [Escalation Alert] Customer ${escalation.customerName} requests assistance (${escalation.priority.toUpperCase()})`,
+          html: emailHtml
+        });
+        console.log(`✅ Escalation email sent to ${recipientEmail}`);
+      } else {
+        console.log(`⚠️ SMTP credentials not configured. Skipping email delivery for ${recipientEmail}.`);
+      }
+
+      // Emit socket event to frontend so admin UI highlights this escalated conversation
+      const io = global.io;
+      if (io) {
+        io.emit('new_message', {
+          customerPhone: escalation.customerPhone,
+          escalated: true,
+          status: 'escalated'
+        });
+        io.emit('escalation_created', escalation);
+      }
+
+      // Mark notification as sent
+      escalation.notificationSent = true;
+      await escalation.save();
+    } catch (error) {
+      console.error('❌ Error sending support notification email:', error);
+    }
+  }
+
+  async analyzeWithGemini(prompt, history = []) {
+    // Try Gemini first
+    if (this.gemini) {
+      try {
+        const model = this.gemini.getGenerativeModel({
+          model: this.geminiModelName || 'gemini-2.5-flash',
+          generationConfig: {
+            temperature: 0.3,
+            maxOutputTokens: 500,
+          }
+        });
+        
+        const result = await model.generateContent(prompt);
+        return result.response.text();
+      } catch (error) {
+        console.error('Error generating content with Gemini:', error);
+      }
+    }
+    
+    // Fallback to OpenAI if configured
+    if (this.openai) {
+      try {
+        const completion = await this.openai.chat.completions.create({
+          model: this.openaiModelName || 'gpt-3.5-turbo',
+          messages: [
+            {
+              role: 'user',
+              content: prompt
+            }
+          ],
+          max_tokens: 500,
+          temperature: 0.3
+        });
+        return completion.choices[0].message.content;
+      } catch (error) {
+        console.error('Error generating content with OpenAI fallback:', error);
+      }
+    }
+
+    // Default static JSON fallback if no AI is available/configured
+    console.warn('⚠️ No AI provider available for analyzeWithGemini. Returning mock response.');
+    return JSON.stringify({
+      sentiment: 'neutral',
+      confidence: 0.8,
+      breakdown: {
+        happy: 60,
+        neutral: 30,
+        frustrated: 10
+      },
+      reasoning: 'Analyzed using local mock analysis.'
+    });
   }
 }
 

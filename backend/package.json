@@ -12,6 +12,7 @@
     "reset-demo": "node scripts/clearUserData.js && node scripts/seedData.js",
     "create-admin": "node scripts/createAdmin.js",
     "create-test-admin": "node scripts/createTestAdmin.js",
+    "seed-demo": "node scripts/seedDemoAccount.js",
     "test": "jest --runInBand",
     "test:watch": "jest --watch",
     "test-webhook": "node scripts/testWebhook.js",

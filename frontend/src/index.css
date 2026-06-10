@@ -1,6 +1,28 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
 
 :root {
+  --bg-base: #f8fafc;
+  --bg-elevated: #ffffff;
+  --bg-surface: rgba(255, 255, 255, 0.75);
+  --bg-input: #f1f5f9;
+  --border-subtle: rgba(226, 232, 240, 0.8);
+  --border-default: rgba(203, 213, 225, 0.8);
+  --text-primary: #0f172a;
+  --text-secondary: #475569;
+  --text-muted: #64748b;
+  --accent: #4f46e5;
+  --accent-secondary: #7c3aed;
+  --success: #10b981;
+  --danger: #ef4444;
+  --warning: #f59e0b;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 20px;
+  --shadow-glow: 0 4px 16px rgba(79, 70, 229, 0.15);
+}
+
+body.dark-theme {
   --bg-base: #09090b;
   --bg-elevated: #18181b;
   --bg-surface: rgba(24, 24, 27, 0.7);
@@ -15,10 +37,6 @@
   --success: #10b981;
   --danger: #ef4444;
   --warning: #f59e0b;
-  --radius-sm: 8px;
-  --radius-md: 12px;
-  --radius-lg: 16px;
-  --radius-xl: 20px;
   --shadow-glow: 0 4px 16px rgba(99, 102, 241, 0.35);
 }
 
@@ -39,6 +57,7 @@ body {
   background-color: var(--bg-base);
   color: var(--text-primary);
   line-height: 1.5;
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 code {
@@ -60,4 +79,178 @@ input:not([type='checkbox']):not([type='radio']):focus,
 select:focus,
 textarea:focus {
   outline: none;
+}
+
+/* Light Theme Component Overrides */
+body:not(.dark-theme) .sidebar {
+  background: var(--bg-surface);
+  border-right: 1px solid var(--border-subtle);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.05);
+}
+body:not(.dark-theme) .sidebar-logo {
+  color: var(--text-primary);
+}
+body:not(.dark-theme) .nav-links li a {
+  color: var(--text-secondary);
+}
+body:not(.dark-theme) .nav-links li a:hover {
+  background: var(--bg-input);
+  color: var(--text-primary);
+}
+body:not(.dark-theme) .nav-links li a.active {
+  background: linear-gradient(135deg, rgba(79, 70, 229, 0.1) 0%, rgba(124, 58, 237, 0.1) 100%);
+  color: var(--accent);
+  box-shadow: 0 0 20px rgba(79, 70, 229, 0.08);
+}
+body:not(.dark-theme) .sidebar-user-name {
+  color: var(--text-primary);
+}
+body:not(.dark-theme) .sidebar-user-email {
+  color: var(--text-muted);
+}
+body:not(.dark-theme) .sidebar-footer {
+  border-top: 1px solid var(--border-subtle);
+}
+body:not(.dark-theme) .sidebar-header {
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+body:not(.dark-theme) .top-bar {
+  background: var(--bg-surface);
+  border-bottom: 1px solid var(--border-subtle);
+}
+body:not(.dark-theme) .greeting-text {
+  color: var(--text-primary);
+}
+body:not(.dark-theme) .greeting-sub {
+  color: var(--text-secondary);
+}
+body:not(.dark-theme) .search-wrapper {
+  background: var(--bg-input);
+  border: 1px solid var(--border-subtle);
+}
+body:not(.dark-theme) .search-input {
+  color: var(--text-primary);
+}
+body:not(.dark-theme) .search-input::placeholder {
+  color: var(--text-muted);
+}
+body:not(.dark-theme) .icon-button {
+  background: var(--bg-input);
+  color: var(--text-secondary);
+  border-color: var(--border-subtle);
+}
+body:not(.dark-theme) .icon-button:hover {
+  color: var(--text-primary);
+  background: var(--border-subtle);
+}
+
+/* Card and Container overrides */
+body:not(.dark-theme) .dashboard-stat-card,
+body:not(.dark-theme) .stat-card,
+body:not(.dark-theme) .analytics-card,
+body:not(.dark-theme) .billing-card,
+body:not(.dark-theme) .card,
+body:not(.dark-theme) .panel,
+body:not(.dark-theme) .chat-container,
+body:not(.dark-theme) .conversations-container,
+body:not(.dark-theme) .table-container,
+body:not(.dark-theme) .orders-table-container,
+body:not(.dark-theme) .detail-card,
+body:not(.dark-theme) .settings-card,
+body:not(.dark-theme) .integration-card,
+body:not(.dark-theme) .kb-card,
+body:not(.dark-theme) .broadcast-card,
+body:not(.dark-theme) .template-card,
+body:not(.dark-theme) .super-admin-card {
+  background: var(--bg-elevated) !important;
+  border: 1px solid var(--border-subtle) !important;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04) !important;
+}
+
+body:not(.dark-theme) h1,
+body:not(.dark-theme) h2,
+body:not(.dark-theme) h3,
+body:not(.dark-theme) h4,
+body:not(.dark-theme) h5,
+body:not(.dark-theme) h6,
+body:not(.dark-theme) .card h3,
+body:not(.dark-theme) .stat-value,
+body:not(.dark-theme) .stats-value {
+  color: var(--text-primary) !important;
+}
+
+body:not(.dark-theme) p,
+body:not(.dark-theme) span:not(.sidebar-role-badge):not(.badge):not(.btn-primary):not(.badge-success):not(.badge-danger):not(.badge-warning):not(.badge-info):not(.status-dot):not(.ai-status-dot),
+body:not(.dark-theme) label,
+body:not(.dark-theme) .stat-label,
+body:not(.dark-theme) .stats-label {
+  color: var(--text-secondary) !important;
+}
+
+body:not(.dark-theme) th {
+  background: var(--bg-input) !important;
+  color: var(--text-primary) !important;
+  border-bottom: 2px solid var(--border-default) !important;
+}
+
+body:not(.dark-theme) td {
+  border-bottom: 1px solid var(--border-subtle) !important;
+  color: var(--text-secondary) !important;
+}
+
+body:not(.dark-theme) tr:hover td {
+  background: rgba(0, 0, 0, 0.01) !important;
+}
+
+body:not(.dark-theme) input:not([type='checkbox']):not([type='radio']),
+body:not(.dark-theme) select,
+body:not(.dark-theme) textarea {
+  background: var(--bg-elevated) !important;
+  border: 1px solid var(--border-default) !important;
+  color: var(--text-primary) !important;
+}
+
+body:not(.dark-theme) input:focus,
+body:not(.dark-theme) select:focus,
+body:not(.dark-theme) textarea:focus {
+  border-color: var(--accent) !important;
+  box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.1) !important;
+}
+
+/* Chat overrides */
+body:not(.dark-theme) .conversation-item {
+  border-bottom: 1px solid var(--border-subtle);
+}
+body:not(.dark-theme) .conversation-item:hover {
+  background: var(--bg-base);
+}
+body:not(.dark-theme) .conversation-item.active {
+  background: var(--bg-input);
+}
+body:not(.dark-theme) .conversation-name {
+  color: var(--text-primary);
+}
+body:not(.dark-theme) .conversation-preview {
+  color: var(--text-muted);
+}
+body:not(.dark-theme) .chat-header {
+  border-bottom: 1px solid var(--border-subtle);
+  background: var(--bg-elevated);
+}
+body:not(.dark-theme) .message-bubble.incoming {
+  background: var(--bg-input);
+  color: var(--text-primary);
+}
+body:not(.dark-theme) .message-bubble.outgoing {
+  background: var(--accent);
+  color: #ffffff;
+}
+body:not(.dark-theme) .chat-input-container {
+  border-top: 1px solid var(--border-subtle);
+  background: var(--bg-elevated);
+}
+body:not(.dark-theme) .chat-input-wrapper {
+  background: var(--bg-input);
+  border: 1px solid var(--border-subtle);
 }

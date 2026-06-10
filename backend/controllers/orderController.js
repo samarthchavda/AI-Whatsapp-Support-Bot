@@ -22,13 +22,15 @@ exports.getAllOrders = async (req, res) => {
       ];
     }
 
-    const orders = await Order.find(query)
-      .sort({ orderDate: -1 })
-      .limit(limit * 1)
-      .skip((page - 1) * limit)
-      .exec();
-
-    const count = await Order.countDocuments(query);
+    const [orders, count] = await Promise.all([
+      Order.find(query)
+        .sort({ orderDate: -1 })
+        .limit(limit * 1)
+        .skip((page - 1) * limit)
+        .lean()
+        .exec(),
+      Order.countDocuments(query)
+    ]);
 
     res.json({
       orders,
@@ -112,7 +114,12 @@ exports.createOrder = async (req, res) => {
         ...orderData,
         orderId: nextOrderId,
         customerId: customer._id,
-        admin: req.admin._id
+        admin: req.admin._id,
+        items: [{
+          productName: orderData.productName,
+          quantity: parseInt(orderData.quantity) || 1,
+          price: parseFloat(orderData.totalAmount) || 0
+        }]
       };
 
       if (req.admin) {
@@ -153,6 +160,15 @@ exports.createOrder = async (req, res) => {
     customer.lastOrderDate = new Date();
     await customer.save();
 
+    // Trigger WhatsApp notification for order creation
+    try {
+      const webhookService = require('../services/webhookService');
+      console.log(`📡 Sending manual order confirmation WhatsApp notification to ${order.customerPhone}...`);
+      await webhookService.sendOrderConfirmation(order, customer);
+    } catch (wsError) {
+      console.error('⚠️ Failed to send order confirmation WhatsApp notification:', wsError.message);
+    }
+
     res.status(201).json(order);
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -173,12 +189,14 @@ exports.updateOrderStatus = async (req, res) => {
       return res.status(404).json({ error: 'Order not found' });
     }
 
+    const oldStatus = order.status;
+
     if (status) order.status = status;
     if (trackingNumber) order.trackingNumber = trackingNumber;
     if (estimatedDelivery) order.estimatedDelivery = estimatedDelivery;
     if (typeof notes === 'string') order.notes = notes;
 
-    if (status === 'delivered') {
+    if (status === 'delivered' && oldStatus !== 'delivered') {
       order.deliveredDate = new Date();
     }
 
@@ -191,6 +209,24 @@ exports.updateOrderStatus = async (req, res) => {
     }
 
     await order.save();
+
+    // Trigger WhatsApp notification for shipped/delivered status changes
+    if (status && status !== oldStatus && (status === 'shipped' || status === 'delivered')) {
+      try {
+        const Customer = require('../models/Customer');
+        const customer = await Customer.findById(order.customerId);
+        if (customer) {
+          const webhookService = require('../services/webhookService');
+          console.log(`📱 Sending manual order status update WhatsApp notification to ${order.customerPhone}...`);
+          await webhookService.sendTrackingUpdate(order, customer, {
+            trackingNumber: order.trackingNumber,
+            status: order.status
+          });
+        }
+      } catch (err) {
+        console.error('⚠️ Failed to send manual status update WhatsApp notification:', err.message);
+      }
+    }
 
     res.json(order);
   } catch (error) {
@@ -297,11 +333,14 @@ exports.bulkUploadOrders = async (req, res) => {
           customerName: row.customerName,
           customerPhone: normalizedPhone,
           customerEmail: row.customerEmail || '',
-          productName: row.productName,
-          quantity: parseInt(row.quantity) || 1,
           totalAmount: parseFloat(row.totalAmount) || 0,
           status: row.status || 'pending',
-          admin: req.admin._id
+          admin: req.admin._id,
+          items: [{
+            productName: row.productName,
+            quantity: parseInt(row.quantity) || 1,
+            price: parseFloat(row.totalAmount) || 0
+          }]
         };
 
         // Add admin info if authenticated

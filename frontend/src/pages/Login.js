@@ -20,7 +20,9 @@ function Login({ onLogin }) {
       const response = await api.post('/auth/login', { email, password });
 
       if (response.data.success) {
-        localStorage.setItem('token', response.data.data.token);
+        const accessToken = response.data.data.accessToken || response.data.data.token;
+        localStorage.setItem('accessToken', accessToken);
+        localStorage.setItem('token', accessToken);
         localStorage.setItem('admin', JSON.stringify(response.data.data.admin));
         onLogin(response.data.data.admin);
         navigate('/dashboard');

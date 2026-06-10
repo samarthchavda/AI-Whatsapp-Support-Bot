@@ -13,6 +13,29 @@ const adminSchema = new mongoose.Schema({
     type: String,
     required: true
   },
+  refreshTokens: [
+    {
+      hash: {
+        type: String,
+        required: true
+      },
+      createdAt: {
+        type: Date,
+        default: Date.now
+      },
+      expiresAt: {
+        type: Date,
+        required: true,
+        index: true
+      },
+      userAgent: {
+        type: String
+      },
+      ipAddress: {
+        type: String
+      }
+    }
+  ],
   name: {
     type: String,
     required: true
@@ -81,12 +104,35 @@ const adminSchema = new mongoose.Schema({
   whatsappConnectedAt: {
     type: Date
   },
-  // Business info
+  // Business / Store info
   businessName: {
     type: String
   },
   businessPhone: {
     type: String
+  },
+  storeUrl: {
+    type: String
+  },
+  storeCategory: {
+    type: String
+  },
+  supportEmail: {
+    type: String
+  },
+  currency: {
+    type: String,
+    default: 'USD'
+  },
+  timezone: {
+    type: String,
+    default: 'UTC'
+  },
+  // Theme settings
+  theme: {
+    type: String,
+    enum: ['light', 'dark'],
+    default: 'light'
   }
 }, {
   timestamps: true

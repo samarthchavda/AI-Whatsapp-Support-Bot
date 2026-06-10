@@ -67,5 +67,6 @@ escalationSchema.index({ status: 1, priority: -1 });
 escalationSchema.index({ customerPhone: 1 });
 escalationSchema.index({ createdAt: -1 });
 escalationSchema.index({ admin: 1, createdAt: -1 });
+escalationSchema.index({ admin: 1, status: 1, priority: -1, createdAt: -1 });
 
 module.exports = mongoose.model('Escalation', escalationSchema);

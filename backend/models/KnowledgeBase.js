@@ -12,7 +12,7 @@ const knowledgeBaseSchema = new mongoose.Schema({
   },
   fileType: {
     type: String,
-    enum: ['pdf', 'txt', 'text'],
+    enum: ['pdf', 'txt', 'text', 'csv', 'url'],
     required: true
   },
   fileName: {

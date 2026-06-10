@@ -11,11 +11,26 @@ const { verifyToken } = require('../middleware/auth');
 router.post('/login', authController.login);
 
 /**
+ * @route   POST /api/auth/refresh
+ * @desc    Refresh access token using refresh token cookie
+ * @access  Public
+ */
+router.post('/refresh', authController.refresh);
+
+/**
+ * @route   POST /api/auth/logout
+ * @desc    Logout admin and revoke the current refresh token
+ * @access  Public
+ */
+router.post('/logout', authController.logout);
+
+/**
  * @route   GET /api/auth/profile
  * @desc    Get current admin profile
  * @access  Private
  */
 router.get('/profile', verifyToken, authController.getProfile);
+router.put('/profile', verifyToken, authController.updateProfile);
 
 /**
  * @route   POST /api/auth/change-password
@@ -25,10 +40,17 @@ router.get('/profile', verifyToken, authController.getProfile);
 router.post('/change-password', verifyToken, authController.changePassword);
 
 /**
- * @route   POST /api/auth/logout
- * @desc    Logout admin
+ * @route   GET /api/auth/plans
+ * @desc    Get all active subscription pricing plans
  * @access  Private
  */
-router.post('/logout', verifyToken, authController.logout);
+router.get('/plans', verifyToken, authController.getPlans);
+
+/**
+ * @route   POST /api/auth/upgrade-plan
+ * @desc    Upgrade admin subscription pricing plan
+ * @access  Private
+ */
+router.post('/upgrade-plan', verifyToken, authController.upgradePlan);
 
 module.exports = router;

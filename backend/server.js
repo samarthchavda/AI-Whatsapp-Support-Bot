@@ -23,6 +23,7 @@ const broadcastRoutes = require('./routes/broadcastRoutes');
 const analyticsRoutes = require('./routes/analyticsRoutes');
 const integrationRoutes = require('./routes/integrationRoutes');
 const superAdminRoutes = require('./routes/superAdminRoutes');
+const whatsappRoutes = require('./routes/whatsappRoutes');
 
 // Import WhatsApp bot (optional - only if available)
 let whatsappWebBot = null;
@@ -33,6 +34,7 @@ try {
 }
 
 const app = express();
+app.set('trust proxy', 1);
 const server = http.createServer(app);
 const io = socketIo(server, {
   cors: {
@@ -56,8 +58,17 @@ const limiter = rateLimit({
 app.use('/api/', limiter);
 
 // Middleware
-app.use(cors());
-app.use(express.json());
+app.use(cors({
+  origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
+app.use(express.json({
+  verify: (req, res, buf) => {
+    req.rawBody = buf;
+  }
+}));
 app.use(express.urlencoded({ extended: true }));
 app.use(morgan('dev'));
 
@@ -69,6 +80,11 @@ io.on('connection', (socket) => {
   if (whatsappWebBot) {
     const status = whatsappWebBot.getStatus();
     socket.emit('whatsapp-status', status);
+    
+    // If there is an active QR code, emit it to the connecting client immediately
+    if (status.qrCode) {
+      socket.emit('whatsapp-qr', { qr: status.qrCode, timestamp: new Date() });
+    }
   }
   
   socket.on('disconnect', () => {
@@ -80,6 +96,7 @@ io.on('connection', (socket) => {
 mongoose.connect(process.env.MONGODB_URI, {
   useNewUrlParser: true,
   useUnifiedTopology: true,
+  maxPoolSize: 50, // Increase connection pool size to handle high concurrent traffic
 })
 .then(() => {
   console.log('✅ Connected to MongoDB');
@@ -99,6 +116,13 @@ mongoose.connect(process.env.MONGODB_URI, {
   const { initializeScheduler, startScheduler } = require('./services/broadcastScheduler');
   initializeScheduler().then(() => {
     startScheduler();
+  });
+
+  // Schedule daily subscription token resets
+  const cron = require('node-cron');
+  const { checkAndResetMonthlyTokens } = require('./services/subscriptionService');
+  cron.schedule('0 0 * * *', () => {
+    checkAndResetMonthlyTokens();
   });
 })
 .catch((err) => {
@@ -130,6 +154,7 @@ app.use('/api/broadcasts', broadcastRoutes);
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/integrations', integrationRoutes);
 app.use('/api/super-admin', superAdminRoutes);
+app.use('/api/whatsapp', whatsappRoutes);
 
 // Error handling middleware
 app.use((err, req, res, next) => {

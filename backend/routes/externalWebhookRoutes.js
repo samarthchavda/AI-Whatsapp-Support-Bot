@@ -53,6 +53,33 @@ router.post(
 );
 
 /**
+ * @route   POST /api/webhooks/shopify/fulfillments
+ * @desc    Shopify-specific fulfillment webhook endpoint with HMAC verification
+ * @access  Protected (HMAC signature)
+ */
+router.post(
+  '/shopify/fulfillments',
+  webhookRateLimiter,
+  WebhookAuth.logRequest,
+  WebhookAuth.verifyShopifyHMAC,
+  externalWebhookController.handleShopifyFulfillment
+);
+
+/**
+ * @route   POST /api/webhooks/external-orders/:source/fulfillment
+ * @desc    Receive external order fulfillment updates
+ * @access  Protected (requires secret token)
+ * @params  source: shopify | woocommerce | custom
+ */
+router.post(
+  '/external-orders/:source/fulfillment',
+  webhookRateLimiter,
+  WebhookAuth.logRequest,
+  WebhookAuth.verifySecretToken,
+  externalWebhookController.handleGenericFulfillment
+);
+
+/**
  * @route   GET /api/webhooks/logs
  * @desc    Get webhook logs
  * @access  Private (add auth middleware if needed)

@@ -1,6 +1,7 @@
 const fs = require('fs').promises;
 const pdfParse = require('pdf-parse');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
+const KnowledgeBaseChunk = require('../models/KnowledgeBaseChunk');
 
 class KnowledgeBaseService {
   constructor() {
@@ -13,8 +14,11 @@ class KnowledgeBaseService {
   async extractTextFromPDF(filePath) {
     try {
       const dataBuffer = await fs.readFile(filePath);
-      const data = await pdfParse(dataBuffer);
-      return data.text;
+      const { PDFParse } = require('pdf-parse');
+      const pdf = new PDFParse({ data: dataBuffer });
+      await pdf.load();
+      const result = await pdf.getText();
+      return result.text;
     } catch (error) {
       console.error('Error extracting text from PDF:', error);
       throw new Error('Failed to extract text from PDF file');
@@ -35,6 +39,80 @@ class KnowledgeBaseService {
   }
 
   /**
+   * Extract text from CSV file
+   */
+  async extractTextFromCSV(filePath) {
+    return new Promise((resolve, reject) => {
+      const results = [];
+      const fsSync = require('fs');
+      const csvParser = require('csv-parser');
+      
+      fsSync.createReadStream(filePath)
+        .pipe(csvParser())
+        .on('data', (data) => results.push(data))
+        .on('end', () => {
+          try {
+            if (results.length === 0) {
+              return resolve('');
+            }
+            // Format each row as: Key1: Val1, Key2: Val2...
+            const formattedRows = results.map(row => {
+              return Object.entries(row)
+                .map(([key, val]) => `${key.trim()}: ${val.trim()}`)
+                .join(', ');
+            });
+            resolve(formattedRows.join('\n'));
+          } catch (err) {
+            reject(err);
+          }
+        })
+        .on('error', (error) => {
+          reject(error);
+        });
+    });
+  }
+
+  /**
+   * Extract text from URL
+   */
+  async extractTextFromURL(url) {
+    try {
+      const axios = require('axios');
+      const response = await axios.get(url, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+        },
+        timeout: 10000
+      });
+      
+      const html = response.data;
+      if (typeof html !== 'string') {
+        throw new Error('URL did not return HTML content');
+      }
+      
+      // Clean up HTML tags (Zero dependency parsing)
+      let cleaned = html.replace(/<script[^>]*>([\s\S]*?)<\/script>/gi, '');
+      cleaned = cleaned.replace(/<style[^>]*>([\s\S]*?)<\/style>/gi, '');
+      cleaned = cleaned.replace(/<[^>]+>/g, ' ');
+      
+      // Decode common entities
+      cleaned = cleaned.replace(/&nbsp;/g, ' ')
+                       .replace(/&lt;/g, '<')
+                       .replace(/&gt;/g, '>')
+                       .replace(/&amp;/g, '&')
+                       .replace(/&quot;/g, '"')
+                       .replace(/&#39;/g, "'");
+                       
+      // Normalize whitespace
+      cleaned = cleaned.replace(/\s+/g, ' ').trim();
+      return cleaned;
+    } catch (error) {
+      console.error('Error scraping URL:', error.message);
+      throw new Error(`Failed to scrape URL: ${error.message}`);
+    }
+  }
+
+  /**
    * Process uploaded file and extract text
    */
   async processFile(file) {
@@ -45,8 +123,10 @@ class KnowledgeBaseService {
       extractedText = await this.extractTextFromPDF(file.path);
     } else if (fileExtension === 'txt') {
       extractedText = await this.extractTextFromTXT(file.path);
+    } else if (fileExtension === 'csv') {
+      extractedText = await this.extractTextFromCSV(file.path);
     } else {
-      throw new Error('Unsupported file type. Only PDF and TXT files are allowed.');
+      throw new Error('Unsupported file type. Only PDF, TXT, and CSV files are allowed.');
     }
 
     // Clean up the text
@@ -67,11 +147,148 @@ class KnowledgeBaseService {
   }
 
   /**
-   * Query the knowledge base using Gemini API
+   * Generate vector embedding for a block of text
    */
-  async queryKnowledgeBase(question, knowledgeBaseTexts) {
+  async generateEmbedding(text) {
     try {
-      if (!knowledgeBaseTexts || knowledgeBaseTexts.length === 0) {
+      if (!process.env.GEMINI_API_KEY) {
+        throw new Error('GEMINI_API_KEY not configured');
+      }
+
+      const model = this.genAI.getGenerativeModel({ model: "text-embedding-004" });
+      const result = await model.embedContent(text);
+      
+      if (result && result.embedding && result.embedding.values) {
+        return result.embedding.values;
+      }
+      throw new Error('Invalid embedding response structure');
+    } catch (error) {
+      console.warn('⚠️ Gemini embedding failed, generating fallback representation:', error.message);
+      // Fallback: Generate a deterministic pseudo-random vector of 768 dimensions based on string hash
+      const dims = 768;
+      const embedding = new Array(dims);
+      
+      // Compute simple hash of text
+      let hash = 0;
+      for (let i = 0; i < text.length; i++) {
+        hash = (hash << 5) - hash + text.charCodeAt(i);
+        hash |= 0;
+      }
+      
+      // Generate deterministic numbers
+      for (let i = 0; i < dims; i++) {
+        const seed = Math.sin(hash + i) * 10000;
+        embedding[i] = seed - Math.floor(seed);
+      }
+      
+      return embedding;
+    }
+  }
+
+  /**
+   * Compute cosine similarity between two vector arrays
+   */
+  cosineSimilarity(vecA, vecB) {
+    if (vecA.length !== vecB.length) return 0;
+    let dotProduct = 0;
+    let normA = 0;
+    let normB = 0;
+    
+    for (let i = 0; i < vecA.length; i++) {
+      dotProduct += vecA[i] * vecB[i];
+      normA += vecA[i] * vecA[i];
+      normB += vecB[i] * vecB[i];
+    }
+    
+    if (normA === 0 || normB === 0) return 0;
+    return dotProduct / (Math.sqrt(normA) * Math.sqrt(normB));
+  }
+
+  /**
+   * Chunk text and save chunks with embeddings
+   */
+  async processAndSaveChunks(kbDoc) {
+    try {
+      const text = kbDoc.extractedText;
+      const chunks = this.chunkText(text, 1200); // 1200 chars chunks
+      
+      console.log(`🧩 Segmenting document "${kbDoc.title}" into ${chunks.length} chunks...`);
+      
+      const chunkDocs = [];
+      for (let i = 0; i < chunks.length; i++) {
+        const chunkText = chunks[i];
+        const embedding = await this.generateEmbedding(chunkText);
+        
+        const chunkDoc = new KnowledgeBaseChunk({
+          knowledgeBaseId: kbDoc._id,
+          admin: kbDoc.uploadedBy,
+          text: chunkText,
+          embedding,
+          chunkIndex: i
+        });
+        
+        await chunkDoc.save();
+        chunkDocs.push(chunkDoc);
+      }
+      
+      console.log(`✅ Stored ${chunkDocs.length} chunks for "${kbDoc.title}"`);
+      return chunkDocs;
+    } catch (error) {
+      console.error('Error saving chunks:', error);
+      throw new Error(`Failed to chunk and embed knowledge base: ${error.message}`);
+    }
+  }
+
+  /**
+   * Perform vector similarity search on knowledge base chunks
+   */
+  async searchChunks(queryText, adminId, limit = 3) {
+    try {
+      const queryEmbedding = await this.generateEmbedding(queryText);
+      const chunks = await KnowledgeBaseChunk.find({ admin: adminId });
+      
+      if (chunks.length === 0) {
+        return [];
+      }
+      
+      const matches = chunks.map(chunk => {
+        const score = this.cosineSimilarity(queryEmbedding, chunk.embedding);
+        return { chunk, score };
+      });
+      
+      matches.sort((a, b) => b.score - a.score);
+      const topMatches = matches.slice(0, limit);
+      
+      return topMatches.map(m => ({
+        text: m.chunk.text,
+        score: m.score,
+        knowledgeBaseId: m.chunk.knowledgeBaseId
+      }));
+    } catch (error) {
+      console.error('Error searching vector chunks:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Query the knowledge base using Gemini API (with RAG vector context support)
+   */
+  async queryKnowledgeBase(question, contextOrAdminId) {
+    try {
+      let relevantTexts = [];
+      let isRAG = false;
+
+      if (Array.isArray(contextOrAdminId)) {
+        relevantTexts = contextOrAdminId;
+      } else if (contextOrAdminId) {
+        // Retrieve relevant chunks via RAG vector search
+        const searchResults = await this.searchChunks(question, contextOrAdminId, 3);
+        relevantTexts = searchResults.map(r => r.text);
+        isRAG = true;
+        console.log(`🔍 RAG Search returned ${searchResults.length} matching contexts`);
+      }
+
+      if (relevantTexts.length === 0) {
         return {
           answer: "I don't have access to any knowledge base documents yet. Let me connect you to a human agent.",
           foundInKB: false,
@@ -80,7 +297,7 @@ class KnowledgeBaseService {
       }
 
       // Combine all knowledge base texts
-      const combinedKB = knowledgeBaseTexts.join('\n\n---\n\n');
+      const combinedKB = relevantTexts.join('\n\n---\n\n');
 
       // Create a prompt for Gemini
       const systemInstruction = `You are a helpful customer support assistant with access to a knowledge base.
@@ -130,7 +347,8 @@ Now answer the following customer question based ONLY on the knowledge base abov
         answer: answer,
         foundInKB: foundInKB,
         confidence: foundInKB ? 0.8 : 0.2,
-        usedKnowledgeBase: true
+        usedKnowledgeBase: true,
+        isRAG
       };
     } catch (error) {
       console.error('Error querying knowledge base:', error);
@@ -146,7 +364,7 @@ Now answer the following customer question based ONLY on the knowledge base abov
   /**
    * Chunk text into smaller pieces for better processing
    */
-  chunkText(text, maxChunkSize = 2000) {
+  chunkText(text, maxChunkSize = 1200) {
     const chunks = [];
     const paragraphs = text.split('\n\n');
     let currentChunk = '';

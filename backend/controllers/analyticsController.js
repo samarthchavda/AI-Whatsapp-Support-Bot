@@ -1,7 +1,7 @@
 const Conversation = require('../models/Conversation');
 const Order = require('../models/Order');
 const Escalation = require('../models/Escalation');
-const { analyzeWithGemini } = require('../services/aiService');
+const aiService = require('../services/aiService');
 
 // Get conversations per day for last 7 days
 exports.getConversationsPerDay = async (req, res) => {
@@ -62,8 +62,10 @@ exports.getResolutionRate = async (req, res) => {
   try {
     const adminQuery = { admin: req.admin._id };
     
-    const totalConversations = await Conversation.countDocuments(adminQuery);
-    const escalatedConversations = await Escalation.countDocuments(adminQuery);
+    const [totalConversations, escalatedConversations] = await Promise.all([
+      Conversation.countDocuments(adminQuery),
+      Escalation.countDocuments(adminQuery)
+    ]);
     
     const aiResolved = totalConversations - escalatedConversations;
     const humanEscalated = escalatedConversations;
@@ -98,15 +100,16 @@ exports.getSentimentAnalysis = async (req, res) => {
     const conversations = await Conversation.find({ admin: req.admin._id })
       .sort({ updatedAt: -1 })
       .limit(50)
-      .select('messages');
+      .select('messages')
+      .lean();
 
     // Extract all messages
     let allMessages = [];
     conversations.forEach(conv => {
       if (conv.messages && conv.messages.length > 0) {
         conv.messages.forEach(msg => {
-          if (msg.sender === 'customer' && msg.text) {
-            allMessages.push(msg.text);
+          if (msg.role === 'user' && msg.content) {
+            allMessages.push(msg.content);
           }
         });
       }
@@ -156,7 +159,7 @@ Consider:
 - Complaints, anger, dissatisfaction = frustrated`;
 
     // Call Gemini API
-    const geminiResponse = await analyzeWithGemini(prompt, []);
+    const geminiResponse = await aiService.analyzeWithGemini(prompt, []);
 
     // Parse response
     let analysis;
@@ -211,20 +214,27 @@ exports.getDashboardStats = async (req, res) => {
   try {
     const adminQuery = { admin: req.admin._id };
     
-    const totalConversations = await Conversation.countDocuments(adminQuery);
-    const totalOrders = await Order.countDocuments(adminQuery);
-    const totalEscalations = await Escalation.countDocuments(adminQuery);
-    
-    const pendingOrders = await Order.countDocuments({ ...adminQuery, status: 'pending' });
-    const activeEscalations = await Escalation.countDocuments({ ...adminQuery, status: 'open' });
-
-    // Get today's conversations
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    const todayConversations = await Conversation.countDocuments({
-      ...adminQuery,
-      createdAt: { $gte: today }
-    });
+
+    const [
+      totalConversations,
+      totalOrders,
+      totalEscalations,
+      pendingOrders,
+      activeEscalations,
+      todayConversations
+    ] = await Promise.all([
+      Conversation.countDocuments(adminQuery),
+      Order.countDocuments(adminQuery),
+      Escalation.countDocuments(adminQuery),
+      Order.countDocuments({ ...adminQuery, status: 'pending' }),
+      Escalation.countDocuments({ ...adminQuery, status: 'open' }),
+      Conversation.countDocuments({
+        ...adminQuery,
+        createdAt: { $gte: today }
+      })
+    ]);
 
     res.json({
       success: true,

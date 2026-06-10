@@ -1,36 +1,57 @@
 const jwt = require('jsonwebtoken');
+const crypto = require('crypto');
 const Admin = require('../models/Admin');
 
-// Generate JWT token
-const generateToken = (adminId) => {
-  return jwt.sign(
-    { id: adminId },
-    process.env.JWT_SECRET || 'your-secret-key-change-in-production',
-    { expiresIn: '7d' }
-  );
+const ACCESS_TOKEN_EXPIRES_IN = '15m';
+const REFRESH_TOKEN_EXPIRES_IN = '30d';
+
+const getAccessTokenSecret = () => process.env.JWT_ACCESS_SECRET || process.env.JWT_SECRET || 'your-secret-key-change-in-production';
+const getRefreshTokenSecret = () => process.env.JWT_REFRESH_SECRET || process.env.JWT_SECRET || 'your-refresh-secret-key-change-in-production';
+
+const generateAccessToken = (adminId) => jwt.sign(
+  { id: adminId, tokenType: 'access' },
+  getAccessTokenSecret(),
+  { expiresIn: ACCESS_TOKEN_EXPIRES_IN }
+);
+
+const generateRefreshToken = (adminId) => jwt.sign(
+  { id: adminId, tokenType: 'refresh' },
+  getRefreshTokenSecret(),
+  { expiresIn: REFRESH_TOKEN_EXPIRES_IN }
+);
+
+const hashToken = (token) => crypto.createHash('sha256').update(token).digest('hex');
+
+const verifyRefreshToken = (token) => jwt.verify(token, getRefreshTokenSecret());
+
+const extractBearerToken = (authorizationHeader) => {
+  if (!authorizationHeader) {
+    return null;
+  }
+
+  const [scheme, token] = authorizationHeader.split(' ');
+  if (scheme !== 'Bearer' || !token) {
+    return null;
+  }
+
+  return token;
 };
 
 // Verify JWT token middleware
 const verifyToken = async (req, res, next) => {
   try {
-    // Get token from header
-    const token = req.headers.authorization?.replace('Bearer ', '');
+    const token = extractBearerToken(req.headers.authorization);
 
     if (!token) {
       return res.status(401).json({
         success: false,
-        error: 'No token provided',
+        error: 'No access token provided',
         message: 'Authentication required'
       });
     }
 
-    // Verify token
-    const decoded = jwt.verify(
-      token,
-      process.env.JWT_SECRET || 'your-secret-key-change-in-production'
-    );
+    const decoded = jwt.verify(token, getAccessTokenSecret());
 
-    // Get admin from database
     const admin = await Admin.findById(decoded.id).select('-password');
 
     if (!admin) {
@@ -79,13 +100,10 @@ const verifyToken = async (req, res, next) => {
 // Optional auth - doesn't fail if no token
 const optionalAuth = async (req, res, next) => {
   try {
-    const token = req.headers.authorization?.replace('Bearer ', '');
+    const token = extractBearerToken(req.headers.authorization);
 
     if (token) {
-      const decoded = jwt.verify(
-        token,
-        process.env.JWT_SECRET || 'your-secret-key-change-in-production'
-      );
+      const decoded = jwt.verify(token, getAccessTokenSecret());
       const admin = await Admin.findById(decoded.id).select('-password');
       
       if (admin && admin.isActive) {
@@ -100,7 +118,10 @@ const optionalAuth = async (req, res, next) => {
 };
 
 module.exports = {
-  generateToken,
+  generateAccessToken,
+  generateRefreshToken,
+  hashToken,
+  verifyRefreshToken,
   verifyToken,
   optionalAuth
 };

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import { 
@@ -11,14 +11,20 @@ import {
   FaToggleOff,
   FaTrash,
   FaPercent,
-  FaCrown
+  FaCrown,
+  FaSearch,
+  FaUserPlus
 } from 'react-icons/fa';
+import { getSuperAdminUsers, getSuperAdminAnalytics } from '../services/api';
 import './SuperAdmin.css';
+
+const API_BASE = process.env.REACT_APP_API_URL || 'http://localhost:5001/api';
 
 function SuperAdmin() {
   const [users, setUsers] = useState([]);
   const [analytics, setAnalytics] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [userSearch, setUserSearch] = useState('');
   const [showDiscountModal, setShowDiscountModal] = useState(false);
   const [showAddUserModal, setShowAddUserModal] = useState(false);
   const [selectedUser, setSelectedUser] = useState(null);
@@ -41,12 +47,9 @@ function SuperAdmin() {
   const fetchData = async () => {
     try {
       setLoading(true);
-      const token = localStorage.getItem('token');
-      const headers = { Authorization: `Bearer ${token}` };
-
       const [usersRes, analyticsRes] = await Promise.all([
-        axios.get('http://localhost:5001/api/super-admin/users', { headers }),
-        axios.get('http://localhost:5001/api/super-admin/analytics', { headers })
+        getSuperAdminUsers(),
+        getSuperAdminAnalytics()
       ]);
 
       setUsers(usersRes.data.data);
@@ -70,7 +73,7 @@ function SuperAdmin() {
     
     try {
       await axios.post(
-        `http://localhost:5001/api/super-admin/users/${userId}/toggle-status`,
+        `${API_BASE}/super-admin/users/${userId}/toggle-status`,
         {},
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -87,7 +90,7 @@ function SuperAdmin() {
     
     try {
       await axios.post(
-        `http://localhost:5001/api/super-admin/users/${selectedUser._id}/apply-discount`,
+        `${API_BASE}/super-admin/users/${selectedUser._id}/apply-discount`,
         { discount: discountValue },
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -108,7 +111,7 @@ function SuperAdmin() {
     
     try {
       await axios.delete(
-        `http://localhost:5001/api/super-admin/users/${userId}`,
+        `${API_BASE}/super-admin/users/${userId}`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
       alert('User deleted successfully');
@@ -125,7 +128,7 @@ function SuperAdmin() {
     
     try {
       await axios.post(
-        'http://localhost:5001/api/super-admin/users',
+        `${API_BASE}/super-admin/users`,
         newUser,
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -166,6 +169,18 @@ function SuperAdmin() {
     return colors[status] || '#71717a';
   };
 
+  const filteredUsers = useMemo(() => {
+    const q = userSearch.toLowerCase().trim();
+    if (!q) return users;
+    return users.filter(
+      (u) =>
+        u.name?.toLowerCase().includes(q) ||
+        u.email?.toLowerCase().includes(q) ||
+        u.businessName?.toLowerCase().includes(q) ||
+        u.subscriptionPlan?.toLowerCase().includes(q)
+    );
+  }, [users, userSearch]);
+
   if (loading) {
     return (
       <div className="container">
@@ -178,21 +193,20 @@ function SuperAdmin() {
   }
 
   return (
-    <div className="container">
-      <div className="page-header">
+    <div className="container super-admin-page">
+      <div className="page-header super-admin-header">
         <div>
-          <h1 className="page-title">
-            <FaCrown style={{ color: '#f59e0b', marginRight: '12px' }} />
-            Super Admin Dashboard
+          <h1 className="page-title super-admin-title">
+            <FaCrown className="crown-icon" />
+            Super Admin
           </h1>
-          <p className="page-subtitle">Manage all users and view global analytics</p>
+          <p className="page-subtitle">Platform overview, user management, and revenue analytics</p>
         </div>
-        <button 
+        <button
           className="btn-primary"
           onClick={() => setShowAddUserModal(true)}
-          style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
         >
-          <FaUsers /> Add New User
+          <FaUserPlus /> Add User
         </button>
       </div>
 
@@ -245,45 +259,64 @@ function SuperAdmin() {
         </div>
       )}
 
-      {/* Users Table */}
-      <div className="table-container">
-        <div className="table-header">
-          <h2>All Business Owners ({users.length})</h2>
+      <div className="table-container-premium super-admin-table">
+        <div className="table-header-premium super-admin-table-header">
+          <h2><FaUsers /> Business Owners ({filteredUsers.length})</h2>
+          <div className="super-admin-search">
+            <FaSearch />
+            <input
+              type="text"
+              placeholder="Search users..."
+              value={userSearch}
+              onChange={(e) => setUserSearch(e.target.value)}
+            />
+          </div>
         </div>
-        
-        <div className="table-responsive">
-          <table>
+
+        <div className="table-wrapper">
+          <table className="premium-table">
             <thead>
               <tr>
-                <th>Name</th>
-                <th>Email</th>
+                <th>User</th>
                 <th>Plan</th>
                 <th>Status</th>
-                <th>Price</th>
-                <th>Discount</th>
+                <th>Revenue</th>
                 <th>WhatsApp</th>
-                <th>Tokens Used</th>
+                <th>Token Usage</th>
                 <th>Actions</th>
               </tr>
             </thead>
             <tbody>
-              {users.map((user) => {
+              {filteredUsers.length === 0 ? (
+                <tr>
+                  <td colSpan="7" className="super-admin-empty">
+                    No users found matching &quot;{userSearch}&quot;
+                  </td>
+                </tr>
+              ) : filteredUsers.map((user) => {
                 const finalPrice = user.monthlyPrice - (user.monthlyPrice * user.customDiscount / 100);
                 const tokenPercentage = user.geminiTokensLimit > 0
                   ? ((user.geminiTokensUsed / user.geminiTokensLimit) * 100).toFixed(0)
                   : 0;
 
                 return (
-                  <tr key={user._id}>
+                  <tr key={user._id} className="table-row-premium">
                     <td>
-                      <strong>{user.name}</strong>
-                      {user.businessName && (
-                        <div style={{ fontSize: '12px', color: '#71717a' }}>
-                          {user.businessName}
+                      <div className="customer-cell">
+                        <div className="avatar" style={{
+                          background: getPlanBadgeColor(user.subscriptionPlan)
+                        }}>
+                          {user.name?.charAt(0)}
                         </div>
-                      )}
+                        <div className="customer-info">
+                          <span className="customer-name">{user.name}</span>
+                          <span className="customer-phone">{user.email}</span>
+                          {user.businessName && (
+                            <span className="customer-phone">{user.businessName}</span>
+                          )}
+                        </div>
+                      </div>
                     </td>
-                    <td>{user.email}</td>
                     <td>
                       <span 
                         className="badge"
@@ -307,23 +340,12 @@ function SuperAdmin() {
                       </span>
                     </td>
                     <td>
-                      <div>
-                        ${finalPrice.toFixed(2)}/mo
+                      <div className="revenue-cell">
+                        <strong>${finalPrice.toFixed(2)}/mo</strong>
                         {user.customDiscount > 0 && (
-                          <div style={{ fontSize: '11px', color: '#71717a', textDecoration: 'line-through' }}>
-                            ${user.monthlyPrice}
-                          </div>
+                          <span className="discount-tag">{user.customDiscount}% off</span>
                         )}
                       </div>
-                    </td>
-                    <td>
-                      {user.customDiscount > 0 ? (
-                        <span style={{ color: '#10b981', fontSize: '13px', fontWeight: '600' }}>
-                          {user.customDiscount}% OFF
-                        </span>
-                      ) : (
-                        <span style={{ color: '#71717a' }}>-</span>
-                      )}
                     </td>
                     <td>
                       <span className={user.whatsappConnected ? 'status-connected' : 'status-disconnected'}>
@@ -331,27 +353,16 @@ function SuperAdmin() {
                       </span>
                     </td>
                     <td>
-                      <div style={{ fontSize: '13px' }}>
-                        {user.geminiTokensUsed.toLocaleString()} / {user.geminiTokensLimit.toLocaleString()}
-                        <div 
-                          style={{ 
-                            width: '100%', 
-                            height: '4px', 
-                            background: 'rgba(63, 63, 70, 0.5)', 
-                            borderRadius: '2px',
-                            marginTop: '4px',
-                            overflow: 'hidden'
-                          }}
-                        >
-                          <div 
-                            style={{ 
-                              width: `${tokenPercentage}%`, 
-                              height: '100%', 
-                              background: tokenPercentage > 80 ? '#ef4444' : '#10b981',
-                              transition: 'width 0.3s ease'
-                            }}
+                      <div className="token-usage-bar">
+                        <div className="token-usage-track">
+                          <div
+                            className={`token-usage-fill ${tokenPercentage > 80 ? 'high' : ''}`}
+                            style={{ width: `${Math.min(tokenPercentage, 100)}%` }}
                           />
                         </div>
+                        <span className="token-usage-text">
+                          {tokenPercentage}% · {user.geminiTokensUsed?.toLocaleString()} used
+                        </span>
                       </div>
                     </td>
                     <td>

@@ -35,6 +35,14 @@ const conversationSchema = new mongoose.Schema({
       type: String,
       enum: ['order_status', 'cancel_order', 'return_policy', 'refund_request', 'complaint', 'general_inquiry', 'other'],
       default: 'other'
+    },
+    messageId: {
+      type: String
+    },
+    status: {
+      type: String,
+      enum: ['sent', 'delivered', 'read', 'failed'],
+      default: 'sent'
     }
   }],
   status: {
@@ -43,6 +51,10 @@ const conversationSchema = new mongoose.Schema({
     default: 'active'
   },
   escalated: {
+    type: Boolean,
+    default: false
+  },
+  botPaused: {
     type: Boolean,
     default: false
   },
@@ -77,6 +89,7 @@ const conversationSchema = new mongoose.Schema({
 conversationSchema.index({ admin: 1, customerPhone: 1, createdAt: -1 });
 conversationSchema.index({ admin: 1, status: 1 });
 conversationSchema.index({ admin: 1, escalated: 1 });
+conversationSchema.index({ admin: 1, updatedAt: -1 });
 conversationSchema.index({ customerPhone: 1, createdAt: -1 });
 conversationSchema.index({ status: 1 });
 conversationSchema.index({ escalated: 1 });

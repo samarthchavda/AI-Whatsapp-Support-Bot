@@ -1,5 +1,9 @@
-import React, { useState, useEffect } from 'react';
-import { getOrders, updateOrder, createOrder } from '../services/api';
+import React, { useState, useEffect, useMemo } from 'react';
+import { getOrders, updateOrder } from '../services/api';
+import { FaUpload, FaPlus, FaBox, FaTimes } from 'react-icons/fa';
+import './Orders.css';
+
+const API_BASE = process.env.REACT_APP_API_URL || 'http://localhost:5001/api';
 
 function Orders() {
   const [orders, setOrders] = useState([]);
@@ -64,7 +68,7 @@ function Orders() {
     const token = localStorage.getItem('token');
     
     try {
-      const response = await fetch('http://localhost:5001/api/orders', {
+      const response = await fetch(`${API_BASE}/orders`, {
         method: 'POST',
         headers: {
           'Authorization': token ? `Bearer ${token}` : ''
@@ -104,7 +108,7 @@ function Orders() {
     try {
       setUploadProgress('Uploading...');
       
-      const response = await fetch('http://localhost:5001/api/orders/bulk-upload', {
+      const response = await fetch(`${API_BASE}/orders/bulk-upload`, {
         method: 'POST',
         headers: {
           'Authorization': token ? `Bearer ${token}` : ''
@@ -148,41 +152,66 @@ Bob Johnson,+1234567892,bob@example.com,Standard Item,3,149.99,shipped`;
     window.URL.revokeObjectURL(url);
   };
 
+  const orderStats = useMemo(() => ({
+    total: orders.length,
+    pending: orders.filter((o) => o.status === 'pending').length,
+    processing: orders.filter((o) => o.status === 'processing').length,
+    shipped: orders.filter((o) => o.status === 'shipped').length,
+    delivered: orders.filter((o) => o.status === 'delivered').length
+  }), [orders]);
+
   if (loading && orders.length === 0) {
     return (
       <div className="loading">
         <div className="spinner"></div>
-        Loading orders...
+        <span>Loading orders...</span>
       </div>
     );
   }
 
   return (
     <div className="container">
-      <div className="page-header">
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <div>
-            <h1 className="page-title">Orders</h1>
-            <p className="page-subtitle">Manage and track all customer orders</p>
-          </div>
-          <div style={{ display: 'flex', gap: '12px' }}>
-            <button 
-              className="btn-secondary" 
-              onClick={() => setShowBulkUpload(!showBulkUpload)}
-              style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
-            >
-              <span style={{ fontSize: '18px' }}>📤</span>
-              Bulk Upload CSV
-            </button>
-            <button 
-              className="btn-primary" 
-              onClick={() => setShowCreateForm(!showCreateForm)}
-              style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
-            >
-              <span style={{ fontSize: '18px' }}>{showCreateForm ? '✕' : '+'}</span>
-              {showCreateForm ? 'Cancel' : 'Add Order'}
-            </button>
-          </div>
+      <div className="page-header orders-page-header">
+        <div>
+          <h1 className="page-title">Orders</h1>
+          <p className="page-subtitle">Manage and track all customer orders in one place</p>
+        </div>
+        <div className="orders-header-actions">
+          <button
+            className="btn-secondary"
+            onClick={() => setShowBulkUpload(!showBulkUpload)}
+          >
+            <FaUpload /> Bulk Upload
+          </button>
+          <button
+            className="btn-primary"
+            onClick={() => setShowCreateForm(!showCreateForm)}
+          >
+            {showCreateForm ? <><FaTimes /> Cancel</> : <><FaPlus /> Add Order</>}
+          </button>
+        </div>
+      </div>
+
+      <div className="orders-stats-row">
+        <div className="orders-stat-pill">
+          <span className="label">Total</span>
+          <span className="value">{orderStats.total}</span>
+        </div>
+        <div className="orders-stat-pill pending">
+          <span className="label">Pending</span>
+          <span className="value">{orderStats.pending}</span>
+        </div>
+        <div className="orders-stat-pill processing">
+          <span className="label">Processing</span>
+          <span className="value">{orderStats.processing}</span>
+        </div>
+        <div className="orders-stat-pill shipped">
+          <span className="label">Shipped</span>
+          <span className="value">{orderStats.shipped}</span>
+        </div>
+        <div className="orders-stat-pill delivered">
+          <span className="label">Delivered</span>
+          <span className="value">{orderStats.delivered}</span>
         </div>
       </div>
 
@@ -430,86 +459,78 @@ Bob Johnson,+1234567892,bob@example.com,Standard Item,3,149.99,shipped`;
 
       {error && <div className="error">{error}</div>}
 
-      {/* Orders Table */}
-      <div className="table-container">
+      <div className="orders-table-card">
         <div className="table-header">
-          <h2>All Orders ({orders.length})</h2>
+          <h2><FaBox style={{ marginRight: '10px', color: '#10b981' }} />All Orders ({orders.length})</h2>
         </div>
-        <table>
-          <thead>
-            <tr>
-              <th>Order ID</th>
-              <th>Customer</th>
-              <th>Phone</th>
-              <th>Amount</th>
-              <th>Status</th>
-              <th>Date</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {orders.length > 0 ? (
-              orders.map((order) => (
-                <tr key={order._id}>
-                  <td><strong>{order.orderId}</strong></td>
-                  <td>{order.customerName}</td>
-                  <td>{order.customerPhone}</td>
-                  <td>${order.totalAmount.toFixed(2)}</td>
-                  <td>
-                    <span className={`badge badge-${order.status}`}>
-                      {order.status}
-                    </span>
-                  </td>
-                  <td>{new Date(order.orderDate).toLocaleDateString()}</td>
-                  <td>
-                    {order.status === 'pending' && (
-                      <button 
-                        className="btn btn-primary" 
-                        onClick={() => handleStatusUpdate(order.orderId, 'processing')}
-                        style={{ fontSize: '12px', padding: '5px 10px', marginRight: '5px' }}
-                      >
-                        Process
-                      </button>
-                    )}
-                    {order.status === 'processing' && (
-                      <button 
-                        className="btn btn-primary" 
-                        onClick={() => handleStatusUpdate(order.orderId, 'shipped')}
-                        style={{ fontSize: '12px', padding: '5px 10px' }}
-                      >
-                        Ship
-                      </button>
-                    )}
-                    {order.status === 'shipped' && (
-                      <button 
-                        className="btn btn-success" 
-                        onClick={() => handleStatusUpdate(order.orderId, 'delivered')}
-                        style={{ fontSize: '12px', padding: '5px 10px' }}
-                      >
-                        Deliver
-                      </button>
-                    )}
-                    {order.status === 'return_processing' && (
-                      <button
-                        className="btn btn-secondary"
-                        onClick={() => handleStatusUpdate(order.orderId, 'returned')}
-                        style={{ fontSize: '12px', padding: '5px 10px' }}
-                      >
-                        Complete Return
-                      </button>
-                    )}
-                  </td>
+        <div className="table-wrapper">
+          {orders.length > 0 ? (
+            <table className="premium-table">
+              <thead>
+                <tr>
+                  <th>Order ID</th>
+                  <th>Customer</th>
+                  <th>Phone</th>
+                  <th>Amount</th>
+                  <th>Status</th>
+                  <th>Date</th>
+                  <th>Actions</th>
                 </tr>
-              ))
-            ) : (
-              <tr>
-                <td colSpan="7" style={{ textAlign: 'center', padding: '20px' }}>
-                  No orders found
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
+              </thead>
+              <tbody>
+                {orders.map((order) => (
+                  <tr key={order._id} className="table-row-premium">
+                    <td><span className="order-id-cell">{order.orderId}</span></td>
+                    <td>
+                      <div className="customer-cell">
+                        <div className="avatar">{order.customerName?.charAt(0)}</div>
+                        <span className="customer-name">{order.customerName}</span>
+                      </div>
+                    </td>
+                    <td className="text-muted">{order.customerPhone}</td>
+                    <td><span className="order-amount">₹{order.totalAmount.toLocaleString('en-IN')}</span></td>
+                    <td>
+                      <span className={`badge-premium badge-${order.status}`}>
+                        {order.status.replace('_', ' ')}
+                      </span>
+                    </td>
+                    <td className="text-muted">{new Date(order.orderDate).toLocaleDateString('en-IN')}</td>
+                    <td>
+                      <div className="order-actions">
+                        {order.status === 'pending' && (
+                          <button className="btn-action process" onClick={() => handleStatusUpdate(order.orderId, 'processing')}>
+                            Process
+                          </button>
+                        )}
+                        {order.status === 'processing' && (
+                          <button className="btn-action ship" onClick={() => handleStatusUpdate(order.orderId, 'shipped')}>
+                            Ship
+                          </button>
+                        )}
+                        {order.status === 'shipped' && (
+                          <button className="btn-action deliver" onClick={() => handleStatusUpdate(order.orderId, 'delivered')}>
+                            Deliver
+                          </button>
+                        )}
+                        {order.status === 'return_processing' && (
+                          <button className="btn-action return" onClick={() => handleStatusUpdate(order.orderId, 'returned')}>
+                            Complete Return
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          ) : (
+            <div className="orders-empty">
+              <FaBox style={{ fontSize: '40px', color: '#6366f1', opacity: 0.5 }} />
+              <h3>No orders yet</h3>
+              <p>Add an order manually or import from CSV to get started.</p>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

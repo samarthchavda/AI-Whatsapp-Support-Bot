@@ -1,0 +1,277 @@
+import React, { useState, useEffect } from 'react';
+import { FaCrown, FaCheck, FaInfoCircle, FaRegCreditCard, FaHistory, FaCalendarAlt } from 'react-icons/fa';
+import { getPricingPlans, upgradePricingPlan, getAdminProfile } from '../services/api';
+import './Billing.css';
+
+function Billing() {
+  const [profile, setProfile] = useState(null);
+  const [plans, setPlans] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [upgradingPlanName, setUpgradingPlanName] = useState(null);
+  const [successMessage, setSuccessMessage] = useState(null);
+
+  useEffect(() => {
+    fetchBillingData();
+  }, []);
+
+  const fetchBillingData = async () => {
+    try {
+      setLoading(true);
+      const [profileRes, plansRes] = await Promise.all([
+        getAdminProfile(),
+        getPricingPlans()
+      ]);
+      setProfile(profileRes.data.data.admin);
+      setPlans(plansRes.data.data);
+    } catch (error) {
+      console.error('Error fetching billing data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleUpgrade = async (planName) => {
+    if (!window.confirm(`Are you sure you want to upgrade/change your subscription to ${planName.toUpperCase()} plan?`)) {
+      return;
+    }
+
+    try {
+      setUpgradingPlanName(planName);
+      const response = await upgradePricingPlan(planName);
+      
+      // Update local profile state
+      setProfile(response.data.data.admin);
+      
+      // Save updated admin data to localStorage
+      const storedAdmin = localStorage.getItem('admin');
+      if (storedAdmin) {
+        const adminObj = JSON.parse(storedAdmin);
+        const updatedAdminObj = {
+          ...adminObj,
+          ...response.data.data.admin
+        };
+        localStorage.setItem('admin', JSON.stringify(updatedAdminObj));
+      }
+
+      setSuccessMessage(`Plan updated successfully to ${planName.toUpperCase()}!`);
+      setTimeout(() => setSuccessMessage(null), 5000);
+    } catch (error) {
+      console.error('Error upgrading plan:', error);
+      alert(error.response?.data?.error || 'Failed to update pricing plan');
+    } finally {
+      setUpgradingPlanName(null);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="container">
+        <div style={{ padding: '40px', textAlign: 'center', color: '#71717a' }}>
+          <div className="spinner" style={{ margin: '0 auto 16px' }}></div>
+          Loading subscription details...
+        </div>
+      </div>
+    );
+  }
+
+  const tokenUsagePercentage = profile 
+    ? Math.min(100, Math.round((profile.geminiTokensUsed / profile.geminiTokensLimit) * 100))
+    : 0;
+
+  const isUsageWarning = tokenUsagePercentage >= 80;
+  const isUsageDanger = tokenUsagePercentage >= 95;
+
+  let progressColor = '#22c55e'; // Green
+  if (isUsageDanger) progressColor = '#ef4444'; // Red
+  else if (isUsageWarning) progressColor = '#f59e0b'; // Amber
+
+  const mockInvoices = [
+    { id: 'INV-2026-001', date: '2026-05-15', amount: profile?.monthlyPrice || 29, status: 'Paid', method: 'Visa ending in 4242' },
+    { id: 'INV-2026-002', date: '2026-04-15', amount: profile?.monthlyPrice || 29, status: 'Paid', method: 'Visa ending in 4242' },
+  ];
+
+  return (
+    <div className="container billing-page">
+      <div className="page-header">
+        <div>
+          <h1 className="page-title">
+            <FaCrown style={{ color: '#fbbf24', marginRight: '12px' }} />
+            Billing & Subscriptions
+          </h1>
+          <p className="page-subtitle">Manage your SaaS subscription, limits, and billing details</p>
+        </div>
+      </div>
+
+      {successMessage && (
+        <div className="billing-success-alert">
+          <FaCheck /> {successMessage}
+        </div>
+      )}
+
+      {/* Grid: Plan overview and Token usage */}
+      <div className="billing-overview-grid">
+        {/* Active Plan Card */}
+        <div className="billing-card active-plan-card">
+          <div className="card-badge">Current Plan</div>
+          <h2 className="plan-name-display">
+            {profile?.subscriptionPlan ? profile.subscriptionPlan.toUpperCase() : 'STARTER'} Plan
+          </h2>
+          
+          <div className="plan-status-row">
+            <span className={`status-badge-saas status-${profile?.subscriptionStatus || 'trial'}`}>
+              {profile?.subscriptionStatus || 'Trial'}
+            </span>
+            <span className="monthly-price-display">${profile?.monthlyPrice || 29}/mo</span>
+          </div>
+
+          <div className="plan-meta-list">
+            <div className="plan-meta-item">
+              <FaCalendarAlt />
+              <span>
+                Billing Period Started: {profile?.createdAt ? new Date(profile.createdAt).toLocaleDateString() : 'N/A'}
+              </span>
+            </div>
+            <div className="plan-meta-item">
+              <FaRegCreditCard />
+              <span>Payment Method: Visa ending in 4242</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Token Usage Card */}
+        <div className="billing-card token-usage-card">
+          <h3>Gemini AI Token Usage</h3>
+          <p className="usage-subtitle">Your monthly AI usage limits reset every 30 days.</p>
+
+          <div className="usage-numeric-row">
+            <div>
+              <span className="used-amount">{profile?.geminiTokensUsed?.toLocaleString() || 0}</span>
+              <span className="divider"> / </span>
+              <span className="limit-amount">{profile?.geminiTokensLimit?.toLocaleString() || '10,000'}</span>
+              <span className="unit"> tokens</span>
+            </div>
+            <div className="percentage-display">{tokenUsagePercentage}%</div>
+          </div>
+
+          <div className="progress-bar-container">
+            <div 
+              className="progress-bar-fill" 
+              style={{ width: `${tokenUsagePercentage}%`, backgroundColor: progressColor }}
+            />
+          </div>
+
+          {isUsageDanger && (
+            <div className="usage-alertdanger">
+              <FaInfoCircle /> You have reached your AI token limit! Suspending bot auto-replies until upgrade or monthly reset.
+            </div>
+          )}
+          {!isUsageDanger && isUsageWarning && (
+            <div className="usage-alertwarning">
+              <FaInfoCircle /> Warning: You are running low on monthly AI tokens. Upgrade your plan to avoid service interruption.
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Plan Selection Grid */}
+      <div className="plans-selection-section">
+        <h2 className="section-title">Change Subscription Plan</h2>
+        <p className="section-subtitle">Select a plan that fits your customer support request volume.</p>
+        
+        <div className="billing-plans-grid">
+          {plans.map((plan) => {
+            const isCurrent = profile?.subscriptionPlan === plan.name;
+            const features = plan.features || {};
+
+            return (
+              <div key={plan._id || plan.name} className={`upgrade-plan-card ${isCurrent ? 'current' : ''}`}>
+                {plan.badge && <span className="upgrade-badge">{plan.badge}</span>}
+                
+                <h3 className="upgrade-plan-name">{plan.displayName}</h3>
+                <p className="upgrade-plan-desc">{plan.description}</p>
+
+                <div className="upgrade-price-row">
+                  <span className="price">${plan.monthlyPrice}</span>
+                  <span className="period">/month</span>
+                </div>
+
+                <ul className="upgrade-features-list">
+                  {features.maxConversations === -1 ? (
+                    <li><FaCheck /> Unlimited Conversations</li>
+                  ) : (
+                    <li><FaCheck /> Up to {features.maxConversations} Conversations</li>
+                  )}
+                  
+                  {features.maxMessages === -1 ? (
+                    <li><FaCheck /> Unlimited Messages</li>
+                  ) : (
+                    <li><FaCheck /> Up to {features.maxMessages} Messages</li>
+                  )}
+
+                  <li><FaCheck /> {features.geminiTokensPerMonth.toLocaleString()} Gemini Tokens/mo</li>
+                  <li><FaCheck /> {features.maxWhatsAppConnections} WhatsApp Connection{features.maxWhatsAppConnections > 1 ? 's' : ''}</li>
+                  
+                  {features.advancedAnalytics && <li><FaCheck /> Advanced Analytics</li>}
+                  {features.customBranding && <li><FaCheck /> Custom Branding</li>}
+                  {features.liveChat && <li><FaCheck /> Live Chat Support</li>}
+                  {features.knowledgeBase && <li><FaCheck /> Knowledge Base</li>}
+                  {features.integrations && <li><FaCheck /> E-commerce Integrations</li>}
+                  {features.apiAccess && <li><FaCheck /> API Access</li>}
+                  {features.prioritySupport && <li><FaCheck /> Priority Support</li>}
+                </ul>
+
+                <button
+                  type="button"
+                  className={`plan-select-btn ${isCurrent ? 'btn-current' : 'btn-upgrade'}`}
+                  disabled={isCurrent || upgradingPlanName !== null}
+                  onClick={() => handleUpgrade(plan.name)}
+                >
+                  {isCurrent 
+                    ? 'Current Active Plan' 
+                    : upgradingPlanName === plan.name 
+                    ? 'Processing...' 
+                    : 'Select Plan'}
+                </button>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Invoice History */}
+      <div className="billing-card invoice-history-card">
+        <h3 className="card-title-with-icon">
+          <FaHistory /> Invoice Payment History
+        </h3>
+        <div className="table-wrapper" style={{ marginTop: '16px' }}>
+          <table className="premium-table">
+            <thead>
+              <tr>
+                <th>Invoice Number</th>
+                <th>Billed Date</th>
+                <th>Amount</th>
+                <th>Payment Method</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {mockInvoices.map((inv) => (
+                <tr key={inv.id} className="table-row-premium">
+                  <td><strong>{inv.id}</strong></td>
+                  <td>{inv.date}</td>
+                  <td>${inv.amount.toFixed(2)}</td>
+                  <td>{inv.method}</td>
+                  <td>
+                    <span className="badge-premium badge-active">{inv.status}</span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default Billing;

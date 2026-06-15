@@ -25,7 +25,7 @@ exports.handleExternalOrder = async (req, res) => {
     console.log(`📦 Processing ${source} webhook...`);
 
     // Process the webhook and create order
-    const result = await webhookService.processWebhook(source, webhookData);
+    const result = await webhookService.processWebhook(source, webhookData, req.adminId);
     order = result.order;
 
     let whatsappResult = { success: false, error: 'Not attempted' };
@@ -35,9 +35,10 @@ exports.handleExternalOrder = async (req, res) => {
 
       const statusChanged = result.oldStatus !== order.status;
       const isShippedOrDelivered = order.status === 'shipped' || order.status === 'delivered';
+      const isCancelled = order.status === 'cancelled';
 
-      if (order.customerPhone && (statusChanged && isShippedOrDelivered)) {
-        console.log(`📱 Sending WhatsApp tracking update to ${order.customerPhone}...`);
+      if (order.customerPhone && (statusChanged && (isShippedOrDelivered || isCancelled))) {
+        console.log(`📱 Sending WhatsApp tracking/cancellation update to ${order.customerPhone}...`);
         whatsappResult = await webhookService.sendTrackingUpdate(order, result.customer, {
           trackingNumber: order.trackingNumber,
           status: order.status
@@ -384,7 +385,7 @@ exports.handleShopifyFulfillment = async (req, res) => {
       status: fulfillment.shipment_status === 'delivered' ? 'delivered' : 'shipped'
     };
     
-    const result = await webhookService.processFulfillmentUpdate('shopify', externalOrderId, trackingInfo);
+    const result = await webhookService.processFulfillmentUpdate('shopify', externalOrderId, trackingInfo, req.adminId);
     
     // Log webhook
     webhookLog = new WebhookLog({
@@ -477,7 +478,7 @@ exports.handleGenericFulfillment = async (req, res) => {
       status: status.toLowerCase() === 'delivered' ? 'delivered' : 'shipped'
     };
     
-    const result = await webhookService.processFulfillmentUpdate(source, externalOrderId, trackingInfo);
+    const result = await webhookService.processFulfillmentUpdate(source, externalOrderId, trackingInfo, req.adminId);
     
     // Log webhook
     webhookLog = new WebhookLog({
@@ -535,3 +536,77 @@ exports.handleGenericFulfillment = async (req, res) => {
     return res.status(500).json({ success: false, error: error.message });
   }
 };
+
+/**
+ * Handle Shopify checkout webhooks
+ */
+exports.handleShopifyCheckout = async (req, res) => {
+  const startTime = Date.now();
+  const webhookData = req.body;
+  let webhookLog = null;
+
+  try {
+    if (!webhookData || Object.keys(webhookData).length === 0) {
+      return res.status(400).json({
+        success: false,
+        error: 'Empty request body',
+        message: 'Webhook payload is required'
+      });
+    }
+
+    console.log(`🛒 Processing Shopify checkout webhook...`);
+
+    // Call webhookService.processCheckout
+    await webhookService.processCheckout('shopify', webhookData, req.adminId);
+
+    // Log webhook
+    webhookLog = new WebhookLog({
+      source: 'shopify',
+      eventType: 'checkout_updated',
+      externalOrderId: webhookData.id?.toString() || webhookData.token || 'unknown',
+      status: 'success',
+      requestPayload: webhookData,
+      responsePayload: {
+        success: true,
+        message: 'Checkout processed successfully'
+      },
+      ipAddress: req.webhookMeta?.ipAddress,
+      userAgent: req.webhookMeta?.userAgent,
+      processingTime: Date.now() - startTime
+    });
+    await webhookLog.save();
+
+    return res.status(200).json({
+      success: true,
+      message: 'Checkout processed successfully',
+      processingTime: `${Date.now() - startTime}ms`
+    });
+
+  } catch (error) {
+    console.error('❌ Shopify checkout webhook error:', error.message);
+
+    try {
+      webhookLog = new WebhookLog({
+        source: 'shopify',
+        eventType: 'checkout_updated',
+        externalOrderId: webhookData?.id?.toString() || webhookData?.token || 'unknown',
+        status: 'failed',
+        requestPayload: webhookData,
+        errorMessage: error.message,
+        ipAddress: req.webhookMeta?.ipAddress,
+        userAgent: req.webhookMeta?.userAgent,
+        processingTime: Date.now() - startTime
+      });
+      await webhookLog.save();
+    } catch (logError) {
+      console.error('Failed to log webhook error:', logError.message);
+    }
+
+    return res.status(500).json({
+      success: false,
+      error: error.message,
+      message: 'Failed to process checkout webhook'
+    });
+  }
+};
+

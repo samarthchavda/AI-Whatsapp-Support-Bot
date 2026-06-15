@@ -6,6 +6,7 @@ const WebhookAuth = require('../middleware/webhookAuth');
 // Rate limiter for webhooks
 const webhookRateLimiter = WebhookAuth.createRateLimiter(100, 60000); // 100 requests per minute
 
+
 /**
  * @route   POST /api/webhooks/external-orders/:source
  * @desc    Receive external order webhooks
@@ -108,5 +109,60 @@ router.get('/stats', externalWebhookController.getWebhookStats);
 if (process.env.NODE_ENV !== 'production') {
   router.post('/test/:source', externalWebhookController.testWebhook);
 }
+
+/**
+ * @route   POST /api/webhooks/:platform/:webhookSecret
+ * @desc    Receive external webhooks with tenant scoping secret
+ * @access  Protected (webhookSecret URL token)
+ */
+router.post(
+  '/:platform/:webhookSecret',
+  webhookRateLimiter,
+  WebhookAuth.logRequest,
+  async (req, res, next) => {
+    try {
+      const { platform, webhookSecret } = req.params;
+      const Integration = require('../models/Integration');
+      const integration = await Integration.findOne({ platform, webhookSecret, isActive: true });
+      
+      if (!integration) {
+        return res.status(404).json({
+          success: false,
+          error: 'Integration not found or inactive',
+          message: 'The webhook URL is invalid or has been disabled'
+        });
+      }
+      
+      // Attach integration and adminId to request object
+      req.integration = integration;
+      req.adminId = integration.adminId;
+      req.params.source = platform;
+      
+      next();
+    } catch (error) {
+      console.error('Webhook secret routing error:', error);
+      return res.status(500).json({
+        success: false,
+        error: 'Internal Server Error'
+      });
+    }
+  },
+  (req, res, next) => {
+    const platform = req.params.platform;
+    const topic = req.headers['x-shopify-topic'] || '';
+    
+    // Route to checkout handler if Shopify checkout webhook
+    if (platform === 'shopify' && topic.toLowerCase().includes('checkout')) {
+      return externalWebhookController.handleShopifyCheckout(req, res);
+    }
+    
+    // Route to fulfillment handler if Shopify fulfillment webhook
+    if (platform === 'shopify' && topic.toLowerCase().includes('fulfillment')) {
+      return externalWebhookController.handleShopifyFulfillment(req, res);
+    }
+    
+    return externalWebhookController.handleExternalOrder(req, res);
+  }
+);
 
 module.exports = router;

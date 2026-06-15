@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FaArrowLeft, FaWhatsapp, FaCheckCircle } from 'react-icons/fa';
+import { FaArrowLeft, FaCommentDots, FaCheckCircle } from 'react-icons/fa';
 import api from '../services/api';
 import './Login.css';
 
@@ -28,7 +28,11 @@ function Login({ onLogin }) {
         navigate('/dashboard');
       }
     } catch (err) {
-      setError(err.response?.data?.message || err.response?.data?.error || 'Login failed. Please check your credentials.');
+      if (!err.response) {
+        setError('Cannot connect to the server. Please check if the backend is running.');
+      } else {
+        setError(err.response?.data?.message || err.response?.data?.error || 'Login failed. Please check your credentials.');
+      }
     } finally {
       setLoading(false);
     }
@@ -43,7 +47,7 @@ function Login({ onLogin }) {
 
         <div className="login-brand-content">
           <div className="login-brand-logo">
-            <FaWhatsapp />
+            <FaCommentDots />
             <span>AI Support Bot</span>
           </div>
           <h2 className="login-brand-title">
@@ -95,7 +99,16 @@ function Login({ onLogin }) {
             </div>
 
             <div className="login-field">
-              <label htmlFor="password">Password</label>
+              <div className="login-field-header">
+                <label htmlFor="password">Password</label>
+                <button
+                  type="button"
+                  className="login-forgot-link"
+                  onClick={() => navigate('/forgot-password')}
+                >
+                  Forgot password?
+                </button>
+              </div>
               <input
                 id="password"
                 type="password"

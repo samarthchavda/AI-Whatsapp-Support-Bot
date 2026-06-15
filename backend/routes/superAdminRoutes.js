@@ -14,6 +14,9 @@ router.get('/users/:id', superAdminController.getUserDetails);
 router.put('/users/:id/subscription', superAdminController.updateUserSubscription);
 router.post('/users/:id/reset-tokens', superAdminController.resetUserTokens);
 router.post('/users/:id/toggle-status', superAdminController.toggleUserStatus);
+router.post('/users/:id/toggle-web-bot', superAdminController.toggleUserWebBot);
+router.post('/users/:id/toggle-shopify', superAdminController.toggleUserShopify);
+router.post('/users/:id/toggle-woocommerce', superAdminController.toggleUserWooCommerce);
 router.post('/users/:id/apply-discount', superAdminController.applyDiscount);
 router.delete('/users/:id', superAdminController.deleteUser);
 
@@ -26,5 +29,9 @@ router.delete('/plans/:id', superAdminController.deletePlan);
 
 // Global analytics
 router.get('/analytics', superAdminController.getGlobalAnalytics);
+
+// Global settings
+router.get('/settings', superAdminController.getGlobalSettings);
+router.post('/settings', superAdminController.updateGlobalSettings);
 
 module.exports = router;

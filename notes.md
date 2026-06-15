@@ -19,6 +19,13 @@ This file keeps track of the development progress, completed features, configura
 6. **[COMPLETED] Task 6: Official WhatsApp Cloud API Integration**
    - Meta official API integration.
 
+## 🌐 Production Domain Settings
+* **Selected Domain**: `kwickbot` (e.g. `kwickbot.com` / `kwickbot.ai`)
+* **Planned Configuration**:
+  - Frontend Application URL: `https://kwickbot.com`
+  - Backend API Gateway: `https://api.kwickbot.com`
+  - Permanent WhatsApp Webhook Callback URL: `https://api.kwickbot.com/api/webhook/whatsapp`
+
 ---
 
 ## 🛠️ Completed Steps
@@ -175,3 +182,32 @@ To simulate webhook GET handshake verification, POST incoming messages, Gemini r
 node scripts/testCloudAPIWebhook.js
 ```
 *(Note: Run inside backend directory. Ensures all assertions pass successfully.)*
+
+### 7. Dynamic Multi-Currency Support
+Implemented dynamic base currency support across the CRM orders list, simulated demo chat window, shipping policy text, and official AI WhatsApp auto-replies.
+
+#### 🔀 Settings & Dynamic Formatting
+* **Dynamic Resolution:** Base currency is retrieved directly from the merchant's `admin.currency` profile setting (defaults to `USD`).
+* **Intl.NumberFormat Integration:** Formats amount values to correct localized currency patterns:
+  - Uses `en-IN` formatting (e.g. `₹1,200.00`) when currency is `INR`.
+  - Uses `en-US` formatting (e.g. `$1,200.00`, `€1,200.00`, etc.) for other international currencies.
+  - Fallback map supports standard symbols: `USD/CAD/AUD ($)`, `EUR (€)`, `GBP (£)`, `INR (₹)`, `JPY (¥)`, `AED (د.إ)`.
+* **Frontend Adaptations:** 
+  - Dynamic table columns and interactive amount inputs in the CRM portal (`Orders.js`).
+  - Dynamic lookup matching in Simulated Live Chat (`DemoChat.js`).
+  - Context-aware shipping policies: automatically suggests INR free shipping rates when base currency is set to `INR`.
+* **Backend AI Adaptations:**
+  - Asynchronous lookup inside `aiService.js` that retrieves the merchant's preference from MongoDB when processing status replies.
+
+---
+
+## 🔮 Future Features & Commercial Roadmap
+
+The following suggestions have been approved to build in future product sprints:
+1. **🛒 Abandoned Cart Recovery (WhatsApp)**: Send automatic friendly reminders on WhatsApp with direct checkout links when customers leave items in their cart.
+2. **🔘 Interactive WhatsApp Buttons**: Use official Meta interactive buttons (e.g. "Check Order Status", "Talk to Agent") inside messages rather than asking users to type text.
+3. **✍️ AI-Generated Agent Drafts**: Instead of the bot replying directly, it drafts a message for the agent in the Live Chat CRM, who can edit and click "Send".
+4. **🌐 Real-Time Translation**: Auto-translate incoming foreign languages to English/Gujarati for dashboard agents, and auto-translate agent replies back to the customer's language.
+5. **📅 Scheduled Marketing Broadcasts**: Target specific cohorts of customers and schedule broadcast messages for upcoming sales or new product collections.
+6. **🎙️ Voice Note Processing**: Transcribe customer voice messages using Whisper/Gemini and let the bot answer them, with option to output AI voice responses.
+7. **📊 Advanced Bot Analytics & ROI Tracking**: Track ticket containment rate (how many queries were solved without human handover) and estimated savings in support costs.

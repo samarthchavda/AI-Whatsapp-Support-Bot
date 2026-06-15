@@ -79,7 +79,7 @@ exports.mapTemplate = async (req, res) => {
     const adminId = req.admin._id;
 
     // Validate event type
-    const validEvents = [null, 'order_confirmation', 'order_shipped', 'order_delivered'];
+    const validEvents = [null, 'order_confirmation', 'order_shipped', 'order_delivered', 'order_cancelled', 'abandoned_cart'];
     if (!validEvents.includes(mappedEvent)) {
       return res.status(400).json({
         success: false,

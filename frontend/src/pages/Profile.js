@@ -1,7 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { updateAdminProfile, getAdminProfile } from '../services/api';
-import { FaUser, FaStore, FaGlobe, FaSave, FaSun, FaMoon, FaEnvelope, FaPhone, FaLink, FaBuilding, FaDollarSign, FaClock } from 'react-icons/fa';
+import { FaUser, FaStore, FaGlobe, FaSave, FaSun, FaMoon, FaEnvelope, FaPhone, FaLink, FaBuilding, FaDollarSign, FaClock, FaRobot, FaCheckCircle, FaTimesCircle, FaTimes } from 'react-icons/fa';
 import './Profile.css';
+
+// Fields that are editable and should be compared for changes
+const EDITABLE_FIELDS = ['name', 'businessName', 'businessPhone', 'storeUrl', 'storeCategory', 'supportEmail', 'timezone'];
 
 function Profile({ admin, onUpdateAdmin }) {
   const [profileData, setProfileData] = useState({
@@ -16,16 +19,32 @@ function Profile({ admin, onUpdateAdmin }) {
     currency: 'USD',
     timezone: 'UTC',
     theme: 'light',
+    aiDraftMode: false,
     subscriptionPlan: 'starter',
     subscriptionStatus: 'trial',
     geminiTokensUsed: 0,
     geminiTokensLimit: 10000,
     totalMessagesProcessed: 0
   });
+  const [originalData, setOriginalData] = useState({});
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [message, setMessage] = useState({ type: '', text: '' });
+  const [toast, setToast] = useState({ show: false, type: '', text: '' });
+
+  // Check if any editable field has changed from its original value
+  const hasChanges = useCallback(() => {
+    return EDITABLE_FIELDS.some(field => {
+      const current = (profileData[field] || '').toString().trim();
+      const original = (originalData[field] || '').toString().trim();
+      return current !== original;
+    });
+  }, [profileData, originalData]);
+
+  const showToast = (type, text) => {
+    setToast({ show: true, type, text });
+    setTimeout(() => setToast({ show: false, type: '', text: '' }), 3500);
+  };
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -35,13 +54,17 @@ function Profile({ admin, onUpdateAdmin }) {
         if (response.data?.success) {
           const fetchedAdmin = response.data.data.admin;
           setProfileData(fetchedAdmin);
+          // Store a snapshot of the original editable fields
+          const snapshot = {};
+          EDITABLE_FIELDS.forEach(f => { snapshot[f] = fetchedAdmin[f] || ''; });
+          setOriginalData(snapshot);
           if (onUpdateAdmin) {
             onUpdateAdmin(fetchedAdmin);
           }
         }
       } catch (error) {
         console.error('Error fetching admin profile:', error);
-        setMessage({ type: 'error', text: 'Failed to load profile details.' });
+        showToast('error', 'Failed to load profile details.');
       } finally {
         setLoading(false);
       }
@@ -62,7 +85,6 @@ function Profile({ admin, onUpdateAdmin }) {
     e.preventDefault();
     try {
       setSaving(true);
-      setMessage({ type: '', text: '' });
       
       const payload = {
         name: profileData.name,
@@ -73,22 +95,26 @@ function Profile({ admin, onUpdateAdmin }) {
         supportEmail: profileData.supportEmail,
         currency: profileData.currency,
         timezone: profileData.timezone,
-        theme: profileData.theme
+        theme: profileData.theme,
+        aiDraftMode: profileData.aiDraftMode
       };
 
       const response = await updateAdminProfile(payload);
       if (response.data?.success) {
         const updatedAdmin = response.data.data.admin;
         setProfileData(updatedAdmin);
+        // Update the original snapshot so hasChanges resets to false
+        const snapshot = {};
+        EDITABLE_FIELDS.forEach(f => { snapshot[f] = updatedAdmin[f] || ''; });
+        setOriginalData(snapshot);
         if (onUpdateAdmin) {
           onUpdateAdmin(updatedAdmin);
         }
-        setMessage({ type: 'success', text: 'Settings saved successfully!' });
-        setTimeout(() => setMessage({ type: '', text: '' }), 4000);
+        showToast('success', 'Settings saved successfully! ✅');
       }
     } catch (error) {
       console.error('Error updating admin profile:', error);
-      setMessage({ type: 'error', text: error.response?.data?.error || 'Failed to save settings.' });
+      showToast('error', error.response?.data?.error || 'Failed to save settings.');
     } finally {
       setSaving(false);
     }
@@ -124,9 +150,16 @@ function Profile({ admin, onUpdateAdmin }) {
         <p className="profile-subtitle">Manage your merchant account preferences and store configurations.</p>
       </div>
 
-      {message.text && (
-        <div className={`profile-alert-message alert-${message.type}`}>
-          {message.text}
+      {/* Floating Toast Popup */}
+      {toast.show && (
+        <div className={`profile-toast profile-toast-${toast.type}`}>
+          <div className="profile-toast-icon">
+            {toast.type === 'success' ? <FaCheckCircle /> : <FaTimesCircle />}
+          </div>
+          <span className="profile-toast-text">{toast.text}</span>
+          <button className="profile-toast-close" onClick={() => setToast({ show: false, type: '', text: '' })}>
+            <FaTimes />
+          </button>
         </div>
       )}
 
@@ -149,6 +182,10 @@ function Profile({ admin, onUpdateAdmin }) {
             </div>
 
             <div className="overview-stats">
+              <div className="stat-row">
+                <span>Store Currency:</span>
+                <strong style={{ textTransform: 'uppercase' }}>{profileData.currency || 'USD'} (Auto-synced)</strong>
+              </div>
               <div className="stat-row">
                 <span>Messages Processed:</span>
                 <strong>{profileData.totalMessagesProcessed}</strong>
@@ -317,24 +354,17 @@ function Profile({ admin, onUpdateAdmin }) {
 
               <div className="form-group-grid">
                 <div className="form-group">
-                  <label htmlFor="currency">Base Currency</label>
+                  <label htmlFor="currency">Store Currency</label>
                   <div className="input-with-icon">
                     <FaDollarSign className="input-icon" />
-                    <select
+                    <input
+                      type="text"
                       id="currency"
                       name="currency"
-                      value={profileData.currency}
-                      onChange={handleChange}
-                    >
-                      <option value="USD">USD ($)</option>
-                      <option value="EUR">EUR (€)</option>
-                      <option value="GBP">GBP (£)</option>
-                      <option value="INR">INR (₹)</option>
-                      <option value="CAD">CAD ($)</option>
-                      <option value="AUD">AUD ($)</option>
-                      <option value="JPY">JPY (¥)</option>
-                      <option value="AED">AED (د.إ)</option>
-                    </select>
+                      value={`${profileData.currency || 'USD'} (Auto-synced from store)`}
+                      disabled
+                      style={{ opacity: 0.85, cursor: 'not-allowed', backgroundColor: 'rgba(0,0,0,0.05)' }}
+                    />
                   </div>
                 </div>
 
@@ -363,11 +393,43 @@ function Profile({ admin, onUpdateAdmin }) {
               </div>
             </div>
 
-            <div className="form-action-button-row">
-              <button type="submit" className="btn-save-profile" disabled={saving}>
-                <FaSave /> {saving ? 'Saving...' : 'Save Settings'}
-              </button>
+            {/* AI Agent Settings temporarily disabled as per user request
+            <div className="profile-card form-section-card">
+              <div className="section-title-wrapper">
+                <FaRobot className="section-icon text-accent" />
+                <h3>AI Agent Settings</h3>
+              </div>
+              <div className="form-group-checkbox">
+                <label className="checkbox-switch-label">
+                  <input
+                    type="checkbox"
+                    id="aiDraftMode"
+                    name="aiDraftMode"
+                    checked={profileData.aiDraftMode || false}
+                    onChange={(e) => {
+                      setProfileData(prev => ({
+                        ...prev,
+                        aiDraftMode: e.target.checked
+                      }));
+                    }}
+                  />
+                  <span className="checkbox-slider"></span>
+                  <div className="checkbox-text-info">
+                    <strong>AI suggested draft replies</strong>
+                    <p>Instead of the AI bot replying directly to the customer on WhatsApp, it will generate a suggested reply draft in the Live Chat CRM for human agents to edit and send.</p>
+                  </div>
+                </label>
+              </div>
             </div>
+            */}
+
+            {hasChanges() && (
+              <div className="form-action-button-row form-action-slide-in">
+                <button type="submit" className="btn-save-profile" disabled={saving}>
+                  <FaSave /> {saving ? 'Saving...' : 'Save Changes'}
+                </button>
+              </div>
+            )}
           </form>
         </div>
       </div>

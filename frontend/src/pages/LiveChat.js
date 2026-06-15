@@ -90,9 +90,19 @@ function LiveChat() {
 
   useEffect(() => {
     const socket = io(SOCKET_URL);
-    socket.on('new_message', () => fetchConversations());
+    socket.on('new_message', (data) => {
+      fetchConversations();
+      if (selectedConversation && data && data.customerPhone === selectedConversation.customerPhone) {
+        fetchMessages(selectedConversation.customerPhone);
+        getConversationsByPhone(selectedConversation.customerPhone).then(response => {
+          if (response.data?.success && response.data?.conversation) {
+            setSelectedConversation(response.data.conversation);
+          }
+        }).catch(err => console.error('Error refreshing selected conversation:', err));
+      }
+    });
     return () => socket.disconnect();
-  }, [fetchConversations]);
+  }, [fetchConversations, selectedConversation, fetchMessages]);
 
   useEffect(() => {
     if (selectedConversation) {
@@ -321,6 +331,20 @@ function LiveChat() {
                         <span className="message-time">{formatMessageTime(msg.timestamp)}</span>
                       </div>
                       <div className="message-content">{msg.content}</div>
+                      {msg.translation && (
+                        <div className="message-translation">
+                          <span className="translation-badge">
+                            {msg.role === 'user' ? (
+                              `🌐 Translated from ${msg.detectedLanguage || 'foreign language'}:`
+                            ) : msg.role === 'assistant' ? (
+                              `🌐 Translated from ${msg.detectedLanguage || 'foreign language'}:`
+                            ) : (
+                              `🌐 Sent in ${msg.detectedLanguage || 'foreign language'}:`
+                            )}
+                          </span>
+                          <div className="translation-text">{msg.translation}</div>
+                        </div>
+                      )}
                     </div>
                   ))
                 )}
@@ -328,8 +352,48 @@ function LiveChat() {
               </div>
 
               <div className="message-input-area">
+                {selectedConversation.suggestedReply && (
+                  <div className="ai-suggested-draft-container">
+                    <div className="ai-suggested-draft-header">
+                      <div className="draft-title">
+                        <FaRobot className="draft-icon-robot" />
+                        <span>AI Suggested Draft</span>
+                      </div>
+                      <div className="draft-actions">
+                        <button
+                          type="button"
+                          className="draft-action-btn apply"
+                          onClick={() => setMessageInput(selectedConversation.suggestedReply)}
+                        >
+                          Use Draft
+                        </button>
+                        <button
+                          type="button"
+                          className="draft-action-btn dismiss"
+                          onClick={async () => {
+                            try {
+                              const response = await updateConversation(selectedConversation._id, {
+                                suggestedReply: null
+                              });
+                              setSelectedConversation(response.data);
+                              await fetchConversations();
+                            } catch (err) {
+                              console.error('Failed to dismiss draft:', err);
+                            }
+                          }}
+                        >
+                          Dismiss
+                        </button>
+                      </div>
+                    </div>
+                    <div className="ai-suggested-draft-content">
+                      {selectedConversation.suggestedReply}
+                    </div>
+                  </div>
+                )}
+
                 {selectedConversation.botPaused ? (
-                  <div className="input-notice" style={{ background: 'rgba(239, 68, 68, 0.1)', borderColor: 'rgba(239, 68, 68, 0.3)', color: '#fca5a5' }}>
+                  <div className="input-notice paused">
                     <FaRobot /> AI Bot is paused. You have taken over this chat manually.
                   </div>
                 ) : (

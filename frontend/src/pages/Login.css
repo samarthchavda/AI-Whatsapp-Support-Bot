@@ -256,3 +256,30 @@
     left: 20px;
   }
 }
+
+.login-field-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.login-field-header label {
+  margin-bottom: 0 !important;
+}
+
+.login-forgot-link {
+  background: none;
+  border: none;
+  color: var(--accent);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0;
+  transition: color 0.2s ease;
+}
+
+.login-forgot-link:hover {
+  color: var(--accent-secondary);
+  text-decoration: underline;
+}

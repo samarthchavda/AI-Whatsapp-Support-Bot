@@ -104,6 +104,38 @@ const adminSchema = new mongoose.Schema({
   whatsappConnectedAt: {
     type: Date
   },
+  whatsappAccessToken: {
+    type: String,
+    default: null
+  },
+  whatsappPhoneNumberId: {
+    type: String,
+    default: null
+  },
+  whatsappBusinessAccountId: {
+    type: String,
+    default: null
+  },
+  whatsappVerifyToken: {
+    type: String,
+    default: null
+  },
+  webBotEnabled: {
+    type: Boolean,
+    default: false
+  },
+  aiDraftMode: {
+    type: Boolean,
+    default: false
+  },
+  shopifyEnabled: {
+    type: Boolean,
+    default: true
+  },
+  woocommerceEnabled: {
+    type: Boolean,
+    default: true
+  },
   // Business / Store info
   businessName: {
     type: String
@@ -133,6 +165,14 @@ const adminSchema = new mongoose.Schema({
     type: String,
     enum: ['light', 'dark'],
     default: 'light'
+  },
+  resetPasswordToken: {
+    type: String,
+    default: null
+  },
+  resetPasswordExpires: {
+    type: Date,
+    default: null
   }
 }, {
   timestamps: true

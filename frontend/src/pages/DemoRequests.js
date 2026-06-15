@@ -45,7 +45,7 @@ function DemoRequests() {
       const response = await axios.post(
         `http://localhost:5001/api/demo-requests/${requestId}/approve`,
         {
-          subscriptionPlan: 'Starter',
+          subscriptionPlan: 'starter',
           monthlyPrice: 29,
           geminiTokens: 10000
         },

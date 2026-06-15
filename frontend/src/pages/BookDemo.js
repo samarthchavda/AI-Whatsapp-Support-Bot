@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FaArrowLeft, FaWhatsapp, FaCheckCircle } from 'react-icons/fa';
+import { FaArrowLeft, FaCommentDots, FaCheckCircle } from 'react-icons/fa';
 import axios from 'axios';
 import './BookDemo.css';
 
@@ -86,7 +86,7 @@ function BookDemo() {
       <div className="book-demo-container">
         <div className="demo-header">
           <div className="demo-logo">
-            <FaWhatsapp />
+            <FaCommentDots />
           </div>
           <h1>Book a Demo</h1>
           <p>See how our AI-powered WhatsApp Support Bot can transform your customer service</p>

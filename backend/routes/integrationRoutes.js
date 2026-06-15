@@ -24,4 +24,10 @@ router.post('/:id/regenerate-secret', integrationController.regenerateWebhookSec
 // Test integration connection
 router.post('/:id/test', integrationController.testIntegration);
 
+// Manually sync Shopify orders for an integration
+router.post('/:id/sync-shopify-orders', integrationController.syncShopifyOrders);
+
+// Manually sync WooCommerce orders for an integration
+router.post('/:id/sync-woocommerce-orders', integrationController.syncWooCommerceOrders);
+
 module.exports = router;

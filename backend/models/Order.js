@@ -4,7 +4,6 @@ const orderSchema = new mongoose.Schema({
   orderId: {
     type: String,
     required: true,
-    unique: true,
     index: true
   },
   customerId: {
@@ -15,6 +14,11 @@ const orderSchema = new mongoose.Schema({
   customerPhone: {
     type: String,
     required: true
+  },
+  customerEmail: {
+    type: String,
+    lowercase: true,
+    trim: true
   },
   customerName: {
     type: String,
@@ -77,6 +81,9 @@ const orderSchema = new mongoose.Schema({
     type: String,
     index: true
   },
+  externalOrderNumber: {
+    type: String
+  },
   createdBy: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Admin'
@@ -95,5 +102,6 @@ const orderSchema = new mongoose.Schema({
 // Index for faster queries
 orderSchema.index({ customerPhone: 1, orderDate: -1 });
 orderSchema.index({ admin: 1, orderDate: -1 });
+orderSchema.index({ admin: 1, orderId: 1 }, { unique: true });
 
 module.exports = mongoose.model('Order', orderSchema);

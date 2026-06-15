@@ -5,7 +5,35 @@ import './Orders.css';
 
 const API_BASE = process.env.REACT_APP_API_URL || 'http://localhost:5001/api';
 
-function Orders() {
+const currencySymbols = {
+  USD: '$',
+  EUR: '€',
+  GBP: '£',
+  INR: '₹',
+  CAD: '$',
+  AUD: '$',
+  JPY: '¥',
+  AED: 'د.إ'
+};
+
+const getCurrencySymbol = (currencyCode) => {
+  return currencySymbols[currencyCode] || '$';
+};
+
+const formatCurrency = (amount, currencyCode) => {
+  const code = currencyCode || 'USD';
+  try {
+    return new Intl.NumberFormat(code === 'INR' ? 'en-IN' : 'en-US', {
+      style: 'currency',
+      currency: code
+    }).format(amount);
+  } catch (e) {
+    const symbol = getCurrencySymbol(code);
+    return `${symbol}${Number(amount).toFixed(2)}`;
+  }
+};
+
+function Orders({ admin }) {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -341,7 +369,7 @@ Bob Johnson,+1234567892,bob@example.com,Standard Item,3,149.99,shipped`;
                 <input type="number" name="quantity" required min="1" defaultValue="1" />
               </div>
               <div className="filter-group">
-                <label>Total Amount ($) *</label>
+                <label>Total Amount ({getCurrencySymbol(admin?.currency)}) *</label>
                 <input type="number" name="totalAmount" required min="0" step="0.01" placeholder="99.99" />
               </div>
               <div className="filter-group" style={{ gridColumn: 'span 2' }}>
@@ -469,8 +497,10 @@ Bob Johnson,+1234567892,bob@example.com,Standard Item,3,149.99,shipped`;
               <thead>
                 <tr>
                   <th>Order ID</th>
+                  <th>Store Order No</th>
                   <th>Customer</th>
                   <th>Phone</th>
+                  <th>Email</th>
                   <th>Amount</th>
                   <th>Status</th>
                   <th>Date</th>
@@ -478,17 +508,85 @@ Bob Johnson,+1234567892,bob@example.com,Standard Item,3,149.99,shipped`;
                 </tr>
               </thead>
               <tbody>
-                {orders.map((order) => (
-                  <tr key={order._id} className="table-row-premium">
-                    <td><span className="order-id-cell">{order.orderId}</span></td>
-                    <td>
-                      <div className="customer-cell">
-                        <div className="avatar">{order.customerName?.charAt(0)}</div>
-                        <span className="customer-name">{order.customerName}</span>
-                      </div>
-                    </td>
-                    <td className="text-muted">{order.customerPhone}</td>
-                    <td><span className="order-amount">₹{order.totalAmount.toLocaleString('en-IN')}</span></td>
+                {orders.map((order) => {
+                  const isShopifyBasicRedacted = order.customerPhone && order.customerPhone.startsWith('shopify-order-');
+                  
+                  return (
+                    <tr key={order._id} className="table-row-premium">
+                      <td><span className="order-id-cell">{order.orderId}</span></td>
+                      <td className="text-muted" style={{ fontWeight: '500' }}>
+                        {order.externalOrderNumber || (order.externalOrderId && !order.externalOrderId.startsWith('mock-') ? `#${order.externalOrderId}` : '—')}
+                      </td>
+                      <td>
+                        <div className="customer-cell">
+                          <div className="avatar" style={{ background: isShopifyBasicRedacted ? '#3f3f46' : undefined }}>
+                            {isShopifyBasicRedacted ? '🔑' : (order.customerName?.charAt(0) || 'C')}
+                          </div>
+                          <span className="customer-name">
+                            {order.customerName}
+                            {isShopifyBasicRedacted && (
+                              <span style={{ 
+                                fontSize: '10px', 
+                                color: '#eab308', 
+                                background: 'rgba(234, 179, 8, 0.15)', 
+                                padding: '2px 6px', 
+                                borderRadius: '4px', 
+                                marginLeft: '8px',
+                                fontWeight: '600',
+                                border: '1px solid rgba(234, 179, 8, 0.2)',
+                                display: 'inline-block'
+                              }}>
+                                Basic Plan
+                              </span>
+                            )}
+                          </span>
+                        </div>
+                      </td>
+                      <td className="text-muted">
+                        {isShopifyBasicRedacted ? (
+                          <span 
+                            title="Shopify Basic plan restricts API access to customer contact details." 
+                            style={{ 
+                              fontSize: '11px', 
+                              color: '#a1a1aa', 
+                              display: 'inline-flex', 
+                              alignItems: 'center', 
+                              gap: '4px',
+                              background: 'rgba(161, 161, 170, 0.1)',
+                              padding: '2px 8px',
+                              borderRadius: '6px',
+                              border: '1px solid rgba(161, 161, 170, 0.15)'
+                            }}
+                          >
+                            🔒 Redacted
+                          </span>
+                        ) : (
+                          order.customerPhone && !order.customerPhone.includes('@') ? order.customerPhone : '—'
+                        )}
+                      </td>
+                      <td className="text-muted" style={{ maxWidth: '180px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {isShopifyBasicRedacted ? (
+                          <span 
+                            title="Shopify Basic plan restricts API access to customer contact details." 
+                            style={{ 
+                              fontSize: '11px', 
+                              color: '#a1a1aa', 
+                              display: 'inline-flex', 
+                              alignItems: 'center', 
+                              gap: '4px',
+                              background: 'rgba(161, 161, 170, 0.1)',
+                              padding: '2px 8px',
+                              borderRadius: '6px',
+                              border: '1px solid rgba(161, 161, 170, 0.15)'
+                            }}
+                          >
+                            🔒 Redacted
+                          </span>
+                        ) : (
+                          order.customerEmail || (order.customerPhone && order.customerPhone.includes('@') ? order.customerPhone : '—')
+                        )}
+                      </td>
+                    <td><span className="order-amount">{formatCurrency(order.totalAmount, admin?.currency)}</span></td>
                     <td>
                       <span className={`badge-premium badge-${order.status}`}>
                         {order.status.replace('_', ' ')}
@@ -520,7 +618,8 @@ Bob Johnson,+1234567892,bob@example.com,Standard Item,3,149.99,shipped`;
                       </div>
                     </td>
                   </tr>
-                ))}
+                 );
+                })}
               </tbody>
             </table>
           ) : (

@@ -8,7 +8,6 @@ const customerSchema = new mongoose.Schema({
   phone: {
     type: String,
     required: true,
-    unique: true,
     index: true
   },
   email: {
@@ -46,7 +45,7 @@ const customerSchema = new mongoose.Schema({
   timestamps: true 
 });
 
-// Index for faster queries
-customerSchema.index({ admin: 1, phone: 1 });
+// Index for faster queries and multi-tenant uniqueness
+customerSchema.index({ admin: 1, phone: 1 }, { unique: true });
 
 module.exports = mongoose.model('Customer', customerSchema);

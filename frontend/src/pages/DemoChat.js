@@ -2,7 +2,35 @@ import React, { useState, useRef, useEffect } from 'react';
 import * as api from '../services/api';
 import '../styles/DemoChat.css';
 
-const DemoChat = () => {
+const currencySymbols = {
+  USD: '$',
+  EUR: '€',
+  GBP: '£',
+  INR: '₹',
+  CAD: '$',
+  AUD: '$',
+  JPY: '¥',
+  AED: 'د.إ'
+};
+
+const getCurrencySymbol = (currencyCode) => {
+  return currencySymbols[currencyCode] || '$';
+};
+
+const formatCurrency = (amount, currencyCode) => {
+  const code = currencyCode || 'USD';
+  try {
+    return new Intl.NumberFormat(code === 'INR' ? 'en-IN' : 'en-US', {
+      style: 'currency',
+      currency: code
+    }).format(amount);
+  } catch (e) {
+    const symbol = getCurrencySymbol(code);
+    return `${symbol}${Number(amount).toFixed(2)}`;
+  }
+};
+
+const DemoChat = ({ admin }) => {
   const [messages, setMessages] = useState([
     {
       id: 1,
@@ -150,7 +178,7 @@ const DemoChat = () => {
         if (order) {
           setAwaitingOrderId(false);
           return `📦 **${order.orderId}** 
-💰 Amount: ₹${order.totalAmount}
+💰 Amount: ${formatCurrency(order.totalAmount, admin?.currency)}
 📊 Status: ${order.status.toUpperCase()}
 📅 Order Date: ${new Date(order.orderDate).toLocaleDateString()}
 ${order.estimatedDelivery ? `⏰ Expected: ${new Date(order.estimatedDelivery).toLocaleDateString()}` : ''}
@@ -175,8 +203,18 @@ ${order.estimatedDelivery ? `⏰ Expected: ${new Date(order.estimatedDelivery).t
       return '↩️ Our return policy allows returns within 30 days of purchase in original condition.\nReply "yes" to initiate return.';
     }
 
-    // Help/greeting
-    if (msgLower.includes('hi') || msgLower.includes('hello') || msgLower.includes('hii')) {
+    // Shipping policies
+    if (msgLower.includes('shipping') || msgLower.includes('delivery') || msgLower.includes('shipped')) {
+      const symbol = getCurrencySymbol(admin?.currency);
+      if (admin?.currency === 'INR') {
+        return `🚚 Shipping Policy Info:\n- Free shipping on domestic orders over ₹999.00.\n- Standard Shipping: ₹99.00 flat rate (3-5 business days).\n- Express Shipping: ₹299.00 flat rate (1-2 business days).\n- We currently ship all over India.`;
+      }
+      return `🚚 Shipping Policy Info:\n- Free shipping on domestic orders over ${symbol}75.00.\n- Standard Shipping: ${symbol}5.99 flat rate (3-5 business days).\n- Express Shipping: ${symbol}14.99 flat rate (1-2 business days).\n- We currently ship to the US and Canada.`;
+    }
+
+    // Help/greeting (using boundary matching to prevent matching inside words like "shipping")
+    const isGreeting = /\b(hi|hello|hii|hey|yo|greetings|hola)\b/i.test(msgLower);
+    if (isGreeting) {
       return '👋 Hello! I\'m your AI Support Bot. I can help with:\n✅ Order status\n✅ Returns & Refunds\n✅ Delivery tracking\n✅ Escalation to support\n\nHow can I help?';
     }
 
@@ -198,23 +236,56 @@ ${order.estimatedDelivery ? `⏰ Expected: ${new Date(order.estimatedDelivery).t
 
   const handleSendMessage = async () => {
     if (newMessage.trim()) {
+      const userInput = newMessage;
+      setNewMessage('');
+
+      const userMsgId = Date.now();
       const userMsg = {
-        id: messages.length + 1,
-        text: newMessage,
+        id: userMsgId,
+        text: userInput,
         sender: 'user',
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         status: 'sent'
       };
 
-      setMessages([...messages, userMsg]);
-      const userInput = newMessage;
-      setNewMessage('');
+      setMessages(prev => [...prev, userMsg]);
 
-      // Bot response after 800ms
+      try {
+        const adminData = JSON.parse(localStorage.getItem('admin') || '{}');
+        const response = await api.testAIMessage({
+          customerPhone: adminData.phone || '+919876543210',
+          customerName: adminData.name || 'Test Customer',
+          message: userInput
+        });
+
+        if (response.data?.success && response.data?.output?.message) {
+          const botMsg = {
+            id: Date.now() + 1,
+            text: response.data.output.message,
+            sender: 'bot',
+            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            status: 'read'
+          };
+
+          setMessages(prev => [...prev, botMsg]);
+
+          // Mark user message as read
+          setMessages(prev =>
+            prev.map(msg =>
+              msg.id === userMsgId ? { ...msg, status: 'read' } : msg
+            )
+          );
+          return;
+        }
+      } catch (error) {
+        console.warn('Backend AI response failed, falling back to local simulation:', error);
+      }
+
+      // Local fallback bot response after 800ms
       setTimeout(async () => {
         const botResponse = await generateBotResponse(userInput, awaitingOrderId);
         const botMsg = {
-          id: messages.length + 2,
+          id: Date.now() + 2,
           text: botResponse,
           sender: 'bot',
           timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
@@ -225,7 +296,7 @@ ${order.estimatedDelivery ? `⏰ Expected: ${new Date(order.estimatedDelivery).t
         // Mark user message as read
         setMessages(prev =>
           prev.map(msg =>
-            msg.id === userMsg.id ? { ...msg, status: 'read' } : msg
+            msg.id === userMsgId ? { ...msg, status: 'read' } : msg
           )
         );
       }, 800);

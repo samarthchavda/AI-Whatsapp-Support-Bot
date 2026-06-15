@@ -165,7 +165,7 @@ exports.deleteDemoRequest = async (req, res) => {
 exports.approveDemoRequest = async (req, res) => {
   try {
     const { id } = req.params;
-    const { subscriptionPlan = 'Starter', monthlyPrice = 29, geminiTokens = 10000 } = req.body;
+    const { subscriptionPlan = 'starter', monthlyPrice = 29, geminiTokens = 10000 } = req.body;
 
     const demoRequest = await DemoRequest.findById(id);
 
@@ -198,19 +198,15 @@ exports.approveDemoRequest = async (req, res) => {
     const crypto = require('crypto');
     const generatedPassword = crypto.randomBytes(8).toString('hex').slice(0, 12);
 
-    // Hash password
-    const bcrypt = require('bcryptjs');
-    const hashedPassword = await bcrypt.hash(generatedPassword, 10);
-
     // Create admin account
     const newAdmin = new Admin({
       name: demoRequest.name,
       email: demoRequest.email,
-      password: hashedPassword,
+      password: generatedPassword,
       phone: demoRequest.phone,
       businessName: demoRequest.businessName,
       role: 'admin',
-      subscriptionPlan,
+      subscriptionPlan: subscriptionPlan.toLowerCase(),
       subscriptionStatus: 'trial',
       monthlyPrice,
       geminiTokens,
@@ -234,7 +230,7 @@ exports.approveDemoRequest = async (req, res) => {
     
     try {
       // Configure email transporter (you'll need to set up SMTP credentials in .env)
-      const transporter = nodemailer.createTransporter({
+      const transporter = nodemailer.createTransport({
         host: process.env.SMTP_HOST || 'smtp.gmail.com',
         port: process.env.SMTP_PORT || 587,
         secure: false,

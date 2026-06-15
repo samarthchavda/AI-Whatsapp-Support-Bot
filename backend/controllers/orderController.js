@@ -106,7 +106,8 @@ exports.createOrder = async (req, res) => {
     for (let attempt = 0; attempt < maxRetries; attempt++) {
       const nextOrderId = await getNextOrderId({
         CounterModel: Counter,
-        OrderModel: Order
+        OrderModel: Order,
+        adminId: req.admin._id
       });
       
       // Add admin info if authenticated
@@ -114,6 +115,7 @@ exports.createOrder = async (req, res) => {
         ...orderData,
         orderId: nextOrderId,
         customerId: customer._id,
+        customerEmail: orderData.customerEmail || customer.email,
         admin: req.admin._id,
         items: [{
           productName: orderData.productName,
@@ -323,7 +325,8 @@ exports.bulkUploadOrders = async (req, res) => {
         // Generate unique order ID
         const nextOrderId = await getNextOrderId({
           CounterModel: Counter,
-          OrderModel: Order
+          OrderModel: Order,
+          adminId: req.admin._id
         });
 
         // Create order

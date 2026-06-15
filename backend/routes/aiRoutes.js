@@ -1,9 +1,13 @@
 const express = require('express');
 const router = express.Router();
 const aiController = require('../controllers/aiController');
+const { verifyToken } = require('../middleware/auth');
 
 // Test endpoint - simulate WhatsApp message
-router.post('/test-message', aiController.testMessage);
+router.post('/test-message', verifyToken, aiController.testMessage);
+
+// Test Gemini API key validation
+router.get('/verify-key', verifyToken, aiController.verifyGeminiKey);
 
 // Get AI logs for a specific customer
 router.get('/logs/customer/:customerPhone', aiController.getAILogs);

@@ -148,6 +148,54 @@ function KnowledgeBase() {
         </div>
       </div>
 
+      {/* Premium Onboarding FAQ Template Banner */}
+      <div style={{
+        background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.08) 0%, rgba(5, 150, 105, 0.08) 100%)',
+        border: '1px solid rgba(16, 185, 129, 0.2)',
+        borderRadius: '16px',
+        padding: '20px 24px',
+        marginBottom: '28px',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        gap: '20px',
+        flexWrap: 'wrap',
+        boxShadow: '0 4px 20px rgba(0, 0, 0, 0.02)'
+      }}>
+        <div style={{ flex: 1, minWidth: '280px', textAlign: 'left' }}>
+          <h3 style={{ fontSize: '15px', fontWeight: '700', color: '#064e3b', margin: '0 0 6px 0', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            📝 Ready-Made Sample Store FAQ PDF Template
+          </h3>
+          <p style={{ fontSize: '13px', color: '#4b5563', margin: 0, lineHeight: '1.5' }}>
+            We have pre-loaded a professional <strong>Sample Store FAQ Template</strong> PDF into your Knowledge Base. This shows the correct formatting of return windows, shipping rates, and support details to ensure high-accuracy responses from the AI. Download it below to use as a template.
+          </p>
+        </div>
+        <a 
+          href="/docs/sample_store_faq_template.pdf" 
+          download="Sample_Store_FAQ_Template.pdf"
+          style={{
+            padding: '10px 18px',
+            backgroundColor: '#10b981',
+            color: '#ffffff',
+            borderRadius: '10px',
+            fontSize: '13.5px',
+            fontWeight: '600',
+            textDecoration: 'none',
+            display: 'inline-flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '8px',
+            boxShadow: '0 4px 12px rgba(16, 185, 129, 0.15)',
+            transition: 'all 0.2s ease',
+            whiteSpace: 'nowrap'
+          }}
+          onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#059669'}
+          onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#10b981'}
+        >
+          <FaFilePdf /> Download FAQ Template
+        </a>
+      </div>
+
       {/* Test Query Form */}
       {showTestQuery && (
         <div className="table-container" style={{ marginBottom: '28px', background: 'rgba(16, 185, 129, 0.05)' }}>
@@ -400,11 +448,31 @@ function KnowledgeBase() {
                   <td>{kb.uploadedByName}</td>
                   <td>{new Date(kb.createdAt).toLocaleDateString()}</td>
                   <td>
-                    <div style={{ display: 'flex', gap: '8px' }}>
+                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                      {kb.fileName === 'sample_store_faq_template.pdf' && (
+                        <a
+                          href="/docs/sample_store_faq_template.pdf"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="btn btn-secondary"
+                          style={{ 
+                            fontSize: '12px', 
+                            padding: '6px 12px', 
+                            display: 'inline-flex', 
+                            alignItems: 'center', 
+                            justifyContent: 'center',
+                            textDecoration: 'none',
+                            color: 'inherit'
+                          }}
+                          title="View PDF"
+                        >
+                          <FaEye />
+                        </a>
+                      )}
                       <button
                         onClick={() => handleToggleActive(kb._id, kb.isActive)}
                         className="btn btn-secondary"
-                        style={{ fontSize: '12px', padding: '6px 12px' }}
+                        style={{ fontSize: '12px', padding: '6px 12px', display: 'inline-flex', alignItems: 'center' }}
                         title={kb.isActive ? 'Deactivate' : 'Activate'}
                       >
                         {kb.isActive ? <FaToggleOn /> : <FaToggleOff />}
@@ -412,7 +480,7 @@ function KnowledgeBase() {
                       <button
                         onClick={() => handleDelete(kb._id)}
                         className="btn btn-danger"
-                        style={{ fontSize: '12px', padding: '6px 12px' }}
+                        style={{ fontSize: '12px', padding: '6px 12px', display: 'inline-flex', alignItems: 'center' }}
                       >
                         <FaTrash />
                       </button>

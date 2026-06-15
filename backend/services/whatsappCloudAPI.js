@@ -30,9 +30,13 @@ class WhatsAppCloudAPI {
   }
 
   // Send message via WhatsApp Cloud API
-  async sendMessage(phoneNumber, message) {
+  async sendMessage(phoneNumber, message, customCredentials = null) {
+    const accessToken = customCredentials?.accessToken || this.accessToken;
+    const phoneNumberId = customCredentials?.phoneNumberId || this.phoneNumberId;
+    const isConfig = (customCredentials?.accessToken && customCredentials?.phoneNumberId) || this.isConfigured;
+
     // Check if API is configured
-    if (!this.isConfigured) {
+    if (!isConfig) {
       console.error('❌ WhatsApp Cloud API not configured!');
       console.error('   Set WHATSAPP_ACCESS_TOKEN and WHATSAPP_PHONE_NUMBER_ID in .env file');
       return {
@@ -42,7 +46,7 @@ class WhatsAppCloudAPI {
     }
 
     try {
-      const url = `${this.baseUrl}/${this.phoneNumberId}/messages`;
+      const url = `${this.baseUrl}/${phoneNumberId}/messages`;
 
       const data = {
         messaging_product: 'whatsapp',
@@ -56,7 +60,7 @@ class WhatsAppCloudAPI {
 
       const config = {
         headers: {
-          'Authorization': `Bearer ${this.accessToken}`,
+          'Authorization': `Bearer ${accessToken}`,
           'Content-Type': 'application/json'
         }
       };
@@ -128,9 +132,11 @@ class WhatsAppCloudAPI {
   }
 
   // Mark message as read
-  async markAsRead(messageId) {
+  async markAsRead(messageId, customCredentials = null) {
+    const accessToken = customCredentials?.accessToken || this.accessToken;
+    const phoneNumberId = customCredentials?.phoneNumberId || this.phoneNumberId;
     try {
-      const url = `${this.baseUrl}/${this.phoneNumberId}/messages`;
+      const url = `${this.baseUrl}/${phoneNumberId}/messages`;
 
       const data = {
         messaging_product: 'whatsapp',
@@ -140,7 +146,7 @@ class WhatsAppCloudAPI {
 
       const config = {
         headers: {
-          'Authorization': `Bearer ${this.accessToken}`,
+          'Authorization': `Bearer ${accessToken}`,
           'Content-Type': 'application/json'
         }
       };
@@ -156,9 +162,13 @@ class WhatsAppCloudAPI {
   }
 
   // Send template message
-  async sendTemplateMessage(phoneNumber, templateName, templateLanguage = 'en_US', parameters = []) {
+  async sendTemplateMessage(phoneNumber, templateName, templateLanguage = 'en_US', parameters = [], customCredentials = null) {
+    const accessToken = customCredentials?.accessToken || this.accessToken;
+    const phoneNumberId = customCredentials?.phoneNumberId || this.phoneNumberId;
+    const isConfig = (customCredentials?.accessToken && customCredentials?.phoneNumberId) || this.isConfigured;
+
     // If not configured, return mock success (helpful for local dev / testing)
-    if (!this.isConfigured) {
+    if (!isConfig) {
       console.log(`⚠️ WhatsApp Cloud API not configured. Simulating template message dispatch:`);
       console.log(`   To: ${phoneNumber}`);
       console.log(`   Template: ${templateName} [${templateLanguage}]`);
@@ -170,7 +180,7 @@ class WhatsAppCloudAPI {
     }
 
     try {
-      const url = `${this.baseUrl}/${this.phoneNumberId}/messages`;
+      const url = `${this.baseUrl}/${phoneNumberId}/messages`;
 
       // Map parameters to Meta format components (body text placeholders)
       const formattedParameters = parameters.map(p => {
@@ -200,7 +210,7 @@ class WhatsAppCloudAPI {
 
       const config = {
         headers: {
-          'Authorization': `Bearer ${this.accessToken}`,
+          'Authorization': `Bearer ${accessToken}`,
           'Content-Type': 'application/json'
         }
       };
@@ -216,42 +226,68 @@ class WhatsAppCloudAPI {
   }
 
   // Send interactive message with buttons
-  async sendInteractiveMessage(phoneNumber, headerText, bodyText, footerText, buttons) {
+  async sendInteractiveMessage(phoneNumber, headerText, bodyText, footerText, buttons, customCredentials = null) {
+    const accessToken = customCredentials?.accessToken || this.accessToken;
+    const phoneNumberId = customCredentials?.phoneNumberId || this.phoneNumberId;
+    const isConfig = (customCredentials?.accessToken && customCredentials?.phoneNumberId) || this.isConfigured;
+
+    // If not configured, return mock success (helpful for local dev / testing)
+    if (!isConfig) {
+      console.log(`⚠️ WhatsApp Cloud API not configured. Simulating interactive message dispatch:`);
+      console.log(`   To: ${phoneNumber}`);
+      console.log(`   Header: ${headerText || 'None'}`);
+      console.log(`   Body: ${bodyText}`);
+      console.log(`   Footer: ${footerText || 'None'}`);
+      console.log(`   Buttons:`, JSON.stringify(buttons, null, 2));
+      return { 
+        success: true, 
+        messageId: 'mock_int_wamid_' + Math.random().toString(36).substr(2, 9) 
+      };
+    }
+
     try {
-      const url = `${this.baseUrl}/${this.phoneNumberId}/messages`;
+      const url = `${this.baseUrl}/${phoneNumberId}/messages`;
+
+      const interactive = {
+        type: 'button',
+        body: {
+          text: bodyText
+        },
+        action: {
+          buttons: buttons.slice(0, 3).map((btn, idx) => ({
+            type: 'reply',
+            reply: {
+              id: `btn_${idx}_${Date.now()}`,
+              title: btn.substring(0, 20)
+            }
+          }))
+        }
+      };
+
+      if (headerText) {
+        interactive.header = {
+          type: 'text',
+          text: headerText
+        };
+      }
+
+      if (footerText) {
+        interactive.footer = {
+          text: footerText
+        };
+      }
 
       const data = {
         messaging_product: 'whatsapp',
         recipient_type: 'individual',
         to: phoneNumber.replace(/\D/g, ''),
         type: 'interactive',
-        interactive: {
-          type: 'button',
-          header: {
-            type: 'text',
-            text: headerText
-          },
-          body: {
-            text: bodyText
-          },
-          footer: {
-            text: footerText
-          },
-          action: {
-            buttons: buttons.map((btn, idx) => ({
-              type: 'reply',
-              reply: {
-                id: `btn_${idx}`,
-                title: btn
-              }
-            }))
-          }
-        }
+        interactive
       };
 
       const config = {
         headers: {
-          'Authorization': `Bearer ${this.accessToken}`,
+          'Authorization': `Bearer ${accessToken}`,
           'Content-Type': 'application/json'
         }
       };
@@ -261,19 +297,21 @@ class WhatsAppCloudAPI {
       return { success: true, messageId: response.data.messages[0].id };
 
     } catch (error) {
-      console.error('❌ Error sending interactive message:', error);
-      return { success: false, error: error.message };
+      console.error('❌ Error sending interactive message:', error.response?.data || error.message);
+      return { success: false, error: error.response?.data || error.message };
     }
   }
 
   // Get business phone number details
-  async getPhoneNumberDetails() {
+  async getPhoneNumberDetails(customCredentials = null) {
+    const accessToken = customCredentials?.accessToken || this.accessToken;
+    const phoneNumberId = customCredentials?.phoneNumberId || this.phoneNumberId;
     try {
-      const url = `${this.baseUrl}/${this.phoneNumberId}`;
+      const url = `${this.baseUrl}/${phoneNumberId}`;
       
       const config = {
         headers: {
-          'Authorization': `Bearer ${this.accessToken}`
+          'Authorization': `Bearer ${accessToken}`
         }
       };
 
@@ -288,13 +326,14 @@ class WhatsAppCloudAPI {
   }
 
   // Get message media (images, documents, etc.)
-  async getMedia(mediaId) {
+  async getMedia(mediaId, customCredentials = null) {
+    const accessToken = customCredentials?.accessToken || this.accessToken;
     try {
       const url = `${this.baseUrl}/${mediaId}`;
       
       const config = {
         headers: {
-          'Authorization': `Bearer ${this.accessToken}`
+          'Authorization': `Bearer ${accessToken}`
         }
       };
 
@@ -308,7 +347,8 @@ class WhatsAppCloudAPI {
   }
 
   // Upload media for sending
-  async uploadMedia(phoneNumberId, mediaFile, mediaType = 'image') {
+  async uploadMedia(phoneNumberId, mediaFile, mediaType = 'image', customCredentials = null) {
+    const accessToken = customCredentials?.accessToken || this.accessToken;
     try {
       const url = `${this.baseUrl}/${phoneNumberId}/media`;
       
@@ -318,7 +358,7 @@ class WhatsAppCloudAPI {
 
       const config = {
         headers: {
-          'Authorization': `Bearer ${this.accessToken}`,
+          'Authorization': `Bearer ${accessToken}`,
           'Content-Type': 'multipart/form-data'
         }
       };
@@ -349,17 +389,21 @@ class WhatsAppCloudAPI {
   }
 
   // Fetch templates from Meta Graph API
-  async fetchTemplates() {
-    if (!this.isConfigured) {
+  async fetchTemplates(customCredentials = null) {
+    const accessToken = customCredentials?.accessToken || this.accessToken;
+    const businessAccountId = customCredentials?.businessAccountId || this.businessAccountId;
+    const isConfig = (customCredentials?.accessToken && customCredentials?.businessAccountId) || this.isConfigured;
+
+    if (!isConfig) {
       console.log('⚠️ WhatsApp Cloud API not configured. Returning seeded default templates.');
       return this.getSeededTemplates();
     }
 
     try {
-      const url = `${this.baseUrl}/${this.businessAccountId}/message_templates`;
+      const url = `${this.baseUrl}/${businessAccountId}/message_templates`;
       const config = {
         headers: {
-          'Authorization': `Bearer ${this.accessToken}`
+          'Authorization': `Bearer ${accessToken}`
         }
       };
 

@@ -128,6 +128,11 @@ export const createOrder = (data) => api.post('/orders', data);
 export const updateOrder = (id, data) => api.patch(`/orders/${id}`, data);
 export const deleteOrder = (id) => api.delete(`/orders/${id}`);
 
+// Abandoned Carts
+export const getAbandonedCarts = (params) => api.get('/abandoned-carts', { params });
+export const getAbandonedCartStats = () => api.get('/abandoned-carts/stats');
+export const sendAbandonedCartReminder = (id) => api.post(`/abandoned-carts/${id}/send-reminder`);
+
 // Escalations
 export const getEscalations = (params) => api.get('/dashboard/escalations', { params });
 export const updateEscalation = (id, data) => api.patch(`/dashboard/escalations/${id}`, data);
@@ -135,6 +140,11 @@ export const updateEscalation = (id, data) => api.patch(`/dashboard/escalations/
 // WhatsApp
 export const sendWhatsAppMessage = (data) => api.post('/webhook/send', data);
 export const getWhatsAppStatus = () => api.get('/webhook/status');
+export const disconnectWhatsApp = () => api.post('/webhook/disconnect');
+export const connectWhatsApp = () => api.post('/webhook/connect');
+
+// AI Simulating/Testing
+export const testAIMessage = (data) => api.post('/ai/test-message', data);
 
 // SaaS Subscriptions & Billing
 export const getPricingPlans = () => api.get('/auth/plans');

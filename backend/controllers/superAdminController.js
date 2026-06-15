@@ -37,7 +37,7 @@ exports.getAllUsers = async (req, res) => {
 // Create new user
 exports.createUser = async (req, res) => {
   try {
-    const { name, email, password, subscriptionPlan, subscriptionStatus, monthlyPrice, geminiTokensLimit } = req.body;
+    const { name, email, password, subscriptionPlan, subscriptionStatus, monthlyPrice, geminiTokensLimit, webBotEnabled, shopifyEnabled, woocommerceEnabled } = req.body;
 
     // Check if user already exists
     const existingUser = await Admin.findOne({ email });
@@ -59,6 +59,9 @@ exports.createUser = async (req, res) => {
       monthlyPrice: monthlyPrice || 29,
       geminiTokensLimit: geminiTokensLimit || 10000,
       geminiTokensUsed: 0,
+      webBotEnabled: webBotEnabled === true || webBotEnabled === 'true',
+      shopifyEnabled: shopifyEnabled !== false && shopifyEnabled !== 'false',
+      woocommerceEnabled: woocommerceEnabled !== false && woocommerceEnabled !== 'false',
       isActive: true,
       subscriptionStartDate: new Date()
     });
@@ -252,6 +255,99 @@ exports.toggleUserStatus = async (req, res) => {
     res.status(500).json({
       success: false,
       error: 'Failed to toggle user status'
+    });
+  }
+};
+
+// Toggle user WhatsApp Web Bot scanner access
+exports.toggleUserWebBot = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const user = await Admin.findById(id);
+    
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        error: 'User not found'
+      });
+    }
+
+    user.webBotEnabled = !user.webBotEnabled;
+    await user.save();
+
+    res.json({
+      success: true,
+      message: `WhatsApp Web Bot scanner ${user.webBotEnabled ? 'enabled' : 'disabled'} successfully`,
+      data: user
+    });
+  } catch (error) {
+    console.error('Error toggling user web bot status:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to toggle web bot status'
+    });
+  }
+};
+
+// Toggle user Shopify access
+exports.toggleUserShopify = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const user = await Admin.findById(id);
+    
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        error: 'User not found'
+      });
+    }
+
+    user.shopifyEnabled = user.shopifyEnabled === false ? true : false;
+    await user.save();
+
+    res.json({
+      success: true,
+      message: `Shopify integration access ${user.shopifyEnabled ? 'enabled' : 'disabled'} successfully`,
+      data: user
+    });
+  } catch (error) {
+    console.error('Error toggling user Shopify status:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to toggle Shopify status'
+    });
+  }
+};
+
+// Toggle user WooCommerce access
+exports.toggleUserWooCommerce = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const user = await Admin.findById(id);
+    
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        error: 'User not found'
+      });
+    }
+
+    user.woocommerceEnabled = user.woocommerceEnabled === false ? true : false;
+    await user.save();
+
+    res.json({
+      success: true,
+      message: `WooCommerce integration access ${user.woocommerceEnabled ? 'enabled' : 'disabled'} successfully`,
+      data: user
+    });
+  } catch (error) {
+    console.error('Error toggling user WooCommerce status:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to toggle WooCommerce status'
     });
   }
 };
@@ -506,6 +602,90 @@ exports.deletePlan = async (req, res) => {
     res.status(500).json({
       success: false,
       error: 'Failed to delete plan'
+    });
+  }
+};
+
+// Global settings
+const GlobalSettings = require('../models/GlobalSettings');
+
+exports.getGlobalSettings = async (req, res) => {
+  try {
+    const settings = await GlobalSettings.find({});
+    const settingsMap = {};
+    settings.forEach(s => {
+      settingsMap[s.key] = s.value;
+    });
+
+    // Default value if not set
+    if (settingsMap['webBotEnabled'] === undefined) {
+      settingsMap['webBotEnabled'] = false;
+    }
+
+    res.json({
+      success: true,
+      data: settingsMap
+    });
+  } catch (error) {
+    console.error('Error fetching global settings:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch settings'
+    });
+  }
+};
+
+exports.updateGlobalSettings = async (req, res) => {
+  try {
+    const { settings } = req.body;
+    if (!settings || typeof settings !== 'object') {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid settings object'
+      });
+    }
+
+    const whatsappWebBot = require('../services/whatsappWebBot');
+
+    for (const [key, value] of Object.entries(settings)) {
+      await GlobalSettings.findOneAndUpdate(
+        { key },
+        { key, value },
+        { upsert: true, new: true }
+      );
+
+      // Handle dynamic activation/deactivation of WhatsApp Web Bot
+      if (key === 'webBotEnabled') {
+        if (value === true) {
+          if (whatsappWebBot && !whatsappWebBot.isReady) {
+            console.log('📱 Enabling WhatsApp Web Bot dynamically...');
+            whatsappWebBot.initialize(global.io);
+          }
+        } else {
+          if (whatsappWebBot && whatsappWebBot.client) {
+            console.log('📱 Disabling WhatsApp Web Bot dynamically...');
+            try {
+              whatsappWebBot.isReady = false;
+              whatsappWebBot.status = 'disconnected';
+              await whatsappWebBot.client.destroy();
+              whatsappWebBot.client = null;
+            } catch (err) {
+              console.error('Error destroying WhatsApp Web Bot client:', err.message);
+            }
+          }
+        }
+      }
+    }
+
+    res.json({
+      success: true,
+      message: 'Global settings updated successfully'
+    });
+  } catch (error) {
+    console.error('Error updating global settings:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to update settings'
     });
   }
 };

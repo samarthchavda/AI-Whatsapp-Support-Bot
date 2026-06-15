@@ -251,3 +251,72 @@
     font-size: 13px;
   }
 }
+
+/* Premium Light Theme Overrides */
+body:not(.dark-theme) .chat-header {
+  background: #ffffff !important;
+  border-bottom: 1px solid rgba(229, 231, 235, 0.8) !important;
+}
+
+body:not(.dark-theme) .chat-header h2 {
+  color: #111827 !important;
+}
+
+body:not(.dark-theme) .status-text {
+  color: #6b7280 !important;
+}
+
+body:not(.dark-theme) .chat-body {
+  background: #f3f4f6 !important;
+}
+
+body:not(.dark-theme) .message.user p {
+  color: #ffffff !important;
+}
+
+body:not(.dark-theme) .message.user .timestamp,
+body:not(.dark-theme) .message.user .message-status {
+  color: rgba(255, 255, 255, 0.9) !important;
+}
+
+body:not(.dark-theme) .message.user .message-status.read {
+  color: #34d399 !important;
+}
+
+body:not(.dark-theme) .message.bot {
+  background: #ffffff !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08) !important;
+}
+
+body:not(.dark-theme) .message.bot p {
+  color: #1f2937 !important;
+}
+
+body:not(.dark-theme) .message.bot .timestamp {
+  color: #9ca3af !important;
+}
+
+body:not(.dark-theme) .chat-footer {
+  background: #ffffff !important;
+  border-top: 1px solid rgba(229, 231, 235, 0.8) !important;
+}
+
+body:not(.dark-theme) .message-input {
+  background: #f9fafb !important;
+  border: 1px solid #e5e7eb !important;
+  color: #1f2937 !important;
+}
+
+body:not(.dark-theme) .message-input:focus {
+  border-color: #6366f1 !important;
+  background: #ffffff !important;
+}
+
+body:not(.dark-theme) .icon-btn {
+  color: #4b5563 !important;
+}
+
+body:not(.dark-theme) .icon-btn:hover {
+  background-color: #f3f4f6 !important;
+}
+

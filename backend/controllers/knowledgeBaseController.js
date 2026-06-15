@@ -87,6 +87,10 @@ exports.getAllKnowledgeBases = async (req, res) => {
     if (isActive !== undefined) {
       query.isActive = isActive === 'true';
     }
+    // Only return knowledge bases uploaded by the current admin
+    if (req && req.admin && req.admin._id) {
+      query.uploadedBy = req.admin._id;
+    }
 
     const knowledgeBases = await KnowledgeBase.find(query)
       .sort({ createdAt: -1 })
@@ -125,6 +129,11 @@ exports.getKnowledgeBaseById = async (req, res) => {
       });
     }
 
+    // Enforce ownership: only uploader (or super-admin) can access
+    if (req && req.admin && knowledgeBase.uploadedBy && knowledgeBase.uploadedBy.toString() !== req.admin._id.toString() && !req.admin.isSuperAdmin) {
+      return res.status(403).json({ success: false, error: 'Forbidden' });
+    }
+
     res.json({
       success: true,
       data: knowledgeBase
@@ -150,6 +159,11 @@ exports.updateKnowledgeBase = async (req, res) => {
         success: false,
         error: 'Knowledge base not found'
       });
+    }
+
+    // Enforce ownership for updates
+    if (req && req.admin && knowledgeBase.uploadedBy && knowledgeBase.uploadedBy.toString() !== req.admin._id.toString() && !req.admin.isSuperAdmin) {
+      return res.status(403).json({ success: false, error: 'Forbidden' });
     }
 
     if (title !== undefined) knowledgeBase.title = title;
@@ -182,6 +196,11 @@ exports.deleteKnowledgeBase = async (req, res) => {
         success: false,
         error: 'Knowledge base not found'
       });
+    }
+
+    // Enforce ownership for deletion
+    if (req && req.admin && knowledgeBase.uploadedBy && knowledgeBase.uploadedBy.toString() !== req.admin._id.toString() && !req.admin.isSuperAdmin) {
+      return res.status(403).json({ success: false, error: 'Forbidden' });
     }
 
     // Delete the file
@@ -220,10 +239,10 @@ exports.queryKnowledgeBase = async (req, res) => {
       });
     }
 
-    // Get all active knowledge bases
-    const knowledgeBases = await KnowledgeBase.find({ isActive: true });
+    // Get all active knowledge bases for this admin
+    const knowledgeBases = await KnowledgeBase.find({ isActive: true, uploadedBy: req.admin._id });
 
-    if (knowledgeBases.length === 0) {
+    if (!knowledgeBases || knowledgeBases.length === 0) {
       return res.json({
         success: true,
         data: {
@@ -233,9 +252,6 @@ exports.queryKnowledgeBase = async (req, res) => {
         }
       });
     }
-
-    // Extract texts from all active knowledge bases
-    const texts = knowledgeBases.map(kb => kb.extractedText);
 
     // Query using the knowledge base service with RAG (adminId context)
     const result = await knowledgeBaseService.queryKnowledgeBase(question, req.admin._id);

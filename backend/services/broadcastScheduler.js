@@ -5,6 +5,50 @@ const { addBroadcastToQueue } = require('./broadcastQueue');
 // Store scheduled tasks
 const scheduledTasks = new Map();
 
+// Helper to check and send reminders for abandoned carts
+async function checkAbandonedCarts() {
+  try {
+    const AbandonedCart = require('../models/AbandonedCart');
+    const webhookService = require('./webhookService');
+
+    const now = new Date();
+    const thirtyMinutesAgo = new Date(now.getTime() - 30 * 60 * 1000);
+    const twentyFourHoursAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+
+    // Find carts that are:
+    // 1. status: 'abandoned'
+    // 2. abandonedAt is between 24 hours ago and 30 minutes ago
+    const abandonedCarts = await AbandonedCart.find({
+      status: 'abandoned',
+      abandonedAt: { $gte: twentyFourHoursAgo, $lte: thirtyMinutesAgo }
+    });
+
+    if (abandonedCarts.length > 0) {
+      console.log(`⏰ Found ${abandonedCarts.length} abandoned carts to send reminders.`);
+    }
+
+    for (const cart of abandonedCarts) {
+      try {
+        console.log(`📱 Sending cart recovery reminder to ${cart.customerPhone} for cart ${cart.cartId}`);
+        const result = await webhookService.sendCartRecoveryMessage(cart);
+        
+        if (result.success) {
+          cart.status = 'reminder_sent';
+          cart.reminderSentAt = new Date();
+          await cart.save();
+          console.log(`✅ Cart recovery reminder sent successfully for cart ${cart.cartId}`);
+        } else {
+          console.error(`❌ Failed to send cart recovery reminder for cart ${cart.cartId}:`, result.error);
+        }
+      } catch (err) {
+        console.error(`Error processing cart recovery for cart ${cart.cartId}:`, err);
+      }
+    }
+  } catch (error) {
+    console.error('Error checking abandoned carts:', error);
+  }
+}
+
 // Check for scheduled broadcasts every minute
 const schedulerTask = cron.schedule('* * * * *', async () => {
   try {
@@ -27,6 +71,9 @@ const schedulerTask = cron.schedule('* * * * *', async () => {
         await broadcast.save();
       }
     }
+
+    // Check for abandoned carts
+    await checkAbandonedCarts();
   } catch (error) {
     console.error('Error in broadcast scheduler:', error);
   }

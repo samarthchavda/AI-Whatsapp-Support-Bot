@@ -9,11 +9,13 @@ import {
   FaCheck,
   FaChartLine,
   FaComments,
+  FaFileAlt,
   FaHeadset,
   FaLock,
   FaPlug,
   FaShieldAlt,
-  FaWhatsapp
+  FaWhatsapp,
+  FaCommentDots
 } from 'react-icons/fa';
 import './LandingPage.css';
 
@@ -21,6 +23,37 @@ const metrics = [
   { value: '1.8s', label: 'median first reply' },
   { value: '82%', label: 'queries resolved by AI' },
   { value: '24/7', label: 'WhatsApp coverage' }
+];
+
+const howItWorksSteps = [
+  {
+    number: '01',
+    title: 'Connect WhatsApp',
+    description: 'Establish WhatsApp Cloud API connection or scan the secure QR code to pair your business number with our platform. Takes under 2 minutes.',
+    badge: 'Step 1: Onboarding',
+    visualType: 'connect'
+  },
+  {
+    number: '02',
+    title: 'Train FAQs & Policies',
+    description: 'Feed your store FAQs, custom refund windows, and support documentation directly into the knowledge base. The AI learns your specific business policies.',
+    badge: 'Step 2: Knowledge Ingestion',
+    visualType: 'train'
+  },
+  {
+    number: '03',
+    title: 'Automate 24/7 Support',
+    description: 'The AI WhatsApp Bot immediately begins resolving customer tracking queries, cancellation requests, and policy FAQs without agent intervention.',
+    badge: 'Step 3: Auto-Resolution',
+    visualType: 'automate'
+  },
+  {
+    number: '04',
+    title: 'Human Agency Handoff',
+    description: 'If a customer asks for a human, expresses high frustration, or triggers refund escalations, the AI pauses and alerts your live support team.',
+    badge: 'Step 4: Live Handoff',
+    visualType: 'takeover'
+  }
 ];
 
 const workflows = [
@@ -58,6 +91,7 @@ const platformItems = [
 function LandingPage() {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('inbox');
+  const [activeStep, setActiveStep] = useState(0);
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [chatMessages, setChatMessages] = useState([
     { role: 'assistant', content: 'Hi there! 👋 I am the AI WhatsApp Support Assistant. Ask me about features, pricing, human takeover, or track a mock order (try typing "track ORD-1017").' }
@@ -111,13 +145,15 @@ function LandingPage() {
       <nav className="landing-nav">
         <div className="landing-nav-inner">
           <button className="landing-logo" onClick={() => scrollToSection('top')} aria-label="AI Support Bot home">
-            <FaWhatsapp />
+            <FaCommentDots />
             <span>AI Support Bot</span>
           </button>
 
           <div className="landing-nav-links" aria-label="Primary navigation">
+            <button onClick={() => scrollToSection('how-it-works')}>How it Works</button>
             <button onClick={() => scrollToSection('workflows')}>Workflows</button>
-            <button onClick={() => scrollToSection('platform')}>Platform</button>
+            <button onClick={() => navigate('/services')}>Services</button>
+            <button onClick={() => navigate('/about')}>About Us</button>
             <button onClick={() => scrollToSection('pricing')}>Pricing</button>
           </div>
 
@@ -298,6 +334,137 @@ function LandingPage() {
           </div>
         </section>
 
+        <section id="how-it-works" className="how-it-works-section">
+          <div className="section-heading centered">
+            <span>Operational Flow</span>
+            <h2>How It Works in 4 Steps</h2>
+            <p>From connection to automation and human collaboration, see how our bot integrates with your support desk.</p>
+          </div>
+
+          <div className="stepper-grid">
+            <div className="stepper-nav">
+              {howItWorksSteps.map((step, idx) => (
+                <button
+                  key={idx}
+                  className={`stepper-nav-item ${activeStep === idx ? 'active' : ''}`}
+                  onClick={() => setActiveStep(idx)}
+                >
+                  <span className="step-number">{step.number}</span>
+                  <div className="step-content">
+                    <span className="step-badge">{step.badge}</span>
+                    <h3>{step.title}</h3>
+                    <p>{step.description}</p>
+                  </div>
+                </button>
+              ))}
+            </div>
+
+            <div className="stepper-visual">
+              <div className="stepper-visual-inner">
+                {activeStep === 0 && (
+                  <div className="visual-panel connect-visual">
+                    <div className="qr-container">
+                      <div className="qr-scanner-mock">
+                        <FaWhatsapp className="qr-whatsapp-icon" />
+                        <div className="qr-pattern-mock">
+                          <div className="qr-dots"></div>
+                        </div>
+                      </div>
+                      <div className="qr-status-indicator">
+                        <span className="status-dot pulsing"></span>
+                        <span>Waiting for QR Scan...</span>
+                      </div>
+                    </div>
+                    <h4>Direct Connection</h4>
+                    <p>Open WhatsApp on your phone, navigate to Linked Devices, and scan the QR code to activate support instantly.</p>
+                  </div>
+                )}
+
+                {activeStep === 1 && (
+                  <div className="visual-panel train-visual">
+                    <div className="doc-list-mock">
+                      <div className="doc-row-mock">
+                        <FaFileAlt className="doc-icon-mock" />
+                        <div>
+                          <strong>shipping_policies.txt</strong>
+                          <span>2.4 KB • Sync completed</span>
+                        </div>
+                        <span className="doc-badge-mock">Trained</span>
+                      </div>
+                      <div className="doc-row-mock">
+                        <FaFileAlt className="doc-icon-mock" />
+                        <div>
+                          <strong>return_faqs.pdf</strong>
+                          <span>182 KB • Sync completed</span>
+                        </div>
+                        <span className="doc-badge-mock">Trained</span>
+                      </div>
+                      <div className="doc-row-mock">
+                        <FaFileAlt className="doc-icon-mock" />
+                        <div>
+                          <strong>product_catalog.json</strong>
+                          <span>14.8 KB • 38 items updated</span>
+                        </div>
+                        <span className="doc-badge-mock">Synced</span>
+                      </div>
+                    </div>
+                    <h4>AI Knowledge Library</h4>
+                    <p>Drag and drop text guides, PDF files, or link your Shopify/WooCommerce store catalog. The AI updates its behavior instantly.</p>
+                  </div>
+                )}
+
+                {activeStep === 2 && (
+                  <div className="visual-panel automate-visual">
+                    <div className="whatsapp-chat-mock">
+                      <div className="chat-header-mock">
+                        <FaWhatsapp />
+                        <span>Store Support Chat</span>
+                      </div>
+                      <div className="chat-body-mock">
+                        <div className="bubble-mock user">
+                          Is there a shipping charge for orders below $50?
+                        </div>
+                        <div className="bubble-mock bot">
+                          Yes! For orders under $50, our standard shipping fee is $4.99. Orders above $50 qualify for free shipping! 🚚
+                        </div>
+                        <div className="bubble-system-mock">
+                          Resolved automatically by AI
+                        </div>
+                      </div>
+                    </div>
+                    <h4>Automated Resolution</h4>
+                    <p>82%+ of common inquiries are handled instantly by the AI, requiring 0 human staff hours.</p>
+                  </div>
+                )}
+
+                {activeStep === 3 && (
+                  <div className="visual-panel takeover-visual">
+                    <div className="whatsapp-chat-mock">
+                      <div className="chat-header-mock">
+                        <FaWhatsapp />
+                        <span>Store Support Chat</span>
+                      </div>
+                      <div className="chat-body-mock">
+                        <div className="bubble-mock user">
+                          My package was damaged and I want a refund right now.
+                        </div>
+                        <div className="bubble-system-mock warning">
+                          ⚠️ Frustration detected. Pausing bot...
+                        </div>
+                        <div className="bubble-mock bot agent">
+                          Hi there, I am Sarah from customer support. I have taken over this chat. Let me process this refund right away!
+                        </div>
+                      </div>
+                    </div>
+                    <h4>Human Takeover Control</h4>
+                    <p>Automatic takeover guarantees a smooth handoff. High-priority escalation lists notify your staff via email or sound alerts.</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </section>
+
         <section id="workflows" className="landing-section">
           <div className="section-heading">
             <span>Core workflows</span>
@@ -415,12 +582,37 @@ function LandingPage() {
       </main>
 
       <footer className="landing-footer">
-        <div className="footer-brand">
-          <FaWhatsapp />
-          <span>AI Support Bot</span>
+        <div className="footer-brand-container">
+          <div className="footer-brand">
+            <FaCommentDots />
+            <span>AI Support Bot</span>
+          </div>
+          <p>WhatsApp support automation for real commerce operations.</p>
         </div>
-        <p>WhatsApp support automation for real commerce operations.</p>
-        <button onClick={() => navigate('/book-demo')}>Book demo <FaArrowRight /></button>
+        
+        <div className="footer-links-grid">
+          <div className="footer-links-col">
+            <h4>Product</h4>
+            <button onClick={() => scrollToSection('how-it-works')}>How it works</button>
+            <button onClick={() => scrollToSection('workflows')}>Workflows</button>
+            <button onClick={() => scrollToSection('pricing')}>Pricing</button>
+          </div>
+          <div className="footer-links-col">
+            <h4>Company</h4>
+            <button onClick={() => navigate('/about')}>About Us</button>
+            <button onClick={() => navigate('/services')}>Services</button>
+            <button onClick={() => navigate('/privacy')}>Privacy Policy</button>
+          </div>
+          <div className="footer-links-col">
+            <h4>Account</h4>
+            <button onClick={() => navigate('/login')}>Sign In</button>
+            <button onClick={() => navigate('/book-demo')}>Book Demo</button>
+          </div>
+        </div>
+
+        <div className="footer-cta-container">
+          <button className="footer-cta-btn" onClick={() => navigate('/book-demo')}>Book demo <FaArrowRight /></button>
+        </div>
       </footer>
 
       {/* Floating WhatsApp Demo Widget */}
@@ -435,26 +627,26 @@ function LandingPage() {
             <span className="pulse-notification">1</span>
           </button>
         ) : (
-          <div className="chat-window">
-            <div className="chat-window-header">
-              <FaWhatsapp className="chat-icon" />
+          <div className="widget-chat-window">
+            <div className="widget-chat-header">
+              <FaWhatsapp className="widget-chat-icon" />
               <div>
                 <h4>AI Support Assistant</h4>
                 <span>Online • Powered by Gemini</span>
               </div>
-              <button className="chat-close-btn" onClick={() => setIsChatOpen(false)}>×</button>
+              <button className="widget-chat-close-btn" onClick={() => setIsChatOpen(false)}>×</button>
             </div>
 
-            <div className="chat-window-messages">
+            <div className="widget-chat-messages">
               {chatMessages.map((msg, i) => (
-                <div key={i} className={`chat-bubble ${msg.role}`}>
+                <div key={i} className={`widget-chat-bubble ${msg.role}`}>
                   <p style={{ margin: 0, whiteSpace: 'pre-line' }}>{msg.content}</p>
                 </div>
               ))}
               <div ref={chatEndRef} />
             </div>
 
-            <form onSubmit={handleChatSubmit} className="chat-window-input">
+            <form onSubmit={handleChatSubmit} className="widget-chat-input">
               <input
                 type="text"
                 value={chatInput}

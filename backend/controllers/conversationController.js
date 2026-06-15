@@ -69,7 +69,7 @@ exports.getConversationsByPhone = async (req, res) => {
 // Update conversation status
 exports.updateConversationStatus = async (req, res) => {
   try {
-    const { status, satisfaction, botPaused } = req.body;
+    const { status, satisfaction, botPaused, suggestedReply } = req.body;
 
     const conversation = await Conversation.findById(req.params.id);
     
@@ -83,6 +83,7 @@ exports.updateConversationStatus = async (req, res) => {
         conversation.resolvedAt = new Date();
         conversation.botPaused = false;
         conversation.escalated = false;
+        conversation.suggestedReply = null;
       }
     }
     
@@ -96,6 +97,10 @@ exports.updateConversationStatus = async (req, res) => {
         conversation.status = 'active';
         conversation.escalated = false;
       }
+    }
+
+    if (suggestedReply !== undefined) {
+      conversation.suggestedReply = suggestedReply;
     }
 
     await conversation.save();
@@ -187,10 +192,44 @@ exports.sendAdminMessage = async (req, res) => {
     // Automatically pause the bot as the admin has taken over
     conversation.botPaused = true;
     
+    // Clear suggested draft message
+    conversation.suggestedReply = null;
+    
+    // Retrieve customer's language preference
+    let targetLanguage = 'English';
+    if (conversation.messages && conversation.messages.length > 0) {
+      for (let i = conversation.messages.length - 1; i >= 0; i--) {
+        if (conversation.messages[i].role === 'user' && conversation.messages[i].detectedLanguage) {
+          targetLanguage = conversation.messages[i].detectedLanguage;
+          break;
+        }
+      }
+    }
+
+    // Translate agent message to customer's target language if targetLanguage is foreign
+    let messageToSend = message;
+    let translation = null;
+    const isForeignLanguage = targetLanguage && 
+                              targetLanguage.toLowerCase() !== 'english' && 
+                              targetLanguage.toLowerCase() !== 'gujarati';
+
+    if (isForeignLanguage) {
+      try {
+        const translationService = require('../services/translationService');
+        translation = await translationService.translateText(message, targetLanguage);
+        messageToSend = translation; // We send the translated text to the customer!
+        console.log(`🌐 Translated agent message from English/Gujarati to ${targetLanguage}: "${translation}"`);
+      } catch (err) {
+        console.error('Failed to translate outgoing agent message:', err);
+      }
+    }
+
     // Add admin message to conversation
     conversation.messages.push({
       role: 'system', // Admin messages are 'system' role
       content: message,
+      translation: isForeignLanguage ? translation : null,
+      detectedLanguage: targetLanguage,
       timestamp: new Date()
     });
 
@@ -205,7 +244,7 @@ exports.sendAdminMessage = async (req, res) => {
       const whatsappWebBot = require('../services/whatsappWebBot');
       if (whatsappWebBot && whatsappWebBot.isReady) {
         console.log(`Sending manual message via WhatsApp Web Bot to ${customerPhone}`);
-        const webResult = await whatsappWebBot.sendMessage(customerPhone, message);
+        const webResult = await whatsappWebBot.sendMessage(customerPhone, messageToSend);
         if (webResult.success) {
           sentSuccess = true;
         } else {
@@ -220,7 +259,7 @@ exports.sendAdminMessage = async (req, res) => {
       try {
         const whatsappCloudAPI = require('../services/whatsappCloudAPI');
         console.log(`Sending manual message via WhatsApp Cloud API to ${customerPhone}`);
-        const cloudResult = await whatsappCloudAPI.sendMessage(customerPhone, message);
+        const cloudResult = await whatsappCloudAPI.sendMessage(customerPhone, messageToSend);
         if (cloudResult.success) {
           sentSuccess = true;
         } else {
@@ -232,7 +271,7 @@ exports.sendAdminMessage = async (req, res) => {
     }
 
     if (!sentSuccess) {
-      console.log(`⚠️ Manual message simulated (not sent to actual WhatsApp): "${message}". Reason: ${errorMsg || 'No active clients'}`);
+      console.log(`⚠️ Manual message simulated (not sent to actual WhatsApp): "${messageToSend}". Reason: ${errorMsg || 'No active clients'}`);
     }
     
     // Emit socket event for real-time update
@@ -242,6 +281,8 @@ exports.sendAdminMessage = async (req, res) => {
         customerPhone,
         role: 'system',
         content: message,
+        translation: isForeignLanguage ? translation : null,
+        detectedLanguage: targetLanguage,
         timestamp: new Date(),
         botPaused: conversation.botPaused
       });

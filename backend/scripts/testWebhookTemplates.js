@@ -70,6 +70,7 @@ async function runTest() {
       orderId: testOrderId,
       customerId: customer._id,
       customerPhone: testPhone,
+      customerEmail: customer.email,
       customerName: customer.name,
       externalOrderId: 'ext-order-999',
       items: [{ productName: 'Cool Watch', quantity: 1, price: 99.99 }],

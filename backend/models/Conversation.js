@@ -27,6 +27,14 @@ const conversationSchema = new mongoose.Schema({
       required: false,
       default: ''
     },
+    translation: {
+      type: String,
+      default: null
+    },
+    detectedLanguage: {
+      type: String,
+      default: null
+    },
     timestamp: {
       type: Date,
       default: Date.now
@@ -57,6 +65,10 @@ const conversationSchema = new mongoose.Schema({
   botPaused: {
     type: Boolean,
     default: false
+  },
+  suggestedReply: {
+    type: String,
+    default: null
   },
   escalationReason: {
     type: String,

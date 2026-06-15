@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Link, useLocation, useNavigate, Navigate } from 'react-router-dom';
-import { FaWhatsapp, FaHome, FaComments, FaBox, FaExclamationTriangle, FaPlug, FaRobot, FaSearch, FaBell, FaPlus, FaSignOutAlt, FaUser, FaBrain, FaCommentDots, FaBroadcastTower, FaChartLine, FaCog, FaCrown, FaFileAlt, FaSun, FaMoon } from 'react-icons/fa';
+import { FaHome, FaComments, FaBox, FaExclamationTriangle, FaPlug, FaRobot, FaSearch, FaBell, FaPlus, FaSignOutAlt, FaUser, FaBrain, FaCommentDots, FaBroadcastTower, FaChartLine, FaCog, FaCrown, FaFileAlt, FaSun, FaMoon, FaShoppingCart } from 'react-icons/fa';
 import api, { clearAuthState, refreshAuth, updateAdminProfile } from './services/api';
 import Dashboard from './pages/Dashboard';
 import Profile from './pages/Profile';
@@ -23,6 +23,12 @@ import PlanManager from './pages/PlanManager';
 import DemoRequests from './pages/DemoRequests';
 import Billing from './pages/Billing';
 import Templates from './pages/Templates';
+import AbandonedCarts from './pages/AbandonedCarts';
+import AboutPage from './pages/AboutPage';
+import ServicesPage from './pages/ServicesPage';
+import ForgotPassword from './pages/ForgotPassword';
+import ResetPassword from './pages/ResetPassword';
+import PrivacyPolicy from './pages/PrivacyPolicy';
 import './App.css';
 
 function Sidebar({ admin, onLogout }) {
@@ -36,7 +42,7 @@ function Sidebar({ admin, onLogout }) {
     <div className="sidebar">
       <div className="sidebar-header">
         <div className="sidebar-logo">
-          <FaWhatsapp />
+          <FaCommentDots />
           <span>Support Bot</span>
         </div>
       </div>
@@ -146,6 +152,11 @@ function Sidebar({ admin, onLogout }) {
                 <li>
                   <Link to="/dashboard/templates" className={isActive('/dashboard/templates')}>
                     <FaFileAlt /> Templates
+                  </Link>
+                </li>
+                <li>
+                  <Link to="/dashboard/abandoned-carts" className={isActive('/dashboard/abandoned-carts')}>
+                    <FaShoppingCart /> Abandoned Carts
                   </Link>
                 </li>
                 <li>
@@ -286,6 +297,23 @@ const isJwtExpired = (token) => {
   }
 };
 
+function ThemeHandler({ admin }) {
+  const location = useLocation();
+
+  useEffect(() => {
+    const isPublicPath = ['/', '/book-demo', '/login', '/about', '/services', '/forgot-password'].includes(location.pathname) || location.pathname.startsWith('/reset-password');
+    if (isPublicPath) {
+      document.body.classList.add('dark-theme');
+    } else if (admin && admin.theme) {
+      document.body.classList.toggle('dark-theme', admin.theme === 'dark');
+    } else {
+      document.body.classList.remove('dark-theme');
+    }
+  }, [admin, location.pathname]);
+
+  return null;
+}
+
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [admin, setAdmin] = useState(null);
@@ -293,28 +321,58 @@ function App() {
 
   useEffect(() => {
     const initializeAuth = async () => {
-      const storedAdmin = localStorage.getItem('admin');
-      const storedToken = getStoredAccessToken();
-
-      if (storedToken && storedAdmin && !isJwtExpired(storedToken)) {
-        setIsAuthenticated(true);
-        setAdmin(JSON.parse(storedAdmin));
-        setLoading(false);
-        return;
-      }
-
       try {
-        const response = await refreshAuth();
-        const refreshedToken = response;
-        const refreshedAdmin = localStorage.getItem('admin');
+        const storedAdmin = localStorage.getItem('admin');
+        const storedToken = getStoredAccessToken();
 
-        if (refreshedToken && refreshedAdmin) {
-          setIsAuthenticated(true);
-          setAdmin(JSON.parse(refreshedAdmin));
-          setLoading(false);
-          return;
+        if (
+          storedToken && 
+          storedToken !== 'undefined' && 
+          storedToken !== 'null' && 
+          storedAdmin && 
+          storedAdmin !== 'undefined' && 
+          storedAdmin !== 'null' && 
+          !isJwtExpired(storedToken)
+        ) {
+          try {
+            const parsedAdmin = JSON.parse(storedAdmin);
+            if (parsedAdmin) {
+              setIsAuthenticated(true);
+              setAdmin(parsedAdmin);
+              setLoading(false);
+              return;
+            }
+          } catch (e) {
+            console.error('Error parsing stored admin payload:', e);
+            clearAuthState();
+          }
         }
-      } catch (error) {
+
+        try {
+          const response = await refreshAuth();
+          const refreshedToken = response;
+          const refreshedAdmin = localStorage.getItem('admin');
+
+          if (
+            refreshedToken && 
+            refreshedToken !== 'undefined' && 
+            refreshedToken !== 'null' && 
+            refreshedAdmin && 
+            refreshedAdmin !== 'undefined' && 
+            refreshedAdmin !== 'null'
+          ) {
+            const parsedAdmin = JSON.parse(refreshedAdmin);
+            setIsAuthenticated(true);
+            setAdmin(parsedAdmin);
+            setLoading(false);
+            return;
+          }
+        } catch (error) {
+          console.error('Refresh auth failed:', error);
+          clearAuthState();
+        }
+      } catch (globalError) {
+        console.error('Global auth initialization error:', globalError);
         clearAuthState();
       }
 
@@ -325,14 +383,6 @@ function App() {
 
     initializeAuth();
   }, []);
-
-  useEffect(() => {
-    if (admin && admin.theme) {
-      document.body.classList.toggle('dark-theme', admin.theme === 'dark');
-    } else {
-      document.body.classList.remove('dark-theme');
-    }
-  }, [admin]);
 
   const handleUpdateAdmin = (updatedAdmin) => {
     setAdmin(updatedAdmin);
@@ -372,11 +422,17 @@ function App() {
   }
 
   return (
-    <Router>
+    <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+      <ThemeHandler admin={admin} />
       <Routes>
         {/* Public Routes */}
         <Route path="/" element={<LandingPage />} />
         <Route path="/book-demo" element={<BookDemo />} />
+        <Route path="/about" element={<AboutPage />} />
+        <Route path="/services" element={<ServicesPage />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/reset-password/:token" element={<ResetPassword />} />
+        <Route path="/privacy" element={<PrivacyPolicy />} />
         
         <Route 
           path="/login" 
@@ -412,14 +468,15 @@ function App() {
                     <Route path="/analytics" element={<Analytics />} />
                     <Route path="/live-chat" element={<LiveChat />} />
                     <Route path="/conversations" element={<Conversations />} />
-                    <Route path="/orders" element={<Orders />} />
+                    <Route path="/orders" element={<Orders admin={admin} />} />
                     <Route path="/escalations" element={<Escalations />} />
                     <Route path="/broadcast" element={<Broadcast />} />
                     <Route path="/knowledge-base" element={<KnowledgeBase />} />
-                    <Route path="/integrations" element={<Integrations />} />
+                    <Route path="/integrations" element={<Integrations admin={admin} />} />
                     <Route path="/whatsapp-connect" element={<WhatsAppConnect />} />
                     <Route path="/templates" element={<Templates />} />
-                    <Route path="/demo-chat" element={<DemoChat />} />
+                    <Route path="/abandoned-carts" element={<AbandonedCarts admin={admin} />} />
+                    <Route path="/demo-chat" element={<DemoChat admin={admin} />} />
                     <Route path="/billing" element={<Billing />} />
                     <Route path="/profile" element={<Profile admin={admin} onUpdateAdmin={handleUpdateAdmin} />} />
                     

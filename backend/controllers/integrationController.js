@@ -1,9 +1,21 @@
 const Integration = require('../models/Integration');
 const crypto = require('crypto');
+const shopifyOrderSyncService = require('../services/shopifyOrderSyncService');
 
 // Get all integrations for current admin
 exports.getIntegrations = async (req, res) => {
   try {
+    // Try to auto-detect ngrok URL for local development
+    try {
+      const ngrokService = require('../services/ngrokService');
+      const ngrokUrl = await ngrokService.getNgrokUrl();
+      if (ngrokUrl) {
+        process.env.BACKEND_URL = ngrokUrl;
+      }
+    } catch (err) {
+      console.log('Error detecting ngrok URL in integrations:', err.message);
+    }
+
     const integrations = await Integration.find({ adminId: req.admin.id });
     
     // Add webhook URLs to response
@@ -38,6 +50,39 @@ exports.createIntegration = async (req, res) => {
       });
     }
 
+    // Check if merchant profile is completed
+    const Admin = require('../models/Admin');
+    const adminDoc = await Admin.findById(req.admin.id);
+    if (!adminDoc || !adminDoc.businessName?.trim() || !adminDoc.businessPhone?.trim() || !adminDoc.supportEmail?.trim()) {
+      return res.status(400).json({
+        success: false,
+        error: 'Please complete your Profile & Store settings (Store Name, Store Phone, and Support Email) before connecting an integration.'
+      });
+    }
+
+    // Check Super Admin permissions
+    if (platform === 'shopify' && req.admin.shopifyEnabled === false) {
+      return res.status(403).json({
+        success: false,
+        error: 'Shopify integration is disabled for your account. Please contact support.'
+      });
+    }
+
+    if (platform === 'woocommerce' && req.admin.woocommerceEnabled === false) {
+      return res.status(403).json({
+        success: false,
+        error: 'WooCommerce integration is disabled for your account. Please contact support.'
+      });
+    }
+
+    // Shopify specific validation
+    if (platform === 'shopify' && apiKey.trim().startsWith('shpss_')) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid Shopify token: The provided token starts with "shpss_", which is a Shopify API Secret Key. Please enter the Admin API Access Token (which starts with "shpat_") instead. You can find this token under Shopify Admin → Apps → Develop apps.'
+      });
+    }
+
     // Check if integration already exists for this platform
     const existingIntegration = await Integration.findOne({
       adminId: req.admin.id,
@@ -64,12 +109,48 @@ exports.createIntegration = async (req, res) => {
 
     await integration.save();
 
+    let syncSummary = null;
+    if (platform === 'shopify' && integration.isActive) {
+      try {
+        syncSummary = await shopifyOrderSyncService.syncIntegrationOrders(integration);
+      } catch (syncError) {
+        console.error('Error syncing Shopify orders after integration creation:', syncError);
+        syncSummary = {
+          success: false,
+          error: syncError.message
+        };
+      }
+    } else if (platform === 'woocommerce' && integration.isActive) {
+      try {
+        const woocommerceOrderSyncService = require('../services/woocommerceOrderSyncService');
+        syncSummary = await woocommerceOrderSyncService.syncIntegrationOrders(integration);
+      } catch (syncError) {
+        console.error('Error syncing WooCommerce orders after integration creation:', syncError);
+        syncSummary = {
+          success: false,
+          error: syncError.message
+        };
+      }
+    }
+
+    // Try to auto-detect ngrok URL for local development
+    try {
+      const ngrokService = require('../services/ngrokService');
+      const ngrokUrl = await ngrokService.getNgrokUrl();
+      if (ngrokUrl) {
+        process.env.BACKEND_URL = ngrokUrl;
+      }
+    } catch (err) {
+      console.log('Error detecting ngrok URL in createIntegration:', err.message);
+    }
+
     res.status(201).json({
       success: true,
       message: 'Integration created successfully',
       data: {
         ...integration.toObject(),
-        webhookUrl: integration.getWebhookUrl()
+        webhookUrl: integration.getWebhookUrl(),
+        syncSummary
       }
     });
   } catch (error) {
@@ -101,18 +182,51 @@ exports.updateIntegration = async (req, res) => {
 
     // Update fields
     if (storeUrl) integration.storeUrl = storeUrl;
-    if (apiKey) integration.apiKey = apiKey;
+    if (apiKey) {
+      if (integration.platform === 'shopify' && apiKey.trim().startsWith('shpss_')) {
+        return res.status(400).json({
+          success: false,
+          error: 'Invalid Shopify token: The provided token starts with "shpss_", which is a Shopify API Secret Key. Please enter the Admin API Access Token (which starts with "shpat_") instead. You can find this token under Shopify Admin → Apps → Develop apps.'
+        });
+      }
+      integration.apiKey = apiKey;
+    }
     if (typeof isActive !== 'undefined') integration.isActive = isActive;
     if (storeName) integration.metadata.storeName = storeName;
 
     await integration.save();
+
+    let syncSummary = null;
+    if (integration.platform === 'shopify' && integration.isActive) {
+      try {
+        syncSummary = await shopifyOrderSyncService.syncIntegrationOrders(integration);
+      } catch (syncError) {
+        console.error('Error syncing Shopify orders after integration update:', syncError);
+        syncSummary = {
+          success: false,
+          error: syncError.message
+        };
+      }
+    } else if (integration.platform === 'woocommerce' && integration.isActive) {
+      try {
+        const woocommerceOrderSyncService = require('../services/woocommerceOrderSyncService');
+        syncSummary = await woocommerceOrderSyncService.syncIntegrationOrders(integration);
+      } catch (syncError) {
+        console.error('Error syncing WooCommerce orders after integration update:', syncError);
+        syncSummary = {
+          success: false,
+          error: syncError.message
+        };
+      }
+    }
 
     res.json({
       success: true,
       message: 'Integration updated successfully',
       data: {
         ...integration.toObject(),
-        webhookUrl: integration.getWebhookUrl()
+        webhookUrl: integration.getWebhookUrl(),
+        syncSummary
       }
     });
   } catch (error) {
@@ -210,14 +324,39 @@ exports.testIntegration = async (req, res) => {
     }
 
     // Here you would implement actual API calls to test the connection
-    // For now, we'll just return success
+    // For Shopify, also run a small sync check to verify orders can be fetched
+    let syncSummary = null;
+    if (integration.platform === 'shopify') {
+      try {
+        syncSummary = await shopifyOrderSyncService.syncIntegrationOrders(integration);
+      } catch (syncError) {
+        console.error('Error testing Shopify sync:', syncError);
+        syncSummary = {
+          success: false,
+          error: syncError.message
+        };
+      }
+    } else if (integration.platform === 'woocommerce') {
+      try {
+        const woocommerceOrderSyncService = require('../services/woocommerceOrderSyncService');
+        syncSummary = await woocommerceOrderSyncService.syncIntegrationOrders(integration);
+      } catch (syncError) {
+        console.error('Error testing WooCommerce sync:', syncError);
+        syncSummary = {
+          success: false,
+          error: syncError.message
+        };
+      }
+    }
+
     res.json({
       success: true,
       message: 'Integration connection test successful',
       data: {
         platform: integration.platform,
         storeUrl: integration.storeUrl,
-        status: 'connected'
+        status: 'connected',
+        syncSummary
       }
     });
   } catch (error) {
@@ -225,6 +364,75 @@ exports.testIntegration = async (req, res) => {
     res.status(500).json({
       success: false,
       error: 'Failed to test integration'
+    });
+  }
+};
+
+// Manually sync Shopify orders for a given integration
+exports.syncShopifyOrders = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const integration = await Integration.findOne({
+      _id: id,
+      adminId: req.admin.id,
+      platform: 'shopify'
+    });
+
+    if (!integration) {
+      return res.status(404).json({
+        success: false,
+        error: 'Shopify integration not found'
+      });
+    }
+
+    const syncSummary = await shopifyOrderSyncService.syncIntegrationOrders(integration);
+
+    res.json({
+      success: true,
+      message: 'Shopify orders synced successfully',
+      data: syncSummary
+    });
+  } catch (error) {
+    console.error('Error syncing Shopify orders:', error);
+    res.status(error.status || 500).json({
+      success: false,
+      error: error.message || 'Failed to sync Shopify orders'
+    });
+  }
+};
+
+// Manually sync WooCommerce orders for a given integration
+exports.syncWooCommerceOrders = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const integration = await Integration.findOne({
+      _id: id,
+      adminId: req.admin.id,
+      platform: 'woocommerce'
+    });
+
+    if (!integration) {
+      return res.status(404).json({
+        success: false,
+        error: 'WooCommerce integration not found'
+      });
+    }
+
+    const woocommerceOrderSyncService = require('../services/woocommerceOrderSyncService');
+    const syncSummary = await woocommerceOrderSyncService.syncIntegrationOrders(integration);
+
+    res.json({
+      success: true,
+      message: 'WooCommerce orders synced successfully',
+      data: syncSummary
+    });
+  } catch (error) {
+    console.error('Error syncing WooCommerce orders:', error);
+    res.status(error.status || 500).json({
+      success: false,
+      error: error.message || 'Failed to sync WooCommerce orders'
     });
   }
 };

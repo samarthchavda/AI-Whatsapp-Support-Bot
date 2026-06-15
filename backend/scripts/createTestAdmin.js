@@ -19,14 +19,11 @@ async function createTestAdmin() {
       process.exit(0);
     }
 
-    // Hash password
-    const hashedPassword = await bcrypt.hash('test@123', 10);
-
     // Create test admin
     const testAdmin = new Admin({
       name: 'Test User',
       email: 'test@gmail.com',
-      password: hashedPassword,
+      password: 'test@123',
       role: 'admin'
     });
 

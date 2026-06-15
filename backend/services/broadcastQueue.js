@@ -1,4 +1,6 @@
 const Broadcast = require('../models/Broadcast');
+const Admin = require('../models/Admin');
+const whatsappCloudAPI = require('./whatsappCloudAPI');
 
 // Simple fallback without Redis
 let useQueue = false;
@@ -14,6 +16,17 @@ async function sendBroadcastWithoutQueue(broadcastId) {
       throw new Error('Broadcast not found');
     }
 
+    // Fetch admin credentials for sending messages
+    const admin = await Admin.findById(broadcast.admin);
+    let customCredentials = null;
+    if (admin && admin.whatsappAccessToken && admin.whatsappPhoneNumberId) {
+      customCredentials = {
+        accessToken: admin.whatsappAccessToken,
+        phoneNumberId: admin.whatsappPhoneNumberId,
+        businessAccountId: admin.whatsappBusinessAccountId
+      };
+    }
+
     broadcast.status = 'sending';
     broadcast.startedAt = new Date();
     await broadcast.save();
@@ -22,22 +35,30 @@ async function sendBroadcastWithoutQueue(broadcastId) {
     for (let i = 0; i < broadcast.recipients.length; i++) {
       try {
         const recipient = broadcast.recipients[i];
+        const personalizedMessage = broadcast.message.replace(/{{name}}/gi, recipient.name || 'there');
         
-        console.log(`📤 Sending broadcast to ${recipient.phone}: ${broadcast.message.substring(0, 50)}...`);
+        console.log(`📤 Sending actual WhatsApp broadcast to ${recipient.phone}: ${personalizedMessage.substring(0, 50)}...`);
         
-        // Simulate sending (replace with actual WhatsApp API call)
-        await new Promise(resolve => setTimeout(resolve, 2000));
+        const sendResult = await whatsappCloudAPI.sendMessage(recipient.phone, personalizedMessage, customCredentials);
         
-        broadcast.recipients[i].status = 'sent';
-        broadcast.recipients[i].sentAt = new Date();
-        broadcast.sentCount += 1;
+        if (sendResult && sendResult.success) {
+          broadcast.recipients[i].status = 'sent';
+          broadcast.recipients[i].sentAt = new Date();
+          broadcast.sentCount += 1;
+        } else {
+          throw new Error(sendResult ? sendResult.error : 'Failed to send via Cloud API');
+        }
       } catch (error) {
+        console.error(`❌ Failed to send broadcast to ${broadcast.recipients[i].phone}:`, error.message);
         broadcast.recipients[i].status = 'failed';
         broadcast.recipients[i].error = error.message;
         broadcast.failedCount += 1;
       }
       
       await broadcast.save();
+      
+      // Delay to avoid hitting Meta rate limits
+      await new Promise(resolve => setTimeout(resolve, 1000));
     }
 
     broadcast.status = 'completed';

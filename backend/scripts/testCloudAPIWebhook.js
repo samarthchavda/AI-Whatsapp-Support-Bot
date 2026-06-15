@@ -60,7 +60,8 @@ async function runTest() {
       monthlyPrice: 29,
       geminiTokensUsed: 0,
       geminiTokensLimit: 10000,
-      isActive: true
+      isActive: true,
+      whatsappConnected: true
     });
     await admin.save();
     console.log(`👤 Created test admin: ${admin.email}`);

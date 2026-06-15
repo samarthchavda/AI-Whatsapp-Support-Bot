@@ -15,8 +15,9 @@ function extractSequenceFromOrderId(orderId, prefix = 'ORD') {
   return Number.isNaN(parsed) ? null : parsed;
 }
 
-async function getCurrentMaxOrderSequence(OrderModel, prefix = 'ORD') {
-  const orders = await OrderModel.find({}, { orderId: 1 }).lean();
+async function getCurrentMaxOrderSequence(OrderModel, prefix = 'ORD', adminId = null) {
+  const filter = adminId ? { admin: adminId } : {};
+  const orders = await OrderModel.find(filter, { orderId: 1 }).lean();
   let max = 0;
 
   for (const order of orders) {
@@ -34,15 +35,17 @@ async function getNextOrderId({
   OrderModel,
   counterId = 'order',
   prefix = 'ORD',
-  padLength = 3
+  padLength = 3,
+  adminId = null
 }) {
-  const existingCounter = await CounterModel.findById(counterId);
+  const actualCounterId = adminId ? `${adminId}_order` : counterId;
+  const existingCounter = await CounterModel.findById(actualCounterId);
 
   if (!existingCounter) {
-    const maxSeq = await getCurrentMaxOrderSequence(OrderModel, prefix);
+    const maxSeq = await getCurrentMaxOrderSequence(OrderModel, prefix, adminId);
 
     try {
-      await CounterModel.create({ _id: counterId, seq: maxSeq });
+      await CounterModel.create({ _id: actualCounterId, seq: maxSeq });
     } catch (error) {
       if (error.code !== 11000) {
         throw error;
@@ -51,7 +54,7 @@ async function getNextOrderId({
   }
 
   const counter = await CounterModel.findByIdAndUpdate(
-    counterId,
+    actualCounterId,
     { $inc: { seq: 1 } },
     { new: true, upsert: true }
   );

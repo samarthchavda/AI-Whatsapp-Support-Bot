@@ -3,6 +3,10 @@ const whatsappCloudAPI = require('../services/whatsappCloudAPI');
 const aiService = require('../services/aiService');
 const Conversation = require('../models/Conversation');
 
+// Simple in-memory deduplication set for incoming message IDs
+const processedMessageIds = new Set();
+
+
 // Webhook for receiving WhatsApp messages (WhatsApp Cloud API)
 exports.handleWebhook = async (req, res) => {
   try {
@@ -13,14 +17,21 @@ exports.handleWebhook = async (req, res) => {
       const mode = req.query['hub.mode'];
       const token = req.query['hub.verify_token'];
       const challenge = req.query['hub.challenge'];
+ 
+      if (mode === 'subscribe') {
+        const Admin = require('../models/Admin');
+        const isGlobalMatch = token === process.env.WEBHOOK_VERIFY_TOKEN;
+        const matchedMerchant = token ? await Admin.findOne({ whatsappVerifyToken: token }) : null;
 
-      if (mode === 'subscribe' && token === process.env.WEBHOOK_VERIFY_TOKEN) {
-        console.log('✅ Webhook verified');
-        res.status(200).send(challenge);
-        return;
-      } else {
-        res.status(403).json({ error: 'Forbidden' });
-        return;
+        if (isGlobalMatch || matchedMerchant) {
+          console.log(`✅ Webhook verified (matched: ${isGlobalMatch ? 'global' : matchedMerchant?.email})`);
+          res.status(200).send(challenge);
+          return;
+        } else {
+          console.warn(`❌ Webhook verification failed for token: ${token}`);
+          res.status(403).json({ error: 'Forbidden' });
+          return;
+        }
       }
     }
 
@@ -33,17 +44,45 @@ exports.handleWebhook = async (req, res) => {
       // Extract customer name safely
       const contactName = webhookValue.contacts?.[0]?.profile?.name || 'Customer';
 
+      // Extract phone number ID from metadata to identify target merchant
+      const phoneMetadata = webhookValue.metadata;
+      const incomingPhoneNumberId = phoneMetadata?.phone_number_id;
+
+      // Find the corresponding admin/merchant account
+      const Admin = require('../models/Admin');
+      let matchedAdmin = null;
+      if (incomingPhoneNumberId) {
+        matchedAdmin = await Admin.findOne({ whatsappPhoneNumberId: incomingPhoneNumberId });
+      }
+
+      // Fallback: If no match, search for a default admin configuration
+      if (!matchedAdmin) {
+        // If the incoming ID matches the env, fallback to default admin
+        if (incomingPhoneNumberId === process.env.WHATSAPP_PHONE_NUMBER_ID) {
+          matchedAdmin = await Admin.findOne({ whatsappConnected: true, email: { $ne: 'demo@store.com' } })
+            || await Admin.findOne({ whatsappConnected: true })
+            || await Admin.findOne({ email: 'demo@store.com' })
+            || await Admin.findOne();
+        } else {
+          console.warn(`⚠️ Received message for unconfigured Phone Number ID: ${incomingPhoneNumberId}`);
+        }
+      }
+
       // Handle messages
       if (webhookValue.messages) {
         for (const message of webhookValue.messages) {
-          await handleIncomingMessage(message, contactName);
+          handleIncomingMessage(message, contactName, matchedAdmin).catch(err => {
+            console.error('Error handling incoming message:', err);
+          });
         }
       }
 
       // Handle status updates
       if (webhookValue.statuses) {
         for (const status of webhookValue.statuses) {
-          await handleStatusUpdate(status);
+          handleStatusUpdate(status).catch(err => {
+            console.error('Error handling status update:', err);
+          });
         }
       }
 
@@ -59,10 +98,24 @@ exports.handleWebhook = async (req, res) => {
 };
 
 // Process incoming message
-async function handleIncomingMessage(message, contactName) {
+async function handleIncomingMessage(message, contactName, matchedAdmin) {
   try {
     const customerPhone = message.from;
     const messageId = message.id;
+    
+    // Deduplication check
+    if (processedMessageIds.has(messageId)) {
+      console.log(`♻️ Duplicate message ID ${messageId} ignored.`);
+      return;
+    }
+    processedMessageIds.add(messageId);
+
+    // Keep the set size under control (limit to last 1000 messages)
+    if (processedMessageIds.size > 1000) {
+      const firstItem = processedMessageIds.values().next().value;
+      processedMessageIds.delete(firstItem);
+    }
+
     const timestamp = message.timestamp;
     let messageContent = '';
 
@@ -77,17 +130,28 @@ async function handleIncomingMessage(message, contactName) {
       messageContent = `[${message.type.toUpperCase()}] Message received`;
     }
 
-    console.log(`📨 Message from ${customerPhone}: ${messageContent}`);
+    console.log(`📨 Message from ${customerPhone} to ID ${matchedAdmin?.whatsappPhoneNumberId || 'sandbox'}: ${messageContent}`);
 
-    // Mark message as read
-    await whatsappCloudAPI.markAsRead(messageId);
+    // Retrieve custom credentials if available
+    let customCredentials = null;
+    if (matchedAdmin && matchedAdmin.whatsappAccessToken && matchedAdmin.whatsappPhoneNumberId) {
+      customCredentials = {
+        accessToken: matchedAdmin.whatsappAccessToken,
+        phoneNumberId: matchedAdmin.whatsappPhoneNumberId,
+        businessAccountId: matchedAdmin.whatsappBusinessAccountId
+      };
+    }
+
+    // Mark message as read (using custom credentials if matched)
+    await whatsappCloudAPI.markAsRead(messageId, customCredentials);
 
     // Process with AI service
     const aiResponse = await aiService.processMessage({
       customerPhone,
       customerName: contactName,
       message: messageContent,
-      messageId
+      messageId,
+      adminId: matchedAdmin ? matchedAdmin._id : null
     });
 
     if (aiResponse.botPaused) {
@@ -97,18 +161,35 @@ async function handleIncomingMessage(message, contactName) {
 
     console.log(`🤖 AI Response: ${aiResponse.message}`);
 
-    // Send reply
-    const sendResult = await whatsappCloudAPI.sendMessage(customerPhone, aiResponse.message);
+    // Send reply (using custom credentials if matched)
+    let sendResult;
+    if (aiResponse.buttons && aiResponse.buttons.length > 0) {
+      console.log(`🔘 Sending interactive button response to ${customerPhone} with buttons: ${aiResponse.buttons.join(', ')}`);
+      sendResult = await whatsappCloudAPI.sendInteractiveMessage(
+        customerPhone,
+        null,
+        aiResponse.message,
+        'Select an option below:',
+        aiResponse.buttons,
+        customCredentials
+      );
+    } else {
+      sendResult = await whatsappCloudAPI.sendMessage(customerPhone, aiResponse.message, customCredentials);
+    }
     
     if (!sendResult.success) {
       console.error('❌ Failed to send WhatsApp reply:', sendResult.error);
-      console.error('💡 Check WHATSAPP_ACCESS_TOKEN and WHATSAPP_PHONE_NUMBER_ID in .env');
+      console.error('💡 Check WHATSAPP_ACCESS_TOKEN and WHATSAPP_PHONE_NUMBER_ID in .env or merchant database');
     } else {
       console.log('✅ Reply sent successfully');
       
       // Update assistant message with outgoing message ID
       if (sendResult.messageId) {
-        const conversation = await Conversation.findOne({ customerPhone }).sort({ updatedAt: -1 });
+        const query = { customerPhone };
+        if (matchedAdmin) {
+          query.admin = matchedAdmin._id;
+        }
+        const conversation = await Conversation.findOne(query).sort({ updatedAt: -1 });
         if (conversation && conversation.messages.length > 0) {
           for (let i = conversation.messages.length - 1; i >= 0; i--) {
             if (conversation.messages[i].role === 'assistant') {
@@ -158,20 +239,32 @@ exports.sendMessage = async (req, res) => {
       });
     }
 
+    const Admin = require('../models/Admin');
+    const adminDoc = await Admin.findById(req.admin._id);
+    let customCredentials = null;
+    if (adminDoc && adminDoc.whatsappAccessToken && adminDoc.whatsappPhoneNumberId) {
+      customCredentials = {
+        accessToken: adminDoc.whatsappAccessToken,
+        phoneNumberId: adminDoc.whatsappPhoneNumberId,
+        businessAccountId: adminDoc.whatsappBusinessAccountId
+      };
+    }
+
     let result;
 
     if (messageType === 'template') {
-      result = await whatsappCloudAPI.sendTemplateMessage(phoneNumber, message);
+      result = await whatsappCloudAPI.sendTemplateMessage(phoneNumber, message, 'en_US', [], customCredentials);
     } else if (messageType === 'interactive') {
       result = await whatsappCloudAPI.sendInteractiveMessage(
         phoneNumber,
         message.header,
         message.body,
         message.footer,
-        message.buttons
+        message.buttons,
+        customCredentials
       );
     } else {
-      result = await whatsappCloudAPI.sendMessage(phoneNumber, message);
+      result = await whatsappCloudAPI.sendMessage(phoneNumber, message, customCredentials);
     }
 
     if (result.success) {
@@ -187,22 +280,149 @@ exports.sendMessage = async (req, res) => {
 // Get WhatsApp status
 exports.getStatus = async (req, res) => {
   try {
-    const isConfigured = whatsappCloudAPI.isConfigured;
-    let phoneDetails = null;
+    const Admin = require('../models/Admin');
+    const adminDoc = await Admin.findById(req.admin._id);
     
+    // Determine configuration strictly using custom credentials (except for default demo admin)
+    const hasCustomCreds = !!(adminDoc && adminDoc.whatsappAccessToken && adminDoc.whatsappPhoneNumberId);
+    const isConfigured = hasCustomCreds || (adminDoc?.email === 'demo@store.com' && whatsappCloudAPI.isConfigured);
+    const isConnected = adminDoc ? adminDoc.whatsappConnected === true : false;
+    
+    let phoneDetails = null;
     if (isConfigured) {
-      phoneDetails = await whatsappCloudAPI.getPhoneNumberDetails();
+      if (hasCustomCreds) {
+        phoneDetails = await whatsappCloudAPI.getPhoneNumberDetails({
+          accessToken: adminDoc.whatsappAccessToken,
+          phoneNumberId: adminDoc.whatsappPhoneNumberId
+        });
+      } else {
+        phoneDetails = await whatsappCloudAPI.getPhoneNumberDetails();
+      }
     }
 
+    // Load webBotEnabled setting for the specific admin account
+    const webBotEnabled = adminDoc ? adminDoc.webBotEnabled === true : false;
+
+    // Generate secure unique webhook verification token if not set
+    if (adminDoc && !adminDoc.whatsappVerifyToken) {
+      const crypto = require('crypto');
+      adminDoc.whatsappVerifyToken = 'wh_vt_' + crypto.randomBytes(16).toString('hex');
+      await adminDoc.save();
+    }
+
+    // Try to auto-detect ngrok URL for local development
+    try {
+      const ngrokService = require('../services/ngrokService');
+      const ngrokUrl = await ngrokService.getNgrokUrl();
+      if (ngrokUrl) {
+        process.env.BACKEND_URL = ngrokUrl;
+      }
+    } catch (err) {
+      console.log('Error detecting ngrok URL:', err.message);
+    }
+ 
     res.json({
       service: 'WhatsApp Cloud API',
-      status: isConfigured ? 'active' : 'disconnected',
+      status: (isConfigured && isConnected) ? 'active' : 'disconnected',
       isConfigured,
-      phoneNumber: phoneDetails?.phone_number || 'N/A',
+      phoneNumber: phoneDetails?.phone_number || adminDoc?.whatsappPhoneNumberId || 'N/A',
       verified: phoneDetails?.verified_name || 'Not verified',
-      displayName: phoneDetails?.display_phone_number || 'N/A'
+      displayName: phoneDetails?.display_phone_number || 'N/A',
+      webBotEnabled,
+      isConnected,
+      webhookUrl: `${process.env.BACKEND_URL || (req.protocol + '://' + req.get('host'))}/api/webhook/whatsapp`,
+      verifyToken: adminDoc?.whatsappVerifyToken || process.env.WEBHOOK_VERIFY_TOKEN || 'secure_webhook_token_123',
+      credentials: {
+        whatsappPhoneNumberId: adminDoc?.whatsappPhoneNumberId || '',
+        whatsappBusinessAccountId: adminDoc?.whatsappBusinessAccountId || '',
+        whatsappAccessToken: adminDoc?.whatsappAccessToken ? '••••••••' : '' // Masked for security
+      }
     });
   } catch (error) {
     res.status(500).json({ error: error.message });
+  }
+};
+
+// Disconnect WhatsApp
+exports.disconnectWhatsApp = async (req, res) => {
+  try {
+    const Admin = require('../models/Admin');
+    const admin = await Admin.findById(req.admin._id);
+    if (!admin) {
+      return res.status(404).json({ success: false, error: 'Admin not found' });
+    }
+
+    admin.whatsappConnected = false;
+    admin.whatsappConnectedAt = null;
+    await admin.save();
+
+    res.json({
+      success: true,
+      message: 'WhatsApp disconnected successfully'
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+};
+
+// Connect WhatsApp
+exports.connectWhatsApp = async (req, res) => {
+  try {
+    const Admin = require('../models/Admin');
+    const admin = await Admin.findById(req.admin._id);
+    if (!admin) {
+      return res.status(404).json({ success: false, error: 'Admin not found' });
+    }
+
+    admin.whatsappConnected = true;
+    admin.whatsappConnectedAt = new Date();
+    await admin.save();
+
+    res.json({
+      success: true,
+      message: 'WhatsApp connected successfully'
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+};
+
+// Save WhatsApp Custom Credentials
+exports.saveCredentials = async (req, res) => {
+  try {
+    const { whatsappAccessToken, whatsappPhoneNumberId, whatsappBusinessAccountId } = req.body;
+    
+    const Admin = require('../models/Admin');
+    const admin = await Admin.findById(req.admin._id);
+    if (!admin) {
+      return res.status(404).json({ success: false, error: 'Admin not found' });
+    }
+
+    admin.whatsappAccessToken = whatsappAccessToken || null;
+    admin.whatsappPhoneNumberId = whatsappPhoneNumberId || null;
+    admin.whatsappBusinessAccountId = whatsappBusinessAccountId || null;
+    
+    // Automatically enable connection if valid credentials are saved
+    if (whatsappAccessToken && whatsappPhoneNumberId && whatsappBusinessAccountId) {
+      admin.whatsappConnected = true;
+      admin.whatsappConnectedAt = new Date();
+    } else {
+      admin.whatsappConnected = false;
+      admin.whatsappConnectedAt = null;
+    }
+
+    await admin.save();
+
+    res.json({
+      success: true,
+      message: 'WhatsApp credentials saved successfully',
+      data: {
+        whatsappConnected: admin.whatsappConnected,
+        whatsappPhoneNumberId: admin.whatsappPhoneNumberId,
+        whatsappBusinessAccountId: admin.whatsappBusinessAccountId
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
   }
 };

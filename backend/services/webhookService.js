@@ -17,13 +17,16 @@ class WebhookService {
     
     return {
       externalOrderId: order.id?.toString() || order.order_number?.toString(),
+      externalOrderNumber: order.name || order.order_number?.toString() || order.id?.toString(),
       customerName: order.customer?.first_name && order.customer?.last_name 
         ? `${order.customer.first_name} ${order.customer.last_name}`.trim()
         : order.customer?.name || order.billing_address?.name || 'Customer',
       customerPhone: this.normalizePhone(
+        order.phone ||
         order.customer?.phone || 
-        order.billing_address?.phone || 
-        order.shipping_address?.phone
+        order.shipping_address?.phone || 
+        order.billing_address?.phone ||
+        order.customer?.default_address?.phone
       ),
       customerEmail: order.customer?.email || order.email,
       totalAmount: parseFloat(order.total_price || order.current_total_price || 0),
@@ -41,7 +44,7 @@ class WebhookService {
         country: order.shipping_address.country
       } : undefined,
       paymentStatus: this.mapShopifyPaymentStatus(order.financial_status),
-      status: this.mapShopifyOrderStatus(order.fulfillment_status),
+      status: order.cancelled_at ? 'cancelled' : this.mapShopifyOrderStatus(order.fulfillment_status),
       notes: order.note,
       orderDate: order.created_at ? new Date(order.created_at) : new Date()
     };
@@ -89,6 +92,7 @@ class WebhookService {
 
     return {
       externalOrderId: wooData.id?.toString() || wooData.number?.toString(),
+      externalOrderNumber: wooData.number || wooData.id?.toString(),
       customerName: `${wooData.billing?.first_name || ''} ${wooData.billing?.last_name || ''}`.trim() || 'Customer',
       customerPhone: this.normalizePhone(
         wooData.billing?.phone || 
@@ -234,7 +238,7 @@ class WebhookService {
   /**
    * Process webhook and create order
    */
-  async processWebhook(source, data) {
+  async processWebhook(source, data, adminId = null) {
     const startTime = Date.now();
     let mappedData;
     
@@ -253,10 +257,12 @@ class WebhookService {
         throw new Error(`Unsupported webhook source: ${source}`);
     }
 
-    // Find default/demo admin
-    let adminDoc = await Admin.findOne({ email: 'demo@store.com' });
-    if (!adminDoc) adminDoc = await Admin.findOne();
-    const adminId = adminDoc ? adminDoc._id : null;
+    // Find default/demo admin if not provided
+    if (!adminId) {
+      let adminDoc = await Admin.findOne({ email: 'demo@store.com' });
+      if (!adminDoc) adminDoc = await Admin.findOne();
+      adminId = adminDoc ? adminDoc._id : null;
+    }
 
     if (!adminId) {
       throw new Error('No admin user found in database. Please seed or create an admin first.');
@@ -283,6 +289,7 @@ class WebhookService {
       // Update existing order details
       if (mappedData.status) order.status = mappedData.status;
       if (mappedData.paymentStatus) order.paymentStatus = mappedData.paymentStatus;
+      if (mappedData.externalOrderNumber) order.externalOrderNumber = mappedData.externalOrderNumber;
       if (mappedData.totalAmount !== undefined && mappedData.totalAmount !== null) {
         order.totalAmount = mappedData.totalAmount;
       }
@@ -312,18 +319,18 @@ class WebhookService {
         }
       }
     } else {
-      // It is a new order creation, so validate required fields!
-      if (!mappedData.customerPhone) {
-        throw new Error('Customer phone number is required');
-      }
+      // Fallback for missing phone numbers
+      const customerPhone = mappedData.customerPhone
+        || mappedData.customerEmail
+        || `external-order-${mappedData.externalOrderId}`;
 
       // Find or create customer
-      customer = await Customer.findOne({ phone: mappedData.customerPhone });
+      customer = await Customer.findOne({ phone: customerPhone, admin: adminId });
       
       if (!customer) {
         customer = new Customer({
-          name: mappedData.customerName,
-          phone: mappedData.customerPhone,
+          name: mappedData.customerName || 'Customer',
+          phone: customerPhone,
           email: mappedData.customerEmail,
           admin: adminId
         });
@@ -333,16 +340,19 @@ class WebhookService {
       // Generate internal order ID
       const orderId = await getNextOrderId({
         CounterModel: Counter,
-        OrderModel: Order
+        OrderModel: Order,
+        adminId: adminId
       });
 
       // Create new order
       order = new Order({
         orderId,
         customerId: customer._id,
-        customerPhone: mappedData.customerPhone,
-        customerName: mappedData.customerName,
+        customerPhone,
+        customerEmail: mappedData.customerEmail || customer.email,
+        customerName: mappedData.customerName || customer.name,
         externalOrderId: mappedData.externalOrderId,
+        externalOrderNumber: mappedData.externalOrderNumber,
         items: mappedData.items,
         totalAmount: mappedData.totalAmount,
         status: mappedData.status,
@@ -366,6 +376,42 @@ class WebhookService {
       await customer.save();
     }
 
+    // Mark matching AbandonedCart as recovered
+    try {
+      const AbandonedCart = require('../models/AbandonedCart');
+      const checkoutIdentifier = data.checkout_token || data.checkout_id?.toString() || data.cart_token || data.token || data.id?.toString();
+      
+      let cartMatch = null;
+      if (checkoutIdentifier) {
+        cartMatch = await AbandonedCart.findOne({
+          admin: adminId,
+          cartId: checkoutIdentifier,
+          status: { $ne: 'recovered' }
+        });
+      }
+
+      // Fallback: match by phone if order is shopify/woocommerce and no cart matched by token
+      if (!cartMatch && mappedData.customerPhone) {
+        // Find most recent unrecovered abandoned cart for this customer in last 24 hours
+        const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+        cartMatch = await AbandonedCart.findOne({
+          admin: adminId,
+          customerPhone: mappedData.customerPhone,
+          status: { $ne: 'recovered' },
+          abandonedAt: { $gte: oneDayAgo }
+        }).sort({ abandonedAt: -1 });
+      }
+
+      if (cartMatch) {
+        cartMatch.status = 'recovered';
+        cartMatch.recoveredAt = new Date();
+        await cartMatch.save();
+        console.log(`🛒 Recovered abandoned cart: ${cartMatch.cartId} via order ${order.orderId}`);
+      }
+    } catch (err) {
+      console.error('Error recovering abandoned cart in processWebhook:', err);
+    }
+
     const processingTime = Date.now() - startTime;
 
     return {
@@ -381,13 +427,15 @@ class WebhookService {
   /**
    * Process fulfillment update webhook
    */
-  async processFulfillmentUpdate(source, externalOrderId, trackingInfo) {
+  async processFulfillmentUpdate(source, externalOrderId, trackingInfo, adminId = null) {
     const startTime = Date.now();
 
-    // Find default/demo admin
-    let adminDoc = await Admin.findOne({ email: 'demo@store.com' });
-    if (!adminDoc) adminDoc = await Admin.findOne();
-    const adminId = adminDoc ? adminDoc._id : null;
+    // Find default/demo admin if not provided
+    if (!adminId) {
+      let adminDoc = await Admin.findOne({ email: 'demo@store.com' });
+      if (!adminDoc) adminDoc = await Admin.findOne();
+      adminId = adminDoc ? adminDoc._id : null;
+    }
 
     if (!adminId) {
       throw new Error('No admin user found in database.');
@@ -440,7 +488,9 @@ class WebhookService {
   async sendTrackingUpdate(order, customer, trackingInfo = {}) {
     try {
       // Determine the event type
-      const eventType = order.status === 'delivered' ? 'order_delivered' : 'order_shipped';
+      const eventType = order.status === 'cancelled'
+        ? 'order_cancelled'
+        : (order.status === 'delivered' ? 'order_delivered' : 'order_shipped');
 
       // Find mapped template for this event
       const template = await Template.findOne({
@@ -463,7 +513,7 @@ class WebhookService {
             carrier,
             trackingNumber
           ];
-        } else { // order_delivered
+        } else if (eventType === 'order_cancelled' || eventType === 'order_delivered') {
           // {{1}} = Customer Name, {{2}} = Order ID
           parameters = [
             customer.name || 'Customer',
@@ -508,6 +558,19 @@ class WebhookService {
     const carrier = trackingInfo.carrier || 'our courier partner';
     const trackingNumber = order.trackingNumber || trackingInfo.trackingNumber || 'N/A';
     
+    // Check if cancelled
+    if (order.status === 'cancelled') {
+      return `❌ *Order Cancelled*
+
+Hi ${customer.name}! 👋
+
+We regret to inform you that your order *${order.orderId}* has been cancelled.
+
+If you have any questions or feel this was done in error, please reply to this message.
+
+Thank you!`;
+    }
+
     // Check if delivered
     if (order.status === 'delivered') {
       return `📦 *Order Delivered!*
@@ -629,6 +692,160 @@ You can track your order anytime by sending us a message with your order ID.
 Need help? Just reply to this message! 💬
 
 Thank you for your order! 🙏`;
+  }
+
+  /**
+   * Process checkout webhook and upsert AbandonedCart
+   */
+  async processCheckout(source, data, adminId = null) {
+    // Find default/demo admin if not provided
+    if (!adminId) {
+      let adminDoc = await Admin.findOne({ email: 'demo@store.com' });
+      if (!adminDoc) adminDoc = await Admin.findOne();
+      adminId = adminDoc ? adminDoc._id : null;
+    }
+
+    if (!adminId) {
+      throw new Error('No admin user found in database. Please seed or create an admin first.');
+    }
+
+    const AbandonedCart = require('../models/AbandonedCart');
+
+    // Extract checkout ID/token
+    const cartId = data.token || data.id?.toString();
+    if (!cartId) {
+      throw new Error('Cart ID/token is required');
+    }
+
+    // Extract customer info
+    const customerName = data.customer?.first_name && data.customer?.last_name
+      ? `${data.customer.first_name} ${data.customer.last_name}`.trim()
+      : data.customer?.name || data.billing_address?.name || data.shipping_address?.name || 'Customer';
+
+    const rawPhone = data.phone || 
+      data.customer?.phone || 
+      data.shipping_address?.phone || 
+      data.billing_address?.phone ||
+      data.customer?.default_address?.phone;
+
+    const customerPhone = this.normalizePhone(rawPhone);
+    const customerEmail = data.customer?.email || data.email;
+
+    // We only want to track checkouts that have a contact phone number, since we need to send recovery messages on WhatsApp.
+    if (!customerPhone) {
+      console.log(`⚠️ Shopify checkout ${cartId} skipped: No phone number present.`);
+      return null;
+    }
+
+    // Extract items
+    const items = (data.line_items || []).map(item => ({
+      productId: item.product_id?.toString(),
+      productName: item.name || item.title,
+      quantity: parseInt(item.quantity) || 1,
+      price: parseFloat(item.price || 0)
+    }));
+
+    const totalAmount = parseFloat(data.total_price || data.total_line_items_price || 0);
+    const checkoutUrl = data.abandon_checkout_url || null;
+
+    // If checkout has completed_at timestamp, it means it's not abandoned (already converted).
+    if (data.completed_at) {
+      console.log(`🛒 Shopify checkout ${cartId} is already completed. Marking/Upserting as recovered.`);
+      
+      const cart = await AbandonedCart.findOneAndUpdate(
+        { admin: adminId, cartId },
+        {
+          admin: adminId,
+          cartId,
+          customerPhone,
+          customerName,
+          customerEmail,
+          items,
+          totalAmount,
+          checkoutUrl,
+          status: 'recovered',
+          recoveredAt: new Date(data.completed_at)
+        },
+        { upsert: true, new: true }
+      );
+      return cart;
+    }
+
+    // Otherwise, upsert it as abandoned. Keep existing status if it is already 'reminder_sent' or 'recovered'.
+    const existingCart = await AbandonedCart.findOne({ admin: adminId, cartId });
+    let status = 'abandoned';
+    if (existingCart) {
+      status = existingCart.status; // Keep 'reminder_sent' or 'recovered'
+    }
+
+    const cart = await AbandonedCart.findOneAndUpdate(
+      { admin: adminId, cartId },
+      {
+        admin: adminId,
+        cartId,
+        customerPhone,
+        customerName,
+        customerEmail,
+        items,
+        totalAmount,
+        checkoutUrl,
+        status
+      },
+      { upsert: true, new: true }
+    );
+
+    console.log(`🛒 Shopify checkout ${cartId} saved/updated with status: ${status}`);
+    return cart;
+  }
+
+  /**
+   * Send WhatsApp cart recovery reminder message
+   */
+  async sendCartRecoveryMessage(cart) {
+    try {
+      // Find mapped template for 'abandoned_cart' event
+      const template = await Template.findOne({
+        adminId: cart.admin,
+        mappedEvent: 'abandoned_cart',
+        status: 'APPROVED'
+      });
+
+      if (template) {
+        console.log(`📋 Mapped template found for abandoned_cart: ${template.name}`);
+        // {{1}} = Customer Name, {{2}} = Checkout URL
+        const parameters = [
+          cart.customerName || 'Customer',
+          cart.checkoutUrl || ''
+        ];
+
+        const result = await whatsappCloudAPI.sendTemplateMessage(
+          cart.customerPhone,
+          template.name,
+          template.language || 'en_US',
+          parameters
+        );
+
+        return {
+          success: result.success,
+          error: result.error || null
+        };
+      }
+
+      // Fallback to plain text message via Web Bot if no template is mapped
+      const message = `🛒 *Hi ${cart.customerName || 'there'}!* 👋\n\nWe noticed you left some items in your cart. You can complete your purchase anytime using this link:\n🔗 ${cart.checkoutUrl || ''}\n\nNeed help? Just reply to this message!`;
+      const result = await whatsappWebBot.sendMessage(cart.customerPhone, message);
+      
+      return {
+        success: result.success,
+        error: result.error || null
+      };
+    } catch (error) {
+      console.error('Error sending WhatsApp cart recovery message:', error);
+      return {
+        success: false,
+        error: error.message
+      };
+    }
   }
 }
 

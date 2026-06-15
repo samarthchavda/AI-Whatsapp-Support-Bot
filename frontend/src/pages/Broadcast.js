@@ -131,7 +131,25 @@ function Broadcast() {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>
             <h1 className="page-title">📢 Marketing Broadcasts</h1>
-            <p className="page-subtitle">Send bulk WhatsApp messages to your customers</p>
+            <p className="page-subtitle">
+              Send bulk WhatsApp messages to your customers.
+              <a 
+                href="/docs/broadcast_guide.pdf" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                style={{ 
+                  marginLeft: '12px', 
+                  color: '#6366f1', 
+                  fontWeight: '600', 
+                  textDecoration: 'underline',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '4px'
+                }}
+              >
+                📖 Shopify Basic Plan PDF Guide
+              </a>
+            </p>
           </div>
           <button 
             className="btn-primary" 
@@ -165,6 +183,7 @@ function Broadcast() {
                 <li><strong>Optional columns:</strong> name (for personalization)</li>
                 <li><strong>Example:</strong> phoneNumber,name</li>
                 <li><strong>Max file size:</strong> 5MB</li>
+                <li><strong>Shopify Basic Plan Guide:</strong> Learn how to export customers from Shopify and format the CSV by downloading the <a href="/docs/broadcast_guide.pdf" target="_blank" rel="noopener noreferrer" style={{ color: '#a5b4fc', textDecoration: 'underline', fontWeight: 'bold' }}>Shopify Basic Plan PDF Guide</a>.</li>
               </ul>
             </div>
 

@@ -154,30 +154,74 @@ class AIService {
     }));
   }
 
-  buildContextualPrompt({ customerName, message, recentMessages }) {
+  buildContextualPrompt({ customerName, message, recentMessages, kbContext = null }) {
     const contextLines = recentMessages.length > 0
       ? recentMessages.map((entry, index) => {
           return `${index + 1}. ${entry.role}: ${entry.content}`;
         }).join('\n')
       : 'No prior conversation context.';
 
-    return [
+    const parts = [
       `Customer: ${customerName}`,
-      `Recent context:\n${contextLines}`,
-      `Current message: ${message}`,
-      'Reply in a concise, helpful WhatsApp-friendly style. Do not invent order or policy details.'
-    ].join('\n\n');
+      `Recent context:\n${contextLines}`
+    ];
+
+    if (kbContext) {
+      parts.push(`Reference Information from Knowledge Base:\n${kbContext}`);
+    }
+
+    parts.push(`Current message: ${message}`);
+    parts.push('Reply in a concise, helpful WhatsApp-friendly style. Do not invent order or policy details.');
+
+    return parts.join('\n\n');
   }
 
-  buildSystemInstruction(customerName) {
-    return `You are a WhatsApp customer support assistant.
+  buildSystemInstruction(customerName, storeInfo = {}) {
+    const storeName = storeInfo.businessName || 'our store';
+    const storeUrl = storeInfo.storeUrl || null;
+    const supportEmail = storeInfo.supportEmail || null;
 
+    const storeContext = [];
+    if (storeInfo.businessName) storeContext.push(`Store Name: ${storeInfo.businessName}`);
+    if (storeUrl) storeContext.push(`Store Website: ${storeUrl}`);
+    if (supportEmail) storeContext.push(`Support Email: ${supportEmail}`);
+
+    const storeSection = storeContext.length > 0
+      ? `\nStore Information:\n${storeContext.join('\n')}\n`
+      : '';
+
+    const urlHint = storeUrl
+      ? ` Visit ${storeUrl} for more details.`
+      : '';
+
+    return `You are a professional customer support agent for ${storeName}.
+${storeSection}
 Rules:
-- Keep replies short, clear, and helpful.
-- Use the recent conversation context.
-- Never invent order, refund, or policy details.
-- Escalate refunds and complaints when appropriate.
-- Address the customer naturally: ${customerName}.`;
+1. Never repeat the document title.
+2. Never mention page numbers.
+3. Never copy raw knowledge base text.
+4. Answer the customer's question directly.
+5. Rewrite the information in natural conversational language.
+6. Include only information relevant to the user's question.
+7. Keep responses concise and customer-friendly.
+8. If the answer is Yes or No, start with Yes or No.
+9. Do not mention internal documents, guides, PDFs, pages, or sources.
+10. Use the recent conversation context.
+11. Never invent order, refund, or policy details.
+12. Escalate refunds and complaints when appropriate.
+13. Address the customer naturally: ${customerName}.
+14. Use only information relevant to the user's question and ignore unrelated retrieved content.
+15. When answering about STORE DETAILS or PRODUCTS, always include the store website URL if available.
+
+Smart Fallback Rules (when specific information is not available in the knowledge base):
+- If a customer asks about OFFERS or DISCOUNTS and no info is available: Reply with "We don't have any active offers right now, but stay tuned! We'll notify you as soon as a new offer drops. 🎉${urlHint}"
+- If a customer asks about STORE DETAILS and no info is available: Reply with "Welcome to ${storeName}! We're committed to providing you the best products and service.${urlHint} Feel free to ask me anything specific! 🛍️"
+- If a customer asks about PRODUCTS and no info is available: Reply with "We have a great range of products!${storeUrl ? ` Browse our full catalog at ${storeUrl}` : ' Visit our store website to explore the full catalog'}, or tell me what you're looking for and I'll help. 😊"
+- If a customer asks about DELIVERY TIME and no info is available: Reply with "Delivery typically takes 3-7 business days depending on your location. For exact delivery info on your order, please share your order number."
+- If a customer asks about PAYMENT METHODS and no info is available: Reply with "We accept all major payment methods including UPI, credit/debit cards, and net banking. For specific payment queries, feel free to ask!"
+- If a customer says HI, HELLO, or a GREETING: Reply warmly with "Hey ${customerName}! 👋 Welcome to ${storeName}! How can I help you today?" Do NOT escalate greetings.
+- If a customer asks WHO ARE YOU or WHAT DO YOU DO: Reply with "I'm your AI shopping assistant for ${storeName}! I can help with order tracking, product info, store policies, and more. Just ask! 🤖"
+- ONLY escalate to a human agent for REFUNDS, COMPLAINTS, or genuinely complex issues that cannot be answered. Do NOT escalate for simple questions.`;
   }
 
   buildResponseParts(message) {
@@ -242,7 +286,7 @@ Rules:
     return { valid: errors.length === 0, errors };
   }
 
-  async processMessage({ customerPhone, customerName, message, messageId }) {
+  async processMessage({ customerPhone, customerName, message, messageId, adminId = null }) {
     const startTime = Date.now();
     let conversation = null;
     let aiLogDoc = null;
@@ -292,18 +336,29 @@ Rules:
         };
       }
 
-      // Get or create conversation for logging
-      conversation = await Conversation.findOne({
+      // Get or create conversation for logging, scoped by admin/tenant if available
+      const conversationQuery = {
         customerPhone,
         status: { $in: ['active', 'escalated'] }
-      });
+      };
+      if (adminId) {
+        conversationQuery.admin = adminId;
+      }
+
+      conversation = await Conversation.findOne(conversationQuery);
 
       if (!conversation) {
-        let adminDoc = await Admin.findOne({ email: 'demo@store.com' });
-        if (!adminDoc) adminDoc = await Admin.findOne();
+        let finalAdminId = adminId;
+        if (!finalAdminId) {
+          let adminDoc = await Admin.findOne({ whatsappConnected: true, email: { $ne: 'demo@store.com' } })
+            || await Admin.findOne({ whatsappConnected: true })
+            || await Admin.findOne({ email: 'demo@store.com' })
+            || await Admin.findOne();
+          finalAdminId = adminDoc ? adminDoc._id : null;
+        }
 
         conversation = new Conversation({
-          admin: adminDoc ? adminDoc._id : null,
+          admin: finalAdminId,
           customerPhone,
           customerName,
           messages: [],
@@ -318,11 +373,78 @@ Rules:
         adminDoc = await Admin.findById(conversation.admin);
       }
       if (!adminDoc) {
-        adminDoc = await Admin.findOne({ email: 'demo@store.com' }) || await Admin.findOne();
+        adminDoc = await Admin.findOne({ whatsappConnected: true, email: { $ne: 'demo@store.com' } })
+          || await Admin.findOne({ whatsappConnected: true })
+          || await Admin.findOne({ email: 'demo@store.com' })
+          || await Admin.findOne();
       }
 
-      // Check subscription active and token limit checks
+      // Detect language and translate if foreign
+      let detectedLanguage = 'English';
+      let translation = null;
+      try {
+        const translationService = require('./translationService');
+        const translationResult = await translationService.detectAndTranslate(message);
+        detectedLanguage = translationResult.detectedLanguage;
+        translation = translationResult.translation;
+      } catch (err) {
+        console.error('Failed to run translation service:', err);
+      }
+
+      // Check subscription active, token limit checks, and WhatsApp connection status
       if (adminDoc) {
+        // Check if WhatsApp channel is disconnected
+        const isWhatsappDisconnected = adminDoc.whatsappConnected === false;
+        if (isWhatsappDisconnected) {
+          console.log(`🔕 WhatsApp channel disconnected for tenant: ${adminDoc.email}. Skipping AI response.`);
+          
+          const currentIntent = this.detectIntent(message);
+          conversation.messages = conversation.messages || [];
+          conversation.messages.push({
+            role: 'user',
+            content: message,
+            timestamp: new Date(),
+            intent: currentIntent,
+            messageId,
+            detectedLanguage,
+            translation
+          });
+          conversation.updatedAt = new Date();
+          await conversation.save();
+
+          if (global.io) {
+            global.io.emit('new_message', {
+              customerPhone,
+              role: 'user',
+              content: message,
+              timestamp: new Date(),
+              intent: currentIntent,
+              detectedLanguage,
+              translation
+            });
+          }
+
+          return {
+            botPaused: true,
+            whatsappDisconnected: true,
+            message: "I apologize, but this store's WhatsApp connection is currently disconnected.",
+            intent: currentIntent,
+            escalated: conversation.escalated || conversation.status === 'escalated',
+            escalationReason: conversation.escalationReason,
+            relatedOrderIds: conversation.relatedOrderIds || [],
+            structuredOutput: {
+              intent: currentIntent,
+              metadata: {
+                responseTime: Date.now() - startTime,
+                usedAI: false,
+                whatsappDisconnected: true
+              }
+            },
+            responseParts: [],
+            typingDelayMs: 0
+          };
+        }
+
         const isSubscriptionSuspended = 
           !adminDoc.isActive || 
           adminDoc.subscriptionStatus === 'inactive' || 
@@ -339,7 +461,9 @@ Rules:
             content: message,
             timestamp: new Date(),
             intent: currentIntent,
-            messageId
+            messageId,
+            detectedLanguage,
+            translation
           });
           conversation.updatedAt = new Date();
           await conversation.save();
@@ -350,7 +474,9 @@ Rules:
               role: 'user',
               content: message,
               timestamp: new Date(),
-              intent: currentIntent
+              intent: currentIntent,
+              detectedLanguage,
+              translation
             });
           }
 
@@ -386,7 +512,9 @@ Rules:
             content: message,
             timestamp: new Date(),
             intent: currentIntent,
-            messageId
+            messageId,
+            detectedLanguage,
+            translation
           });
           conversation.updatedAt = new Date();
           await conversation.save();
@@ -397,7 +525,9 @@ Rules:
               role: 'user',
               content: message,
               timestamp: new Date(),
-              intent: currentIntent
+              intent: currentIntent,
+              detectedLanguage,
+              translation
             });
           }
 
@@ -424,7 +554,10 @@ Rules:
       }
 
       // If the conversation is paused or escalated, skip AI generation and save the message
-      if (conversation.botPaused || conversation.escalated || conversation.status === 'escalated') {
+      // Exception: If we are in AI Draft Mode, we want to allow generating a suggested reply draft even if botPaused is true.
+      // const isPausedInDraftMode = conversation.botPaused && adminDoc && adminDoc.aiDraftMode === true;
+      const isPausedInDraftMode = false; // Temporarily disabled as per user request
+      if (conversation.escalated || conversation.status === 'escalated' || (conversation.botPaused && !isPausedInDraftMode)) {
         console.log(`🔕 Bot is PAUSED/ESCALATED for ${customerPhone}. Skipping AI response generation.`);
         
         const currentIntent = this.detectIntent(message);
@@ -435,7 +568,9 @@ Rules:
           content: message,
           timestamp: new Date(),
           intent: currentIntent,
-          messageId
+          messageId,
+          detectedLanguage,
+          translation
         });
         
         if (conversation.messages.length > 50) {
@@ -452,7 +587,9 @@ Rules:
             role: 'user',
             content: message,
             timestamp: new Date(),
-            intent: currentIntent
+            intent: currentIntent,
+            detectedLanguage,
+            translation
           });
         }
         
@@ -502,23 +639,32 @@ Rules:
       // Process based on intent
       switch (intent) {
         case 'order_status':
-          const orderResult = await this.handleOrderStatusQuery(customerPhone, message);
+          const orderResult = await this.handleOrderStatusQuery(customerPhone, message, adminDoc ? adminDoc._id : null);
           response = orderResult.message;
           relatedOrderIds = orderResult.orderIds || [];
           break;
 
         case 'cancel_order':
-          const cancelResult = await this.handleCancelOrderRequest(customerPhone, message);
+          const cancelResult = await this.handleCancelOrderRequest(customerPhone, message, adminDoc ? adminDoc._id : null);
           response = cancelResult.message;
           relatedOrderIds = cancelResult.orderIds || [];
           break;
 
         case 'return_policy':
-          response = await this.handleReturnPolicyQuery(message);
+          const policyText = await this.handleReturnPolicyQuery(message, adminDoc ? adminDoc._id : null);
+          const recentMsgList = this.getRecentConversationMessages(conversation, this.maxRecentMessages);
+          const returnAiResult = await this.handleGeneralInquiry(message, customerName, recentMsgList, conversation.admin, policyText);
+          response = returnAiResult.message;
+          usedAI = returnAiResult.usedAI;
+          aiModel = returnAiResult.model || null;
+          modelUsed = returnAiResult.modelUsed || (returnAiResult.usedAI ? 'AI' : 'Fallback');
+          tokenUsage = returnAiResult.tokenUsage || tokenUsage;
+          typingDelayMs = returnAiResult.typingDelayMs || 0;
+          responseParts = returnAiResult.responseParts || [];
           break;
 
         case 'refund_request':
-          const refundResult = await this.handleRefundRequest(customerPhone, customerName, message);
+          const refundResult = await this.handleRefundRequest(customerPhone, customerName, message, adminDoc ? adminDoc._id : null);
           response = refundResult.message;
           relatedOrderIds = refundResult.orderIds || [];
           escalated = true;
@@ -609,14 +755,25 @@ Rules:
         content: message,
         timestamp: new Date(),
         intent,
-        messageId
+        messageId,
+        detectedLanguage,
+        translation
       });
-      conversation.messages.push({
-        role: 'assistant',
-        content: response,
-        timestamp: new Date(),
-        intent
-      });
+
+      // const isDraftMode = adminDoc && adminDoc.aiDraftMode === true;
+      const isDraftMode = false; // Temporarily disabled as per user request
+
+      if (isDraftMode) {
+        conversation.suggestedReply = response;
+        conversation.botPaused = true;
+      } else {
+        conversation.messages.push({
+          role: 'assistant',
+          content: response,
+          timestamp: new Date(),
+          intent
+        });
+      }
 
       if (conversation.messages.length > 50) {
         conversation.messages = conversation.messages.slice(-50);
@@ -630,6 +787,19 @@ Rules:
       }
 
       await conversation.save();
+
+      // Emit socket event in draft mode so live chat gets notified instantly of user msg + new draft
+      if (isDraftMode && global.io) {
+        global.io.emit('new_message', {
+          customerPhone,
+          role: 'user',
+          content: message,
+          timestamp: new Date(),
+          intent,
+          botPaused: true,
+          suggestedReply: response
+        });
+      }
 
       const duration = Date.now() - startTime;
       
@@ -676,6 +846,17 @@ Rules:
         console.log(`📊 Updated usage for admin ${adminDoc.email}: tokensUsed=${adminDoc.geminiTokensUsed}, messages=${adminDoc.totalMessagesProcessed}`);
       }
 
+      // Determine if we should attach interactive buttons
+      let buttons = [];
+      const lowerMsg = message.toLowerCase().trim();
+      const greetings = ['hi', 'hello', 'hey', 'yo', 'hola', 'namaste', 'help', 'menu', 'options', 'support', 'start'];
+      const isGreeting = greetings.includes(lowerMsg) || lowerMsg.length <= 4;
+      const isNewConversation = conversation && conversation.messages && conversation.messages.filter(m => m.role === 'assistant').length === 0;
+
+      if ((isGreeting || isNewConversation) && !escalated && intent === 'general_inquiry') {
+        buttons = ['Check Order Status', 'Talk to Agent', 'Store FAQs'];
+      }
+
       return {
         message: response,
         intent,
@@ -684,7 +865,10 @@ Rules:
         relatedOrderIds,
         structuredOutput,
         responseParts,
-        typingDelayMs
+        typingDelayMs,
+        buttons: buttons.length > 0 ? buttons : undefined,
+        botPaused: false,
+        aiDraftMode: false
       };
 
     } catch (error) {
@@ -869,28 +1053,87 @@ Rules:
     return candidateDigits.includes(orderDigits);
   }
 
-  async handleOrderStatusQuery(customerPhone, message) {
+  async handleOrderStatusQuery(customerPhone, message, adminId = null) {
     try {
+      const Integration = require('../models/Integration');
+      
+      // Detect if store is Shopify Basic (using placeholder phone numbers)
+      let isShopifyBasic = false;
+      if (adminId) {
+        const shopifyIntegration = await Integration.findOne({ adminId, platform: 'shopify', isActive: true });
+        if (shopifyIntegration) {
+          const redactedOrderExists = await Order.findOne({ admin: adminId, customerPhone: /^shopify-order-/ });
+          if (redactedOrderExists) {
+            isShopifyBasic = true;
+          }
+        }
+      }
+
       // Extract potential order ID from message
       const requestedOrderId = this.extractOrderId(message);
+
+      // If it's a Shopify Basic store, enforce ONLY Order Number lookup
+      if (isShopifyBasic) {
+        if (!requestedOrderId) {
+          return {
+            message: `I couldn't find any orders automatically because customer contact details are restricted on this store. 🛒\n\nPlease reply with your **Order Number** (e.g. #1008) so I can fetch your status!`,
+            orderIds: []
+          };
+        }
+
+        const specificOrder = await Order.findOne({
+          admin: adminId,
+          $or: [
+            { orderId: requestedOrderId },
+            { externalOrderId: requestedOrderId },
+            { externalOrderNumber: requestedOrderId },
+            { externalOrderNumber: `#${requestedOrderId}` }
+          ]
+        });
+
+        if (!specificOrder) {
+          return {
+            message: `I couldn't find any order matching **${requestedOrderId}**. Please make sure the order number is correct (e.g. #1008) and try again.`,
+            orderIds: []
+          };
+        }
+
+        return {
+          message: await this.formatOrderStatus(specificOrder),
+          orderIds: [specificOrder.orderId]
+        };
+      }
       
       // Normalize phone and try multiple formats for matching
       const phoneFormats = this.getPhoneFormats(customerPhone);
       
-      console.log(`🔍 Searching orders for phone formats:`, phoneFormats);
+      console.log(`🔍 Searching orders for phone formats under admin ${adminId}:`, phoneFormats);
       
-      // Find customer orders - try all phone formats
+      // Find customer orders - try all phone formats and isolate by adminId
       const phoneQuery = this.buildPhoneSearchQuery(phoneFormats);
-      const orders = await Order.find(phoneQuery)
+      const orders = await Order.find({
+        ...phoneQuery,
+        admin: adminId
+      })
         .sort({ orderDate: -1 })
         .limit(5);
 
       // If specific order ID is provided, try exact lookup first.
       if (requestedOrderId) {
-        const specificOrder = await Order.findOne({ orderId: requestedOrderId });
+        const specificOrder = await Order.findOne({
+          admin: adminId,
+          $or: [
+            { orderId: requestedOrderId },
+            { externalOrderId: requestedOrderId },
+            { externalOrderNumber: requestedOrderId },
+            { externalOrderNumber: `#${requestedOrderId}` }
+          ]
+        });
 
         if (specificOrder) {
-          const belongsToCustomer = this.matchesPhoneFormats(specificOrder.customerPhone, phoneFormats);
+          // Bypass phone check if order phone is a shopify placeholder
+          const isPlaceholderPhone = specificOrder.customerPhone && specificOrder.customerPhone.startsWith('shopify-order-');
+          const belongsToCustomer = isPlaceholderPhone || this.matchesPhoneFormats(specificOrder.customerPhone, phoneFormats);
 
           if (!belongsToCustomer) {
             return {
@@ -900,7 +1143,7 @@ Rules:
           }
 
           return {
-            message: this.formatOrderStatus(specificOrder),
+            message: await this.formatOrderStatus(specificOrder),
             orderIds: [specificOrder.orderId]
           };
         }
@@ -918,11 +1161,14 @@ Rules:
 
       // If specific order ID mentioned, find that order in fetched list
       if (requestedOrderId) {
-        const specificOrder = orders.find(o => o.orderId.toUpperCase() === requestedOrderId);
+        const specificOrder = orders.find(o => 
+          o.orderId.toUpperCase() === requestedOrderId || 
+          (o.externalOrderId && o.externalOrderId.toUpperCase() === requestedOrderId)
+        );
         
         if (specificOrder) {
           return {
-            message: this.formatOrderStatus(specificOrder),
+            message: await this.formatOrderStatus(specificOrder),
             orderIds: [specificOrder.orderId]
           };
         }
@@ -930,7 +1176,7 @@ Rules:
 
       // Return most recent order
       const recentOrder = orders[0];
-      let response = this.formatOrderStatus(recentOrder);
+      let response = await this.formatOrderStatus(recentOrder);
 
       if (orders.length > 1) {
         response += `\n\n📋 You have ${orders.length} orders. Reply with a specific order number to check another order.`;
@@ -950,7 +1196,7 @@ Rules:
     }
   }
 
-  formatOrderStatus(order) {
+  async formatOrderStatus(order) {
     const statusEmoji = {
       'pending': '⏳',
       'processing': '📦',
@@ -961,10 +1207,43 @@ Rules:
       'returned': '↩️'
     };
 
-    let message = `${statusEmoji[order.status] || '📦'} *Order ${order.orderId}*\n\n`;
+    let currencyCode = 'USD';
+    try {
+      if (order.admin) {
+        const adminDoc = await Admin.findById(order.admin);
+        if (adminDoc && adminDoc.currency) {
+          currencyCode = adminDoc.currency;
+        }
+      }
+    } catch (err) {
+      console.error('Error fetching admin currency in formatOrderStatus:', err);
+    }
+
+    const formatCurrency = (amount, code) => {
+      try {
+        return new Intl.NumberFormat(code === 'INR' ? 'en-IN' : 'en-US', {
+          style: 'currency',
+          currency: code
+        }).format(amount);
+      } catch (e) {
+        const symbols = {
+          USD: '$', EUR: '€', GBP: '£', INR: '₹', CAD: '$', AUD: '$', JPY: '¥', AED: 'د.إ'
+        };
+        const symbol = symbols[code] || '$';
+        return `${symbol}${Number(amount).toFixed(2)}`;
+      }
+    };
+
+    const formattedAmount = formatCurrency(order.totalAmount, currencyCode);
+
+    let message = `${statusEmoji[order.status] || '📦'} *Order ${order.orderId}*`;
+    if (order.externalOrderId) {
+      message += ` (Store Order: *${order.externalOrderId}*)`;
+    }
+    message += `\n\n`;
     message += `Status: *${order.status.toUpperCase()}*\n`;
     message += `Order Date: ${order.orderDate.toLocaleDateString()}\n`;
-    message += `Total: $${order.totalAmount.toFixed(2)}\n`;
+    message += `Total: ${formattedAmount}\n`;
 
     if (order.trackingNumber) {
       message += `Tracking: ${order.trackingNumber}\n`;
@@ -1014,16 +1293,15 @@ Rules:
       return direct[0].toUpperCase();
     }
 
-    const contextual = message.match(/(?:order|#)\s*([A-Z0-9-]+)/i);
+    const contextual = message.match(/(?:order|#|order\s+id|order\s+no|number)\s*#?\s*([A-Z0-9_-]{3,25})/i);
     if (contextual) {
-      const token = contextual[1].toUpperCase();
-      return token.startsWith('ORD-') ? token : null;
+      return contextual[1].toUpperCase();
     }
 
     return null;
   }
 
-  async handleCancelOrderRequest(customerPhone, message) {
+  async handleCancelOrderRequest(customerPhone, message, adminId = null) {
     try {
       const phoneFormats = this.getPhoneFormats(customerPhone);
       const requestedOrderId = this.extractOrderId(message);
@@ -1033,11 +1311,18 @@ Rules:
 
       if (requestedOrderId) {
         order = await Order.findOne({
-          orderId: requestedOrderId,
-          ...phoneQuery
+          ...phoneQuery,
+          admin: adminId,
+          $or: [
+            { orderId: requestedOrderId },
+            { externalOrderId: requestedOrderId }
+          ]
         });
       } else {
-        order = await Order.findOne(phoneQuery)
+        order = await Order.findOne({
+          ...phoneQuery,
+          admin: adminId
+        })
           .sort({ orderDate: -1 });
       }
 
@@ -1081,8 +1366,15 @@ Rules:
     }
   }
 
-  async handleReturnPolicyQuery(message) {
+  async handleReturnPolicyQuery(message, adminId = null) {
     try {
+      if (adminId) {
+        const kbResult = await knowledgeBaseService.queryKnowledgeBase(message, adminId);
+        if (kbResult.foundInKB && kbResult.confidence > 0.5) {
+          return kbResult.answer;
+        }
+      }
+
       // Get active return policies
       const policies = await ReturnPolicy.find({ isActive: true });
 
@@ -1117,13 +1409,16 @@ Rules:
     }
   }
 
-  async handleRefundRequest(customerPhone, customerName, message) {
+  async handleRefundRequest(customerPhone, customerName, message, adminId = null) {
     try {
       const phoneFormats = this.getPhoneFormats(customerPhone);
       const phoneQuery = this.buildPhoneSearchQuery(phoneFormats);
 
       // Find recent orders
-      const orders = await Order.find(phoneQuery)
+      const orders = await Order.find({
+        ...phoneQuery,
+        admin: adminId
+      })
         .sort({ orderDate: -1 })
         .limit(5);
 
@@ -1172,81 +1467,106 @@ Rules:
     return response;
   }
 
-  async handleGeneralInquiry(message, customerName, recentMessages = [], adminId = null) {
+  async handleGeneralInquiry(message, customerName, recentMessages = [], adminId = null, kbContextOverride = null) {
     const tokenUsageZero = {
       promptTokens: 0,
       completionTokens: 0,
       totalTokens: 0
     };
 
-    // 1) Knowledge base first: fastest response and no model spend.
-    try {
-      if (adminId) {
-        const kbResult = await knowledgeBaseService.queryKnowledgeBase(message, adminId);
+    let queryText = message;
+    const lowerMsg = message.toLowerCase().trim();
+    const isFollowUp = 
+      lowerMsg.length < 25 && 
+      (lowerMsg.includes('detail') || 
+       lowerMsg.includes('more') || 
+       lowerMsg.includes('info') || 
+       lowerMsg.includes('explain') || 
+       lowerMsg.includes('why') || 
+       lowerMsg.includes('elaborate') || 
+       lowerMsg.includes('okay') || 
+       lowerMsg.includes('ok') || 
+       lowerMsg.includes('yes') || 
+       lowerMsg.includes('tell me'));
 
-        if (kbResult.foundInKB && kbResult.confidence > 0.5) {
-          const responsePlan = this.buildResponsePlan(kbResult.answer);
-
-          return {
-            message: kbResult.answer,
-            usedAI: false,
-            model: 'KnowledgeBase',
-            modelUsed: 'KnowledgeBase',
-            tokenUsage: tokenUsageZero,
-            aiLogPayload: {
-              systemPrompt: 'Knowledge Base Query (RAG)',
-              userPrompt: this.buildContextualPrompt({ customerName, message, recentMessages }),
-              aiResponse: kbResult.answer,
-              promptTokens: 0,
-              completionTokens: 0,
-              totalTokens: 0,
-              temperature: 0.3
-            },
-            responseParts: responsePlan.responseParts,
-            typingDelayMs: responsePlan.typingDelayMs,
-            cacheable: true
-          };
-        }
-      } else {
-        const knowledgeBases = await KnowledgeBase.find({ isActive: true });
-
-        if (knowledgeBases.length > 0) {
-          const texts = knowledgeBases.map((kb) => kb.extractedText);
-          const kbResult = await knowledgeBaseService.queryKnowledgeBase(message, texts);
-
-          if (kbResult.foundInKB && kbResult.confidence > 0.5) {
-            const responsePlan = this.buildResponsePlan(kbResult.answer);
-
-            return {
-              message: kbResult.answer,
-              usedAI: false,
-              model: 'KnowledgeBase',
-              modelUsed: 'KnowledgeBase',
-              tokenUsage: tokenUsageZero,
-              aiLogPayload: {
-                systemPrompt: 'Knowledge Base Query (Full Text Fallback)',
-                userPrompt: this.buildContextualPrompt({ customerName, message, recentMessages }),
-                aiResponse: kbResult.answer,
-                promptTokens: 0,
-                completionTokens: 0,
-                totalTokens: 0,
-                temperature: 0.3
-              },
-              responseParts: responsePlan.responseParts,
-              typingDelayMs: responsePlan.typingDelayMs,
-              cacheable: true
-            };
-          }
-        }
+    if (isFollowUp && recentMessages && recentMessages.length > 0) {
+      const lastUserMsg = [...recentMessages].reverse().find(msg => msg.role === 'user');
+      if (lastUserMsg && lastUserMsg.content) {
+        queryText = `${lastUserMsg.content} ${message}`;
+        console.log(`🔄 Follow-up query detected. Merging previous query context: "${queryText}"`);
       }
-    } catch (error) {
-      console.error('Error querying knowledge base first:', error);
-      // Fall through to Gemini/OpenAI if KB lookup fails.
     }
 
-    const systemInstruction = this.buildSystemInstruction(customerName);
+    let kbContext = kbContextOverride;
+
+    // 1) Fetch Knowledge base context (if no override is provided)
+    if (!kbContext) {
+      try {
+        if (adminId) {
+          const kbResult = await knowledgeBaseService.queryKnowledgeBase(queryText, adminId);
+          if (kbResult.foundInKB && kbResult.confidence > 0.5) {
+            kbContext = kbResult.answer;
+          }
+        } else {
+          const knowledgeBases = await KnowledgeBase.find({ isActive: true });
+          if (knowledgeBases.length > 0) {
+            const texts = knowledgeBases.map((kb) => kb.extractedText);
+            const kbResult = await knowledgeBaseService.queryKnowledgeBase(queryText, texts);
+            if (kbResult.foundInKB && kbResult.confidence > 0.5) {
+              kbContext = kbResult.answer;
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Error querying knowledge base:', error);
+      }
+    }
+
+    // 2) If we have KB context but no LLM is configured/ready, return the KB context directly as a fallback
+    if (kbContext && !this.gemini && !this.openai) {
+      console.log('⚠️ No LLM configured. Returning raw Knowledge Base answer.');
+      const responsePlan = this.buildResponsePlan(kbContext);
+      return {
+        message: kbContext,
+        usedAI: false,
+        model: 'KnowledgeBase',
+        modelUsed: 'KnowledgeBase',
+        tokenUsage: tokenUsageZero,
+        aiLogPayload: {
+          systemPrompt: 'Knowledge Base Query (RAG Fallback)',
+          userPrompt: this.buildContextualPrompt({ customerName, message, recentMessages, kbContext }),
+          aiResponse: kbContext,
+          promptTokens: 0,
+          completionTokens: 0,
+          totalTokens: 0,
+          temperature: 0.3
+        },
+        responseParts: responsePlan.responseParts,
+        typingDelayMs: responsePlan.typingDelayMs,
+        cacheable: true
+      };
+    }
+
+    // Fetch store info from admin profile for contextual replies
+    let storeInfo = {};
+    if (adminId) {
+      try {
+        const adminDoc = await Admin.findById(adminId).select('businessName storeUrl supportEmail').lean();
+        if (adminDoc) {
+          storeInfo = {
+            businessName: adminDoc.businessName || null,
+            storeUrl: adminDoc.storeUrl || null,
+            supportEmail: adminDoc.supportEmail || null
+          };
+        }
+      } catch (err) {
+        console.error('Error fetching admin store info for AI prompt:', err.message);
+      }
+    }
+
+    const systemInstruction = this.buildSystemInstruction(customerName, storeInfo);
     const systemPrompt = systemInstruction;
-    const userPrompt = this.buildContextualPrompt({ customerName, message, recentMessages });
+    const userPrompt = this.buildContextualPrompt({ customerName, message, recentMessages, kbContext });
 
     // 2) Gemini preferred model for low-cost AI answers.
     if (this.gemini) {
@@ -1401,7 +1721,32 @@ Rules:
       }
     }
 
-    // 4) Static fallback message if both model providers are unavailable or fail.
+    // 4) Fallback to Knowledge Base context if both model providers are unavailable or fail but we have KB data.
+    if (kbContext) {
+      console.log('⚠️ LLM providers failed or unavailable at runtime. Falling back to raw KB context.');
+      const responsePlan = this.buildResponsePlan(kbContext);
+      return {
+        message: kbContext,
+        usedAI: false,
+        model: 'KnowledgeBaseFallback',
+        modelUsed: 'KnowledgeBaseFallback',
+        tokenUsage: tokenUsageZero,
+        aiLogPayload: {
+          systemPrompt,
+          userPrompt,
+          aiResponse: kbContext,
+          promptTokens: 0,
+          completionTokens: 0,
+          totalTokens: 0,
+          temperature: 0.6
+        },
+        responseParts: responsePlan.responseParts,
+        typingDelayMs: responsePlan.typingDelayMs,
+        cacheable: true
+      };
+    }
+
+    // 5) Static fallback message if both model providers are unavailable or fail and no KB context is available.
     const fallbackMessage = `Hi ${customerName}! 👋\n\nI'm here to help with:\n` +
       `📦 Order status and tracking\n` +
       `↩️ Returns and exchanges\n` +

@@ -43,7 +43,7 @@ const templateSchema = new mongoose.Schema({
   }],
   mappedEvent: {
     type: String,
-    enum: [null, 'order_confirmation', 'order_shipped', 'order_delivered'],
+    enum: [null, 'order_confirmation', 'order_shipped', 'order_delivered', 'order_cancelled', 'abandoned_cart'],
     default: null
   }
 }, {

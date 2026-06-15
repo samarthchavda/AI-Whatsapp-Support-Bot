@@ -15,11 +15,33 @@ exports.testMessage = async (req, res) => {
       });
     }
 
+    // Associate the conversation with the authenticated admin
+    const adminId = req.admin._id;
+    let conversation = await Conversation.findOne({
+      customerPhone,
+      status: { $in: ['active', 'escalated'] }
+    });
+
+    if (!conversation) {
+      conversation = new Conversation({
+        admin: adminId,
+        customerPhone,
+        customerName,
+        messages: [],
+        status: 'active'
+      });
+      await conversation.save();
+    } else if (!conversation.admin || conversation.admin.toString() !== adminId.toString()) {
+      conversation.admin = adminId;
+      await conversation.save();
+    }
+
     // Process message through AI service
     const response = await aiService.processMessage({
       customerPhone,
       customerName,
-      message
+      message,
+      adminId: req.admin._id
     });
 
     res.json({
@@ -223,3 +245,46 @@ exports.getConversationWithLogs = async (req, res) => {
     });
   }
 };
+
+// Test Gemini API key validation
+exports.verifyGeminiKey = async (req, res) => {
+  try {
+    const axios = require('axios');
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) {
+      return res.status(400).json({
+        success: false,
+        message: 'GEMINI_API_KEY not configured in .env'
+      });
+    }
+
+    try {
+      const response = await axios.get(
+        `https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`
+      );
+      if (response.data && response.data.models) {
+        return res.json({
+          success: true,
+          message: 'Gemini API Key is active and working!',
+          modelsCount: response.data.models.length
+        });
+      }
+      return res.json({
+        success: false,
+        message: 'Could not fetch models, key might be restricted.'
+      });
+    } catch (apiError) {
+      return res.status(400).json({
+        success: false,
+        message: 'Gemini API Key validation failed',
+        error: apiError.response?.data?.error?.message || apiError.message
+      });
+    }
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+};
+

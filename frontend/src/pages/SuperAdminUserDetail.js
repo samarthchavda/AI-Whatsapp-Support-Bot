@@ -8,7 +8,9 @@ import {
   FaChartLine, 
   FaCalendar,
   FaSync,
-  FaEdit
+  FaEdit,
+  FaToggleOn,
+  FaToggleOff
 } from 'react-icons/fa';
 import './SuperAdmin.css';
 
@@ -87,6 +89,51 @@ function SuperAdminUserDetail() {
       fetchUserDetails();
     } catch (error) {
       alert('Failed to update subscription');
+    }
+  };
+
+  const handleToggleUserWebBot = async () => {
+    const token = localStorage.getItem('token') || localStorage.getItem('accessToken');
+    
+    try {
+      await axios.post(
+        `http://localhost:5001/api/super-admin/users/${userId}/toggle-web-bot`,
+        {},
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      fetchUserDetails();
+    } catch (error) {
+      alert('Failed to toggle user scanner access');
+    }
+  };
+
+  const handleToggleUserShopify = async () => {
+    const token = localStorage.getItem('token') || localStorage.getItem('accessToken');
+    
+    try {
+      await axios.post(
+        `http://localhost:5001/api/super-admin/users/${userId}/toggle-shopify`,
+        {},
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      fetchUserDetails();
+    } catch (error) {
+      alert('Failed to toggle user Shopify access');
+    }
+  };
+
+  const handleToggleUserWooCommerce = async () => {
+    const token = localStorage.getItem('token') || localStorage.getItem('accessToken');
+    
+    try {
+      await axios.post(
+        `http://localhost:5001/api/super-admin/users/${userId}/toggle-woocommerce`,
+        {},
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      fetchUserDetails();
+    } catch (error) {
+      alert('Failed to toggle user WooCommerce access');
     }
   };
 
@@ -213,6 +260,81 @@ function SuperAdminUserDetail() {
                 <span>{user.businessPhone}</span>
               </div>
             )}
+            <div className="detail-row">
+              <span>Web Bot Scanner:</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span className={user.webBotEnabled ? 'status-connected' : 'status-disconnected'}>
+                  {user.webBotEnabled ? 'Enabled' : 'Disabled'}
+                </span>
+                <button
+                  onClick={handleToggleUserWebBot}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    cursor: 'pointer',
+                    fontSize: '18px',
+                    padding: 0,
+                    color: user.webBotEnabled ? '#10b981' : '#71717a',
+                    display: 'flex',
+                    alignItems: 'center',
+                    transition: 'color 0.2s ease'
+                  }}
+                  title={user.webBotEnabled ? 'Revoke Access' : 'Grant Access'}
+                >
+                  {user.webBotEnabled ? <FaToggleOn /> : <FaToggleOff />}
+                </button>
+              </div>
+            </div>
+            <div className="detail-row">
+              <span>Shopify Integration:</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span className={user.shopifyEnabled !== false ? 'status-connected' : 'status-disconnected'}>
+                  {user.shopifyEnabled !== false ? 'Enabled' : 'Disabled'}
+                </span>
+                <button
+                  onClick={handleToggleUserShopify}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    cursor: 'pointer',
+                    fontSize: '18px',
+                    padding: 0,
+                    color: user.shopifyEnabled !== false ? '#10b981' : '#71717a',
+                    display: 'flex',
+                    alignItems: 'center',
+                    transition: 'color 0.2s ease'
+                  }}
+                  title={user.shopifyEnabled !== false ? 'Revoke Access' : 'Grant Access'}
+                >
+                  {user.shopifyEnabled !== false ? <FaToggleOn /> : <FaToggleOff />}
+                </button>
+              </div>
+            </div>
+            <div className="detail-row">
+              <span>WooCommerce Integration:</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span className={user.woocommerceEnabled !== false ? 'status-connected' : 'status-disconnected'}>
+                  {user.woocommerceEnabled !== false ? 'Enabled' : 'Disabled'}
+                </span>
+                <button
+                  onClick={handleToggleUserWooCommerce}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    cursor: 'pointer',
+                    fontSize: '18px',
+                    padding: 0,
+                    color: user.woocommerceEnabled !== false ? '#10b981' : '#71717a',
+                    display: 'flex',
+                    alignItems: 'center',
+                    transition: 'color 0.2s ease'
+                  }}
+                  title={user.woocommerceEnabled !== false ? 'Revoke Access' : 'Grant Access'}
+                >
+                  {user.woocommerceEnabled !== false ? <FaToggleOn /> : <FaToggleOff />}
+                </button>
+              </div>
+            </div>
           </div>
         </div>
 

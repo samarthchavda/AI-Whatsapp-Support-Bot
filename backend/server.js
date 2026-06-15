@@ -6,7 +6,7 @@ const morgan = require('morgan');
 const rateLimit = require('express-rate-limit');
 const http = require('http');
 const socketIo = require('socket.io');
-require('dotenv').config();
+require('dotenv').config({ override: true });
 
 // Import routes
 const orderRoutes = require('./routes/orderRoutes');
@@ -24,6 +24,7 @@ const analyticsRoutes = require('./routes/analyticsRoutes');
 const integrationRoutes = require('./routes/integrationRoutes');
 const superAdminRoutes = require('./routes/superAdminRoutes');
 const whatsappRoutes = require('./routes/whatsappRoutes');
+const abandonedCartRoutes = require('./routes/abandonedCartRoutes');
 
 // Import WhatsApp bot (optional - only if available)
 let whatsappWebBot = null;
@@ -53,7 +54,12 @@ app.use(helmet());
 // Rate limiting
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100 // limit each IP to 100 requests per windowMs
+  max: process.env.NODE_ENV === 'production' ? 100 : 2000, // limit each IP to 2000 requests per windowMs in dev, 100 in production
+  message: {
+    success: false,
+    message: 'Too many requests, please try again later.',
+    error: 'Too many requests'
+  }
 });
 app.use('/api/', limiter);
 
@@ -101,10 +107,20 @@ mongoose.connect(process.env.MONGODB_URI, {
 .then(() => {
   console.log('✅ Connected to MongoDB');
   
-  // Initialize WhatsApp bot after DB connection (if available)
+  // Initialize WhatsApp bot after DB connection (if available and enabled)
   if (whatsappWebBot) {
     try {
-      whatsappWebBot.initialize(io);
+      const GlobalSettings = require('./models/GlobalSettings');
+      GlobalSettings.findOne({ key: 'webBotEnabled' }).then((setting) => {
+        if (setting && setting.value === true) {
+          whatsappWebBot.initialize(io);
+        } else {
+          console.log('📱 WhatsApp Web Bot is disabled globally by Super Admin');
+        }
+      }).catch((err) => {
+        console.error('Error reading global settings for Web Bot:', err.message);
+        whatsappWebBot.initialize(io);
+      });
     } catch (error) {
       console.log('⚠️  Could not initialize WhatsApp bot:', error.message);
     }
@@ -123,6 +139,21 @@ mongoose.connect(process.env.MONGODB_URI, {
   const { checkAndResetMonthlyTokens } = require('./services/subscriptionService');
   cron.schedule('0 0 * * *', () => {
     checkAndResetMonthlyTokens();
+  });
+
+  // Schedule Shopify order sync for all active Shopify integrations
+  const shopifyOrderSyncService = require('./services/shopifyOrderSyncService');
+  const shopifySyncSchedule = process.env.SHOPIFY_SYNC_CRON || '*/15 * * * *';
+  cron.schedule(shopifySyncSchedule, async () => {
+    try {
+      const results = await shopifyOrderSyncService.syncAllShopifyIntegrations();
+      const totalFetched = results.reduce((sum, item) => sum + (item.fetched || 0), 0);
+      const totalCreated = results.reduce((sum, item) => sum + (item.created || 0), 0);
+      const totalUpdated = results.reduce((sum, item) => sum + (item.updated || 0), 0);
+      console.log(`🛍️ Shopify sync completed: ${totalFetched} fetched, ${totalCreated} created, ${totalUpdated} updated`);
+    } catch (error) {
+      console.error('❌ Shopify sync cron failed:', error.message);
+    }
   });
 })
 .catch((err) => {
@@ -155,6 +186,7 @@ app.use('/api/analytics', analyticsRoutes);
 app.use('/api/integrations', integrationRoutes);
 app.use('/api/super-admin', superAdminRoutes);
 app.use('/api/whatsapp', whatsappRoutes);
+app.use('/api/abandoned-carts', abandonedCartRoutes);
 
 // Error handling middleware
 app.use((err, req, res, next) => {
@@ -174,10 +206,25 @@ app.use('*', (req, res) => {
 
 const PORT = process.env.PORT || 5000;
 
-server.listen(PORT, () => {
+server.listen(PORT, async () => {
   console.log(`🚀 Server running on port ${PORT}`);
   console.log(`📱 Environment: ${process.env.NODE_ENV || 'development'}`);
   console.log(`🔌 Socket.IO ready for real-time updates`);
+
+  // Pre-initialize local tunnel for webhook verification
+  if (process.env.NODE_ENV !== 'production') {
+    try {
+      const ngrokService = require('./services/ngrokService');
+      const tunnelUrl = await ngrokService.getNgrokUrl();
+      if (tunnelUrl) {
+        process.env.BACKEND_URL = tunnelUrl;
+        console.log(`🔗 Local webhook tunnel active: ${tunnelUrl}`);
+        console.log(`📲 Configure Meta webhook Callback URL to: ${tunnelUrl}/api/webhook/whatsapp`);
+      }
+    } catch (err) {
+      console.log('⚠️ Could not pre-initialize webhook tunnel:', err.message);
+    }
+  }
 });
 
 module.exports = app;

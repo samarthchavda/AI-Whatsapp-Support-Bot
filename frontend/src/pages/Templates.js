@@ -218,6 +218,8 @@ function Templates() {
                   <option value="order_confirmation">E-Commerce: Order Confirmed</option>
                   <option value="order_shipped">E-Commerce: Order Shipped</option>
                   <option value="order_delivered">E-Commerce: Order Delivered</option>
+                  <option value="order_cancelled">E-Commerce: Order Cancelled</option>
+                  <option value="abandoned_cart">E-Commerce: Abandoned Cart</option>
                 </select>
               </div>
 

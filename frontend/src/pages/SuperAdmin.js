@@ -36,8 +36,13 @@ function SuperAdmin() {
     subscriptionPlan: 'starter',
     subscriptionStatus: 'trial',
     monthlyPrice: 29,
-    geminiTokensLimit: 10000
+    geminiTokensLimit: 10000,
+    webBotEnabled: false,
+    shopifyEnabled: true,
+    woocommerceEnabled: true
   });
+  const [globalSettings, setGlobalSettings] = useState({ webBotEnabled: false });
+  const [settingsLoading, setSettingsLoading] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -54,6 +59,19 @@ function SuperAdmin() {
 
       setUsers(usersRes.data.data);
       setAnalytics(analyticsRes.data.data);
+
+      // Fetch global settings
+      try {
+        const token = localStorage.getItem('token') || localStorage.getItem('accessToken');
+        const settingsRes = await axios.get(`${API_BASE}/super-admin/settings`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (settingsRes.data.success) {
+          setGlobalSettings(settingsRes.data.data);
+        }
+      } catch (err) {
+        console.error('Error fetching settings:', err);
+      }
     } catch (error) {
       console.error('Error fetching data:', error);
       if (error.response?.status === 403) {
@@ -61,6 +79,29 @@ function SuperAdmin() {
       }
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleToggleWebBot = async () => {
+    const token = localStorage.getItem('token') || localStorage.getItem('accessToken');
+    const newValue = !globalSettings.webBotEnabled;
+    
+    try {
+      setSettingsLoading(true);
+      const res = await axios.post(
+        `${API_BASE}/super-admin/settings`,
+        { settings: { webBotEnabled: newValue } },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      if (res.data.success) {
+        setGlobalSettings({ ...globalSettings, webBotEnabled: newValue });
+        alert(`WhatsApp Web Bot (QR Code) has been ${newValue ? 'enabled' : 'disabled'} successfully!`);
+      }
+    } catch (err) {
+      alert('Failed to update platform settings');
+      console.error(err);
+    } finally {
+      setSettingsLoading(false);
     }
   };
 
@@ -80,6 +121,51 @@ function SuperAdmin() {
       fetchData();
     } catch (error) {
       alert('Failed to toggle user status');
+    }
+  };
+
+  const handleToggleUserWebBot = async (userId) => {
+    const token = localStorage.getItem('token') || localStorage.getItem('accessToken');
+    
+    try {
+      await axios.post(
+        `${API_BASE}/super-admin/users/${userId}/toggle-web-bot`,
+        {},
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      fetchData();
+    } catch (error) {
+      alert('Failed to toggle user scanner access');
+    }
+  };
+
+  const handleToggleUserShopify = async (userId) => {
+    const token = localStorage.getItem('token') || localStorage.getItem('accessToken');
+    
+    try {
+      await axios.post(
+        `${API_BASE}/super-admin/users/${userId}/toggle-shopify`,
+        {},
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      fetchData();
+    } catch (error) {
+      alert('Failed to toggle user Shopify access');
+    }
+  };
+
+  const handleToggleUserWooCommerce = async (userId) => {
+    const token = localStorage.getItem('token') || localStorage.getItem('accessToken');
+    
+    try {
+      await axios.post(
+        `${API_BASE}/super-admin/users/${userId}/toggle-woocommerce`,
+        {},
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      fetchData();
+    } catch (error) {
+      alert('Failed to toggle user WooCommerce access');
     }
   };
 
@@ -141,7 +227,10 @@ function SuperAdmin() {
         subscriptionPlan: 'starter',
         subscriptionStatus: 'trial',
         monthlyPrice: 29,
-        geminiTokensLimit: 10000
+        geminiTokensLimit: 10000,
+        webBotEnabled: false,
+        shopifyEnabled: true,
+        woocommerceEnabled: true
       });
       fetchData();
     } catch (error) {
@@ -282,6 +371,9 @@ function SuperAdmin() {
                 <th>Status</th>
                 <th>Revenue</th>
                 <th>WhatsApp</th>
+                <th>Scanner Access</th>
+                <th>Shopify</th>
+                <th>WooCommerce</th>
                 <th>Token Usage</th>
                 <th>Actions</th>
               </tr>
@@ -289,7 +381,7 @@ function SuperAdmin() {
             <tbody>
               {filteredUsers.length === 0 ? (
                 <tr>
-                  <td colSpan="7" className="super-admin-empty">
+                  <td colSpan="10" className="super-admin-empty">
                     No users found matching &quot;{userSearch}&quot;
                   </td>
                 </tr>
@@ -353,6 +445,66 @@ function SuperAdmin() {
                       </span>
                     </td>
                     <td>
+                      <button
+                        onClick={() => handleToggleUserWebBot(user._id)}
+                        style={{
+                          background: 'none',
+                          border: 'none',
+                          cursor: 'pointer',
+                          fontSize: '24px',
+                          padding: 0,
+                          color: user.webBotEnabled ? '#10b981' : '#71717a',
+                          display: 'flex',
+                          alignItems: 'center',
+                          margin: '0 auto',
+                          transition: 'color 0.2s ease'
+                        }}
+                        title={user.webBotEnabled ? 'Revoke Scanner Access' : 'Grant Scanner Access'}
+                      >
+                        {user.webBotEnabled ? <FaToggleOn /> : <FaToggleOff />}
+                      </button>
+                    </td>
+                    <td>
+                      <button
+                        onClick={() => handleToggleUserShopify(user._id)}
+                        style={{
+                          background: 'none',
+                          border: 'none',
+                          cursor: 'pointer',
+                          fontSize: '24px',
+                          padding: 0,
+                          color: user.shopifyEnabled !== false ? '#10b981' : '#71717a',
+                          display: 'flex',
+                          alignItems: 'center',
+                          margin: '0 auto',
+                          transition: 'color 0.2s ease'
+                        }}
+                        title={user.shopifyEnabled !== false ? 'Revoke Shopify Access' : 'Grant Shopify Access'}
+                      >
+                        {user.shopifyEnabled !== false ? <FaToggleOn /> : <FaToggleOff />}
+                      </button>
+                    </td>
+                    <td>
+                      <button
+                        onClick={() => handleToggleUserWooCommerce(user._id)}
+                        style={{
+                          background: 'none',
+                          border: 'none',
+                          cursor: 'pointer',
+                          fontSize: '24px',
+                          padding: 0,
+                          color: user.woocommerceEnabled !== false ? '#10b981' : '#71717a',
+                          display: 'flex',
+                          alignItems: 'center',
+                          margin: '0 auto',
+                          transition: 'color 0.2s ease'
+                        }}
+                        title={user.woocommerceEnabled !== false ? 'Revoke WooCommerce Access' : 'Grant WooCommerce Access'}
+                      >
+                        {user.woocommerceEnabled !== false ? <FaToggleOn /> : <FaToggleOff />}
+                      </button>
+                    </td>
+                    <td>
                       <div className="token-usage-bar">
                         <div className="token-usage-track">
                           <div
@@ -406,6 +558,50 @@ function SuperAdmin() {
               })}
             </tbody>
           </table>
+        </div>
+      </div>
+
+      {/* Platform Settings */}
+      <div className="table-container-premium super-admin-table" style={{ marginTop: '24px' }}>
+        <div className="table-header-premium super-admin-table-header">
+          <h2>⚙️ Platform Configuration</h2>
+        </div>
+        <div style={{ padding: '24px' }}>
+          <div style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            padding: '16px 20px',
+            background: 'rgba(39, 39, 42, 0.4)',
+            border: '1px solid rgba(63, 63, 70, 0.3)',
+            borderRadius: '12px'
+          }}>
+            <div>
+              <h4 style={{ margin: '0 0 4px 0', fontSize: '15px', fontWeight: '600', color: '#fafafa' }}>
+                Enable WhatsApp Web Bot (QR Code Method)
+              </h4>
+              <p style={{ margin: 0, fontSize: '13px', color: '#a1a1aa' }}>
+                Allow merchants/users to connect their mobile accounts by scanning a QR code using Puppeteer session emulation.
+              </p>
+            </div>
+            <button
+              onClick={handleToggleWebBot}
+              disabled={settingsLoading}
+              style={{
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                fontSize: '32px',
+                padding: 0,
+                color: globalSettings.webBotEnabled ? '#10b981' : '#71717a',
+                display: 'flex',
+                alignItems: 'center',
+                transition: 'color 0.2s ease'
+              }}
+            >
+              {globalSettings.webBotEnabled ? <FaToggleOn /> : <FaToggleOff />}
+            </button>
+          </div>
         </div>
       </div>
 
@@ -634,6 +830,60 @@ function SuperAdmin() {
                       }}
                     />
                   </div>
+                </div>
+
+                <div className="form-group" style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '12px' }}>
+                  <input
+                    type="checkbox"
+                    id="webBotEnabled"
+                    checked={newUser.webBotEnabled}
+                    onChange={(e) => setNewUser({...newUser, webBotEnabled: e.target.checked})}
+                    style={{
+                      width: '20px',
+                      height: '20px',
+                      accentColor: '#10b981',
+                      cursor: 'pointer'
+                    }}
+                  />
+                  <label htmlFor="webBotEnabled" style={{ cursor: 'pointer', fontSize: '14px', margin: 0, color: '#fafafa' }}>
+                    Enable WhatsApp Web Bot Scanner (QR Code Connection)
+                  </label>
+                </div>
+
+                <div className="form-group" style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '12px' }}>
+                  <input
+                    type="checkbox"
+                    id="shopifyEnabled"
+                    checked={newUser.shopifyEnabled}
+                    onChange={(e) => setNewUser({...newUser, shopifyEnabled: e.target.checked})}
+                    style={{
+                      width: '20px',
+                      height: '20px',
+                      accentColor: '#10b981',
+                      cursor: 'pointer'
+                    }}
+                  />
+                  <label htmlFor="shopifyEnabled" style={{ cursor: 'pointer', fontSize: '14px', margin: 0, color: '#fafafa' }}>
+                    Enable Shopify Integration
+                  </label>
+                </div>
+
+                <div className="form-group" style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '12px' }}>
+                  <input
+                    type="checkbox"
+                    id="woocommerceEnabled"
+                    checked={newUser.woocommerceEnabled}
+                    onChange={(e) => setNewUser({...newUser, woocommerceEnabled: e.target.checked})}
+                    style={{
+                      width: '20px',
+                      height: '20px',
+                      accentColor: '#10b981',
+                      cursor: 'pointer'
+                    }}
+                  />
+                  <label htmlFor="woocommerceEnabled" style={{ cursor: 'pointer', fontSize: '14px', margin: 0, color: '#fafafa' }}>
+                    Enable WooCommerce Integration
+                  </label>
                 </div>
 
                 <div className="modal-actions">

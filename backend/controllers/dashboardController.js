@@ -1,6 +1,7 @@
 const Escalation = require('../models/Escalation');
 const Conversation = require('../models/Conversation');
 const Order = require('../models/Order');
+const Announcement = require('../models/Announcement');
 
 // Get dashboard statistics
 exports.getDashboardStats = async (req, res) => {
@@ -151,6 +152,46 @@ exports.updateEscalation = async (req, res) => {
       escalation.status = status;
       if (status === 'resolved' || status === 'closed') {
         escalation.resolvedAt = new Date();
+        
+        // Find and update corresponding Conversation
+        const conversation = await Conversation.findById(escalation.conversationId);
+        if (conversation) {
+          conversation.status = status; // e.g., 'resolved' or 'closed'
+          conversation.escalated = false;
+          conversation.botPaused = false;
+          conversation.resolvedAt = new Date();
+          await conversation.save();
+
+          // Emit Socket.IO event so live chat / dashboard update in real-time
+          const io = req.app.get('io') || global.io;
+          if (io) {
+            io.emit('new_message', {
+              customerPhone: conversation.customerPhone,
+              status: conversation.status,
+              botPaused: conversation.botPaused
+            });
+            io.emit('conversation_updated', conversation);
+          }
+        }
+      } else if (status === 'pending' || status === 'in_progress') {
+        // If escalation is reopened, pause the bot and mark as escalated
+        const conversation = await Conversation.findById(escalation.conversationId);
+        if (conversation) {
+          conversation.status = 'escalated';
+          conversation.escalated = true;
+          conversation.botPaused = true;
+          await conversation.save();
+
+          const io = req.app.get('io') || global.io;
+          if (io) {
+            io.emit('new_message', {
+              customerPhone: conversation.customerPhone,
+              status: conversation.status,
+              botPaused: conversation.botPaused
+            });
+            io.emit('conversation_updated', conversation);
+          }
+        }
       }
     }
     
@@ -167,5 +208,28 @@ exports.updateEscalation = async (req, res) => {
     res.json(escalation);
   } catch (error) {
     res.status(500).json({ error: error.message });
+  }
+};
+
+// Get active announcements for merchant dashboard
+exports.getActiveAnnouncements = async (req, res) => {
+  try {
+    const now = new Date();
+    // Find active announcements where expiration date is either null or in the future
+    const announcements = await Announcement.find({
+      isActive: true,
+      $or: [
+        { expiresAt: null },
+        { expiresAt: { $gt: now } }
+      ]
+    }).sort({ createdAt: -1 });
+
+    res.json({
+      success: true,
+      data: announcements
+    });
+  } catch (error) {
+    console.error('Error fetching active announcements:', error);
+    res.status(500).json({ success: false, error: 'Failed to fetch active announcements', message: error.message });
   }
 };

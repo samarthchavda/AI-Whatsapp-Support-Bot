@@ -3,7 +3,7 @@ import { getOrders, updateOrder } from '../services/api';
 import { FaUpload, FaPlus, FaBox, FaTimes } from 'react-icons/fa';
 import './Orders.css';
 
-const API_BASE = process.env.REACT_APP_API_URL || 'http://localhost:5001/api';
+const API_BASE = process.env.REACT_APP_API_URL || `http://${window.location.hostname}:5001/api`;
 
 const currencySymbols = {
   USD: '$',

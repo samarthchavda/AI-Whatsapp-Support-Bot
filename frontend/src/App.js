@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Link, useLocation, useNavigate, Navigate } from 'react-router-dom';
-import { FaHome, FaComments, FaBox, FaExclamationTriangle, FaPlug, FaRobot, FaSearch, FaBell, FaPlus, FaSignOutAlt, FaUser, FaBrain, FaCommentDots, FaBroadcastTower, FaChartLine, FaCog, FaCrown, FaFileAlt, FaSun, FaMoon, FaShoppingCart } from 'react-icons/fa';
+import { FaHome, FaComments, FaBox, FaExclamationTriangle, FaPlug, FaRobot, FaSearch, FaBell, FaPlus, FaSignOutAlt, FaUser, FaBrain, FaCommentDots, FaBroadcastTower, FaChartLine, FaCog, FaCrown, FaFileAlt, FaSun, FaMoon, FaShoppingCart, FaCoins, FaUserSecret, FaHeartbeat, FaBullhorn } from 'react-icons/fa';
 import api, { clearAuthState, refreshAuth, updateAdminProfile } from './services/api';
 import Dashboard from './pages/Dashboard';
 import Profile from './pages/Profile';
@@ -18,9 +18,13 @@ import Broadcast from './pages/Broadcast';
 import Analytics from './pages/Analytics';
 import Integrations from './pages/Integrations';
 import SuperAdmin from './pages/SuperAdmin';
+import LeadsCRM from './pages/LeadsCRM';
+import SuperAdminHealth from './pages/SuperAdminHealth';
+import SuperAdminAnnouncements from './pages/SuperAdminAnnouncements';
 import SuperAdminUserDetail from './pages/SuperAdminUserDetail';
 import PlanManager from './pages/PlanManager';
 import DemoRequests from './pages/DemoRequests';
+import SuperAdminBudget from './pages/SuperAdminBudget';
 import Billing from './pages/Billing';
 import Templates from './pages/Templates';
 import AbandonedCarts from './pages/AbandonedCarts';
@@ -29,175 +33,257 @@ import ServicesPage from './pages/ServicesPage';
 import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
 import PrivacyPolicy from './pages/PrivacyPolicy';
+import axios from 'axios';
 import './App.css';
 
-function Sidebar({ admin, onLogout }) {
+function TrafficTracker() {
   const location = useLocation();
-  
+
+  useEffect(() => {
+    // Only track public page visits (not dashboard/internal pages)
+    if (!location.pathname.startsWith('/dashboard') && !location.pathname.startsWith('/login')) {
+      const trackVisit = async () => {
+        try {
+          const API_BASE = process.env.REACT_APP_API_URL || (window.location.hostname === 'localhost' ? 'http://localhost:5001/api' : '/api');
+          await axios.post(`${API_BASE}/traffic/track`, {
+            pagePath: location.pathname,
+            referrer: document.referrer || 'Direct'
+          });
+        } catch (err) {
+          // Silent catch
+        }
+      };
+      trackVisit();
+    }
+  }, [location]);
+
+  return null;
+}
+
+function Sidebar({ admin, onLogout, isOpen, onToggle }) {
+  const location = useLocation();
+
   const isActive = (path) => {
     return location.pathname === path ? 'active' : '';
   };
 
   return (
-    <div className="sidebar">
-      <div className="sidebar-header">
-        <div className="sidebar-logo">
-          <FaCommentDots />
-          <span>Support Bot</span>
-        </div>
-      </div>
-      
-      <nav className="sidebar-nav">
-        {/* Super Admin Section */}
-        {admin && admin.role === 'super_admin' && (
-          <div className="nav-section">
-            <div className="nav-section-title" style={{ color: '#f59e0b' }}>
-              <FaCrown /> Super Admin
-            </div>
-            <ul className="nav-links">
-              <li>
-                <Link to="/dashboard/super-admin" className={isActive('/dashboard/super-admin')}>
-                  <FaCrown /> User Management
-                </Link>
-              </li>
-              <li>
-                <Link to="/dashboard/demo-requests" className={isActive('/dashboard/demo-requests')}>
-                  <FaBell /> Demo Requests
-                </Link>
-              </li>
-              <li>
-                <Link to="/dashboard/super-admin/plans" className={isActive('/dashboard/super-admin/plans')}>
-                  <FaCog /> Plan Manager
-                </Link>
-              </li>
-            </ul>
+    <div className={`sidebar${isOpen ? ' sidebar-expanded' : ''}`}>
+      {/* Toggle Button — outside inner so it floats on the edge */}
+      <button
+        className="sidebar-toggle-btn"
+        onClick={onToggle}
+        title={isOpen ? 'Collapse sidebar' : 'Expand sidebar'}
+        aria-label={isOpen ? 'Collapse sidebar' : 'Expand sidebar'}
+      >
+        <span className={`toggle-arrow${isOpen ? ' open' : ''}`}>&#8250;</span>
+      </button>
+
+      {/* Inner container clips content overflow during animation */}
+      <div className="sidebar-inner">
+        <div className="sidebar-header">
+          <div className="sidebar-logo">
+            <img src="/logo.png" className="logo-img" alt="Kwickbot Logo" style={{ width: '36px', height: '36px', borderRadius: '8px', flexShrink: 0 }} />
+            {isOpen && <span className="sidebar-brand-name">Kwickbot</span>}
           </div>
-        )}
+        </div>
 
-        {/* Client Pages - Only show for non-super_admin users */}
-        {admin && admin.role !== 'super_admin' && (
-          <>
+        <nav className="sidebar-nav">
+          {/* Super Admin Section */}
+          {admin && admin.role === 'super_admin' && (
             <div className="nav-section">
-              <div className="nav-section-title">Main</div>
+              {isOpen && <div className="nav-section-title">Super Admin</div>}
               <ul className="nav-links">
                 <li>
-                  <Link to="/dashboard" className={isActive('/dashboard')}>
-                    <FaHome /> Dashboard
+                  <Link to="/dashboard/super-admin" className={isActive('/dashboard/super-admin')} title="User Management">
+                    <FaCrown />
+                    <span className="nav-label">Users</span>
                   </Link>
                 </li>
                 <li>
-                  <Link to="/dashboard/analytics" className={isActive('/dashboard/analytics')}>
-                    <FaChartLine /> Analytics
+                  <Link to="/dashboard/super-admin/leads" className={isActive('/dashboard/super-admin/leads')} title="Leads CRM">
+                    <FaUserSecret />
+                    <span className="nav-label">Leads CRM</span>
                   </Link>
                 </li>
                 <li>
-                  <Link to="/dashboard/live-chat" className={isActive('/dashboard/live-chat')}>
-                    <FaCommentDots /> Live Chat
+                  <Link to="/dashboard/demo-requests" className={isActive('/dashboard/demo-requests')} title="Demo Requests">
+                    <FaBell />
+                    <span className="nav-label">Demo Requests</span>
                   </Link>
                 </li>
                 <li>
-                  <Link to="/dashboard/conversations" className={isActive('/dashboard/conversations')}>
-                    <FaComments /> Conversations
+                  <Link to="/dashboard/super-admin/plans" className={isActive('/dashboard/super-admin/plans')} title="Plan Manager">
+                    <FaCog />
+                    <span className="nav-label">Plan Manager</span>
                   </Link>
                 </li>
                 <li>
-                  <Link to="/dashboard/orders" className={isActive('/dashboard/orders')}>
-                    <FaBox /> Orders
+                  <Link to="/dashboard/super-admin/budget" className={isActive('/dashboard/super-admin/budget')} title="Gemini Budget">
+                    <FaCoins />
+                    <span className="nav-label">AI Budget</span>
                   </Link>
                 </li>
                 <li>
-                  <Link to="/dashboard/escalations" className={isActive('/dashboard/escalations')}>
-                    <FaExclamationTriangle /> Escalations
+                  <Link to="/dashboard/super-admin/health" className={isActive('/dashboard/super-admin/health')} title="Connection Health">
+                    <FaHeartbeat />
+                    <span className="nav-label">Health</span>
                   </Link>
                 </li>
                 <li>
-                  <Link to="/dashboard/billing" className={isActive('/dashboard/billing')}>
-                    <FaCrown style={{ color: '#fbbf24' }} /> Billing & Plans
-                  </Link>
-                </li>
-                <li>
-                  <Link to="/dashboard/profile" className={isActive('/dashboard/profile')}>
-                    <FaUser /> Profile & Store
+                  <Link to="/dashboard/super-admin/announcements" className={isActive('/dashboard/super-admin/announcements')} title="System Announcements">
+                    <FaBullhorn />
+                    <span className="nav-label">Announcements</span>
                   </Link>
                 </li>
               </ul>
             </div>
-            
-            <div className="nav-section">
-              <div className="nav-section-title">Tools</div>
-              <ul className="nav-links">
-                <li>
-                  <Link to="/dashboard/broadcast" className={isActive('/dashboard/broadcast')}>
-                    <FaBroadcastTower /> Broadcast
-                  </Link>
-                </li>
-                <li>
-                  <Link to="/dashboard/knowledge-base" className={isActive('/dashboard/knowledge-base')}>
-                    <FaBrain /> Knowledge Base
-                  </Link>
-                </li>
-                <li>
-                  <Link to="/dashboard/integrations" className={isActive('/dashboard/integrations')}>
-                    <FaCog /> Integrations
-                  </Link>
-                </li>
-                <li>
-                  <Link to="/dashboard/whatsapp-connect" className={isActive('/dashboard/whatsapp-connect')}>
-                    <FaPlug /> WhatsApp Connect
-                    <span className="ai-status-indicator">
-                      <span className="ai-status-dot"></span>
-                    </span>
-                  </Link>
-                </li>
-                <li>
-                  <Link to="/dashboard/templates" className={isActive('/dashboard/templates')}>
-                    <FaFileAlt /> Templates
-                  </Link>
-                </li>
-                <li>
-                  <Link to="/dashboard/abandoned-carts" className={isActive('/dashboard/abandoned-carts')}>
-                    <FaShoppingCart /> Abandoned Carts
-                  </Link>
-                </li>
-                <li>
-                  <Link to="/dashboard/demo-chat" className={isActive('/dashboard/demo-chat')}>
-                    <FaRobot /> Demo Chat
-                  </Link>
-                </li>
-              </ul>
-            </div>
-          </>
-        )}
-      </nav>
+          )}
 
-      {admin && (
-        <div className="sidebar-footer">
-          <Link to="/dashboard/profile" style={{ textDecoration: 'none', display: 'block' }}>
-            <div className="sidebar-user">
+          {/* Client Pages */}
+          {admin && admin.role !== 'super_admin' && (
+            <>
+              <div className="nav-section">
+                {isOpen && <div className="nav-section-title">Main</div>}
+                <ul className="nav-links">
+                  <li>
+                    <Link to="/dashboard" className={isActive('/dashboard')} title="Dashboard">
+                      <FaHome />
+                      <span className="nav-label">Dashboard</span>
+                    </Link>
+                  </li>
+                  <li>
+                    <Link to="/dashboard/live-chat" className={isActive('/dashboard/live-chat')} title="Live Chat">
+                      <FaCommentDots />
+                      <span className="nav-label">Live Chat</span>
+                    </Link>
+                  </li>
+                  <li>
+                    <Link to="/dashboard/conversations" className={isActive('/dashboard/conversations')} title="Conversations">
+                      <FaComments />
+                      <span className="nav-label">Conversations</span>
+                    </Link>
+                  </li>
+                  <li>
+                    <Link to="/dashboard/orders" className={isActive('/dashboard/orders')} title="Orders">
+                      <FaBox />
+                      <span className="nav-label">Orders</span>
+                    </Link>
+                  </li>
+                  <li>
+                    <Link to="/dashboard/abandoned-carts" className={isActive('/dashboard/abandoned-carts')} title="Abandoned Carts">
+                      <FaShoppingCart />
+                      <span className="nav-label">Abandoned Carts</span>
+                    </Link>
+                  </li>
+                  <li>
+                    <Link to="/dashboard/escalations" className={isActive('/dashboard/escalations')} title="Escalations">
+                      <FaExclamationTriangle />
+                      <span className="nav-label">Escalations</span>
+                    </Link>
+                  </li>
+                  <li>
+                    <Link to="/dashboard/analytics" className={isActive('/dashboard/analytics')} title="Analytics">
+                      <FaChartLine />
+                      <span className="nav-label">Analytics</span>
+                    </Link>
+                  </li>
+                </ul>
+              </div>
+
+              <div className="nav-section">
+                {isOpen && <div className="nav-section-title">Messaging</div>}
+                <ul className="nav-links">
+                  <li>
+                    <Link to="/dashboard/broadcast" className={isActive('/dashboard/broadcast')} title="Broadcast">
+                      <FaBroadcastTower />
+                      <span className="nav-label">Broadcast</span>
+                    </Link>
+                  </li>
+                  <li>
+                    <Link to="/dashboard/templates" className={isActive('/dashboard/templates')} title="Templates">
+                      <FaFileAlt />
+                      <span className="nav-label">Templates</span>
+                    </Link>
+                  </li>
+                  <li>
+                    <Link to="/dashboard/knowledge-base" className={isActive('/dashboard/knowledge-base')} title="Knowledge Base">
+                      <FaBrain />
+                      <span className="nav-label">Knowledge Base</span>
+                    </Link>
+                  </li>
+                  <li>
+                    <Link to="/dashboard/integrations" className={isActive('/dashboard/integrations')} title="Integrations">
+                      <FaCog />
+                      <span className="nav-label">Integrations</span>
+                    </Link>
+                  </li>
+                </ul>
+              </div>
+
+              <div className="nav-section">
+                {isOpen && <div className="nav-section-title">Account</div>}
+                <ul className="nav-links">
+                  <li>
+                    <Link to="/dashboard/whatsapp-connect" className={isActive('/dashboard/whatsapp-connect')} title="WhatsApp Connect">
+                      <div style={{ position: 'relative', display: 'inline-flex' }}>
+                        <FaPlug />
+                        <span className="ai-status-indicator" style={{ position: 'absolute', top: '-2px', right: '-4px' }}>
+                          <span className="ai-status-dot"></span>
+                        </span>
+                      </div>
+                      <span className="nav-label">WA Connect</span>
+                    </Link>
+                  </li>
+                  <li>
+                    <Link to="/dashboard/demo-chat" className={isActive('/dashboard/demo-chat')} title="Demo Chat">
+                      <FaRobot />
+                      <span className="nav-label">Demo Chat</span>
+                    </Link>
+                  </li>
+                  <li>
+                    <Link to="/dashboard/billing" className={isActive('/dashboard/billing')} title="Billing & Plans">
+                      <FaCrown style={{ color: '#fbbf24' }} />
+                      <span className="nav-label">Billing</span>
+                    </Link>
+                  </li>
+                  <li>
+                    <Link to="/dashboard/profile" className={isActive('/dashboard/profile')} title="Profile & Store">
+                      <FaUser />
+                      <span className="nav-label">Profile</span>
+                    </Link>
+                  </li>
+                </ul>
+              </div>
+            </>
+          )}
+        </nav>
+
+        {admin && (
+          <div className="sidebar-footer">
+            <div className="sidebar-user" title={`${admin.name} (${admin.email})`}>
               <div className="sidebar-user-avatar">
                 {admin.name?.charAt(0)?.toUpperCase() || <FaUser />}
               </div>
-              <div className="sidebar-user-info">
-                <div className="sidebar-user-name">{admin.name}</div>
-                <div className="sidebar-user-email">{admin.email}</div>
-                {admin.role && (
-                  <span className={`sidebar-role-badge role-${admin.role}`}>
-                    {admin.role.replace('_', ' ')}
-                  </span>
-                )}
-              </div>
+              {isOpen && (
+                <div className="sidebar-user-info">
+                  <span className="sidebar-user-name">{admin.name?.split(' ')[0]}</span>
+                  <span className="sidebar-user-email">{admin.email}</span>
+                </div>
+              )}
             </div>
-          </Link>
-          <button className="sidebar-logout-btn" onClick={onLogout}>
-            <FaSignOutAlt /> Sign out
-          </button>
-        </div>
-      )}
+            <button className="sidebar-logout-btn" onClick={onLogout} title="Sign out">
+              <FaSignOutAlt />
+              {isOpen && <span>Logout</span>}
+            </button>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
 
-function TopBar({ admin, onUpdateAdmin }) {
+function TopBar({ admin, onUpdateAdmin, isImpersonated }) {
   const navigate = useNavigate();
   const greeting = () => {
     const hour = new Date().getHours();
@@ -220,7 +306,8 @@ function TopBar({ admin, onUpdateAdmin }) {
   };
 
   return (
-    <div className="top-bar">
+    <div className="top-bar" style={isImpersonated ? { top: '42px' } : {}}>
+
       <div className="top-bar-left">
         <div className="top-bar-greeting">
           <span className="greeting-text">{greeting()}, {admin?.name?.split(' ')[0] || 'there'}</span>
@@ -318,6 +405,17 @@ function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [admin, setAdmin] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useState(() => {
+    return localStorage.getItem('sidebarOpen') === 'true';
+  });
+
+  const handleToggleSidebar = () => {
+    setSidebarOpen(prev => {
+      const next = !prev;
+      localStorage.setItem('sidebarOpen', String(next));
+      return next;
+    });
+  };
 
   useEffect(() => {
     const initializeAuth = async () => {
@@ -394,6 +492,53 @@ function App() {
     setAdmin(adminData);
   };
 
+  const [activeAnnouncements, setActiveAnnouncements] = useState([]);
+
+  useEffect(() => {
+    if (isAuthenticated && admin && admin.role !== 'super_admin') {
+      api.get('/dashboard/announcements')
+        .then(res => {
+          if (res.data.success) {
+            setActiveAnnouncements(res.data.data);
+          }
+        })
+        .catch(err => console.error('Error fetching announcements:', err));
+    } else {
+      setActiveAnnouncements([]);
+    }
+  }, [isAuthenticated, admin]);
+
+  const handleDismissAnnouncement = (id) => {
+    const dismissed = JSON.parse(localStorage.getItem('dismissedAnnouncements') || '[]');
+    dismissed.push(id);
+    localStorage.setItem('dismissedAnnouncements', JSON.stringify(dismissed));
+    setActiveAnnouncements(prev => prev.filter(ann => ann._id !== id));
+  };
+
+  const isImpersonated = localStorage.getItem('isImpersonated') === 'true';
+  const impersonatedUserName = localStorage.getItem('impersonatedUserName') || '';
+  const impersonatedUserEmail = localStorage.getItem('impersonatedUserEmail') || '';
+
+  const handleStopImpersonating = () => {
+    const originalToken = localStorage.getItem('originalToken');
+    const originalAdmin = localStorage.getItem('originalAdmin');
+    
+    if (originalToken && originalAdmin) {
+      localStorage.setItem('token', originalToken);
+      localStorage.setItem('accessToken', originalToken);
+      localStorage.setItem('admin', originalAdmin);
+    }
+    
+    localStorage.removeItem('originalToken');
+    localStorage.removeItem('originalAdmin');
+    localStorage.removeItem('isImpersonated');
+    localStorage.removeItem('impersonatedUserEmail');
+    localStorage.removeItem('impersonatedUserName');
+    
+    alert('Returned to Super Admin session. Redirecting...');
+    window.location.href = '/dashboard/super-admin';
+  };
+
   const handleLogout = async () => {
     try {
       await api.post('/auth/logout');
@@ -402,9 +547,15 @@ function App() {
     }
 
     clearAuthState();
+    localStorage.removeItem('originalToken');
+    localStorage.removeItem('originalAdmin');
+    localStorage.removeItem('isImpersonated');
+    localStorage.removeItem('impersonatedUserEmail');
+    localStorage.removeItem('impersonatedUserName');
     setIsAuthenticated(false);
     setAdmin(null);
   };
+
 
   if (loading) {
     return (
@@ -424,6 +575,7 @@ function App() {
   return (
     <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
       <ThemeHandler admin={admin} />
+      <TrafficTracker />
       <Routes>
         {/* Public Routes */}
         <Route path="/" element={<LandingPage />} />
@@ -449,10 +601,43 @@ function App() {
           element={
             <ProtectedRoute isAuthenticated={isAuthenticated}>
               <div className="App">
-                <Sidebar admin={admin} onLogout={handleLogout} />
-                
-                <div className="main-content">
-                  <TopBar admin={admin} onUpdateAdmin={handleUpdateAdmin} />
+                <Sidebar admin={admin} onLogout={handleLogout} isOpen={sidebarOpen} onToggle={handleToggleSidebar} />
+
+                <div className={`main-content${sidebarOpen ? ' main-content-expanded' : ''}`}>
+                  {isImpersonated && (
+                    <div className="impersonation-banner">
+                      <div className="impersonation-content">
+                        <span className="impersonation-badge">Impersonating</span>
+                        <span>
+                          Active session as <strong>{impersonatedUserName}</strong> ({impersonatedUserEmail})
+                        </span>
+                      </div>
+                      <button 
+                        className="impersonation-exit-btn"
+                        onClick={handleStopImpersonating}
+                      >
+                        <FaSignOutAlt /> Return to Super Admin
+                      </button>
+                    </div>
+                  )}
+                  {activeAnnouncements.map(ann => {
+                    const dismissedList = JSON.parse(localStorage.getItem('dismissedAnnouncements') || '[]');
+                    if (dismissedList.includes(ann._id)) return null;
+
+                    return (
+                      <div key={ann._id} className={`system-announcement-banner banner-${ann.type}`}>
+                        <div className="announcement-content">
+                          <span className="announcement-badge">{ann.type}</span>
+                          <span><strong>{ann.title}</strong>: {ann.content}</span>
+                        </div>
+                        <button className="announcement-close-btn" onClick={() => handleDismissAnnouncement(ann._id)}>
+                          ✕
+                        </button>
+                      </div>
+                    );
+                  })}
+                  <TopBar admin={admin} onUpdateAdmin={handleUpdateAdmin} isImpersonated={isImpersonated} />
+
 
                   <div className="page-content">
                   <Routes>
@@ -482,9 +667,13 @@ function App() {
                     
                     {/* Super Admin Routes */}
                     <Route path="/super-admin" element={<SuperAdmin />} />
+                    <Route path="/super-admin/leads" element={<LeadsCRM />} />
+                    <Route path="/super-admin/health" element={<SuperAdminHealth />} />
+                    <Route path="/super-admin/announcements" element={<SuperAdminAnnouncements />} />
                     <Route path="/demo-requests" element={<DemoRequests />} />
                     <Route path="/super-admin/user/:userId" element={<SuperAdminUserDetail />} />
                     <Route path="/super-admin/plans" element={<PlanManager />} />
+                    <Route path="/super-admin/budget" element={<SuperAdminBudget />} />
                   </Routes>
                   </div>
                 </div>

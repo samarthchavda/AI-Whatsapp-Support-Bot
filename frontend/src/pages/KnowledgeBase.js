@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import api from '../services/api';
 import { FaUpload, FaTrash, FaEye, FaToggleOn, FaToggleOff, FaFileAlt, FaFilePdf, FaFileCsv, FaGlobe, FaRobot } from 'react-icons/fa';
 
 function KnowledgeBase() {
@@ -19,10 +19,7 @@ function KnowledgeBase() {
   const fetchKnowledgeBases = async () => {
     try {
       setLoading(true);
-      const token = localStorage.getItem('token');
-      const response = await axios.get('http://localhost:5001/api/knowledge-base', {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      const response = await api.get('/knowledge-base');
       setKnowledgeBases(response.data.data);
     } catch (error) {
       console.error('Error fetching knowledge bases:', error);
@@ -35,14 +32,12 @@ function KnowledgeBase() {
   const handleUpload = async (e) => {
     e.preventDefault();
     const formData = new FormData(e.target);
-    const token = localStorage.getItem('token');
 
     try {
       setUploadProgress('Uploading and processing...');
       
-      const response = await axios.post('http://localhost:5001/api/knowledge-base', formData, {
+      const response = await api.post('/knowledge-base', formData, {
         headers: {
-          'Authorization': `Bearer ${token}`,
           'Content-Type': 'multipart/form-data'
         }
       });
@@ -61,13 +56,10 @@ function KnowledgeBase() {
   };
 
   const handleToggleActive = async (id, currentStatus) => {
-    const token = localStorage.getItem('token');
-    
     try {
-      await axios.put(
-        `http://localhost:5001/api/knowledge-base/${id}`,
-        { isActive: !currentStatus },
-        { headers: { Authorization: `Bearer ${token}` } }
+      await api.put(
+        `/knowledge-base/${id}`,
+        { isActive: !currentStatus }
       );
       fetchKnowledgeBases();
     } catch (error) {
@@ -79,13 +71,9 @@ function KnowledgeBase() {
     if (!window.confirm('Are you sure you want to delete this knowledge base?')) {
       return;
     }
-
-    const token = localStorage.getItem('token');
     
     try {
-      await axios.delete(`http://localhost:5001/api/knowledge-base/${id}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      await api.delete(`/knowledge-base/${id}`);
       fetchKnowledgeBases();
       alert('Knowledge base deleted successfully');
     } catch (error) {
@@ -95,16 +83,14 @@ function KnowledgeBase() {
 
   const handleTestQuery = async (e) => {
     e.preventDefault();
-    const token = localStorage.getItem('token');
 
     try {
       setTestLoading(true);
       setTestResult(null);
 
-      const response = await axios.post(
-        'http://localhost:5001/api/knowledge-base/query',
-        { question: testQuestion },
-        { headers: { Authorization: `Bearer ${token}` } }
+      const response = await api.post(
+        '/knowledge-base/query',
+        { question: testQuestion }
       );
 
       setTestResult(response.data.data);

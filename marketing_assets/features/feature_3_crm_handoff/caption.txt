@@ -2,7 +2,7 @@
 
 Rigid bots that don't know when to call a human are the number one reason customers abandon support chats.
 
-WAssistant's Live Chat CRM offers a seamless "Human-in-the-Loop" experience:
+Kwickbot's Live Chat CRM offers a seamless "Human-in-the-Loop" experience:
 • 🤖 AI handles all routine queries (FAQs, shipping status, product info).
 • 🚨 High-priority complaints or refunds trigger an automated escalation alert.
 • 👥 A human agent can toggle off the AI Assistant in one click and take over the WhatsApp chat manually.

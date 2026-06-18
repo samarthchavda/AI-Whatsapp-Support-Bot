@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { FaEnvelope, FaPhone, FaBriefcase, FaCheck, FaTimes, FaEye, FaClock, FaCheckCircle, FaTimesCircle } from 'react-icons/fa';
-import axios from 'axios';
+import api from '../services/api';
 
 function DemoRequests() {
   const [requests, setRequests] = useState([]);
@@ -17,11 +17,9 @@ function DemoRequests() {
   const fetchRequests = async () => {
     try {
       setLoading(true);
-      const token = localStorage.getItem('token');
       const params = filter !== 'all' ? { status: filter } : {};
       
-      const response = await axios.get('http://localhost:5001/api/demo-requests', {
-        headers: { Authorization: `Bearer ${token}` },
+      const response = await api.get('/demo-requests', {
         params
       });
       
@@ -40,17 +38,13 @@ function DemoRequests() {
 
     try {
       setApproving(true);
-      const token = localStorage.getItem('token');
       
-      const response = await axios.post(
-        `http://localhost:5001/api/demo-requests/${requestId}/approve`,
+      const response = await api.post(
+        `/demo-requests/${requestId}/approve`,
         {
           subscriptionPlan: 'starter',
           monthlyPrice: 29,
           geminiTokens: 10000
-        },
-        {
-          headers: { Authorization: `Bearer ${token}` }
         }
       );
 
@@ -71,14 +65,9 @@ function DemoRequests() {
     if (reason === null) return;
 
     try {
-      const token = localStorage.getItem('token');
-      
-      await axios.post(
-        `http://localhost:5001/api/demo-requests/${requestId}/reject`,
-        { reason },
-        {
-          headers: { Authorization: `Bearer ${token}` }
-        }
+      await api.post(
+        `/demo-requests/${requestId}/reject`,
+        { reason }
       );
 
       alert('Request rejected successfully');

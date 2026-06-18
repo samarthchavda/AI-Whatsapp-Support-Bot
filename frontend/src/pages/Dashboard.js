@@ -1,7 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import io from 'socket.io-client';
 import { getDashboardStats } from '../services/api';
 import { FaComments, FaBox, FaExclamationTriangle, FaCheckCircle, FaStar, FaArrowUp, FaArrowDown, FaCommentDots, FaPlug, FaBrain, FaBroadcastTower } from 'react-icons/fa';
+
+const SOCKET_URL = process.env.REACT_APP_API_URL?.replace('/api', '') || `http://${window.location.hostname}:5001`;
 
 function Dashboard() {
   const [stats, setStats] = useState(null);
@@ -9,14 +12,34 @@ function Dashboard() {
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    fetchStats();
-    const interval = setInterval(fetchStats, 30000);
-    return () => clearInterval(interval);
+    fetchStats(false); // Initial load: show spinner
+
+    // Connect to Socket.IO for real-time dashboard updates
+    const socket = io(SOCKET_URL);
+
+    socket.on('new_message', () => {
+      fetchStats(true); // Silent update: no spinner
+    });
+
+    socket.on('escalation_created', () => {
+      fetchStats(true); // Silent update: no spinner
+    });
+
+    const interval = setInterval(() => {
+      fetchStats(true); // Silent update: no spinner
+    }, 30000);
+
+    return () => {
+      clearInterval(interval);
+      socket.disconnect();
+    };
   }, []);
 
-  const fetchStats = async () => {
+  const fetchStats = async (silent = false) => {
     try {
-      setLoading(true);
+      if (!silent) {
+        setLoading(true);
+      }
       const response = await getDashboardStats();
       setStats(response.data);
       setError(null);

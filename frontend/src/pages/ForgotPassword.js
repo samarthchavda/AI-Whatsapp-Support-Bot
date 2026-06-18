@@ -38,8 +38,8 @@ function ForgotPassword() {
 
         <div className="forgot-brand-content">
           <div className="forgot-brand-logo">
-            <FaCommentDots />
-            <span>AI Support Bot</span>
+            <img src="/logo.png" className="logo-img" alt="Kwickbot Logo" style={{ width: '30px', height: '30px' }} />
+            <span>Kwickbot</span>
           </div>
           <h2 className="forgot-brand-title">
             Recover Your Support Dashboard

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import api from '../services/api';
 import { useParams, useNavigate } from 'react-router-dom';
 import { 
   FaArrowLeft, 
@@ -10,9 +11,24 @@ import {
   FaSync,
   FaEdit,
   FaToggleOn,
-  FaToggleOff
+  FaToggleOff,
+  FaPercent,
+  FaUserSecret,
+  FaTrash
 } from 'react-icons/fa';
 import './SuperAdmin.css';
+
+const API_BASE = process.env.REACT_APP_API_URL || (window.location.hostname === 'localhost' ? 'http://localhost:5001/api' : '/api');
+
+const getRoleBadgeStyle = (role) => {
+  const styles = {
+    super_admin: { background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444' },
+    admin: { background: 'rgba(59, 130, 246, 0.1)', color: '#3b82f6' },
+    manager: { background: 'rgba(16, 185, 129, 0.1)', color: '#10b981' },
+    agent: { background: 'rgba(245, 158, 11, 0.1)', color: '#f59e0b' }
+  };
+  return styles[role] || { background: 'rgba(113, 113, 122, 0.1)', color: '#71717a' };
+};
 
 function SuperAdminUserDetail() {
   const { userId } = useParams();
@@ -20,6 +36,8 @@ function SuperAdminUserDetail() {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [showDiscountModal, setShowDiscountModal] = useState(false);
+  const [discountValue, setDiscountValue] = useState(0);
   const [editForm, setEditForm] = useState({
     subscriptionPlan: '',
     subscriptionStatus: '',
@@ -34,11 +52,7 @@ function SuperAdminUserDetail() {
   const fetchUserDetails = async () => {
     try {
       setLoading(true);
-      const token = localStorage.getItem('token');
-      const response = await axios.get(
-        `http://localhost:5001/api/super-admin/users/${userId}`,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+      const response = await api.get(`/super-admin/users/${userId}`);
       setData(response.data.data);
       
       // Set edit form with current values
@@ -49,6 +63,7 @@ function SuperAdminUserDetail() {
         monthlyPrice: user.monthlyPrice,
         geminiTokensLimit: user.geminiTokensLimit
       });
+      setDiscountValue(user.customDiscount || 0);
     } catch (error) {
       console.error('Error fetching user details:', error);
       alert('Failed to load user details');
@@ -59,15 +74,9 @@ function SuperAdminUserDetail() {
 
   const handleResetTokens = async () => {
     if (!window.confirm('Reset token usage for this user?')) return;
-
-    const token = localStorage.getItem('token');
     
     try {
-      await axios.post(
-        `http://localhost:5001/api/super-admin/users/${userId}/reset-tokens`,
-        {},
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+      await api.post(`/super-admin/users/${userId}/reset-tokens`);
       alert('Token usage reset successfully!');
       fetchUserDetails();
     } catch (error) {
@@ -76,14 +85,8 @@ function SuperAdminUserDetail() {
   };
 
   const handleUpdateSubscription = async () => {
-    const token = localStorage.getItem('token');
-    
     try {
-      await axios.put(
-        `http://localhost:5001/api/super-admin/users/${userId}/subscription`,
-        editForm,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+      await api.put(`/super-admin/users/${userId}/subscription`, editForm);
       alert('Subscription updated successfully!');
       setShowEditModal(false);
       fetchUserDetails();
@@ -93,14 +96,8 @@ function SuperAdminUserDetail() {
   };
 
   const handleToggleUserWebBot = async () => {
-    const token = localStorage.getItem('token') || localStorage.getItem('accessToken');
-    
     try {
-      await axios.post(
-        `http://localhost:5001/api/super-admin/users/${userId}/toggle-web-bot`,
-        {},
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+      await api.post(`/super-admin/users/${userId}/toggle-web-bot`);
       fetchUserDetails();
     } catch (error) {
       alert('Failed to toggle user scanner access');
@@ -108,14 +105,8 @@ function SuperAdminUserDetail() {
   };
 
   const handleToggleUserShopify = async () => {
-    const token = localStorage.getItem('token') || localStorage.getItem('accessToken');
-    
     try {
-      await axios.post(
-        `http://localhost:5001/api/super-admin/users/${userId}/toggle-shopify`,
-        {},
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+      await api.post(`/super-admin/users/${userId}/toggle-shopify`);
       fetchUserDetails();
     } catch (error) {
       alert('Failed to toggle user Shopify access');
@@ -123,17 +114,79 @@ function SuperAdminUserDetail() {
   };
 
   const handleToggleUserWooCommerce = async () => {
-    const token = localStorage.getItem('token') || localStorage.getItem('accessToken');
-    
     try {
-      await axios.post(
-        `http://localhost:5001/api/super-admin/users/${userId}/toggle-woocommerce`,
-        {},
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+      await api.post(`/super-admin/users/${userId}/toggle-woocommerce`);
       fetchUserDetails();
     } catch (error) {
       alert('Failed to toggle user WooCommerce access');
+    }
+  };
+
+  const handleImpersonateUser = async (user) => {
+    if (!window.confirm(`Log in as merchant "${user.name}" (${user.email})?`)) return;
+    
+    const token = localStorage.getItem('token') || localStorage.getItem('accessToken');
+    const originalAdmin = localStorage.getItem('admin');
+    
+    try {
+      const res = await api.post(`/super-admin/users/${user._id}/impersonate`);
+      
+      if (res.data.success && res.data.data.token) {
+        localStorage.setItem('originalToken', token);
+        if (originalAdmin) {
+          localStorage.setItem('originalAdmin', originalAdmin);
+        }
+        
+        localStorage.setItem('token', res.data.data.token);
+        localStorage.setItem('accessToken', res.data.data.token);
+        
+        localStorage.setItem('isImpersonated', 'true');
+        localStorage.setItem('impersonatedUserEmail', user.email);
+        localStorage.setItem('impersonatedUserName', user.name);
+
+        try {
+          const profileRes = await axios.get(`${API_BASE}/auth/profile`, {
+            headers: { Authorization: `Bearer ${res.data.data.token}` }
+          });
+          if (profileRes.data.success && profileRes.data.data.admin) {
+            localStorage.setItem('admin', JSON.stringify(profileRes.data.data.admin));
+          } else {
+            localStorage.setItem('admin', JSON.stringify(res.data.data.user));
+          }
+        } catch (err) {
+          console.error('Error fetching impersonated profile:', err);
+          localStorage.setItem('admin', JSON.stringify(res.data.data.user));
+        }
+
+        alert(`Successfully logged in as ${user.name}! Redirecting to dashboard...`);
+        window.location.href = '/dashboard';
+      }
+    } catch (error) {
+      alert(error.response?.data?.error || 'Failed to impersonate user');
+      console.error(error);
+    }
+  };
+
+  const handleDeleteUser = async (userId, userName) => {
+    if (!window.confirm(`Delete user ${userName}? This action cannot be undone.`)) return;
+    
+    try {
+      await api.delete(`/super-admin/users/${userId}`);
+      alert('User deleted successfully');
+      navigate('/dashboard/super-admin');
+    } catch (error) {
+      alert(error.response?.data?.error || 'Failed to delete user');
+    }
+  };
+
+  const handleApplyDiscount = async () => {
+    try {
+      await api.post(`/super-admin/users/${userId}/apply-discount`, { discount: discountValue });
+      alert('Discount applied successfully!');
+      setShowDiscountModal(false);
+      fetchUserDetails();
+    } catch (error) {
+      alert(error.response?.data?.error || 'Failed to apply discount');
     }
   };
 
@@ -174,7 +227,22 @@ function SuperAdminUserDetail() {
           >
             <FaArrowLeft /> Back to Users
           </button>
-          <h1 className="page-title">{user.name}</h1>
+          <h1 className="page-title" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            {user.name}
+            <span 
+              className="role-badge-pill"
+              style={{ 
+                ...getRoleBadgeStyle(user.role || 'admin'),
+                padding: '4px 10px',
+                borderRadius: '20px',
+                fontSize: '11px',
+                fontWeight: '600',
+                textTransform: 'uppercase'
+              }}
+            >
+              {user.role === 'super_admin' ? 'Super Admin' : (user.role || 'Admin')}
+            </span>
+          </h1>
           <p className="page-subtitle">{user.email}</p>
         </div>
         <button 
@@ -409,6 +477,76 @@ function SuperAdminUserDetail() {
           </div>
         </div>
 
+        {/* Store & Contact Details */}
+        <div className="detail-card">
+          <h3>Store & Contact Details</h3>
+          <div className="detail-rows">
+            <div className="detail-row">
+              <span>Business Name:</span>
+              <strong>{user.businessName || 'N/A'}</strong>
+            </div>
+            <div className="detail-row">
+              <span>Website URL:</span>
+              {user.storeUrl ? (
+                <a 
+                  href={user.storeUrl.startsWith('http') ? user.storeUrl : `https://${user.storeUrl}`} 
+                  target="_blank" 
+                  rel="noopener noreferrer" 
+                  style={{ color: 'var(--accent)', textDecoration: 'underline', fontWeight: '500' }}
+                >
+                  {user.storeUrl}
+                </a>
+              ) : (
+                <span style={{ color: 'var(--text-secondary)' }}>N/A</span>
+              )}
+            </div>
+            <div className="detail-row">
+              <span>Support Email:</span>
+              <strong>{user.supportEmail || 'N/A'}</strong>
+            </div>
+            <div className="detail-row">
+              <span>Store Category:</span>
+              <strong>{user.storeCategory || 'N/A'}</strong>
+            </div>
+            <div className="detail-row">
+              <span>Base Currency:</span>
+              <strong>{user.currency || 'USD'}</strong>
+            </div>
+            <div className="detail-row">
+              <span>Timezone:</span>
+              <strong>{user.timezone || 'UTC'}</strong>
+            </div>
+          </div>
+        </div>
+
+        {/* Administrative Actions */}
+        <div className="detail-card">
+          <h3>Administrative Actions</h3>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '16px' }}>
+            <button 
+              onClick={() => setShowDiscountModal(true)}
+              className="btn-primary"
+              style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', cursor: 'pointer' }}
+            >
+              <FaPercent /> Apply Discount
+            </button>
+            <button 
+              onClick={() => handleImpersonateUser(user)}
+              className="btn-primary btn-impersonate"
+              style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', cursor: 'pointer' }}
+            >
+              <FaUserSecret /> Impersonate User
+            </button>
+            <button 
+              onClick={() => handleDeleteUser(user._id, user.name)}
+              className="btn-primary btn-delete-merchant"
+              style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', cursor: 'pointer' }}
+            >
+              <FaTrash /> Delete Merchant Account
+            </button>
+          </div>
+        </div>
+
         {/* Account Info */}
         <div className="detail-card">
           <h3><FaCalendar /> Account Information</h3>
@@ -427,12 +565,6 @@ function SuperAdminUserDetail() {
               <div className="detail-row">
                 <span>Last Login:</span>
                 <span>{new Date(user.lastLogin).toLocaleString()}</span>
-              </div>
-            )}
-            {user.businessName && (
-              <div className="detail-row">
-                <span>Business:</span>
-                <span>{user.businessName}</span>
               </div>
             )}
           </div>
@@ -459,10 +591,7 @@ function SuperAdminUserDetail() {
                   style={{
                     width: '100%',
                     padding: '12px',
-                    background: 'rgba(39, 39, 42, 0.6)',
-                    border: '1px solid rgba(63, 63, 70, 0.5)',
                     borderRadius: '10px',
-                    color: '#fafafa',
                     fontSize: '14px'
                   }}
                 >
@@ -481,10 +610,7 @@ function SuperAdminUserDetail() {
                   style={{
                     width: '100%',
                     padding: '12px',
-                    background: 'rgba(39, 39, 42, 0.6)',
-                    border: '1px solid rgba(63, 63, 70, 0.5)',
                     borderRadius: '10px',
-                    color: '#fafafa',
                     fontSize: '14px'
                   }}
                 >
@@ -505,10 +631,7 @@ function SuperAdminUserDetail() {
                   style={{
                     width: '100%',
                     padding: '12px',
-                    background: 'rgba(39, 39, 42, 0.6)',
-                    border: '1px solid rgba(63, 63, 70, 0.5)',
                     borderRadius: '10px',
-                    color: '#fafafa',
                     fontSize: '14px'
                   }}
                 />
@@ -524,10 +647,7 @@ function SuperAdminUserDetail() {
                   style={{
                     width: '100%',
                     padding: '12px',
-                    background: 'rgba(39, 39, 42, 0.6)',
-                    border: '1px solid rgba(63, 63, 70, 0.5)',
                     borderRadius: '10px',
-                    color: '#fafafa',
                     fontSize: '14px'
                   }}
                 />
@@ -538,6 +658,63 @@ function SuperAdminUserDetail() {
                   Update Subscription
                 </button>
                 <button onClick={() => setShowEditModal(false)} className="btn-secondary">
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Discount Modal */}
+      {showDiscountModal && (
+        <div className="modal-overlay" onClick={() => setShowDiscountModal(false)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2>Apply Discount to {user.name}</h2>
+              <button onClick={() => setShowDiscountModal(false)} className="modal-close">
+                ✕
+              </button>
+            </div>
+
+            <div className="modal-body">
+              <div className="form-group">
+                <label>Discount Percentage</label>
+                <input
+                  type="number"
+                  min="0"
+                  max="100"
+                  value={discountValue}
+                  onChange={(e) => setDiscountValue(Number(e.target.value))}
+                  style={{
+                    width: '100%',
+                    padding: '12px',
+                    borderRadius: '10px',
+                    fontSize: '14px'
+                  }}
+                />
+              </div>
+
+              <div className="discount-preview">
+                <div className="preview-row">
+                  <span>Original Price:</span>
+                  <span>${user.monthlyPrice}/mo</span>
+                </div>
+                <div className="preview-row">
+                  <span>Discount:</span>
+                  <span style={{ color: '#10b981' }}>-{discountValue}%</span>
+                </div>
+                <div className="preview-row final">
+                  <span>Final Price:</span>
+                  <span>${(user.monthlyPrice - (user.monthlyPrice * discountValue / 100)).toFixed(2)}/mo</span>
+                </div>
+              </div>
+
+              <div className="modal-actions">
+                <button onClick={handleApplyDiscount} className="btn-primary">
+                  Apply Discount
+                </button>
+                <button onClick={() => setShowDiscountModal(false)} className="btn-secondary">
                   Cancel
                 </button>
               </div>

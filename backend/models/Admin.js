@@ -87,6 +87,10 @@ const adminSchema = new mongoose.Schema({
     type: Number,
     default: 0
   },
+  limitNotificationSent: {
+    type: Boolean,
+    default: false
+  },
   // Pricing
   monthlyPrice: {
     type: Number,

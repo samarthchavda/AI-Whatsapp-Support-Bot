@@ -258,12 +258,24 @@ exports.sendAdminMessage = async (req, res) => {
     if (!sentSuccess) {
       try {
         const whatsappCloudAPI = require('../services/whatsappCloudAPI');
+        const Admin = require('../models/Admin');
+        const adminDoc = await Admin.findById(req.admin._id);
+        
+        let customCredentials = null;
+        if (adminDoc && adminDoc.whatsappAccessToken && adminDoc.whatsappPhoneNumberId) {
+          customCredentials = {
+            accessToken: adminDoc.whatsappAccessToken,
+            phoneNumberId: adminDoc.whatsappPhoneNumberId,
+            businessAccountId: adminDoc.whatsappBusinessAccountId
+          };
+        }
+
         console.log(`Sending manual message via WhatsApp Cloud API to ${customerPhone}`);
-        const cloudResult = await whatsappCloudAPI.sendMessage(customerPhone, messageToSend);
+        const cloudResult = await whatsappCloudAPI.sendMessage(customerPhone, messageToSend, customCredentials);
         if (cloudResult.success) {
           sentSuccess = true;
         } else {
-          errorMsg = cloudResult.error || 'Failed to send via Cloud API';
+          errorMsg = typeof cloudResult.error === 'object' ? JSON.stringify(cloudResult.error) : (cloudResult.error || 'Failed to send via Cloud API');
         }
       } catch (e) {
         console.log('WhatsApp Cloud API not available for sending admin message:', e.message);

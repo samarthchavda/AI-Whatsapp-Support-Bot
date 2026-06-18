@@ -26,7 +26,7 @@ const SHOPIFY_GUIDE_STEPS = [
   {
     step: 4,
     title: "Create App Instance",
-    description: "Click Create an app. In the modal, specify an App name (e.g. 'WhatsApp Support Bot') and select the Developer email. Click Create app.",
+    description: "Click Create an app. In the modal, specify an App name (e.g. 'Kwickbot') and select the Developer email. Click Create app.",
     image: "/guide/shopify/step-4.png"
   },
   {
@@ -79,8 +79,8 @@ const SHOPIFY_GUIDE_STEPS = [
   },
   {
     step: 13,
-    title: "Connect on Support Bot Dashboard",
-    description: "Open your WhatsApp Support Bot Dashboard. Navigate to Integrations -> Shopify -> click Connect Shopify.",
+    title: "Connect on Kwickbot Dashboard",
+    description: "Open your Kwickbot Dashboard. Navigate to Integrations -> Shopify -> click Connect Shopify.",
     image: "/guide/shopify/step-13.png"
   },
   {

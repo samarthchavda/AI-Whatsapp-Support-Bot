@@ -31,7 +31,8 @@ function BookDemo() {
     setError('');
 
     try {
-      const response = await axios.post('http://localhost:5001/api/demo-requests', formData);
+      const API_URL = process.env.REACT_APP_API_URL || (window.location.hostname === 'localhost' ? 'http://localhost:5001/api' : '/api');
+      const response = await axios.post(`${API_URL}/demo-requests`, formData);
       
       if (response.data.success) {
         setSuccess(true);
@@ -62,7 +63,7 @@ function BookDemo() {
             <FaCheckCircle />
           </div>
           <h1>Request Submitted Successfully!</h1>
-          <p>Thank you for your interest in our AI WhatsApp Support Bot.</p>
+          <p>Thank you for your interest in Kwickbot.</p>
           <p>Our team will contact you within 24 hours to schedule your personalized demo.</p>
           <div className="success-actions">
             <button className="btn-primary" onClick={() => navigate('/')}>
@@ -86,10 +87,10 @@ function BookDemo() {
       <div className="book-demo-container">
         <div className="demo-header">
           <div className="demo-logo">
-            <FaCommentDots />
+            <img src="/logo.png" className="logo-img-large" alt="Kwickbot Logo" />
           </div>
           <h1>Book a Demo</h1>
-          <p>See how our AI-powered WhatsApp Support Bot can transform your customer service</p>
+          <p>See how Kwickbot can transform your customer service</p>
         </div>
 
         {error && (
@@ -160,7 +161,7 @@ function BookDemo() {
               name="businessDetails"
               value={formData.businessDetails}
               onChange={handleChange}
-              placeholder="Describe your business, current customer support challenges, expected message volume, and how you envision using our AI WhatsApp Support Bot..."
+              placeholder="Describe your business, current customer support challenges, expected message volume, and how you envision using Kwickbot..."
               rows="6"
               required
             />

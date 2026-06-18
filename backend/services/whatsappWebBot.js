@@ -211,7 +211,11 @@ class WhatsAppWebBot {
       });
       
       if (result.botPaused) {
-        console.log(`🔕 Conversation with ${normalizedPhone} is in agent takeover. AI response skipped.`);
+        if (result.message) {
+          console.log(`🤖 Sending system/limit message via web bot: ${result.message}`);
+          await this.client.sendMessage(message.from, result.message);
+        }
+        console.log(`🔕 Conversation with ${normalizedPhone} is in agent takeover/paused. AI response skipped.`);
         return;
       }
       

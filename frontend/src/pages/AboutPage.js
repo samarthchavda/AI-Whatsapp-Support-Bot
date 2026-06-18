@@ -11,9 +11,9 @@ function AboutPage() {
       {/* Navigation */}
       <nav className="about-nav">
         <div className="about-nav-inner">
-          <button className="about-logo" onClick={() => navigate('/')} aria-label="AI Support Bot home">
-            <FaCommentDots />
-            <span>AI Support Bot</span>
+          <button className="about-logo" onClick={() => navigate('/')} aria-label="Kwickbot home">
+            <img src="/logo.png" className="logo-img" alt="Kwickbot Logo" style={{ width: '38px', height: '38px' }} />
+            <span>Kwickbot</span>
           </button>
 
           <div className="about-nav-links" aria-label="Primary navigation">
@@ -126,8 +126,8 @@ function AboutPage() {
       {/* Footer */}
       <footer className="about-footer">
         <div className="footer-brand">
-          <FaCommentDots />
-          <span>AI Support Bot</span>
+          <img src="/logo.png" className="logo-img" alt="Kwickbot Logo" style={{ width: '30px', height: '30px' }} />
+          <span>Kwickbot</span>
         </div>
         <p>WhatsApp support automation for real commerce operations.</p>
         <button onClick={() => navigate('/book-demo')}>Book demo <FaArrowRight /></button>

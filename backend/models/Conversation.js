@@ -41,7 +41,7 @@ const conversationSchema = new mongoose.Schema({
     },
     intent: {
       type: String,
-      enum: ['order_status', 'cancel_order', 'return_policy', 'refund_request', 'complaint', 'general_inquiry', 'other'],
+      enum: ['order_status', 'cancel_order', 'return_policy', 'refund_request', 'complaint', 'general_inquiry', 'new_order_inquiry', 'other'],
       default: 'other'
     },
     messageId: {
@@ -88,6 +88,29 @@ const conversationSchema = new mongoose.Schema({
   },
   tags: [String],
   relatedOrderIds: [String],
+  hasProductInquiry: {
+    type: Boolean,
+    default: false,
+    index: true
+  },
+  inquiredProductName: {
+    type: String,
+    default: null
+  },
+  productInquiryAt: {
+    type: Date,
+    default: null,
+    index: true
+  },
+  followUpSent: {
+    type: Boolean,
+    default: false,
+    index: true
+  },
+  followUpSentAt: {
+    type: Date,
+    default: null
+  },
   metadata: {
     aiModel: String,
     totalTokens: Number,

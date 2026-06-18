@@ -3,6 +3,8 @@ import { io } from 'socket.io-client';
 import { QRCodeSVG } from 'qrcode.react';
 import { FaPlug, FaWhatsapp, FaServer, FaCheckCircle, FaExclamationTriangle, FaInfoCircle, FaArrowRight, FaKey, FaBuilding, FaUserCheck, FaCode, FaLaptop, FaCopy, FaChevronDown, FaChevronUp, FaExternalLinkAlt } from 'react-icons/fa';
 
+const BASE_URL = process.env.REACT_APP_API_URL?.replace('/api', '') || (window.location.hostname === 'localhost' ? 'http://localhost:5001' : window.location.origin);
+
 const GUIDE_STEPS = [
   {
     step: 1,
@@ -169,6 +171,11 @@ function WhatsAppConnect() {
   const [widgetPulse, setWidgetPulse] = useState(true);
   const [activeGuideCollapse, setActiveGuideCollapse] = useState('shopify');
 
+  // Copy feedback states
+  const [copiedWebhookUrl, setCopiedWebhookUrl] = useState(false);
+  const [copiedVerifyToken, setCopiedVerifyToken] = useState(false);
+  const [copiedWidgetCode, setCopiedWidgetCode] = useState(false);
+
   // Sync widgetPhone when cloud status resolves
   useEffect(() => {
     if (cloudStatus?.phoneNumber && !widgetPhone) {
@@ -230,8 +237,7 @@ function WhatsAppConnect() {
       setCloudLoading(true);
       setCloudError(null);
       const token = localStorage.getItem('token') || localStorage.getItem('accessToken');
-      const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5001';
-      const response = await fetch(`${API_URL}/api/webhook/status`, {
+      const response = await fetch(`${BASE_URL}/api/webhook/status`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -264,26 +270,25 @@ function WhatsAppConnect() {
   }, []);
 
   const handleDisconnectCloud = async () => {
-    if (!window.confirm('Are you sure you want to logout / disconnect this WhatsApp connection? The AI Bot will stop responding to incoming queries.')) return;
+    if (!window.confirm('Are you sure you want to disconnect this WhatsApp connection? The AI Bot will stop responding to incoming queries. (Note: This will not log you out of your Admin Dashboard)')) return;
     try {
       setActionLoading(true);
       const token = localStorage.getItem('token') || localStorage.getItem('accessToken');
-      const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5001';
-      const response = await fetch(`${API_URL}/api/webhook/disconnect`, {
+      const response = await fetch(`${BASE_URL}/api/webhook/disconnect`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`
         }
       });
       if (response.ok) {
-        alert('WhatsApp connection logged out / disconnected successfully!');
+        alert('WhatsApp connection disconnected successfully!');
         fetchCloudStatus();
       } else {
-        alert('Failed to logout / disconnect WhatsApp');
+        alert('Failed to disconnect WhatsApp');
       }
     } catch (err) {
       console.error(err);
-      alert('Error logging out / disconnecting WhatsApp');
+      alert('Error disconnecting WhatsApp');
     } finally {
       setActionLoading(false);
     }
@@ -293,8 +298,7 @@ function WhatsAppConnect() {
     try {
       setActionLoading(true);
       const token = localStorage.getItem('token') || localStorage.getItem('accessToken');
-      const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5001';
-      const response = await fetch(`${API_URL}/api/webhook/connect`, {
+      const response = await fetch(`${BASE_URL}/api/webhook/connect`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`
@@ -324,8 +328,7 @@ function WhatsAppConnect() {
     try {
       setSaveLoading(true);
       const token = localStorage.getItem('token') || localStorage.getItem('accessToken');
-      const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5001';
-      const response = await fetch(`${API_URL}/api/webhook/settings`, {
+      const response = await fetch(`${BASE_URL}/api/webhook/settings`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -388,8 +391,7 @@ function WhatsAppConnect() {
 
   // Web Bot Socket Handshake
   useEffect(() => {
-    const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5001';
-    const newSocket = io(API_URL);
+    const newSocket = io(BASE_URL);
 
     newSocket.on('connect', () => {
       setIsServerConnected(true);
@@ -829,7 +831,7 @@ function WhatsAppConnect() {
                       )}
                       <div>
                         <h4 style={{ fontSize: '15px', fontWeight: '700', color: '#18181b', margin: '0 0 2px 0', textAlign: 'left' }}>
-                          {(cloudStatus.isConfigured && cloudStatus.isConnected) ? 'WhatsApp Connected & Active' : 'WhatsApp Disconnected / Logged Out'}
+                          {(cloudStatus.isConfigured && cloudStatus.isConnected) ? 'WhatsApp Connected & Active' : 'WhatsApp Disconnected'}
                         </h4>
                         <p style={{ fontSize: '12px', color: '#71717a', margin: 0, textAlign: 'left' }}>
                           {(cloudStatus.isConfigured && cloudStatus.isConnected) 
@@ -851,7 +853,7 @@ function WhatsAppConnect() {
                       <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #f4f4f5', paddingBottom: '8px' }}>
                         <span style={{ fontSize: '14px', color: '#71717a', display: 'flex', alignItems: 'center', gap: '8px' }}><FaServer style={{ fontSize: '12px' }} /> Channel Status:</span>
                         <span style={{ fontSize: '14px', fontWeight: '600', color: cloudStatus.isConnected ? '#10b981' : '#ef4444' }}>
-                          {cloudStatus.isConnected ? 'Connected' : 'Disconnected (Logged Out)'}
+                          {cloudStatus.isConnected ? 'Connected' : 'Disconnected'}
                         </span>
                       </div>
                       <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #f4f4f5', paddingBottom: '8px' }}>
@@ -905,7 +907,7 @@ function WhatsAppConnect() {
                               transition: 'all 0.2s ease'
                             }}
                           >
-                            {actionLoading ? 'Logging out...' : 'Logout / Disconnect WhatsApp'}
+                            {actionLoading ? 'Disconnecting...' : 'Disconnect WhatsApp'}
                           </button>
                         ) : (
                           <button
@@ -952,7 +954,7 @@ function WhatsAppConnect() {
                     <input
                       type="text"
                       readOnly
-                      value={cloudStatus?.webhookUrl || `${process.env.REACT_APP_API_URL || 'http://localhost:5001'}/api/webhook/whatsapp`}
+                      value={cloudStatus?.webhookUrl || `${BASE_URL}/api/webhook/whatsapp`}
                       style={{
                         flex: 1,
                         padding: '8px 12px',
@@ -966,22 +968,24 @@ function WhatsAppConnect() {
                     />
                     <button
                       onClick={() => {
-                        const url = cloudStatus?.webhookUrl || `${process.env.REACT_APP_API_URL || 'http://localhost:5001'}/api/webhook/whatsapp`;
+                        const url = cloudStatus?.webhookUrl || `${BASE_URL}/api/webhook/whatsapp`;
                         navigator.clipboard.writeText(url);
-                        alert('Callback URL copied to clipboard!');
+                        setCopiedWebhookUrl(true);
+                        setTimeout(() => setCopiedWebhookUrl(false), 2000);
                       }}
                       style={{
                         padding: '8px 12px',
-                        backgroundColor: '#25d366',
+                        backgroundColor: copiedWebhookUrl ? '#1b9a4b' : '#25d366',
                         color: '#ffffff',
                         border: 'none',
                         borderRadius: '6px',
                         fontSize: '12px',
                         fontWeight: '600',
-                        cursor: 'pointer'
+                        cursor: 'pointer',
+                        transition: 'background-color 0.2s'
                       }}
                     >
-                      Copy
+                      {copiedWebhookUrl ? '✓ Copied!' : 'Copy'}
                     </button>
                   </div>
                 </div>
@@ -1008,20 +1012,22 @@ function WhatsAppConnect() {
                       onClick={() => {
                         const token = cloudStatus?.verifyToken || 'secure_webhook_token_123';
                         navigator.clipboard.writeText(token);
-                        alert('Verification Token copied to clipboard!');
+                        setCopiedVerifyToken(true);
+                        setTimeout(() => setCopiedVerifyToken(false), 2000);
                       }}
                       style={{
                         padding: '8px 12px',
-                        backgroundColor: '#25d366',
+                        backgroundColor: copiedVerifyToken ? '#1b9a4b' : '#25d366',
                         color: '#ffffff',
                         border: 'none',
                         borderRadius: '6px',
                         fontSize: '12px',
                         fontWeight: '600',
-                        cursor: 'pointer'
+                        cursor: 'pointer',
+                        transition: 'background-color 0.2s'
                       }}
                     >
-                      Copy
+                      {copiedVerifyToken ? '✓ Copied!' : 'Copy'}
                     </button>
                   </div>
                 </div>
@@ -1531,14 +1537,15 @@ function WhatsAppConnect() {
                 <button
                   onClick={() => {
                     navigator.clipboard.writeText(generateSnippet());
-                    alert('Widget code snippet copied to clipboard!');
+                    setCopiedWidgetCode(true);
+                    setTimeout(() => setCopiedWidgetCode(false), 2000);
                   }}
                   style={{
                     display: 'flex',
                     alignItems: 'center',
                     gap: '6px',
                     padding: '6px 12px',
-                    backgroundColor: '#e6f4ea',
+                    backgroundColor: copiedWidgetCode ? '#d1e7dd' : '#e6f4ea',
                     color: '#137333',
                     border: '1px solid #a3cfbb',
                     borderRadius: '6px',
@@ -1547,10 +1554,10 @@ function WhatsAppConnect() {
                     cursor: 'pointer',
                     transition: 'all 0.2s'
                   }}
-                  onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#d1e7dd'}
-                  onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#e6f4ea'}
+                  onMouseOver={(e) => { if (!copiedWidgetCode) e.currentTarget.style.backgroundColor = '#d1e7dd'; }}
+                  onMouseOut={(e) => { if (!copiedWidgetCode) e.currentTarget.style.backgroundColor = '#e6f4ea'; }}
                 >
-                  <FaCopy /> Copy Snippet
+                  <FaCopy /> {copiedWidgetCode ? '✓ Copied!' : 'Copy Snippet'}
                 </button>
               </div>
 

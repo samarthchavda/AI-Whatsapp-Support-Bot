@@ -15,7 +15,8 @@ import {
   FaPlug,
   FaShieldAlt,
   FaWhatsapp,
-  FaCommentDots
+  FaCommentDots,
+  FaShoppingCart
 } from 'react-icons/fa';
 import './LandingPage.css';
 
@@ -88,13 +89,51 @@ const platformItems = [
   'Secure auth with refresh-token session handling'
 ];
 
+const testimonials = [
+  {
+    quote: "Kwickbot has completely transformed our customer operations. We synced our Shopify store and the AI immediately began resolving 80% of our order tracking and cancellation tickets automatically.",
+    author: "Elena R.",
+    role: "Founder, EcoStyle Apparel"
+  },
+  {
+    quote: "The instant human handoff feature is a lifesaver. When customers request refunds, the AI pauses itself and alerts our team immediately in the live chat workspace. Setup took us less than 5 minutes.",
+    author: "Marcus K.",
+    role: "Support Director, FitGear Store"
+  },
+  {
+    quote: "Being able to send bulk campaign updates while keeping Gemini AI budgets under control is exactly what we needed. Our WhatsApp customer engagement is up 3x since we started.",
+    author: "Aarav S.",
+    role: "Operations Head, OrganicGlow"
+  }
+];
+
+const faqs = [
+  {
+    question: "Do I need a Meta Business Manager account to connect WhatsApp?",
+    answer: "Yes, to use the official WhatsApp Cloud API, you need a Meta Business Manager account. Kwickbot provides a step-by-step setup guide with screenshots to help you create your Meta developer app and verify your business number in under 10 minutes."
+  },
+  {
+    question: "How does Kwickbot sync with Shopify or WooCommerce?",
+    answer: "Kwickbot integrates directly using secure API credentials. By subscribing to Shopify or WooCommerce webhook events (like order updates and checkout creations), Kwickbot listens to live updates and answers customer tracking and cancellation queries in real-time."
+  },
+  {
+    question: "How does the AI handle complex questions that it isn't trained on?",
+    answer: "Kwickbot is equipped with an automated human handoff mechanism. If a customer expresses high frustration, asks for a human agent, or triggers a custom escalation (like a refund request), the AI pauses itself and immediately alerts your support team in the Live Chat CRM console with the full conversation history."
+  },
+  {
+    question: "Can we control the Google Gemini AI token budget?",
+    answer: "Yes! Super Admins have complete control over platform token limits. You can specify precise monthly token quotas (e.g., 10k, 50k, 200k tokens) and pricing structures for each merchant. Once the limit is reached, the bot automatically pauses and notifies you, preventing unexpected API bills."
+  }
+];
+
 function LandingPage() {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('inbox');
   const [activeStep, setActiveStep] = useState(0);
+  const [openFaqIndex, setOpenFaqIndex] = useState(null);
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [chatMessages, setChatMessages] = useState([
-    { role: 'assistant', content: 'Hi there! 👋 I am the AI WhatsApp Support Assistant. Ask me about features, pricing, human takeover, or track a mock order (try typing "track ORD-1017").' }
+    { role: 'assistant', content: 'Hi there! 👋 I am the Kwickbot Sales & Setup Assistant. Ask me about features, plans, extra charges, integration setup, or how to give access permissions!' }
   ]);
   const [chatInput, setChatInput] = useState('');
   const chatEndRef = useRef(null);
@@ -102,6 +141,24 @@ function LandingPage() {
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [chatMessages]);
+
+  // Scroll Entrance Animations Observer
+  useEffect(() => {
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('in-view');
+        }
+      });
+    }, { threshold: 0.05, rootMargin: '0px 0px -50px 0px' });
+
+    const elements = document.querySelectorAll('.animate-on-scroll');
+    elements.forEach((el) => observer.observe(el));
+
+    return () => {
+      elements.forEach((el) => observer.unobserve(el));
+    };
+  }, []);
 
   const handleChatSubmit = (e) => {
     e.preventDefault();
@@ -116,24 +173,26 @@ function LandingPage() {
       let reply = '';
       const input = userMessage.toLowerCase();
 
-      if (input.includes('price') || input.includes('pricing') || input.includes('cost') || input.includes('money')) {
-        reply = '💰 We offer three simple plans:\n• **Starter ($29/mo):** 500 AI messages, standard knowledge base.\n• **Growth ($79/mo):** 2,500 AI messages, WooCommerce/Shopify sync, campaigns.\n• **Scale (Custom):** Unlimited volume, custom CRM integrations.';
-      } else if (input.includes('feature') || input.includes('workflow') || input.includes('what can you do')) {
-        reply = '🚀 Here is what I can automate on WhatsApp:\n1. Answer FAQ queries (returns, refunds, shipping rules).\n2. Real-time Order Tracking synced to Shopify/WooCommerce.\n3. Automatic Human Takeover (pauses AI and alerts you).\n4. Bulk template broadcast campaigns.';
-      } else if (input.includes('human') || input.includes('takeover') || input.includes('pause') || input.includes('agent') || input.includes('escalat')) {
-        reply = '🚨 **Instant Agent Handoff:** If a customer is frustrated, asks for a manager, or requests a refund, I automatically pause the AI bot, save their context, and alert your support team in the Live Chat CRM console.';
-      } else if (input.includes('order') || input.includes('track') || input.includes('ord-')) {
-        if (input.includes('1017')) {
-          reply = '📦 **Order Status for #ORD-1017:**\n• **Status:** Delivered ✅\n• **Items:** Premium Leather Boots (x1)\n• **Total:** $142.00\n• **Tracking:** FEDEX888999\n• **Delivered Date:** Yesterday';
-        } else {
-          reply = '📦 I can fetch order statuses in real-time. Try typing "track ORD-1017" to see how I retrieve and present shipping logs!';
-        }
+      if (input.includes('price') || input.includes('pricing') || input.includes('cost') || input.includes('plan') || input.includes('money')) {
+        reply = '💰 Kwickbot Plans:\n• Starter ($29/mo): 500 AI messages, standard knowledge base.\n• Growth ($79/mo): 2,500 AI messages, WooCommerce/Shopify sync, campaigns.\n• Scale (Custom): Unlimited volume, custom CRM integrations.';
+      } else if (input.includes('charge') || input.includes('pay') || input.includes('extra') || input.includes('hidden') || input.includes('fee')) {
+        reply = '⚠️ Hidden/Extra Charges:\nThere are no hidden fees or extra charges from Kwickbot. If you integrate the official WhatsApp Cloud API, Meta charges directly per conversation (typically around $0.008 to $0.015 depending on the country).';
+      } else if (input.includes('setup') || input.includes('integrate') || input.includes('integration') || input.includes('how to use') || input.includes('start') || input.includes('connect')) {
+        reply = '🔧 Setup & Integration:\n1. Sign Up / Sign In to Kwickbot.\n2. Connect WhatsApp: Under "WhatsApp Connect", scan the QR code (for Web Bot) or enter your Meta developer credentials (for Cloud API).\n3. Link Shop: Go to "Integrations" and sync your Shopify or WooCommerce store.\n4. Train AI: Upload text FAQs or PDFs so the bot answers like your team!';
+      } else if (input.includes('access') || input.includes('permission') || input.includes('agent') || input.includes('role') || input.includes('give')) {
+        reply = '👥 Access & Permissions:\n• You can invite support agents from your settings.\n• Agents can reply in the Live Chat CRM console but cannot change integration settings.\n• Super Admins manage token limits, custom pricing rules, and agent permission roles.';
+      } else if (input.includes('feature') || input.includes('what can') || input.includes('why') || input.includes('workflow')) {
+        reply = '🚀 Core Features:\n• AI Auto-Reply: Resolves 80%+ of common store policy & order FAQs.\n• Instant Human Takeover: Pauses the AI bot and alerts agents on high frustration or refund requests.\n• Bulk Broadcasts: Send campaign updates with delivery analytics.\n• Focused CRM Console: Real-time chats, orders, and escalation queues.';
       } else {
-        reply = '👋 I am trained on your store catalog and FAQ policies. Ask me about "pricing", "features", "human handoff", or try typing "track ORD-1017" to see order status checking!';
+        reply = '👋 I am here to help you get started with Kwickbot! Ask me about pricing & extra charges, how to setup integration, how to give access permissions, or core features.';
       }
 
       setChatMessages(prev => [...prev, { role: 'assistant', content: reply }]);
     }, 800);
+  };
+
+  const toggleFaq = (index) => {
+    setOpenFaqIndex(openFaqIndex === index ? null : index);
   };
 
   const scrollToSection = (id) => {
@@ -144,9 +203,9 @@ function LandingPage() {
     <div className="landing-page">
       <nav className="landing-nav">
         <div className="landing-nav-inner">
-          <button className="landing-logo" onClick={() => scrollToSection('top')} aria-label="AI Support Bot home">
-            <FaCommentDots />
-            <span>AI Support Bot</span>
+          <button className="landing-logo" onClick={() => scrollToSection('top')} aria-label="Kwickbot home">
+            <img src="/logo.png" className="logo-img" alt="Kwickbot Logo" style={{ width: '38px', height: '38px' }} />
+            <span>Kwickbot</span>
           </button>
 
           <div className="landing-nav-links" aria-label="Primary navigation">
@@ -173,7 +232,7 @@ function LandingPage() {
               <FaBolt />
               WhatsApp support automation for commerce teams
             </div>
-            <h1>AI Support Bot</h1>
+            <h1>Kwickbot</h1>
             <p className="landing-hero-lede">
               Run customer support, order updates, escalations, broadcasts, and analytics from one focused WhatsApp operations workspace.
             </p>
@@ -334,7 +393,28 @@ function LandingPage() {
           </div>
         </section>
 
-        <section id="how-it-works" className="how-it-works-section">
+        {/* Platform Partner Badges */}
+        <section className="partner-badges-section animate-on-scroll">
+          <div className="partner-badges-container">
+            <div className="partner-badges-title">INTEGRATES WITH THE SERVICES YOU USE</div>
+            <div className="partners-grid">
+              <div className="partner-logo-item shopify">
+                <FaShoppingCart />
+                <span>Shopify Sync</span>
+              </div>
+              <div className="partner-logo-item woocommerce">
+                <FaShoppingCart />
+                <span>WooCommerce Connection</span>
+              </div>
+              <div className="partner-logo-item whatsapp">
+                <FaWhatsapp />
+                <span>Official WhatsApp API</span>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section id="how-it-works" className="how-it-works-section animate-on-scroll">
           <div className="section-heading centered">
             <span>Operational Flow</span>
             <h2>How It Works in 4 Steps</h2>
@@ -465,7 +545,7 @@ function LandingPage() {
           </div>
         </section>
 
-        <section id="workflows" className="landing-section">
+        <section id="workflows" className="landing-section animate-on-scroll">
           <div className="section-heading">
             <span>Core workflows</span>
             <h2>Built for the daily work of support teams</h2>
@@ -483,7 +563,7 @@ function LandingPage() {
           </div>
         </section>
 
-        <section id="platform" className="platform-section">
+        <section id="platform" className="platform-section animate-on-scroll">
           <div className="platform-copy">
             <span>Platform depth</span>
             <h2>A real startup-grade backend is already part of the product.</h2>
@@ -505,7 +585,7 @@ function LandingPage() {
           </div>
         </section>
 
-        <section className="security-band">
+        <section className="security-band animate-on-scroll">
           <div className="security-item">
             <FaShieldAlt />
             <div>
@@ -529,7 +609,7 @@ function LandingPage() {
           </div>
         </section>
 
-        <section id="pricing" className="landing-section pricing-section">
+        <section id="pricing" className="landing-section pricing-section animate-on-scroll">
           <div className="section-heading">
             <span>Pricing</span>
             <h2>Plans that fit growing WhatsApp support volume</h2>
@@ -579,13 +659,69 @@ function LandingPage() {
             </article>
           </div>
         </section>
+
+        {/* Customer Testimonials */}
+        <section className="testimonials-section animate-on-scroll">
+          <div className="testimonials-container">
+            <div className="section-heading centered">
+              <span>Testimonials</span>
+              <h2>What e-commerce founders are saying</h2>
+              <p>Loved by online store owners managing automated customer support pipelines.</p>
+            </div>
+            <div className="testimonials-grid">
+              {testimonials.map((t, idx) => (
+                <div className="testimonial-card" key={idx}>
+                  <p className="testimonial-quote">"{t.quote}"</p>
+                  <div className="testimonial-author">
+                    <div className="avatar-placeholder">{t.author.charAt(0)}</div>
+                    <div className="author-meta">
+                      <h4>{t.author}</h4>
+                      <p>{t.role}</p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* Collapsible FAQ Section */}
+        <section className="faq-accordion-section animate-on-scroll">
+          <div className="faq-accordion-container-wrapper">
+            <div className="section-heading centered">
+              <span>FAQ</span>
+              <h2>Frequently Asked Questions</h2>
+              <p>Everything you need to know about setting up Kwickbot for your online business.</p>
+            </div>
+            <div className="faq-accordion-container">
+              {faqs.map((faq, idx) => (
+                <div className={`faq-accordion-item ${openFaqIndex === idx ? 'active' : ''}`} key={idx}>
+                  <button className="faq-question-btn" onClick={() => toggleFaq(idx)}>
+                    <span>{faq.question}</span>
+                    <span className="faq-chevron">{openFaqIndex === idx ? '▲' : '▼'}</span>
+                  </button>
+                  <div className="faq-answer-wrapper" style={{
+                    maxHeight: openFaqIndex === idx ? '200px' : '0px',
+                    opacity: openFaqIndex === idx ? 1 : 0,
+                    transition: 'max-height 0.35s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.3s ease',
+                    overflow: 'hidden'
+                  }}>
+                    <div className="faq-answer-panel">
+                      <p style={{ margin: 0 }}>{faq.answer}</p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
       </main>
 
       <footer className="landing-footer">
         <div className="footer-brand-container">
           <div className="footer-brand">
-            <FaCommentDots />
-            <span>AI Support Bot</span>
+            <img src="/logo.png" className="logo-img" alt="Kwickbot Logo" style={{ width: '30px', height: '30px' }} />
+            <span>Kwickbot</span>
           </div>
           <p>WhatsApp support automation for real commerce operations.</p>
         </div>
@@ -651,7 +787,7 @@ function LandingPage() {
                 type="text"
                 value={chatInput}
                 onChange={(e) => setChatInput(e.target.value)}
-                placeholder="Type 'pricing', 'features'..."
+                placeholder="Ask about pricing, integration, access..."
                 required
               />
               <button type="submit"><FaArrowRight /></button>

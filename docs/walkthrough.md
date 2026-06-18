@@ -1,3 +1,51 @@
+# Walkthrough - Unified Email Service & Spam Prevention (June 2026)
+
+We have implemented a unified, professional email sending framework supporting Resend transactional delivery with an automated SMTP fallback. We also updated all email configurations to improve deliverability and prevent messages from landing in the spam folder.
+
+## Changes Made
+
+### 1. Unified Email Service Helper
+- **[emailService.js](file:///Users/chavdasamarth/Project-Task/AI%20WhatsApp%20Support%20Bot/backend/services/emailService.js) [NEW]**: Created a single point of dispatch (`sendEmail({ to, subject, html, text })`) supporting:
+  - **Resend SDK Integration**: Dispatches professional transactional emails when `RESEND_API_KEY` is present.
+  - **Nodemailer SMTP Fallback**: Automatically falls back to standard Gmail SMTP if no Resend key is provided.
+
+### 2. Spam Prevention Measures
+- **Added Plain-Text Fallbacks (`text`)**: Configured a readable plain-text backup message for every email trigger. This decreases the email's spam score since filters penalize HTML-only emails.
+- **Removed Emojis from Subjects**: Cleaned up subject headers (removed emojis like `🎉`, `🚨`, `🔐`, `🔒`) to avoid trigger-happy spam filters.
+
+### 3. Controller & Service Integrations
+- **[demoRequestController.js](file:///Users/chavdasamarth/Project-Task/AI%20WhatsApp%20Support%20Bot/backend/controllers/demoRequestController.js) [MODIFY]**: Integrated `emailService` for both **Demo Request Submission** and **Demo Approval Welcome Credentials** emails.
+- **[authController.js](file:///Users/chavdasamarth/Project-Task/AI%20WhatsApp%20Support%20Bot/backend/controllers/authController.js) [MODIFY]**: Integrated `emailService` for the **Password Reset Request** email.
+- **[aiService.js](file:///Users/chavdasamarth/Project-Task/AI%20WhatsApp%20Support%20Bot/backend/services/aiService.js) [MODIFY]**: Integrated `emailService` for the **WhatsApp Escalation Alert** email.
+- **[testRealConnections.js](file:///Users/chavdasamarth/Project-Task/AI%20WhatsApp%20Support%20Bot/backend/scratch/testRealConnections.js) [MODIFY]**: Reconfigured the SMTP diagnostics script to use the unified helper.
+
+---
+
+# Walkthrough - Brand Name Rebranding to Kwickbot (June 2026)
+
+We have successfully updated the branding across the entire website application to **"Kwickbot"**. All user-facing brand strings, labels, footers, logos, emails, templates, PDF guides, and LLM system prompts have been systematically replaced to establish Kwickbot as the unified brand.
+
+## Changes Made
+
+### 1. Frontend Brand Replacements
+- **[LandingPage.js](file:///Users/chavdasamarth/Project-Task/AI%20WhatsApp%20Support%20Bot/frontend/src/pages/LandingPage.js)**: Replaced logo brand text, Hero title, and footer brand name with `Kwickbot`.
+- **[Login.js](file:///Users/chavdasamarth/Project-Task/AI%20WhatsApp%20Support%20Bot/frontend/src/pages/Login.js)**: Updated the logo and brand description panel to read `Kwickbot`.
+- **[ResetPassword.js](file:///Users/chavdasamarth/Project-Task/AI%20WhatsApp%20Support%20Bot/frontend/src/pages/ResetPassword.js)**: Changed logo brand text to `Kwickbot`.
+- **[ServicesPage.js](file:///Users/chavdasamarth/Project-Task/AI%20WhatsApp%20Support%20Bot/frontend/src/pages/ServicesPage.js)**: Replaced navigation and footer brand elements with `Kwickbot`.
+- **[BookDemo.js](file:///Users/chavdasamarth/Project-Task/AI%20WhatsApp%20Support%20Bot/frontend/src/pages/BookDemo.js)**: Updated confirmation descriptions and business questionnaire placeholder instructions to mention `Kwickbot`.
+- **[Integrations.js](file:///Users/chavdasamarth/Project-Task/AI%20WhatsApp%20Support%20Bot/frontend/src/pages/Integrations.js)**: Updated connection guide step descriptions and headers referring to "Support Bot Dashboard" to `Kwickbot Dashboard`.
+- **[PrivacyPolicy.js](file:///Users/chavdasamarth/Project-Task/AI%20WhatsApp%20Support%20Bot/frontend/src/pages/PrivacyPolicy.js)**: Renamed all instances of old names in legal text, pricing tables, compliance items, and footers to `Kwickbot`.
+
+### 2. Backend Brand Replacements
+- **[authController.js](file:///Users/chavdasamarth/Project-Task/AI%20WhatsApp%20Support%20Bot/backend/controllers/authController.js)**: Renamed SMTP email sender name and password reset body copy to `Kwickbot`.
+- **[demoRequestController.js](file:///Users/chavdasamarth/Project-Task/AI%20WhatsApp%20Support%20Bot/backend/controllers/demoRequestController.js)**: Updated demo request approval email headings, signatures, and subject lines to reference `Kwickbot`.
+- **[aiService.js](file:///Users/chavdasamarth/Project-Task/AI%20WhatsApp%20Support%20Bot/backend/services/aiService.js)**: Updated escalation email sender tags and footer copyrights to `Kwickbot`.
+- **[server.js](file:///Users/chavdasamarth/Project-Task/AI%20WhatsApp%20Support%20Bot/backend/server.js)**: Changed standard API test route response message to `Kwickbot API`.
+- **[generateDemoPdf.js](file:///Users/chavdasamarth/Project-Task/AI%20WhatsApp%20Support%20Bot/backend/scripts/generateDemoPdf.js)**: Updated PDF document metadata (Author, title text) and confidentiality margins to `Kwickbot`.
+- **[testGemini.js](file:///Users/chavdasamarth/Project-Task/AI%20WhatsApp%20Support%20Bot/backend/scripts/testGemini.js)**: Updated AI instruction guidelines to refer to `Kwickbot`.
+
+---
+
 # Walkthrough - Resolved Standard Admin Feature Bugs
 
 I have successfully resolved all identified bugs affecting standard Admin-level dashboard features.

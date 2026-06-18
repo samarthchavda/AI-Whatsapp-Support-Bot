@@ -7,5 +7,6 @@ const { verifyToken } = require('../middleware/auth');
 router.get('/stats', verifyToken, dashboardController.getDashboardStats);
 router.get('/escalations', verifyToken, dashboardController.getEscalations);
 router.patch('/escalations/:id', verifyToken, dashboardController.updateEscalation);
+router.get('/announcements', verifyToken, dashboardController.getActiveAnnouncements);
 
 module.exports = router;

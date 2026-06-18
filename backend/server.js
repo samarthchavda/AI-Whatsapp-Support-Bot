@@ -24,6 +24,7 @@ const analyticsRoutes = require('./routes/analyticsRoutes');
 const integrationRoutes = require('./routes/integrationRoutes');
 const superAdminRoutes = require('./routes/superAdminRoutes');
 const whatsappRoutes = require('./routes/whatsappRoutes');
+const trafficRoutes = require('./routes/trafficRoutes');
 const abandonedCartRoutes = require('./routes/abandonedCartRoutes');
 
 // Import WhatsApp bot (optional - only if available)
@@ -37,10 +38,26 @@ try {
 const app = express();
 app.set('trust proxy', 1);
 const server = http.createServer(app);
+
+// Allow any localhost, local network IPs (e.g. 192.168.x.x, 172.x.x.x, 10.x.x.x), or configured FRONTEND_URL (supports comma-separated list)
+const corsOriginHelper = (origin, callback) => {
+  if (!origin) return callback(null, true);
+  
+  const allowedOrigins = (process.env.FRONTEND_URL || '').split(',').map(item => item.trim());
+  const isAllowed = allowedOrigins.includes(origin) ||
+                    /^http:\/\/(localhost|127\.0\.0\.1|192\.168\.\d+\.\d+|172\.\d+\.\d+\.\d+|10\.\d+\.\d+\.\d+)(:\d+)?$/.test(origin);
+  if (isAllowed) {
+    callback(null, true);
+  } else {
+    callback(new Error('Not allowed by CORS'));
+  }
+};
+
 const io = socketIo(server, {
   cors: {
-    origin: process.env.FRONTEND_URL || 'http://localhost:3000',
-    methods: ['GET', 'POST']
+    origin: corsOriginHelper,
+    methods: ['GET', 'POST'],
+    credentials: true
   }
 });
 
@@ -65,7 +82,7 @@ app.use('/api/', limiter);
 
 // Middleware
 app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+  origin: corsOriginHelper,
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
@@ -164,7 +181,7 @@ mongoose.connect(process.env.MONGODB_URI, {
 // Test route
 app.get('/', (req, res) => {
   res.json({ 
-    message: 'WhatsApp AI Support Bot API',
+    message: 'Kwickbot API',
     status: 'running',
     version: '1.0.0'
   });
@@ -186,6 +203,7 @@ app.use('/api/analytics', analyticsRoutes);
 app.use('/api/integrations', integrationRoutes);
 app.use('/api/super-admin', superAdminRoutes);
 app.use('/api/whatsapp', whatsappRoutes);
+app.use('/api/traffic', trafficRoutes);
 app.use('/api/abandoned-carts', abandonedCartRoutes);
 
 // Error handling middleware
@@ -213,16 +231,21 @@ server.listen(PORT, async () => {
 
   // Pre-initialize local tunnel for webhook verification
   if (process.env.NODE_ENV !== 'production') {
-    try {
-      const ngrokService = require('./services/ngrokService');
-      const tunnelUrl = await ngrokService.getNgrokUrl();
-      if (tunnelUrl) {
-        process.env.BACKEND_URL = tunnelUrl;
-        console.log(`🔗 Local webhook tunnel active: ${tunnelUrl}`);
-        console.log(`📲 Configure Meta webhook Callback URL to: ${tunnelUrl}/api/webhook/whatsapp`);
+    const hasStaticUrl = process.env.BACKEND_URL && !process.env.BACKEND_URL.includes('localhost') && !process.env.BACKEND_URL.includes('127.0.0.1');
+    if (hasStaticUrl) {
+      console.log(`🔗 Using static/external webhook URL: ${process.env.BACKEND_URL}`);
+    } else {
+      try {
+        const ngrokService = require('./services/ngrokService');
+        const tunnelUrl = await ngrokService.getNgrokUrl();
+        if (tunnelUrl) {
+          process.env.BACKEND_URL = tunnelUrl;
+          console.log(`🔗 Local webhook tunnel active: ${tunnelUrl}`);
+          console.log(`📲 Configure Meta webhook Callback URL to: ${tunnelUrl}/api/webhook/whatsapp`);
+        }
+      } catch (err) {
+        console.log('⚠️ Could not pre-initialize webhook tunnel:', err.message);
       }
-    } catch (err) {
-      console.log('⚠️ Could not pre-initialize webhook tunnel:', err.message);
     }
   }
 });

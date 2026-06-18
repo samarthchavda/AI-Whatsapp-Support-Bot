@@ -47,8 +47,8 @@ function Login({ onLogin }) {
 
         <div className="login-brand-content">
           <div className="login-brand-logo">
-            <FaCommentDots />
-            <span>AI Support Bot</span>
+            <img src="/logo.png" className="logo-img" alt="Kwickbot Logo" style={{ width: '30px', height: '30px' }} />
+            <span>Kwickbot</span>
           </div>
           <h2 className="login-brand-title">
             WhatsApp support, powered by AI

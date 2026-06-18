@@ -22,7 +22,7 @@ async function generatePDF(destPath) {
         size: 'A4',
         info: {
           Title: 'WhatsApp Business API Onboarding & Data Requirements Guide',
-          Author: 'AI Support Bot Platform',
+          Author: 'Kwickbot',
           Subject: 'Integration Guidelines & Knowledge Base Setup Requirements'
         }
       });
@@ -40,7 +40,7 @@ async function generatePDF(destPath) {
       doc.fillColor(primaryColor)
          .fontSize(22)
          .font('Helvetica-Bold')
-         .text('AI WhatsApp Support Bot Integration Guide', { align: 'center' });
+         .text('Kwickbot Integration Guide', { align: 'center' });
       
       doc.moveDown(0.2);
       
@@ -162,7 +162,7 @@ async function generatePDF(destPath) {
 
       doc.fontSize(8)
          .fillColor('#94a3b8')
-         .text('Version 1.0.0  |  AI Support Bot Platform Documentation  |  Confidential & Proprietary', { align: 'center' });
+         .text('Version 1.0.0  |  Kwickbot Platform Documentation  |  Confidential & Proprietary', { align: 'center' });
 
       // End document
       doc.end();

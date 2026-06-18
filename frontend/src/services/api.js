@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5001/api';
+const API_BASE_URL = process.env.REACT_APP_API_URL || `http://${window.location.hostname}:5001/api`;
 const ACCESS_TOKEN_KEY = 'accessToken';
 const LEGACY_TOKEN_KEY = 'token';
 
@@ -148,7 +148,7 @@ export const testAIMessage = (data) => api.post('/ai/test-message', data);
 
 // SaaS Subscriptions & Billing
 export const getPricingPlans = () => api.get('/auth/plans');
-export const upgradePricingPlan = (planName) => api.post('/auth/upgrade-plan', { planName });
+export const upgradePricingPlan = (planName, couponCode) => api.post('/auth/upgrade-plan', { planName, couponCode });
 export const getAdminProfile = () => api.get('/auth/profile');
 export const updateAdminProfile = (data) => api.put('/auth/profile', data);
 

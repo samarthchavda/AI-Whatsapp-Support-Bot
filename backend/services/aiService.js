@@ -8,7 +8,9 @@ const Conversation = require('../models/Conversation');
 const AILog = require('../models/AILog');
 const KnowledgeBase = require('../models/KnowledgeBase');
 const Admin = require('../models/Admin');
+const emailService = require('./emailService');
 const knowledgeBaseService = require('./knowledgeBaseService');
+const subscriptionService = require('./subscriptionService');
 
 class AIService {
   constructor() {
@@ -203,7 +205,7 @@ Rules:
 4. Answer the customer's question directly.
 5. Rewrite the information in natural conversational language.
 6. Include only information relevant to the user's question.
-7. Keep responses concise and customer-friendly.
+7. Keep responses clear, professional, and customer-friendly. Avoid overly brief, one-sentence, or robotic replies. Provide complete and helpful explanations.
 8. If the answer is Yes or No, start with Yes or No.
 9. Do not mention internal documents, guides, PDFs, pages, or sources.
 10. Use the recent conversation context.
@@ -212,6 +214,7 @@ Rules:
 13. Address the customer naturally: ${customerName}.
 14. Use only information relevant to the user's question and ignore unrelated retrieved content.
 15. When answering about STORE DETAILS or PRODUCTS, always include the store website URL if available.
+16. If a customer is asking about cancellations, complaints, or refunds, and you cannot perform the action yourself, politely explain that the system will guide them or escalate to a human agent, and provide a helpful, full sentence explanation of what they should do next.
 
 Smart Fallback Rules (when specific information is not available in the knowledge base):
 - If a customer asks about OFFERS or DISCOUNTS and no info is available: Reply with "We don't have any active offers right now, but stay tuned! We'll notify you as soon as a new offer drops. 🎉${urlHint}"
@@ -367,6 +370,19 @@ Smart Fallback Rules (when specific information is not available in the knowledg
         await conversation.save();
       }
 
+      // Check if message is a product inquiry
+      try {
+        const productName = await this.detectProductInquiry(message, conversation.admin);
+        if (productName) {
+          conversation.hasProductInquiry = true;
+          conversation.inquiredProductName = productName;
+          conversation.productInquiryAt = new Date();
+          conversation.followUpSent = false;
+        }
+      } catch (inquiryErr) {
+        console.error('Error running product inquiry detection:', inquiryErr);
+      }
+
       // Retrieve Admin document
       let adminDoc = null;
       if (conversation.admin) {
@@ -501,10 +517,43 @@ Smart Fallback Rules (when specific information is not available in the knowledg
           };
         }
 
-        const isLimitExceeded = adminDoc.geminiTokensUsed >= adminDoc.geminiTokensLimit;
-        if (isLimitExceeded) {
-          console.log(`🔕 Monthly token limit exceeded for tenant: ${adminDoc.email}. Skipping AI response.`);
+        const limitCheck = subscriptionService.checkLimitExceeded(adminDoc);
+        if (limitCheck.exceeded) {
+          console.warn(`⚠️ [LIMIT BREACH] Monthly limit exceeded for tenant ${adminDoc.email}: ${limitCheck.reason}`);
           
+          // Send notification to merchant's WhatsApp (only once per billing cycle)
+          if (adminDoc.businessPhone && !adminDoc.limitNotificationSent) {
+            try {
+              let customCredentials = null;
+              if (adminDoc.whatsappAccessToken && adminDoc.whatsappPhoneNumberId) {
+                customCredentials = {
+                  accessToken: adminDoc.whatsappAccessToken,
+                  phoneNumberId: adminDoc.whatsappPhoneNumberId,
+                  businessAccountId: adminDoc.whatsappBusinessAccountId
+                };
+              }
+              const notificationMessage = `Support system notification: Your monthly AI support limits have been reached. Please contact your administrator or upgrade your plan to resume automation.`;
+              
+              if (adminDoc.webBotEnabled) {
+                const whatsappWebBot = require('./whatsappWebBot');
+                if (whatsappWebBot.client && whatsappWebBot.isReady) {
+                  const formattedPhone = adminDoc.businessPhone.replace(/\D/g, '') + '@c.us';
+                  await whatsappWebBot.client.sendMessage(formattedPhone, notificationMessage);
+                  console.log(`✉️ Limit notification sent to merchant via Web Bot (${formattedPhone})`);
+                }
+              } else {
+                const whatsappCloudAPI = require('./whatsappCloudAPI');
+                await whatsappCloudAPI.sendMessage(adminDoc.businessPhone, notificationMessage, customCredentials);
+                console.log(`✉️ Limit notification sent to merchant via Cloud API (${adminDoc.businessPhone})`);
+              }
+              
+              adminDoc.limitNotificationSent = true;
+              await adminDoc.save();
+            } catch (notifyErr) {
+              console.error('Failed to send limit notification to merchant:', notifyErr);
+            }
+          }
+
           const currentIntent = this.detectIntent(message);
           conversation.messages = conversation.messages || [];
           conversation.messages.push({
@@ -550,6 +599,22 @@ Smart Fallback Rules (when specific information is not available in the knowledg
             responseParts: [],
             typingDelayMs: 0
           };
+        }
+      }
+
+      // Self-healing: If conversation is marked escalated, check if there are any open/active escalations
+      if (conversation.escalated || conversation.status === 'escalated') {
+        const Escalation = require('../models/Escalation');
+        const activeEscalation = await Escalation.findOne({
+          conversationId: conversation._id,
+          status: { $in: ['pending', 'in_progress'] }
+        });
+        if (!activeEscalation) {
+          console.log(`🔧 Self-healing: No active escalations found for escalated conversation ${customerPhone}. Unpausing bot.`);
+          conversation.status = 'active';
+          conversation.escalated = false;
+          conversation.botPaused = false;
+          await conversation.save();
         }
       }
 
@@ -638,6 +703,10 @@ Smart Fallback Rules (when specific information is not available in the knowledg
 
       // Process based on intent
       switch (intent) {
+        case 'new_order_inquiry':
+          response = await this.handleNewOrderInquiry(adminDoc);
+          break;
+
         case 'order_status':
           const orderResult = await this.handleOrderStatusQuery(customerPhone, message, adminDoc ? adminDoc._id : null);
           response = orderResult.message;
@@ -799,6 +868,16 @@ Smart Fallback Rules (when specific information is not available in the knowledg
           botPaused: true,
           suggestedReply: response
         });
+      } else if (!isDraftMode && global.io) {
+        // Emit in non-draft mode so live chat and dashboard sync in real-time
+        global.io.emit('new_message', {
+          customerPhone,
+          role: 'assistant',
+          content: response,
+          timestamp: new Date(),
+          intent,
+          status: conversation.status
+        });
       }
 
       const duration = Date.now() - startTime;
@@ -903,6 +982,49 @@ Smart Fallback Rules (when specific information is not available in the knowledg
     }
   }
 
+  async detectProductInquiry(message, adminId) {
+    let knownProducts = [];
+    try {
+      if (adminId) {
+        knownProducts = await Order.distinct('items.productName', { admin: adminId });
+      }
+    } catch (err) {
+      console.error('Error fetching distinct products:', err);
+    }
+
+    if (this.gemini) {
+      const prompt = `Analyze this customer message to see if they are asking a question or inquiring about a specific product name (e.g. price, features, stock status, options, size, color, description, etc.).
+Customer message: "${message}"
+Store products hint list: ${JSON.stringify(knownProducts)}
+
+If the customer is asking about a product (either one from the hint list or any other product), return the exact name of the product they are asking about.
+If they are NOT asking about a product (e.g. greeting, order cancellation, generic help, order tracking, shipping policy, returns, etc.), return "NONE".
+
+Response format must be ONLY the product name or "NONE". Do not write any other explanation or text.`;
+
+      try {
+        const model = this.gemini.getGenerativeModel({ model: this.geminiModelName });
+        const result = await model.generateContent(prompt);
+        const text = result.response.text().trim().replace(/['"“”]/g, '');
+        
+        if (text && text.toUpperCase() !== 'NONE') {
+          return text;
+        }
+      } catch (err) {
+        console.error('Error in detectProductInquiry LLM call:', err);
+      }
+    }
+
+    const lowerMessage = message.toLowerCase();
+    for (const p of knownProducts) {
+      if (p && p.length > 2 && lowerMessage.includes(p.toLowerCase())) {
+        return p;
+      }
+    }
+    
+    return null;
+  }
+
   detectIntent(message) {
     const lowerMessage = message.toLowerCase();
 
@@ -911,10 +1033,48 @@ Smart Fallback Rules (when specific information is not available in the knowledg
       return 'order_status';
     }
 
-    // Cancel order patterns
-    const cancelPatterns = /cancel order|cancel my order|order cancel|can i cancel|want to cancel/i;
-    if (cancelPatterns.test(lowerMessage)) {
+    // Cancel order patterns (exclude policy inquiries)
+    const cancelPatterns = /cancel|cancle|cacel|cancell|cancelling|canceling/i;
+    if (cancelPatterns.test(lowerMessage) && !/policy|policies|polices|rule|rules/i.test(lowerMessage)) {
       return 'cancel_order';
+    }
+
+    // Return policy patterns (highest priority for policy/rules terms)
+    const returnPatterns = /return|exchange|policy|policies|polices|rule|rules|send back|give back|return policy|how to return/i;
+    if (returnPatterns.test(lowerMessage)) {
+      return 'return_policy';
+    }
+
+    // Refund patterns (exclude policy inquiries)
+    const refundPatterns = /refund|money back|reimburse|get refund|request refund/i;
+    if (refundPatterns.test(lowerMessage) && !/policy|policies|polices|rule|rules/i.test(lowerMessage)) {
+      return 'refund_request';
+    }
+
+    // New order/purchase patterns (e.g., "new order", "place order", "want to buy", "how to order")
+    const newOrderKeywords = [
+      'new order',
+      'place order',
+      'place an order',
+      'place a new order',
+      'want to buy',
+      'want to order',
+      'can i order',
+      'can you take order',
+      'can you take my order',
+      'how to buy',
+      'how to order',
+      'order online',
+      'buy now',
+      'shop now',
+      'create order',
+      'create new order'
+    ];
+    const isNewOrder = (newOrderKeywords.some(kw => lowerMessage.includes(kw)) ||
+                       (/\b(buy|order|purchase)\b/i.test(lowerMessage) && /\b(new|take|place|make|want to|how to|web|link|online)\b/i.test(lowerMessage))) &&
+                       !/\b(status|track|check|where|when|shipped|delivered|cancel|return|refund)\b/i.test(lowerMessage);
+    if (isNewOrder) {
+      return 'new_order_inquiry';
     }
 
     // Order status patterns
@@ -923,20 +1083,8 @@ Smart Fallback Rules (when specific information is not available in the knowledg
       return 'order_status';
     }
 
-    // Return policy patterns
-    const returnPatterns = /return|exchange|policy|send back|give back|return policy|how to return/i;
-    if (returnPatterns.test(lowerMessage)) {
-      return 'return_policy';
-    }
-
-    // Refund patterns
-    const refundPatterns = /refund|money back|reimburse|cancel order|get refund|request refund/i;
-    if (refundPatterns.test(lowerMessage)) {
-      return 'refund_request';
-    }
-
     // Complaint patterns
-    const complaintPatterns = /complaint|unhappy|disappointed|terrible|worst|horrible|problem|issue|not satisfied|bad experience/i;
+    const complaintPatterns = /complaint|complain|complent|complate|unhappy|disappointed|terrible|worst|horrible|problem|issue|not satisfied|bad experience|bad service|against you|aginst you|sue you|report you/i;
     if (complaintPatterns.test(lowerMessage)) {
       return 'complaint';
     }
@@ -950,10 +1098,10 @@ Smart Fallback Rules (when specific information is not available in the knowledg
     // Simple confidence calculation based on keyword matches
     const intents = {
       'order_status': /order|track|status|delivery/i,
-      'cancel_order': /cancel/i,
-      'return_policy': /return|exchange|policy/i,
-      'refund_request': /refund|money back/i,
-      'complaint': /complaint|unhappy|terrible/i
+      'cancel_order': /cancel|cancle|cacel|cancell/i,
+      'return_policy': /return|exchange|policy|policies|polices/i,
+      'refund_request': /refund|money back|reimburse/i,
+      'complaint': /complaint|complain|complent|complate|unhappy|terrible/i
     };
 
     if (intents[intent] && intents[intent].test(lowerMessage)) {
@@ -1823,14 +1971,9 @@ Smart Fallback Rules (when specific information is not available in the knowledg
 
   async notifySupport(escalation) {
     console.log(`📧 Support notification triggering for escalation ${escalation._id}...`);
-    console.log(`   Customer: ${escalation.customerName} (${escalation.customerPhone})`);
-    console.log(`   Reason: ${escalation.reason}`);
-    console.log(`   Priority: ${escalation.priority}`);
-    
+    const emailService = require('../services/emailService');
+
     try {
-      const nodemailer = require('nodemailer');
-      
-      // Get Admin User details
       let recipientEmail = process.env.ESCALATION_EMAIL || process.env.ADMIN_EMAIL || 'support@store.com';
       let adminName = 'Store Administrator';
 
@@ -1842,17 +1985,6 @@ Smart Fallback Rules (when specific information is not available in the knowledg
           adminName = adminDoc.name || 'Store Administrator';
         }
       }
-
-      // Configure email transporter
-      const transporter = nodemailer.createTransport({
-        host: process.env.SMTP_HOST || 'smtp.gmail.com',
-        port: process.env.SMTP_PORT || 587,
-        secure: false,
-        auth: {
-          user: process.env.SMTP_USER,
-          pass: process.env.SMTP_PASS
-        }
-      });
 
       const emailHtml = `
         <!DOCTYPE html>
@@ -1883,7 +2015,7 @@ Smart Fallback Rules (when specific information is not available in the knowledg
         <body>
           <div class="container">
             <div class="header">
-              <h1>🚨 WhatsApp Chat Escalation Alert!</h1>
+              <h1>WhatsApp Chat Escalation Alert</h1>
             </div>
             <div class="content">
               <h2>Hello ${adminName},</h2>
@@ -1923,7 +2055,7 @@ Smart Fallback Rules (when specific information is not available in the knowledg
               </div>
             </div>
             <div class="footer">
-              <p>© ${new Date().getFullYear()} WhatsApp Support Bot. All rights reserved.</p>
+              <p>© ${new Date().getFullYear()} Kwickbot. All rights reserved.</p>
               <p>This is an automated system notification.</p>
             </div>
           </div>
@@ -1931,17 +2063,15 @@ Smart Fallback Rules (when specific information is not available in the knowledg
         </html>
       `;
 
-      if (process.env.SMTP_USER && process.env.SMTP_PASS && process.env.SMTP_USER !== 'your_email@gmail.com') {
-        await transporter.sendMail({
-          from: `"WhatsApp Support Bot" <${process.env.SMTP_USER}>`,
-          to: recipientEmail,
-          subject: `🚨 [Escalation Alert] Customer ${escalation.customerName} requests assistance (${escalation.priority.toUpperCase()})`,
-          html: emailHtml
-        });
-        console.log(`✅ Escalation email sent to ${recipientEmail}`);
-      } else {
-        console.log(`⚠️ SMTP credentials not configured. Skipping email delivery for ${recipientEmail}.`);
-      }
+      const emailText = `Hello ${adminName},\n\nAn ongoing customer conversation has been escalated to manual support. The AI response helper has been paused, and the customer is waiting for a response.\n\nEscalation Details:\n- Customer Name: ${escalation.customerName}\n- Phone Number: ${escalation.customerPhone}\n- Reason: ${escalation.reason}\n- Priority: ${escalation.priority}\n- Escalated At: ${new Date().toLocaleString('en-IN')}\n- Trigger Message: "${escalation.description}"\n\nTake over the conversation here: ${process.env.FRONTEND_URL || 'http://localhost:3000'}/live-chat\n\nBest regards,\nKwickbot System`;
+
+      await emailService.sendEmail({
+        to: recipientEmail,
+        subject: `[Escalation Alert] Customer ${escalation.customerName} requests assistance (${escalation.priority.toUpperCase()})`,
+        html: emailHtml,
+        text: emailText
+      });
+      console.log(`✅ Escalation email sent to ${recipientEmail}`);
 
       // Emit socket event to frontend so admin UI highlights this escalated conversation
       const io = global.io;
@@ -2013,6 +2143,38 @@ Smart Fallback Rules (when specific information is not available in the knowledg
       },
       reasoning: 'Analyzed using local mock analysis.'
     });
+  }
+
+  getPublicStoreUrl(adminDoc) {
+    if (!adminDoc || !adminDoc.storeUrl) return null;
+    
+    let url = adminDoc.storeUrl;
+    
+    // Convert Shopify admin store URL to public myshopify URL
+    // e.g., https://admin.shopify.com/store/ai-whatsapp-demo-store -> https://ai-whatsapp-demo-store.myshopify.com
+    const shopifyAdminRegex = /admin\.shopify\.com\/store\/([a-zA-Z0-9-]+)/i;
+    const match = url.match(shopifyAdminRegex);
+    if (match && match[1]) {
+      return `https://${match[1]}.myshopify.com`;
+    }
+    
+    // Ensure URL has protocol
+    if (!/^https?:\/\//i.test(url)) {
+      url = 'https://' + url;
+    }
+    
+    return url;
+  }
+
+  async handleNewOrderInquiry(adminDoc) {
+    const publicUrl = this.getPublicStoreUrl(adminDoc);
+    let storeLinkText = '';
+    
+    if (publicUrl) {
+      storeLinkText = `\n👉 ${publicUrl}`;
+    }
+    
+    return `I cannot place new orders directly here on WhatsApp. 🛍️\n\nPlease place your order directly on our website here:${storeLinkText || ' our online store.'}\n\nIf you have any queries, feel free to send them here, and I will be happy to assist you!`;
   }
 }
 

@@ -215,7 +215,7 @@ ${order.estimatedDelivery ? `⏰ Expected: ${new Date(order.estimatedDelivery).t
     // Help/greeting (using boundary matching to prevent matching inside words like "shipping")
     const isGreeting = /\b(hi|hello|hii|hey|yo|greetings|hola)\b/i.test(msgLower);
     if (isGreeting) {
-      return '👋 Hello! I\'m your AI Support Bot. I can help with:\n✅ Order status\n✅ Returns & Refunds\n✅ Delivery tracking\n✅ Escalation to support\n\nHow can I help?';
+      return '👋 Hello! I\'m Kwickbot. I can help with:\n✅ Order status\n✅ Returns & Refunds\n✅ Delivery tracking\n✅ Escalation to support\n\nHow can I help?';
     }
 
     // Complaint/issue
@@ -322,7 +322,7 @@ ${order.estimatedDelivery ? `⏰ Expected: ${new Date(order.estimatedDelivery).t
     <div className="demo-chat-container">
       <div className="chat-header">
         <div className="header-content">
-          <h2>🤖 AI Support Bot</h2>
+          <h2>🤖 Kwickbot</h2>
           <p className="status-text">
             {loading ? 'Loading orders...' : `Online • ${orders.length} active orders`}
           </p>

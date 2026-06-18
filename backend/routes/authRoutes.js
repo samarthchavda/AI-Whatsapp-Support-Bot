@@ -54,5 +54,6 @@ router.get('/plans', verifyToken, authController.getPlans);
  * @access  Private
  */
 router.post('/upgrade-plan', verifyToken, authController.upgradePlan);
+router.post('/verify-coupon', verifyToken, authController.verifyCoupon);
 
 module.exports = router;

@@ -51,8 +51,8 @@ function ResetPassword() {
 
         <div className="reset-brand-content">
           <div className="reset-brand-logo">
-            <FaCommentDots />
-            <span>AI Support Bot</span>
+            <img src="/logo.png" className="logo-img" alt="Kwickbot Logo" style={{ width: '30px', height: '30px' }} />
+            <span>Kwickbot</span>
           </div>
           <h2 className="reset-brand-title">
             Reset Your Admin Credentials

@@ -9,7 +9,7 @@ When a customer is on your checkout page or product page, they often have a simp
 
 If they have to wait hours for an email reply or search your site for answers, they leave. And once they leave, they buy from a competitor. Slow support = lost revenue.
 
-WAssistant stops this leak by bringing instant, intelligent support to WhatsApp:
+Kwickbot stops this leak by bringing instant, intelligent support to WhatsApp:
 1. ⚡ **Instant Answers**: The AI answers product and stock questions in seconds, keeping buyers hot.
 2. 🎟️ **Lead Conversion**: Automatically sends discount codes or answers queries to close the sale immediately.
 3. 💬 **Preferred Channel**: Reaches customers on WhatsApp, where open rates are 98% compared to dead emails.

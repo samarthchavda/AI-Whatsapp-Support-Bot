@@ -1,43 +1,43 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
 
 :root {
-  --bg-base: #f8fafc;
-  --bg-elevated: #ffffff;
-  --bg-surface: rgba(255, 255, 255, 0.75);
-  --bg-input: #f1f5f9;
-  --border-subtle: rgba(226, 232, 240, 0.8);
-  --border-default: rgba(203, 213, 225, 0.8);
-  --text-primary: #0f172a;
-  --text-secondary: #475569;
-  --text-muted: #64748b;
-  --accent: #4f46e5;
-  --accent-secondary: #7c3aed;
-  --success: #10b981;
-  --danger: #ef4444;
-  --warning: #f59e0b;
-  --radius-sm: 8px;
-  --radius-md: 12px;
-  --radius-lg: 16px;
-  --radius-xl: 20px;
-  --shadow-glow: 0 4px 16px rgba(79, 70, 229, 0.15);
+  --bg-base:        #F4F6FB;
+  --bg-elevated:    #FFFFFF;
+  --bg-surface:     rgba(255,255,255,0.85);
+  --bg-input:       #F8FAFC;
+  --border-subtle:  rgba(232,237,245,0.9);
+  --border-default: #E8EDF5;
+  --text-primary:   #0F1C2E;
+  --text-secondary: #5A6A7A;
+  --text-muted:     #94A3B8;
+  --accent:         #25D366;
+  --accent-secondary: #128C7E;
+  --success:        #25D366;
+  --danger:         #EF4444;
+  --warning:        #F59E0B;
+  --radius-sm:  8px;
+  --radius-md:  12px;
+  --radius-lg:  16px;
+  --radius-xl:  20px;
+  --shadow-glow: 0 4px 20px rgba(37,211,102,0.2);
 }
 
 body.dark-theme {
-  --bg-base: #09090b;
-  --bg-elevated: #18181b;
-  --bg-surface: rgba(24, 24, 27, 0.7);
-  --bg-input: rgba(39, 39, 42, 0.6);
-  --border-subtle: rgba(63, 63, 70, 0.3);
-  --border-default: rgba(63, 63, 70, 0.5);
-  --text-primary: #fafafa;
-  --text-secondary: #a1a1aa;
-  --text-muted: #71717a;
-  --accent: #6366f1;
-  --accent-secondary: #8b5cf6;
-  --success: #10b981;
-  --danger: #ef4444;
-  --warning: #f59e0b;
-  --shadow-glow: 0 4px 16px rgba(99, 102, 241, 0.35);
+  --bg-base:        #0F1C2E;
+  --bg-elevated:    #162030;
+  --bg-surface:     rgba(22,32,48,0.8);
+  --bg-input:       rgba(30,46,66,0.7);
+  --border-subtle:  rgba(255,255,255,0.05);
+  --border-default: rgba(255,255,255,0.08);
+  --text-primary:   #F1F5F9;
+  --text-secondary: #94A3B8;
+  --text-muted:     #64748B;
+  --accent:         #25D366;
+  --accent-secondary: #128C7E;
+  --success:        #25D366;
+  --danger:         #EF4444;
+  --warning:        #F59E0B;
+  --shadow-glow: 0 4px 20px rgba(37,211,102,0.25);
 }
 
 * {
@@ -317,10 +317,32 @@ body:not(.dark-theme) .stat-info h3 {
   color: var(--text-secondary) !important;
 }
 
+body:not(.dark-theme) .modal-content,
 body:not(.dark-theme) .modal-content-large {
   background: var(--bg-elevated) !important;
   border: 1px solid var(--border-subtle) !important;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.1) !important;
 }
+
+body:not(.dark-theme) .modal-close {
+  color: var(--text-secondary) !important;
+}
+
+body:not(.dark-theme) .modal-close:hover {
+  color: var(--text-primary) !important;
+}
+
+body:not(.dark-theme) .btn-secondary {
+  background: var(--bg-input) !important;
+  color: var(--text-primary) !important;
+  border: 1px solid var(--border-default) !important;
+}
+
+body:not(.dark-theme) .btn-secondary:hover {
+  background: var(--border-default) !important;
+  color: var(--text-primary) !important;
+}
+
 
 body:not(.dark-theme) .discount-preview {
   background: var(--bg-input) !important;

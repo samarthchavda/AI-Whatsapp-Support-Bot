@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import api from '../services/api';
 import { FaBroadcastTower, FaUpload, FaCalendarAlt, FaPaperPlane, FaTrash, FaClock, FaCheckCircle, FaTimesCircle } from 'react-icons/fa';
 
 function Broadcast() {
@@ -15,10 +15,7 @@ function Broadcast() {
   const fetchBroadcasts = async () => {
     try {
       setLoading(true);
-      const token = localStorage.getItem('token');
-      const response = await axios.get('http://localhost:5001/api/broadcasts', {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      const response = await api.get('/broadcasts');
       setBroadcasts(response.data.data);
     } catch (error) {
       console.error('Error fetching broadcasts:', error);
@@ -31,14 +28,12 @@ function Broadcast() {
   const handleCreateBroadcast = async (e) => {
     e.preventDefault();
     const formData = new FormData(e.target);
-    const token = localStorage.getItem('token');
 
     try {
       setUploadProgress('Creating broadcast...');
       
-      const response = await axios.post('http://localhost:5001/api/broadcasts', formData, {
+      const response = await api.post('/broadcasts', formData, {
         headers: {
-          'Authorization': `Bearer ${token}`,
           'Content-Type': 'multipart/form-data'
         }
       });
@@ -58,15 +53,9 @@ function Broadcast() {
 
   const handleSendNow = async (id) => {
     if (!window.confirm('Send this broadcast immediately?')) return;
-
-    const token = localStorage.getItem('token');
     
     try {
-      await axios.post(
-        `http://localhost:5001/api/broadcasts/${id}/send`,
-        {},
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+      await api.post(`/broadcasts/${id}/send`, {});
       alert('Broadcast queued for sending!');
       fetchBroadcasts();
     } catch (error) {
@@ -76,13 +65,9 @@ function Broadcast() {
 
   const handleDelete = async (id) => {
     if (!window.confirm('Delete this broadcast?')) return;
-
-    const token = localStorage.getItem('token');
     
     try {
-      await axios.delete(`http://localhost:5001/api/broadcasts/${id}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      await api.delete(`/broadcasts/${id}`);
       alert('Broadcast deleted successfully');
       fetchBroadcasts();
     } catch (error) {

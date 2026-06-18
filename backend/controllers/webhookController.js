@@ -155,7 +155,11 @@ async function handleIncomingMessage(message, contactName, matchedAdmin) {
     });
 
     if (aiResponse.botPaused) {
-      console.log(`🔕 Conversation for ${customerPhone} is in agent takeover. AI response skipped.`);
+      if (aiResponse.message) {
+        console.log(`🤖 Sending system/limit message: ${aiResponse.message}`);
+        await whatsappCloudAPI.sendMessage(customerPhone, aiResponse.message, customCredentials);
+      }
+      console.log(`🔕 Conversation for ${customerPhone} is in agent takeover/paused. AI response skipped.`);
       return;
     }
 

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { FaCrown, FaCheck, FaInfoCircle, FaRegCreditCard, FaHistory, FaCalendarAlt } from 'react-icons/fa';
-import { getPricingPlans, upgradePricingPlan, getAdminProfile } from '../services/api';
+import axios from 'axios';
+import { FaCrown, FaCheck, FaInfoCircle, FaRegCreditCard, FaHistory, FaCalendarAlt, FaTicketAlt, FaWhatsapp } from 'react-icons/fa';
+import api, { getPricingPlans, upgradePricingPlan, getAdminProfile } from '../services/api';
 import './Billing.css';
 
 function Billing() {
@@ -9,6 +10,10 @@ function Billing() {
   const [loading, setLoading] = useState(true);
   const [upgradingPlanName, setUpgradingPlanName] = useState(null);
   const [successMessage, setSuccessMessage] = useState(null);
+  const [couponCode, setCouponCode] = useState('');
+  const [activeCoupon, setActiveCoupon] = useState(null);
+  const [couponError, setCouponError] = useState(null);
+  const [verifyingCoupon, setVerifyingCoupon] = useState(false);
 
   useEffect(() => {
     fetchBillingData();
@@ -30,6 +35,28 @@ function Billing() {
     }
   };
 
+  const handleVerifyCoupon = async (e) => {
+    e.preventDefault();
+    if (!couponCode.trim()) return;
+    
+    try {
+      setVerifyingCoupon(true);
+      setCouponError(null);
+      
+      const response = await api.post('/auth/verify-coupon', { code: couponCode });
+      
+      if (response.data.success) {
+        setActiveCoupon(response.data.data);
+        setCouponError(null);
+      }
+    } catch (err) {
+      setCouponError(err.response?.data?.error || 'Invalid promo code');
+      setActiveCoupon(null);
+    } finally {
+      setVerifyingCoupon(false);
+    }
+  };
+
   const handleUpgrade = async (planName) => {
     if (!window.confirm(`Are you sure you want to upgrade/change your subscription to ${planName.toUpperCase()} plan?`)) {
       return;
@@ -37,7 +64,7 @@ function Billing() {
 
     try {
       setUpgradingPlanName(planName);
-      const response = await upgradePricingPlan(planName);
+      const response = await upgradePricingPlan(planName, activeCoupon ? activeCoupon.code : undefined);
       
       // Update local profile state
       setProfile(response.data.data.admin);
@@ -84,6 +111,19 @@ function Billing() {
   let progressColor = '#22c55e'; // Green
   if (isUsageDanger) progressColor = '#ef4444'; // Red
   else if (isUsageWarning) progressColor = '#f59e0b'; // Amber
+
+  const currentPlanDetails = plans.find(p => p.name === profile?.subscriptionPlan);
+  const currentFeatures = currentPlanDetails?.features || (profile?.subscriptionPlan === 'custom' ? {
+    maxConversations: -1,
+    maxMessages: -1,
+    geminiTokensPerMonth: profile?.geminiTokensLimit || 10000,
+    maxWhatsAppConnections: 5
+  } : {
+    maxConversations: profile?.subscriptionPlan === 'professional' ? 3000 : profile?.subscriptionPlan === 'enterprise' ? -1 : 500,
+    maxMessages: profile?.subscriptionPlan === 'professional' ? 15000 : profile?.subscriptionPlan === 'enterprise' ? -1 : 2000,
+    geminiTokensPerMonth: profile?.geminiTokensLimit || 10000,
+    maxWhatsAppConnections: profile?.subscriptionPlan === 'professional' ? 2 : profile?.subscriptionPlan === 'enterprise' ? 5 : 1
+  });
 
   const mockInvoices = [
     { id: 'INV-2026-001', date: '2026-05-15', amount: profile?.monthlyPrice || 29, status: 'Paid', method: 'Visa ending in 4242' },
@@ -136,6 +176,24 @@ function Billing() {
               <span>Payment Method: Visa ending in 4242</span>
             </div>
           </div>
+
+          <div className="plan-limits-section" style={{ marginTop: '20px', borderTop: '1px solid rgba(255, 255, 255, 0.1)', paddingTop: '16px' }}>
+            <h4 style={{ margin: '0 0 10px 0', fontSize: '12px', color: '#a5b4fc', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: '700' }}>Plan Limits</h4>
+            <div className="plan-limits-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '10px 16px' }}>
+              <div style={{ fontSize: '13px', color: '#a1a1aa' }}>
+                Conversations: <strong style={{ color: '#fafafa' }}>{currentFeatures.maxConversations === -1 ? 'Unlimited' : currentFeatures.maxConversations}</strong>
+              </div>
+              <div style={{ fontSize: '13px', color: '#a1a1aa' }}>
+                Messages: <strong style={{ color: '#fafafa' }}>{currentFeatures.maxMessages === -1 ? 'Unlimited' : currentFeatures.maxMessages}</strong>
+              </div>
+              <div style={{ fontSize: '13px', color: '#a1a1aa' }}>
+                WhatsApp Connections: <strong style={{ color: '#fafafa' }}>{currentFeatures.maxWhatsAppConnections} max</strong>
+              </div>
+              <div style={{ fontSize: '13px', color: '#a1a1aa' }}>
+                Gemini Tokens: <strong style={{ color: '#fafafa' }}>{(profile?.geminiTokensLimit || currentFeatures.geminiTokensPerMonth || 10000).toLocaleString()}</strong>
+              </div>
+            </div>
+          </div>
         </div>
 
         {/* Token Usage Card */}
@@ -173,11 +231,91 @@ function Billing() {
         </div>
       </div>
 
-      {/* Plan Selection Grid */}
+       {/* Plan Selection Grid */}
       <div className="plans-selection-section">
         <h2 className="section-title">Change Subscription Plan</h2>
-        <p className="section-subtitle">Select a plan that fits your customer support request volume.</p>
+        <p className="section-subtitle" style={{ marginBottom: '20px' }}>Select a plan that fits your customer support request volume.</p>
         
+        {profile?.role !== 'super_admin' && (
+          <div className="saas-alert-info" style={{
+            background: 'rgba(59, 130, 246, 0.15)',
+            border: '1px solid rgba(59, 130, 246, 0.3)',
+            borderRadius: '12px',
+            padding: '16px 20px',
+            marginBottom: '28px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '12px',
+            color: '#93c5fd'
+          }}>
+            <FaInfoCircle style={{ fontSize: '20px', flexShrink: 0, color: '#60a5fa' }} />
+            <div>
+              <strong style={{ display: 'block', fontSize: '14px', marginBottom: '2px' }}>Plan Management Restricted</strong>
+              <span style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>
+                Your subscription plan and billing limits are managed by the system administrator. 
+                Please contact your Super Admin to upgrade, apply promo codes, or modify your current plan limits.
+              </span>
+            </div>
+          </div>
+        )}
+
+        {/* Promo Code Input Form */}
+        <div className="promo-code-box" style={{
+          background: 'var(--bg-elevated)',
+          border: '1px solid var(--border-default)',
+          borderRadius: '12px',
+          padding: '20px',
+          marginBottom: '28px',
+          maxWidth: '500px',
+          opacity: profile?.role !== 'super_admin' ? 0.6 : 1
+        }}>
+          <h4 style={{ margin: '0 0 12px 0', fontSize: '14px', fontWeight: '700', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <FaTicketAlt style={{ color: 'var(--accent)' }} /> Have a Promo Code?
+          </h4>
+          <form onSubmit={handleVerifyCoupon} style={{ display: 'flex', gap: '10px' }}>
+            <input
+              type="text"
+              placeholder="e.g. BotReply50"
+              value={couponCode}
+              onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
+              disabled={profile?.role !== 'super_admin'}
+              style={{
+                flex: 1,
+                background: 'var(--bg-input)',
+                border: '1px solid var(--border-default)',
+                borderRadius: '8px',
+                padding: '8px 12px',
+                color: 'var(--text-primary)',
+                fontSize: '13px',
+                outline: 'none'
+              }}
+            />
+            <button
+              type="submit"
+              disabled={verifyingCoupon || !couponCode.trim() || profile?.role !== 'super_admin'}
+              className="btn-primary"
+              style={{ padding: '8px 16px', fontSize: '13px' }}
+            >
+              {verifyingCoupon ? 'Applying...' : 'Apply Code'}
+            </button>
+          </form>
+          {profile?.role !== 'super_admin' && (
+            <div style={{ marginTop: '10px', fontSize: '12px', color: 'var(--text-muted)' }}>
+              Note: Promo codes can only be applied by a Super Admin.
+            </div>
+          )}
+          {activeCoupon && (
+            <div style={{ marginTop: '10px', fontSize: '13px', color: 'var(--success)', fontWeight: '600' }}>
+              ✓ Code {activeCoupon.code} applied! Enjoy {activeCoupon.discountPercent}% OFF on checkout.
+            </div>
+          )}
+          {couponError && (
+            <div style={{ marginTop: '10px', fontSize: '13px', color: 'var(--danger)', fontWeight: '600' }}>
+              ✗ {couponError}
+            </div>
+          )}
+        </div>
+
         <div className="billing-plans-grid">
           {plans.map((plan) => {
             const isCurrent = profile?.subscriptionPlan === plan.name;
@@ -191,7 +329,18 @@ function Billing() {
                 <p className="upgrade-plan-desc">{plan.description}</p>
 
                 <div className="upgrade-price-row">
-                  <span className="price">${plan.monthlyPrice}</span>
+                  {activeCoupon ? (
+                    <div>
+                      <span className="price" style={{ textDecoration: 'line-through', fontSize: '18px', color: 'var(--text-muted)', marginRight: '8px' }}>
+                        ${plan.monthlyPrice}
+                      </span>
+                      <span className="price" style={{ color: 'var(--success)' }}>
+                        ${(plan.monthlyPrice - (plan.monthlyPrice * activeCoupon.discountPercent / 100)).toFixed(2)}
+                      </span>
+                    </div>
+                  ) : (
+                    <span className="price">${plan.monthlyPrice}</span>
+                  )}
                   <span className="period">/month</span>
                 </div>
 
@@ -223,11 +372,13 @@ function Billing() {
                 <button
                   type="button"
                   className={`plan-select-btn ${isCurrent ? 'btn-current' : 'btn-upgrade'}`}
-                  disabled={isCurrent || upgradingPlanName !== null}
+                  disabled={isCurrent || upgradingPlanName !== null || profile?.role !== 'super_admin'}
                   onClick={() => handleUpgrade(plan.name)}
                 >
                   {isCurrent 
                     ? 'Current Active Plan' 
+                    : profile?.role !== 'super_admin'
+                    ? 'Restricted to Super Admin'
                     : upgradingPlanName === plan.name 
                     ? 'Processing...' 
                     : 'Select Plan'}
@@ -235,6 +386,72 @@ function Billing() {
               </div>
             );
           })}
+        </div>
+      </div>
+
+      {/* Official Meta WhatsApp API Charges Info Card */}
+      <div className="billing-card meta-charges-card" style={{ marginBottom: '40px' }}>
+        <h3 className="card-title-with-icon" style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '18px', fontWeight: '700', color: '#fafafa', margin: '0 0 8px 0' }}>
+          <FaWhatsapp style={{ color: '#25D366' }} /> Official Meta WhatsApp API Charges
+        </h3>
+        <p className="usage-subtitle" style={{ margin: '0 0 20px 0', color: 'var(--text-muted)', fontSize: '13px' }}>
+          Direct pricing charged directly by Meta. There are no platform markups or hidden fees on message templates.
+        </p>
+
+        <div className="table-wrapper">
+          <table className="premium-table">
+            <thead>
+              <tr>
+                <th>Category</th>
+                <th>Rate (India / +91 numbers)</th>
+                <th>Common Examples</th>
+                <th>Billing Method</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr className="table-row-premium">
+                <td><strong>Utility</strong></td>
+                <td><span style={{ color: 'var(--success)', fontWeight: '700' }}>₹0.145</span> <small style={{ color: 'var(--text-muted)' }}>/ 24-hr session</small></td>
+                <td>Order Confirmed, Shipping Updates, Order Cancelled notifications</td>
+                <td>Billed directly to your connected Meta card</td>
+              </tr>
+              <tr className="table-row-premium">
+                <td><strong>Marketing</strong></td>
+                <td><span style={{ color: 'var(--success)', fontWeight: '700' }}>₹1.09</span> <small style={{ color: 'var(--text-muted)' }}>/ 24-hr session</small></td>
+                <td>Abandoned Cart Recovery, Promo Offers, Coupon Codes</td>
+                <td>Billed directly to your connected Meta card</td>
+              </tr>
+              <tr className="table-row-premium">
+                <td><strong>Authentication</strong></td>
+                <td><span style={{ color: 'var(--success)', fontWeight: '700' }}>₹0.145</span> <small style={{ color: 'var(--text-muted)' }}>/ 24-hr session</small></td>
+                <td>One-Time Passcodes (OTP), login verification checks</td>
+                <td>Billed directly to your connected Meta card</td>
+              </tr>
+              <tr className="table-row-premium">
+                <td><strong>Service</strong></td>
+                <td><span style={{ color: '#60a5fa', fontWeight: '700' }}>Free Tier</span> <small style={{ color: 'var(--text-muted)' }}>(1,000/month)</small></td>
+                <td>Customer support chats started by the customer messaging first</td>
+                <td>Free for first 1,000 monthly service sessions</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div className="saas-alert-info" style={{
+          background: 'rgba(245, 158, 11, 0.1)',
+          border: '1px solid rgba(245, 158, 11, 0.3)',
+          borderRadius: '10px',
+          padding: '14px 16px',
+          marginTop: '20px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '12px',
+          color: '#fef08a'
+        }}>
+          <FaInfoCircle style={{ fontSize: '18px', flexShrink: 0, color: '#f59e0b' }} />
+          <div style={{ fontSize: '13px', color: 'var(--text-secondary)', textAlign: 'left' }}>
+            <strong>Important Billing Note:</strong> The rates listed above are standard base rates for sending templates to destination phone numbers in India (+91). For sending templates to customers in other countries, Meta's regional conversation rates apply. You must connect your credit card directly inside the Meta Business Manager Billing panel to fund template deliveries.
+          </div>
         </div>
       </div>
 

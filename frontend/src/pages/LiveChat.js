@@ -4,7 +4,7 @@ import io from 'socket.io-client';
 import { getConversations, getConversationsByPhone, sendConversationMessage, updateConversation } from '../services/api';
 import './LiveChat.css';
 
-const SOCKET_URL = process.env.REACT_APP_API_URL?.replace('/api', '') || 'http://localhost:5001';
+const SOCKET_URL = process.env.REACT_APP_API_URL?.replace('/api', '') || `http://${window.location.hostname}:5001`;
 
 const AVATAR_COLORS = [
   'linear-gradient(135deg, #6366f1, #8b5cf6)',

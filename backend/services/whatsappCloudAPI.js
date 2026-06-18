@@ -501,6 +501,40 @@ class WhatsAppCloudAPI {
       }
     ];
   }
+
+  // Verify custom WhatsApp Cloud API credentials
+  async verifyCredentials(customCredentials) {
+    const accessToken = customCredentials?.accessToken || this.accessToken;
+    const phoneNumberId = customCredentials?.phoneNumberId || this.phoneNumberId;
+
+    if (!accessToken || accessToken === 'YOUR_ACCESS_TOKEN' || !phoneNumberId || phoneNumberId === 'YOUR_PHONE_NUMBER_ID') {
+      return {
+        success: false,
+        error: 'Credentials are not configured.'
+      };
+    }
+
+    try {
+      const url = `${this.baseUrl}/${phoneNumberId}`;
+      const config = {
+        headers: {
+          'Authorization': `Bearer ${accessToken}`
+        }
+      };
+      
+      const response = await axios.get(url, config);
+      return {
+        success: true,
+        data: response.data
+      };
+    } catch (error) {
+      console.error('❌ Credentials verification failed:', error.response?.data || error.message);
+      return {
+        success: false,
+        error: error.response?.data?.error?.message || error.message
+      };
+    }
+  }
 }
 
 const whatsappCloudAPI = new WhatsAppCloudAPI();

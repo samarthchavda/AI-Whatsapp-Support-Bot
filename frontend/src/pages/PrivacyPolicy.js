@@ -17,8 +17,8 @@ function PrivacyPolicy() {
           <FaChevronLeft /> Back to Home
         </button>
         <div className="privacy-logo">
-          <FaCommentDots />
-          <span className="logo-text">Support Bot Privacy Center</span>
+          <img src="/logo.png" className="logo-img" alt="Kwickbot Logo" style={{ width: '38px', height: '38px' }} />
+          <span className="logo-text">Kwickbot Privacy Center</span>
         </div>
       </header>
 
@@ -28,7 +28,7 @@ function PrivacyPolicy() {
           <h1>Privacy Policy & Compliance Guidelines</h1>
           <p className="hero-date">Last Updated: June 14, 2026</p>
           <p className="hero-sub">
-            Learn how our AI WhatsApp Support Bot platform collects, processes, and secures store customer data, and how to remain compliant with WhatsApp Business policies.
+            Learn how our Kwickbot platform collects, processes, and secures store customer data, and how to remain compliant with WhatsApp Business policies.
           </p>
         </div>
 
@@ -81,7 +81,7 @@ function PrivacyPolicy() {
         <section className="privacy-section-card">
           <h2>4. Pricing & WhatsApp Business API Cost Structure</h2>
           <p>
-            Understanding the cost breakdown of running an official WhatsApp Support Bot:
+            Understanding the cost breakdown of running Kwickbot:
           </p>
           <table className="pricing-table">
             <thead>
@@ -94,12 +94,12 @@ function PrivacyPolicy() {
             <tbody>
               <tr>
                 <td><strong>Subscription Plan</strong></td>
-                <td>AI Support Bot</td>
+                <td>Kwickbot</td>
                 <td>Flat monthly software hosting fee (e.g., $29/mo or $79/mo) for bot logic, dashboard controls, and server maintenance.</td>
               </tr>
               <tr>
                 <td><strong>AI Token Usage</strong></td>
-                <td>AI Support Bot</td>
+                <td>Kwickbot</td>
                 <td>Gemini LLM token consumption. Starter plans include a generous quota; additional tokens are billed based on use.</td>
               </tr>
               <tr>
@@ -128,7 +128,7 @@ function PrivacyPolicy() {
         <section className="privacy-section-card">
           <h2>6. E-Commerce Integration Prerequisites & Compliance</h2>
           <p>
-            For the AI Support Bot to successfully sync order details and verify customer identities for automated WhatsApp tracking, your store must be properly configured:
+            For Kwickbot to successfully sync order details and verify customer identities for automated WhatsApp tracking, your store must be properly configured:
           </p>
           <div className="guideline-grid">
             <div className="guideline-item">
@@ -143,7 +143,7 @@ function PrivacyPolicy() {
                       <strong>Basic Plan ($39/mo):</strong> Restricted to <em>Limited data access (no PII)</em>. Shopify completely redacts customer contact details. 
                       <ul style={{ marginTop: '3px', paddingLeft: '15px', listStyleType: 'square' }}>
                         <li><strong>No Automated Notifications:</strong> Because the customer phone number is missing, the system **cannot** send automated WhatsApp confirmations, invoice bills, tracking alerts, or recovery reminders.</li>
-                        <li><strong>AI Support Bot Only:</strong> The merchant still gets the AI chatbot widget/live chat support, and customers can manually type in their order numbers (e.g. `#1008`) to track order status.</li>
+                        <li><strong>Kwickbot Only:</strong> The merchant still gets the AI chatbot widget/live chat support, and customers can manually type in their order numbers (e.g. `#1008`) to track order status.</li>
                       </ul>
                     </li>
                     <li><strong>Shopify ($105/mo), Advanced ($399/mo), and Plus ($2,300/mo) Plans:</strong> Granted <em>Full data access</em>. All customer details are successfully shared with the Custom App, enabling automated phone-number-based lookup and direct automated WhatsApp notifications (confirmations, bills, shipping updates, etc.).</li>
@@ -163,7 +163,7 @@ function PrivacyPolicy() {
       </main>
 
       <footer className="privacy-footer">
-        <p>&copy; 2026 AI Support Bot. All rights reserved. Securely integrated with Meta Business API.</p>
+        <p>&copy; 2026 Kwickbot. All rights reserved. Securely integrated with Meta Business API.</p>
       </footer>
     </div>
   );

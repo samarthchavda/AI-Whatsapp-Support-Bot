@@ -11,7 +11,7 @@ This causes:
 2. 🔥 **Support Agent Burnout**: Repetitive queries drain energy and lead to high staff turnover.
 3. ⏳ **Delayed Response Times**: Real, critical issues (refunds, delivery errors) get delayed while agents are answering simple FAQs.
 
-WAssistant automates this by training a smart AI agent on your exact store documents, allowing it to instantly resolve FAQs while routing complex issues to humans.
+Kwickbot automates this by training a smart AI agent on your exact store documents, allowing it to instantly resolve FAQs while routing complex issues to humans.
 
 Take the burden off your support team today! 🚀
 

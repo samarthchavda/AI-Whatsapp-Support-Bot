@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { Link } from 'react-router-dom';
 import { updateAdminProfile, getAdminProfile } from '../services/api';
 import { FaUser, FaStore, FaGlobe, FaSave, FaSun, FaMoon, FaEnvelope, FaPhone, FaLink, FaBuilding, FaDollarSign, FaClock, FaRobot, FaCheckCircle, FaTimesCircle, FaTimes } from 'react-icons/fa';
 import './Profile.css';
@@ -135,6 +136,28 @@ function Profile({ admin, onUpdateAdmin }) {
     }
   };
 
+  const PLAN_LIMITS = {
+    starter: { tokens: 100000, messages: 500 },
+    professional: { tokens: 500000, messages: 2500 },
+    enterprise: { tokens: 2000000, messages: 10000 },
+    custom: { tokens: Infinity, messages: Infinity }
+  };
+
+  const plan = (profileData.subscriptionPlan || 'starter').toLowerCase();
+  const limits = PLAN_LIMITS[plan] || PLAN_LIMITS.starter;
+
+  const tokenLimit = profileData.geminiTokensLimit || limits.tokens;
+  const messageLimit = limits.messages;
+
+  const tokensUsed = profileData.geminiTokensUsed || 0;
+  const messagesProcessed = profileData.totalMessagesProcessed || 0;
+
+  const tokenUsagePercent = tokenLimit === Infinity ? 0 : Math.round((tokensUsed / tokenLimit) * 100);
+  const messageUsagePercent = messageLimit === Infinity ? 0 : Math.round((messagesProcessed / messageLimit) * 100);
+
+  const isApproachingLimit = tokenUsagePercent >= 90 || messageUsagePercent >= 90;
+  const isLimitBreached = tokensUsed >= tokenLimit || messagesProcessed >= messageLimit;
+
   if (loading) {
     return (
       <div className="profile-loading-container">
@@ -149,6 +172,31 @@ function Profile({ admin, onUpdateAdmin }) {
         <h1>Profile & Store Settings</h1>
         <p className="profile-subtitle">Manage your merchant account preferences and store configurations.</p>
       </div>
+
+      {/* Quota Limit Warning / Critical Banner */}
+      {isLimitBreached ? (
+        <div className="profile-alert-message alert-error" style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px' }}>
+          <FaTimesCircle style={{ fontSize: '20px', flexShrink: 0 }} />
+          <div style={{ textAlign: 'left' }}>
+            <strong style={{ display: 'block', fontSize: '15px' }}>Monthly AI limits reached - Bot Suspended/Paused 🔕</strong>
+            <span style={{ fontSize: '13px', opacity: 0.95 }}>
+              Your automated support bot has been suspended because you have reached 100% of your plan's monthly limits. 
+              Please <Link to="/dashboard/billing" style={{ color: 'inherit', textDecoration: 'underline', fontWeight: 'bold' }}>upgrade your plan</Link> to reactivate the bot.
+            </span>
+          </div>
+        </div>
+      ) : isApproachingLimit ? (
+        <div className="profile-alert-message alert-warning" style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px' }}>
+          <FaTimesCircle style={{ fontSize: '20px', flexShrink: 0 }} />
+          <div style={{ textAlign: 'left' }}>
+            <strong style={{ display: 'block', fontSize: '15px' }}>Approaching monthly limits (Over 90% Used) ⚠️</strong>
+            <span style={{ fontSize: '13px', opacity: 0.95 }}>
+              Your account has consumed more than 90% of your monthly resource limits. To prevent support disruption, 
+              consider <Link to="/dashboard/billing" style={{ color: 'inherit', textDecoration: 'underline', fontWeight: 'bold' }}>upgrading your plan</Link>.
+            </span>
+          </div>
+        </div>
+      ) : null}
 
       {/* Floating Toast Popup */}
       {toast.show && (
@@ -186,19 +234,53 @@ function Profile({ admin, onUpdateAdmin }) {
                 <span>Store Currency:</span>
                 <strong style={{ textTransform: 'uppercase' }}>{profileData.currency || 'USD'} (Auto-synced)</strong>
               </div>
-              <div className="stat-row">
-                <span>Messages Processed:</span>
-                <strong>{profileData.totalMessagesProcessed}</strong>
-              </div>
-              <div className="stat-row">
-                <span>Gemini API Usage:</span>
-                <strong>{profileData.geminiTokensUsed} / {profileData.geminiTokensLimit} tokens</strong>
-              </div>
-              <div className="usage-progress-bar-container">
-                <div 
-                  className="usage-progress-bar-fill"
-                  style={{ width: `${Math.min(100, (profileData.geminiTokensUsed / profileData.geminiTokensLimit) * 100)}%` }}
-                ></div>
+
+              <div className="stat-usage-section" style={{ marginTop: '16px', borderTop: '1px solid var(--border-subtle)', paddingTop: '16px', width: '100%' }}>
+                <div className="stat-row" style={{ marginBottom: '6px' }}>
+                  <span>Gemini Token Usage:</span>
+                  <strong>{tokensUsed.toLocaleString()} / {tokenLimit === Infinity ? 'Unlimited' : tokenLimit.toLocaleString()}</strong>
+                </div>
+                <div className="usage-progress-bar-container" style={{ marginBottom: '14px' }}>
+                  <div 
+                    className="usage-progress-bar-fill"
+                    style={{ 
+                      width: `${tokenLimit === Infinity ? 0 : Math.min(100, (tokensUsed / tokenLimit) * 100)}%`,
+                      background: (tokensUsed / tokenLimit) >= 0.9 ? 'var(--danger)' : 'linear-gradient(90deg, var(--accent) 0%, var(--accent-secondary) 100%)'
+                    }}
+                  ></div>
+                </div>
+
+                <div className="stat-row" style={{ marginBottom: '6px' }}>
+                  <span>Messages Processed:</span>
+                  <strong>{messagesProcessed.toLocaleString()} / {messageLimit === Infinity ? 'Unlimited' : messageLimit.toLocaleString()}</strong>
+                </div>
+                <div className="usage-progress-bar-container" style={{ marginBottom: '14px' }}>
+                  <div 
+                    className="usage-progress-bar-fill"
+                    style={{ 
+                      width: `${messageLimit === Infinity ? 0 : Math.min(100, (messagesProcessed / messageLimit) * 100)}%`,
+                      background: (messagesProcessed / messageLimit) >= 0.9 ? 'var(--danger)' : 'linear-gradient(90deg, #10b981 0%, #34d399 100%)'
+                    }}
+                  ></div>
+                </div>
+
+                <div style={{ marginTop: '12px', textAlign: 'center' }}>
+                  <Link to="/dashboard/billing" className="btn-upgrade-sidebar" style={{ 
+                    display: 'inline-block', 
+                    fontSize: '11px', 
+                    fontWeight: 'bold', 
+                    color: 'var(--accent)', 
+                    textDecoration: 'none',
+                    padding: '6px 12px',
+                    borderRadius: '6px',
+                    border: '1px dashed var(--accent)',
+                    transition: 'all 0.2s ease',
+                    width: '100%',
+                    boxSizing: 'border-box'
+                  }}>
+                    Manage Subscriptions & Billing
+                  </Link>
+                </div>
               </div>
             </div>
           </div>

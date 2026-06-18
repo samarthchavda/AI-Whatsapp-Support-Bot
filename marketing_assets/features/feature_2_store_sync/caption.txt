@@ -1,6 +1,6 @@
 📦 Stop keying in order numbers manually. Sync your store in 1-Click!
 
-WAssistant connects directly to your Shopify or WooCommerce store in seconds.
+Kwickbot connects directly to your Shopify or WooCommerce store in seconds.
 
 Once linked, it automates order notifications and tracking requests completely:
 1. 🛍️ Sync your store orders to WhatsApp instantly.

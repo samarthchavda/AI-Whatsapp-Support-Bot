@@ -36,6 +36,15 @@ class WhatsAppService {
       });
       const responseTime = Date.now() - startTime;
 
+      if (response.botPaused) {
+        if (response.message) {
+          console.log(`🤖 Sending system/limit message via simulated service: ${response.message}`);
+          await this.sendMessage(customerPhone, response.message);
+        }
+        console.log(`🔕 Conversation for ${customerPhone} is paused/escalated.`);
+        return response;
+      }
+
       console.log(`🤖 AI Response (${responseTime}ms): ${response.message}`);
 
       // Log conversation

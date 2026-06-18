@@ -1,4 +1,5 @@
 const Admin = require('../models/Admin');
+const emailService = require('../services/emailService');
 const {
   generateAccessToken,
   generateRefreshToken,
@@ -432,7 +433,7 @@ exports.getPlans = async (req, res) => {
  */
 exports.upgradePlan = async (req, res) => {
   try {
-    const { planName } = req.body;
+    const { planName, couponCode } = req.body;
     const allowedPlans = ['starter', 'professional', 'enterprise'];
     if (!allowedPlans.includes(planName)) {
       return res.status(400).json({ success: false, error: 'Invalid plan selected' });
@@ -443,9 +444,27 @@ exports.upgradePlan = async (req, res) => {
       return res.status(404).json({ success: false, error: 'Admin not found' });
     }
 
+    // Restrict plan modifications to super admin role only
+    if (admin.role !== 'super_admin') {
+      return res.status(403).json({
+        success: false,
+        error: 'Access denied. Only Super Admin can change subscription plans.'
+      });
+    }
+
+    let discountPercent = 0;
+    if (couponCode) {
+      const Coupon = require('../models/Coupon');
+      const coupon = await Coupon.findOne({ code: couponCode.toUpperCase(), isActive: true });
+      if (coupon && (!coupon.expiresAt || coupon.expiresAt > new Date())) {
+        discountPercent = coupon.discountPercent;
+      }
+    }
+
     const PricingPlan = require('../models/PricingPlan');
     const planDetails = await PricingPlan.findOne({ name: planName, isActive: true });
 
+    let originalPrice = 29;
     if (!planDetails) {
       const fallbacks = {
         starter: { price: 29, limit: 10000 },
@@ -455,14 +474,16 @@ exports.upgradePlan = async (req, res) => {
       
       const fallback = fallbacks[planName];
       admin.subscriptionPlan = planName;
-      admin.monthlyPrice = fallback.price;
+      originalPrice = fallback.price;
       admin.geminiTokensLimit = fallback.limit;
     } else {
       admin.subscriptionPlan = planName;
-      admin.monthlyPrice = planDetails.monthlyPrice;
+      originalPrice = planDetails.monthlyPrice;
       admin.geminiTokensLimit = planDetails.features.geminiTokensPerMonth;
     }
 
+    admin.monthlyPrice = originalPrice - (originalPrice * discountPercent / 100);
+    admin.customDiscount = discountPercent;
     admin.subscriptionStatus = 'active';
     admin.subscriptionStartDate = new Date();
     const endDate = new Date();
@@ -532,7 +553,6 @@ exports.updateProfile = async (req, res) => {
 exports.forgotPassword = async (req, res) => {
   try {
     const crypto = require('crypto');
-    const nodemailer = require('nodemailer');
     const { email } = req.body;
 
     if (!email) {
@@ -560,17 +580,6 @@ exports.forgotPassword = async (req, res) => {
     // Reset URL
     const resetUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/reset-password/${resetToken}`;
 
-    // Configure transporter
-    const transporter = nodemailer.createTransport({
-      host: process.env.SMTP_HOST || 'smtp.gmail.com',
-      port: process.env.SMTP_PORT || 587,
-      secure: false,
-      auth: {
-        user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASS
-      }
-    });
-
     const mailHtml = `
       <!DOCTYPE html>
       <html>
@@ -590,11 +599,11 @@ exports.forgotPassword = async (req, res) => {
       <body>
         <div class="container">
           <div class="header">
-            <h1>🔒 Password Reset Request</h1>
+            <h1>Password Reset Request</h1>
           </div>
           <div class="content">
             <h2>Hello ${admin.name},</h2>
-            <p>You requested a password reset for your WhatsApp Support Bot admin account. Click the button below to set a new password. This link is valid for 1 hour.</p>
+            <p>You requested a password reset for your Kwickbot admin account. Click the button below to set a new password. This link is valid for 1 hour.</p>
             
             <div style="text-align: center;">
               <a href="${resetUrl}" class="button" style="color: white !important;">Reset Password</a>
@@ -605,7 +614,7 @@ exports.forgotPassword = async (req, res) => {
             <p style="word-break: break-all; color: #4f46e5;">${resetUrl}</p>
           </div>
           <div class="footer">
-            <p>© ${new Date().getFullYear()} WhatsApp Support Bot. All rights reserved.</p>
+            <p>© ${new Date().getFullYear()} Kwickbot. All rights reserved.</p>
             <p>This is an automated system notification.</p>
           </div>
         </div>
@@ -613,17 +622,22 @@ exports.forgotPassword = async (req, res) => {
       </html>
     `;
 
-    // Send the mail
-    if (process.env.SMTP_USER && process.env.SMTP_PASS && process.env.SMTP_USER !== 'your_email@gmail.com') {
-      await transporter.sendMail({
-        from: `"WhatsApp Support Bot" <${process.env.SMTP_USER}>`,
+    const mailText = `Hello ${admin.name},\n\nYou requested a password reset for your Kwickbot admin account.\n\nPlease set a new password using the link below:\n${resetUrl}\n\nThis link is valid for 1 hour.\n\nIf you did not request this, you can safely ignore this email.\n\nBest regards,\nKwickbot Team`;
+
+    // Send the mail using unified email service
+    try {
+      const emailResult = await emailService.sendEmail({
         to: admin.email,
-        subject: '🔒 Reset Your Account Password',
-        html: mailHtml
+        subject: 'Reset Your Account Password',
+        html: mailHtml,
+        text: mailText
       });
-      console.log(`✉️ Password reset mail sent to ${admin.email}`);
-    } else {
-      console.warn(`⚠️ SMTP not configured. Printing password reset URL: ${resetUrl}`);
+      if (!emailResult.success) {
+        console.warn(`⚠️ Email skipped or failed. Printing password reset URL: ${resetUrl}`);
+      }
+    } catch (emailErr) {
+      console.error('❌ Error sending password reset email:', emailErr.message);
+      console.warn(`⚠️ Printing password reset URL: ${resetUrl}`);
     }
 
     res.json({
@@ -692,5 +706,43 @@ exports.resetPassword = async (req, res) => {
       success: false,
       error: error.message
     });
+  }
+};
+
+/**
+ * Verify Coupon Code validity
+ */
+exports.verifyCoupon = async (req, res) => {
+  try {
+    const { code } = req.body;
+    if (!code) {
+      return res.status(400).json({ success: false, error: 'Promo code is required' });
+    }
+    
+    const Coupon = require('../models/Coupon');
+    const coupon = await Coupon.findOne({ code: code.toUpperCase() });
+    if (!coupon) {
+      return res.status(404).json({ success: false, error: 'Invalid coupon code' });
+    }
+    
+    if (!coupon.isActive) {
+      return res.status(400).json({ success: false, error: 'This coupon is no longer active' });
+    }
+    
+    if (coupon.expiresAt && coupon.expiresAt < new Date()) {
+      return res.status(400).json({ success: false, error: 'This coupon has expired' });
+    }
+    
+    res.json({
+      success: true,
+      message: 'Coupon verified successfully!',
+      data: {
+        code: coupon.code,
+        discountPercent: coupon.discountPercent
+      }
+    });
+  } catch (error) {
+    console.error('Error verifying coupon:', error);
+    res.status(500).json({ success: false, error: 'Failed to verify coupon' });
   }
 };

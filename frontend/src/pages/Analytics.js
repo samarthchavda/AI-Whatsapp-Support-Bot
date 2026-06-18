@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import api from '../services/api';
 import {
   BarChart,
   Bar,
@@ -30,14 +30,12 @@ function Analytics() {
   const fetchAnalytics = async () => {
     try {
       setLoading(true);
-      const token = localStorage.getItem('token');
-      const headers = { Authorization: `Bearer ${token}` };
 
-      // Fetch all analytics data
+      // Fetch all analytics data using central API client
       const [conversationsRes, resolutionRes, sentimentRes] = await Promise.all([
-        axios.get('http://localhost:5001/api/analytics/conversations-per-day', { headers }),
-        axios.get('http://localhost:5001/api/analytics/resolution-rate', { headers }),
-        axios.get('http://localhost:5001/api/analytics/sentiment', { headers })
+        api.get('/analytics/conversations-per-day'),
+        api.get('/analytics/resolution-rate'),
+        api.get('/analytics/sentiment')
       ]);
 
       setConversationsData(conversationsRes.data.data);
@@ -54,10 +52,7 @@ function Analytics() {
   const refreshSentiment = async () => {
     try {
       setSentimentLoading(true);
-      const token = localStorage.getItem('token');
-      const response = await axios.get('http://localhost:5001/api/analytics/sentiment', {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      const response = await api.get('/analytics/sentiment');
       setSentimentData(response.data.data);
     } catch (error) {
       console.error('Error refreshing sentiment:', error);

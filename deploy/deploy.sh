@@ -3,7 +3,7 @@
 # Exit immediately if a command exits with a non-zero status
 set -e
 
-PROJECT_DIR="/var/www/whatsapp-bot"
+PROJECT_DIR="/home/ubuntu/whatsapp-bot"
 
 echo "========================================================="
 echo "🔄 Starting AI WhatsApp Support Bot Deployment Script"

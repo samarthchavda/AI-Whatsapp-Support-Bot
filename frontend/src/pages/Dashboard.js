@@ -4,7 +4,7 @@ import io from 'socket.io-client';
 import { getDashboardStats } from '../services/api';
 import { FaComments, FaBox, FaExclamationTriangle, FaCheckCircle, FaStar, FaArrowUp, FaArrowDown, FaCommentDots, FaPlug, FaBrain, FaBroadcastTower } from 'react-icons/fa';
 
-const SOCKET_URL = process.env.REACT_APP_API_URL?.replace('/api', '') || `http://${window.location.hostname}:5001`;
+const SOCKET_URL = process.env.REACT_APP_API_URL?.replace('/api', '') || (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' ? 'http://localhost:5001' : window.location.origin);
 
 function Dashboard() {
   const [stats, setStats] = useState(null);

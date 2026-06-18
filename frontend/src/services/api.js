@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_BASE_URL = process.env.REACT_APP_API_URL || `http://${window.location.hostname}:5001/api`;
+const API_BASE_URL = process.env.REACT_APP_API_URL || (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' ? 'http://localhost:5001/api' : '/api');
 const ACCESS_TOKEN_KEY = 'accessToken';
 const LEGACY_TOKEN_KEY = 'token';
 

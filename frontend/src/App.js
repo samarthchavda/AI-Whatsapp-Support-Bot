@@ -25,6 +25,7 @@ import SuperAdminUserDetail from './pages/SuperAdminUserDetail';
 import PlanManager from './pages/PlanManager';
 import DemoRequests from './pages/DemoRequests';
 import SuperAdminBudget from './pages/SuperAdminBudget';
+import SuperAdminSettings from './pages/SuperAdminSettings';
 import Billing from './pages/Billing';
 import Templates from './pages/Templates';
 import AbandonedCarts from './pages/AbandonedCarts';
@@ -134,6 +135,12 @@ function Sidebar({ admin, onLogout, isOpen, onToggle }) {
                   <Link to="/dashboard/super-admin/announcements" className={isActive('/dashboard/super-admin/announcements')} title="System Announcements">
                     <FaBullhorn />
                     <span className="nav-label">Announcements</span>
+                  </Link>
+                </li>
+                <li>
+                  <Link to="/dashboard/super-admin/settings" className={isActive('/dashboard/super-admin/settings')} title="System Connection">
+                    <FaPlug />
+                    <span className="nav-label">System Connection</span>
                   </Link>
                 </li>
               </ul>
@@ -674,6 +681,7 @@ function App() {
                     <Route path="/super-admin/user/:userId" element={<SuperAdminUserDetail />} />
                     <Route path="/super-admin/plans" element={<PlanManager />} />
                     <Route path="/super-admin/budget" element={<SuperAdminBudget />} />
+                    <Route path="/super-admin/settings" element={<SuperAdminSettings />} />
                   </Routes>
                   </div>
                 </div>

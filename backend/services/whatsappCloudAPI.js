@@ -29,11 +29,52 @@ class WhatsAppCloudAPI {
     return null;
   }
 
+  // Get system connection settings dynamically
+  async getSystemSettings() {
+    let accessToken = this.accessToken;
+    let phoneNumberId = this.phoneNumberId;
+    let businessAccountId = this.businessAccountId;
+    let webhookVerifyToken = this.webhookVerifyToken;
+
+    try {
+      const GlobalSettings = require('../models/GlobalSettings');
+      const tokenSetting = await GlobalSettings.findOne({ key: 'whatsapp_access_token' });
+      const phoneIdSetting = await GlobalSettings.findOne({ key: 'whatsapp_phone_number_id' });
+      const bizIdSetting = await GlobalSettings.findOne({ key: 'whatsapp_business_account_id' });
+      const verifyTokenSetting = await GlobalSettings.findOne({ key: 'whatsapp_webhook_verify_token' });
+
+      if (tokenSetting && tokenSetting.value) accessToken = tokenSetting.value;
+      if (phoneIdSetting && phoneIdSetting.value) phoneNumberId = phoneIdSetting.value;
+      if (bizIdSetting && bizIdSetting.value) businessAccountId = bizIdSetting.value;
+      if (verifyTokenSetting && verifyTokenSetting.value) webhookVerifyToken = verifyTokenSetting.value;
+    } catch (err) {
+      console.error('Error fetching dynamic WhatsApp credentials from DB:', err.message);
+    }
+
+    return {
+      accessToken,
+      phoneNumberId,
+      businessAccountId,
+      webhookVerifyToken
+    };
+  }
+
   // Send message via WhatsApp Cloud API
   async sendMessage(phoneNumber, message, customCredentials = null) {
-    const accessToken = customCredentials?.accessToken || this.accessToken;
-    const phoneNumberId = customCredentials?.phoneNumberId || this.phoneNumberId;
-    const isConfig = (customCredentials?.accessToken && customCredentials?.phoneNumberId) || this.isConfigured;
+    let accessToken;
+    let phoneNumberId;
+    let isConfig;
+
+    if (customCredentials) {
+      accessToken = customCredentials.accessToken;
+      phoneNumberId = customCredentials.phoneNumberId;
+      isConfig = !!(accessToken && phoneNumberId);
+    } else {
+      const systemSettings = await this.getSystemSettings();
+      accessToken = systemSettings.accessToken;
+      phoneNumberId = systemSettings.phoneNumberId;
+      isConfig = (accessToken && accessToken !== 'YOUR_ACCESS_TOKEN') && (phoneNumberId && phoneNumberId !== 'YOUR_PHONE_NUMBER_ID');
+    }
 
     // Check if API is configured
     if (!isConfig) {
@@ -390,9 +431,20 @@ class WhatsAppCloudAPI {
 
   // Fetch templates from Meta Graph API
   async fetchTemplates(customCredentials = null) {
-    const accessToken = customCredentials?.accessToken || this.accessToken;
-    const businessAccountId = customCredentials?.businessAccountId || this.businessAccountId;
-    const isConfig = (customCredentials?.accessToken && customCredentials?.businessAccountId) || this.isConfigured;
+    let accessToken;
+    let businessAccountId;
+    let isConfig;
+
+    if (customCredentials) {
+      accessToken = customCredentials.accessToken;
+      businessAccountId = customCredentials.businessAccountId;
+      isConfig = !!(accessToken && businessAccountId);
+    } else {
+      const systemSettings = await this.getSystemSettings();
+      accessToken = systemSettings.accessToken;
+      businessAccountId = systemSettings.businessAccountId;
+      isConfig = (accessToken && accessToken !== 'YOUR_ACCESS_TOKEN') && (businessAccountId && businessAccountId !== 'YOUR_BUSINESS_ACCOUNT_ID');
+    }
 
     if (!isConfig) {
       console.log('⚠️ WhatsApp Cloud API not configured. Returning seeded default templates.');

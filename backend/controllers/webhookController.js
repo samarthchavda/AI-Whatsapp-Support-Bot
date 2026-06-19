@@ -19,8 +19,17 @@ exports.handleWebhook = async (req, res) => {
       const challenge = req.query['hub.challenge'];
  
       if (mode === 'subscribe') {
+        let globalVerifyToken = process.env.WEBHOOK_VERIFY_TOKEN;
+        try {
+          const GlobalSettings = require('../models/GlobalSettings');
+          const verifyTokenSetting = await GlobalSettings.findOne({ key: 'whatsapp_webhook_verify_token' });
+          if (verifyTokenSetting && verifyTokenSetting.value) globalVerifyToken = verifyTokenSetting.value;
+        } catch (err) {
+          console.error('Error fetching dynamic WhatsApp webhook verify token from DB:', err.message);
+        }
+
+        const isGlobalMatch = token === globalVerifyToken;
         const Admin = require('../models/Admin');
-        const isGlobalMatch = token === process.env.WEBHOOK_VERIFY_TOKEN;
         const matchedMerchant = token ? await Admin.findOne({ whatsappVerifyToken: token }) : null;
 
         if (isGlobalMatch || matchedMerchant) {
@@ -57,8 +66,18 @@ exports.handleWebhook = async (req, res) => {
 
       // Fallback: If no match, search for a default admin configuration
       if (!matchedAdmin) {
-        // If the incoming ID matches the env, fallback to default admin
-        if (incomingPhoneNumberId === process.env.WHATSAPP_PHONE_NUMBER_ID) {
+        // Fetch dynamic phone number ID from GlobalSettings
+        let systemPhoneId = process.env.WHATSAPP_PHONE_NUMBER_ID;
+        try {
+          const GlobalSettings = require('../models/GlobalSettings');
+          const phoneIdSetting = await GlobalSettings.findOne({ key: 'whatsapp_phone_number_id' });
+          if (phoneIdSetting && phoneIdSetting.value) systemPhoneId = phoneIdSetting.value;
+        } catch (err) {
+          console.error('Error fetching dynamic WhatsApp phone number ID from DB:', err.message);
+        }
+
+        // If the incoming ID matches the env or DB system ID, fallback to default admin
+        if (incomingPhoneNumberId === systemPhoneId || incomingPhoneNumberId === process.env.WHATSAPP_PHONE_NUMBER_ID) {
           matchedAdmin = await Admin.findOne({ whatsappConnected: true, email: { $ne: 'demo@store.com' } })
             || await Admin.findOne({ whatsappConnected: true })
             || await Admin.findOne({ email: 'demo@store.com' })

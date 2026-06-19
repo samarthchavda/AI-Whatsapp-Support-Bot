@@ -796,11 +796,15 @@ exports.updateGlobalSettings = async (req, res) => {
     const whatsappWebBot = require('../services/whatsappWebBot');
 
     for (const [key, value] of Object.entries(settings)) {
-      await GlobalSettings.findOneAndUpdate(
-        { key },
-        { key, value },
-        { upsert: true, new: true }
-      );
+      if (value === '' || value === null || value === undefined) {
+        await GlobalSettings.deleteOne({ key });
+      } else {
+        await GlobalSettings.findOneAndUpdate(
+          { key },
+          { key, value },
+          { upsert: true, new: true }
+        );
+      }
 
       // Handle dynamic activation/deactivation of WhatsApp Web Bot
       if (key === 'webBotEnabled') {

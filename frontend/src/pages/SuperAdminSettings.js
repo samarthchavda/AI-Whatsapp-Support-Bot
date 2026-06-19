@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FaPlug, FaSave, FaEye, FaEyeSlash, FaInfoCircle } from 'react-icons/fa';
+import { FaPlug, FaSave, FaEye, FaEyeSlash, FaInfoCircle, FaTrash } from 'react-icons/fa';
 import api from '../services/api';
 import './SuperAdmin.css';
 
@@ -15,10 +15,15 @@ function SuperAdminSettings() {
     razorpay_key_secret: ''
   });
   const [showToken, setShowToken] = useState(false);
+  const [showRazorpayKey, setShowRazorpayKey] = useState(false);
   const [showRazorpaySecret, setShowRazorpaySecret] = useState(false);
+  
   const [loading, setLoading] = useState(true);
   const [savingWhatsApp, setSavingWhatsApp] = useState(false);
   const [savingRazorpay, setSavingRazorpay] = useState(false);
+  const [hasWhatsAppKeys, setHasWhatsAppKeys] = useState(false);
+  const [hasRazorpayKeys, setHasRazorpayKeys] = useState(false);
+
   const [successMsg, setSuccessMsg] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
 
@@ -50,6 +55,8 @@ function SuperAdminSettings() {
           razorpay_key_id: settings.razorpay_key_id || '',
           razorpay_key_secret: settings.razorpay_key_secret || ''
         });
+        setHasWhatsAppKeys(!!(settings.whatsapp_access_token && settings.whatsapp_phone_number_id));
+        setHasRazorpayKeys(!!(settings.razorpay_key_id && settings.razorpay_key_secret));
       }
     } catch (err) {
       console.error('Error fetching settings:', err);
@@ -83,7 +90,8 @@ function SuperAdminSettings() {
       });
 
       if (response.data?.success) {
-        setSuccessMsg('System WhatsApp credentials updated successfully! ✅');
+        setSuccessMsg(hasWhatsAppKeys ? 'System WhatsApp credentials updated successfully! ✅' : 'System WhatsApp credentials saved successfully! ✅');
+        setHasWhatsAppKeys(true);
         setTimeout(() => setSuccessMsg(''), 5000);
       }
     } catch (err) {
@@ -109,12 +117,85 @@ function SuperAdminSettings() {
       });
 
       if (response.data?.success) {
-        setSuccessMsg('Razorpay Gateway credentials updated successfully! ✅');
+        setSuccessMsg(hasRazorpayKeys ? 'Razorpay Gateway credentials updated successfully! ✅' : 'Razorpay Gateway credentials saved successfully! ✅');
+        setHasRazorpayKeys(true);
         setTimeout(() => setSuccessMsg(''), 5000);
       }
     } catch (err) {
       console.error('Error saving Razorpay settings:', err);
       setErrorMsg(err.response?.data?.error || 'Failed to save Razorpay credentials.');
+    } finally {
+      setSavingRazorpay(false);
+    }
+  };
+
+  const handleDeleteWhatsApp = async () => {
+    if (!window.confirm('Are you sure you want to delete all WhatsApp settings? This will delete them from the database.')) {
+      return;
+    }
+    try {
+      setSavingWhatsApp(true);
+      setErrorMsg('');
+      setSuccessMsg('');
+
+      const response = await api.post('/super-admin/settings', {
+        settings: {
+          whatsapp_access_token: '',
+          whatsapp_phone_number_id: '',
+          whatsapp_business_account_id: '',
+          whatsapp_webhook_verify_token: ''
+        }
+      });
+
+      if (response.data?.success) {
+        setSuccessMsg('System WhatsApp credentials deleted successfully! ✅');
+        setFormData(prev => ({
+          ...prev,
+          whatsapp_access_token: '',
+          whatsapp_phone_number_id: '',
+          whatsapp_business_account_id: '',
+          whatsapp_webhook_verify_token: ''
+        }));
+        setHasWhatsAppKeys(false);
+        setTimeout(() => setSuccessMsg(''), 5000);
+      }
+    } catch (err) {
+      console.error('Error deleting WhatsApp settings:', err);
+      setErrorMsg(err.response?.data?.error || 'Failed to delete WhatsApp credentials.');
+    } finally {
+      setSavingWhatsApp(false);
+    }
+  };
+
+  const handleDeleteRazorpay = async () => {
+    if (!window.confirm('Are you sure you want to delete all Razorpay settings? This will delete them from the database.')) {
+      return;
+    }
+    try {
+      setSavingRazorpay(true);
+      setErrorMsg('');
+      setSuccessMsg('');
+
+      const response = await api.post('/super-admin/settings', {
+        settings: {
+          razorpay_key_id: '',
+          razorpay_key_secret: ''
+        }
+      });
+
+      if (response.data?.success) {
+        setSuccessMsg('Razorpay Gateway credentials deleted successfully! ✅');
+        setFormData(prev => ({
+          ...prev,
+          razorpay_key_id: '',
+          razorpay_key_secret: ''
+        }));
+        setHasRazorpayKeys(false);
+        setTimeout(() => setSuccessMsg(''), 5000);
+      }
+    } catch (err) {
+      console.error('Error deleting Razorpay settings:', err);
+      setErrorMsg(err.response?.data?.error || 'Failed to delete Razorpay credentials.');
     } finally {
       setSavingRazorpay(false);
     }
@@ -226,14 +307,38 @@ function SuperAdminSettings() {
             <span style={{ fontSize: '12px', color: '#a1a1aa', lineHeight: '1.4' }}>Saving WhatsApp credentials will override the default WhatsApp settings in your server `.env` file dynamically.</span>
           </div>
 
-          <button
-            type="submit"
-            disabled={savingWhatsApp}
-            className="btn-primary"
-            style={{ width: '100%', padding: '14px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', background: '#6366f1', border: 'none', color: 'white', fontWeight: '700', cursor: 'pointer' }}
-          >
-            <FaSave /> {savingWhatsApp ? 'Saving WhatsApp Settings...' : 'Save WhatsApp Settings'}
-          </button>
+          <div style={{ display: 'flex', gap: '14px', marginTop: '8px' }}>
+            {hasWhatsAppKeys ? (
+              <>
+                <button
+                  type="submit"
+                  disabled={savingWhatsApp}
+                  className="btn-primary"
+                  style={{ flex: 1, padding: '14px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', background: '#6366f1', border: 'none', color: 'white', fontWeight: '700', cursor: 'pointer' }}
+                >
+                  <FaSave /> {savingWhatsApp ? 'Updating WhatsApp...' : 'Update WhatsApp Settings'}
+                </button>
+                <button
+                  type="button"
+                  onClick={handleDeleteWhatsApp}
+                  disabled={savingWhatsApp}
+                  className="btn-danger"
+                  style={{ padding: '14px 24px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', background: '#ef4444', border: 'none', color: 'white', fontWeight: '700', cursor: 'pointer' }}
+                >
+                  <FaTrash /> Delete Credentials
+                </button>
+              </>
+            ) : (
+              <button
+                type="submit"
+                disabled={savingWhatsApp}
+                className="btn-primary"
+                style={{ width: '100%', padding: '14px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', background: '#6366f1', border: 'none', color: 'white', fontWeight: '700', cursor: 'pointer' }}
+              >
+                <FaSave /> {savingWhatsApp ? 'Saving WhatsApp Settings...' : 'Save WhatsApp Settings'}
+              </button>
+            )}
+          </div>
         </form>
       </div>
 
@@ -246,15 +351,24 @@ function SuperAdminSettings() {
         <form onSubmit={handleSaveRazorpay} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
           <div className="settings-field" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
             <label style={{ fontSize: '14px', fontWeight: '600', color: '#a1a1aa' }}>Razorpay Key ID</label>
-            <input
-              type="text"
-              name="razorpay_key_id"
-              value={formData.razorpay_key_id}
-              onChange={handleChange}
-              placeholder="e.g. rzp_test_xxxxxxxxxxxxxx"
-              style={{ width: '100%', padding: '12px 16px', background: '#18181b', border: '1px solid #3f3f46', borderRadius: '8px', color: '#fafafa' }}
-              required
-            />
+            <div style={{ position: 'relative', width: '100%' }}>
+              <input
+                type={showRazorpayKey ? 'text' : 'password'}
+                name="razorpay_key_id"
+                value={formData.razorpay_key_id}
+                onChange={handleChange}
+                placeholder="e.g. rzp_test_xxxxxxxxxxxxxx"
+                style={{ width: '100%', padding: '12px 50px 12px 16px', background: '#18181b', border: '1px solid #3f3f46', borderRadius: '8px', color: '#fafafa' }}
+                required
+              />
+              <button
+                type="button"
+                onClick={() => setShowRazorpayKey(!showRazorpayKey)}
+                style={{ position: 'absolute', right: '16px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: '#a1a1aa', cursor: 'pointer' }}
+              >
+                {showRazorpayKey ? <FaEyeSlash /> : <FaEye />}
+              </button>
+            </div>
             <span style={{ fontSize: '12px', color: '#71717a' }}>This is the public Key ID generated from your Razorpay Dashboard Settings.</span>
           </div>
 
@@ -286,14 +400,38 @@ function SuperAdminSettings() {
             <span style={{ fontSize: '12px', color: '#a1a1aa', lineHeight: '1.4' }}>Saving Razorpay credentials will override the default Razorpay settings in your server `.env` file dynamically.</span>
           </div>
 
-          <button
-            type="submit"
-            disabled={savingRazorpay}
-            className="btn-primary"
-            style={{ width: '100%', padding: '14px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', background: '#10b981', border: 'none', color: 'white', fontWeight: '700', cursor: 'pointer' }}
-          >
-            <FaSave /> {savingRazorpay ? 'Saving Razorpay Settings...' : 'Save Razorpay Settings'}
-          </button>
+          <div style={{ display: 'flex', gap: '14px', marginTop: '8px' }}>
+            {hasRazorpayKeys ? (
+              <>
+                <button
+                  type="submit"
+                  disabled={savingRazorpay}
+                  className="btn-primary"
+                  style={{ flex: 1, padding: '14px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', background: '#10b981', border: 'none', color: 'white', fontWeight: '700', cursor: 'pointer' }}
+                >
+                  <FaSave /> {savingRazorpay ? 'Updating Razorpay...' : 'Update Razorpay Settings'}
+                </button>
+                <button
+                  type="button"
+                  onClick={handleDeleteRazorpay}
+                  disabled={savingRazorpay}
+                  className="btn-danger"
+                  style={{ padding: '14px 24px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', background: '#ef4444', border: 'none', color: 'white', fontWeight: '700', cursor: 'pointer' }}
+                >
+                  <FaTrash /> Delete Credentials
+                </button>
+              </>
+            ) : (
+              <button
+                type="submit"
+                disabled={savingRazorpay}
+                className="btn-primary"
+                style={{ width: '100%', padding: '14px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', background: '#10b981', border: 'none', color: 'white', fontWeight: '700', cursor: 'pointer' }}
+              >
+                <FaSave /> {savingRazorpay ? 'Saving Razorpay Settings...' : 'Save Razorpay Settings'}
+              </button>
+            )}
+          </div>
         </form>
       </div>
     </div>

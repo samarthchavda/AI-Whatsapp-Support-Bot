@@ -17,7 +17,8 @@ function SuperAdminSettings() {
   const [showToken, setShowToken] = useState(false);
   const [showRazorpaySecret, setShowRazorpaySecret] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
+  const [savingWhatsApp, setSavingWhatsApp] = useState(false);
+  const [savingRazorpay, setSavingRazorpay] = useState(false);
   const [successMsg, setSuccessMsg] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
 
@@ -65,26 +66,57 @@ function SuperAdminSettings() {
     });
   };
 
-  const handleSubmit = async (e) => {
+  const handleSaveWhatsApp = async (e) => {
     e.preventDefault();
     try {
-      setSaving(true);
+      setSavingWhatsApp(true);
       setErrorMsg('');
       setSuccessMsg('');
 
       const response = await api.post('/super-admin/settings', {
-        settings: formData
+        settings: {
+          whatsapp_access_token: formData.whatsapp_access_token,
+          whatsapp_phone_number_id: formData.whatsapp_phone_number_id,
+          whatsapp_business_account_id: formData.whatsapp_business_account_id,
+          whatsapp_webhook_verify_token: formData.whatsapp_webhook_verify_token
+        }
       });
 
       if (response.data?.success) {
-        setSuccessMsg('System WhatsApp connection settings updated successfully! ✅');
+        setSuccessMsg('System WhatsApp credentials updated successfully! ✅');
         setTimeout(() => setSuccessMsg(''), 5000);
       }
     } catch (err) {
-      console.error('Error saving settings:', err);
-      setErrorMsg(err.response?.data?.error || 'Failed to save system connection settings.');
+      console.error('Error saving WhatsApp settings:', err);
+      setErrorMsg(err.response?.data?.error || 'Failed to save WhatsApp credentials.');
     } finally {
-      setSaving(false);
+      setSavingWhatsApp(false);
+    }
+  };
+
+  const handleSaveRazorpay = async (e) => {
+    e.preventDefault();
+    try {
+      setSavingRazorpay(true);
+      setErrorMsg('');
+      setSuccessMsg('');
+
+      const response = await api.post('/super-admin/settings', {
+        settings: {
+          razorpay_key_id: formData.razorpay_key_id,
+          razorpay_key_secret: formData.razorpay_key_secret
+        }
+      });
+
+      if (response.data?.success) {
+        setSuccessMsg('Razorpay Gateway credentials updated successfully! ✅');
+        setTimeout(() => setSuccessMsg(''), 5000);
+      }
+    } catch (err) {
+      console.error('Error saving Razorpay settings:', err);
+      setErrorMsg(err.response?.data?.error || 'Failed to save Razorpay credentials.');
+    } finally {
+      setSavingRazorpay(false);
     }
   };
 
@@ -97,32 +129,33 @@ function SuperAdminSettings() {
   }
 
   return (
-    <div className="container">
+    <div className="container" style={{ display: 'flex', flexDirection: 'column', gap: '28px' }}>
       <div className="page-header">
         <h1 className="page-title" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
           <FaPlug style={{ color: '#6366f1' }} /> System Connection Settings
         </h1>
-        <p className="page-subtitle">Configure the default platform WhatsApp Cloud API credentials used for sending system notifications, alerts, and invoices.</p>
+        <p className="page-subtitle">Configure the default platform WhatsApp Cloud API credentials and Razorpay payment gateway credentials.</p>
       </div>
 
       {successMsg && (
-        <div className="alert alert-success" style={{ padding: '12px 20px', background: 'rgba(16, 185, 129, 0.15)', border: '1px solid #10b981', color: '#fafafa', borderRadius: '8px', marginBottom: '24px' }}>
+        <div className="alert alert-success" style={{ padding: '12px 20px', background: 'rgba(16, 185, 129, 0.15)', border: '1px solid #10b981', color: '#fafafa', borderRadius: '8px' }}>
           {successMsg}
         </div>
       )}
 
       {errorMsg && (
-        <div className="alert alert-danger" style={{ padding: '12px 20px', background: 'rgba(239, 68, 68, 0.15)', border: '1px solid #ef4444', color: '#fafafa', borderRadius: '8px', marginBottom: '24px' }}>
+        <div className="alert alert-danger" style={{ padding: '12px 20px', background: 'rgba(239, 68, 68, 0.15)', border: '1px solid #ef4444', color: '#fafafa', borderRadius: '8px' }}>
           {errorMsg}
         </div>
       )}
 
+      {/* Meta WhatsApp Cloud API Credentials */}
       <div className="super-admin-card" style={{ padding: '32px', background: 'rgba(24, 24, 27, 0.6)', border: '1px solid rgba(63, 63, 70, 0.3)', borderRadius: '16px' }}>
         <h3 style={{ fontSize: '18px', fontWeight: '700', color: '#fafafa', marginBottom: '24px', display: 'flex', alignItems: 'center', gap: '8px' }}>
           Meta WhatsApp Cloud API Credentials
         </h3>
 
-        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+        <form onSubmit={handleSaveWhatsApp} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
           <div className="settings-field" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
             <label style={{ fontSize: '14px', fontWeight: '600', color: '#a1a1aa' }}>Phone Number ID</label>
             <input
@@ -188,10 +221,29 @@ function SuperAdminSettings() {
             <span style={{ fontSize: '12px', color: '#71717a' }}>Generate a permanent system user token in your Business Manager settings with <code>whatsapp_business_messaging</code> permissions.</span>
           </div>
 
-          <h3 style={{ fontSize: '18px', fontWeight: '700', color: '#fafafa', marginTop: '30px', marginBottom: '24px', display: 'flex', alignItems: 'center', gap: '8px', borderTop: '1px solid rgba(63, 63, 70, 0.3)', paddingTop: '24px' }}>
-            Razorpay Payment Gateway Credentials
-          </h3>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '12px', background: 'rgba(99, 102, 241, 0.08)', borderRadius: '8px', border: '1px solid rgba(99, 102, 241, 0.2)' }}>
+            <FaInfoCircle style={{ color: '#6366f1', flexShrink: 0 }} />
+            <span style={{ fontSize: '12px', color: '#a1a1aa', lineHeight: '1.4' }}>Saving WhatsApp credentials will override the default WhatsApp settings in your server `.env` file dynamically.</span>
+          </div>
 
+          <button
+            type="submit"
+            disabled={savingWhatsApp}
+            className="btn-primary"
+            style={{ width: '100%', padding: '14px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', background: '#6366f1', border: 'none', color: 'white', fontWeight: '700', cursor: 'pointer' }}
+          >
+            <FaSave /> {savingWhatsApp ? 'Saving WhatsApp Settings...' : 'Save WhatsApp Settings'}
+          </button>
+        </form>
+      </div>
+
+      {/* Razorpay Payment Gateway Credentials */}
+      <div className="super-admin-card" style={{ padding: '32px', background: 'rgba(24, 24, 27, 0.6)', border: '1px solid rgba(63, 63, 70, 0.3)', borderRadius: '16px' }}>
+        <h3 style={{ fontSize: '18px', fontWeight: '700', color: '#fafafa', marginBottom: '24px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          Razorpay Payment Gateway Credentials
+        </h3>
+
+        <form onSubmit={handleSaveRazorpay} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
           <div className="settings-field" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
             <label style={{ fontSize: '14px', fontWeight: '600', color: '#a1a1aa' }}>Razorpay Key ID</label>
             <input
@@ -201,6 +253,7 @@ function SuperAdminSettings() {
               onChange={handleChange}
               placeholder="e.g. rzp_test_xxxxxxxxxxxxxx"
               style={{ width: '100%', padding: '12px 16px', background: '#18181b', border: '1px solid #3f3f46', borderRadius: '8px', color: '#fafafa' }}
+              required
             />
             <span style={{ fontSize: '12px', color: '#71717a' }}>This is the public Key ID generated from your Razorpay Dashboard Settings.</span>
           </div>
@@ -215,6 +268,7 @@ function SuperAdminSettings() {
                 onChange={handleChange}
                 placeholder="Enter your Razorpay Key Secret"
                 style={{ width: '100%', padding: '12px 50px 12px 16px', background: '#18181b', border: '1px solid #3f3f46', borderRadius: '8px', color: '#fafafa' }}
+                required
               />
               <button
                 type="button"
@@ -227,18 +281,18 @@ function SuperAdminSettings() {
             <span style={{ fontSize: '12px', color: '#71717a' }}>Keep this Key Secret secure. Never expose it to the frontend code.</span>
           </div>
 
-          <div style={{ marginTop: '12px', display: 'flex', alignItems: 'center', gap: '10px', padding: '12px', background: 'rgba(99, 102, 241, 0.08)', borderRadius: '8px', border: '1px solid rgba(99, 102, 241, 0.2)' }}>
-            <FaInfoCircle style={{ color: '#6366f1', flexShrink: 0 }} />
-            <span style={{ fontSize: '12px', color: '#a1a1aa', lineHeight: '1.4' }}>Saving these settings will override any default credentials specified in the server `.env` file. The backend will immediately use these details without requiring a server reboot.</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '12px', background: 'rgba(16, 185, 129, 0.08)', borderRadius: '8px', border: '1px solid rgba(16, 185, 129, 0.2)' }}>
+            <FaInfoCircle style={{ color: '#10b981', flexShrink: 0 }} />
+            <span style={{ fontSize: '12px', color: '#a1a1aa', lineHeight: '1.4' }}>Saving Razorpay credentials will override the default Razorpay settings in your server `.env` file dynamically.</span>
           </div>
 
           <button
             type="submit"
-            disabled={saving}
+            disabled={savingRazorpay}
             className="btn-primary"
-            style={{ width: '100%', padding: '14px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', background: '#6366f1', border: 'none', color: 'white', fontWeight: '700', cursor: 'pointer', marginTop: '16px' }}
+            style={{ width: '100%', padding: '14px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', background: '#10b981', border: 'none', color: 'white', fontWeight: '700', cursor: 'pointer' }}
           >
-            <FaSave /> {saving ? 'Saving Settings...' : 'Save Settings'}
+            <FaSave /> {savingRazorpay ? 'Saving Razorpay Settings...' : 'Save Razorpay Settings'}
           </button>
         </form>
       </div>

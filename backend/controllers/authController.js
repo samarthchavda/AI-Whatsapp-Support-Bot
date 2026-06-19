@@ -362,7 +362,7 @@ exports.getPlans = async (req, res) => {
           name: 'starter',
           displayName: 'Starter Plan',
           description: 'Perfect for small e-commerce stores starting out.',
-          monthlyPrice: 29,
+          monthlyPrice: 2999,
           badge: null,
           features: {
             maxConversations: 500,
@@ -379,7 +379,7 @@ exports.getPlans = async (req, res) => {
           name: 'professional',
           displayName: 'Professional Plan',
           description: 'Great for growing businesses looking for premium support.',
-          monthlyPrice: 79,
+          monthlyPrice: 6999,
           badge: 'POPULAR',
           features: {
             maxConversations: 3000,
@@ -397,7 +397,7 @@ exports.getPlans = async (req, res) => {
           name: 'enterprise',
           displayName: 'Enterprise Plan',
           description: 'For large-scale operations requiring maximum power and volume.',
-          monthlyPrice: 199,
+          monthlyPrice: 14999,
           badge: 'BEST VALUE',
           features: {
             maxConversations: -1,
@@ -467,9 +467,9 @@ exports.upgradePlan = async (req, res) => {
     let originalPrice = 29;
     if (!planDetails) {
       const fallbacks = {
-        starter: { price: 29, limit: 10000 },
-        professional: { price: 79, limit: 50000 },
-        enterprise: { price: 199, limit: 200000 }
+        starter: { price: 2999, limit: 10000 },
+        professional: { price: 6999, limit: 50000 },
+        enterprise: { price: 14999, limit: 200000 }
       };
       
       const fallback = fallbacks[planName];

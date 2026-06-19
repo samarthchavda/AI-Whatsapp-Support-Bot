@@ -161,7 +161,7 @@ function Billing() {
             <span className={`status-badge-saas status-${profile?.subscriptionStatus || 'trial'}`}>
               {profile?.subscriptionStatus || 'Trial'}
             </span>
-            <span className="monthly-price-display">${profile?.monthlyPrice || 29}/mo</span>
+            <span className="monthly-price-display">₹{profile?.monthlyPrice || 2999}/mo</span>
           </div>
 
           <div className="plan-meta-list">
@@ -332,14 +332,14 @@ function Billing() {
                   {activeCoupon ? (
                     <div>
                       <span className="price" style={{ textDecoration: 'line-through', fontSize: '18px', color: 'var(--text-muted)', marginRight: '8px' }}>
-                        ${plan.monthlyPrice}
+                        ₹{plan.monthlyPrice}
                       </span>
                       <span className="price" style={{ color: 'var(--success)' }}>
-                        ${(plan.monthlyPrice - (plan.monthlyPrice * activeCoupon.discountPercent / 100)).toFixed(2)}
+                        ₹{(plan.monthlyPrice - (plan.monthlyPrice * activeCoupon.discountPercent / 100)).toFixed(2)}
                       </span>
                     </div>
                   ) : (
-                    <span className="price">${plan.monthlyPrice}</span>
+                    <span className="price">₹{plan.monthlyPrice}</span>
                   )}
                   <span className="period">/month</span>
                 </div>
@@ -476,7 +476,7 @@ function Billing() {
                 <tr key={inv.id} className="table-row-premium">
                   <td><strong>{inv.id}</strong></td>
                   <td>{inv.date}</td>
-                  <td>${inv.amount.toFixed(2)}</td>
+                  <td>₹{inv.amount.toFixed(2)}</td>
                   <td>{inv.method}</td>
                   <td>
                     <span className="badge-premium badge-active">{inv.status}</span>

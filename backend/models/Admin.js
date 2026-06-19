@@ -94,7 +94,7 @@ const adminSchema = new mongoose.Schema({
   // Pricing
   monthlyPrice: {
     type: Number,
-    default: 29 // Starter plan default
+    default: 2999 // Starter plan default
   },
   customDiscount: {
     type: Number,

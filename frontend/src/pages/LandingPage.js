@@ -174,7 +174,7 @@ function LandingPage() {
       const input = userMessage.toLowerCase();
 
       if (input.includes('price') || input.includes('pricing') || input.includes('cost') || input.includes('plan') || input.includes('money')) {
-        reply = '💰 Kwickbot Plans:\n• Starter ($29/mo): 500 AI messages, standard knowledge base.\n• Growth ($79/mo): 2,500 AI messages, WooCommerce/Shopify sync, campaigns.\n• Scale (Custom): Unlimited volume, custom CRM integrations.';
+        reply = '💰 Kwickbot Plans:\n• Starter (₹2999/mo): 500 AI messages, standard knowledge base.\n• Growth (₹6999/mo): 2,500 AI messages, WooCommerce/Shopify sync, campaigns.\n• Scale (Custom): Unlimited volume, custom CRM integrations.';
       } else if (input.includes('charge') || input.includes('pay') || input.includes('extra') || input.includes('hidden') || input.includes('fee')) {
         reply = '⚠️ Hidden/Extra Charges:\nThere are no hidden fees or extra charges from Kwickbot. If you integrate the official WhatsApp Cloud API, Meta charges directly per conversation (typically around $0.008 to $0.015 depending on the country).';
       } else if (input.includes('setup') || input.includes('integrate') || input.includes('integration') || input.includes('how to use') || input.includes('start') || input.includes('connect')) {
@@ -619,7 +619,7 @@ function LandingPage() {
           <div className="pricing-grid">
             <article className="pricing-card">
               <h3>Starter</h3>
-              <div className="price">$29<span>/month</span></div>
+              <div className="price">₹2999<span>/month</span></div>
               <p>For small stores validating AI support.</p>
               <ul>
                 <li><FaCheck /> 500 AI messages</li>
@@ -633,7 +633,7 @@ function LandingPage() {
             <article className="pricing-card featured">
               <div className="pricing-tag">Best fit</div>
               <h3>Growth</h3>
-              <div className="price">$79<span>/month</span></div>
+              <div className="price">₹6999<span>/month</span></div>
               <p>For stores managing regular order and support volume.</p>
               <ul>
                 <li><FaCheck /> 2,500 AI messages</li>

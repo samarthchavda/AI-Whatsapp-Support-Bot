@@ -456,16 +456,14 @@ function Billing() {
                 <button
                   type="button"
                   className={`plan-select-btn ${isCurrent ? 'btn-current' : 'btn-upgrade'}`}
-                  disabled={isCurrent || upgradingPlanName !== null || profile?.role !== 'super_admin'}
+                  disabled={isCurrent || upgradingPlanName !== null}
                   onClick={() => handleUpgrade(plan.name)}
                 >
                   {isCurrent 
                     ? 'Current Active Plan' 
-                    : profile?.role !== 'super_admin'
-                    ? 'Restricted to Super Admin'
                     : upgradingPlanName === plan.name 
                     ? 'Processing...' 
-                    : 'Select Plan'}
+                    : 'Upgrade Plan'}
                 </button>
               </div>
             );

@@ -52,6 +52,8 @@ const buildAdminPayload = (admin) => ({
   createdAt: admin.createdAt,
   subscriptionPlan: admin.subscriptionPlan,
   subscriptionStatus: admin.subscriptionStatus,
+  subscriptionStartDate: admin.subscriptionStartDate,
+  subscriptionEndDate: admin.subscriptionEndDate,
   monthlyPrice: admin.monthlyPrice,
   geminiTokensUsed: admin.geminiTokensUsed || 0,
   geminiTokensLimit: admin.geminiTokensLimit || 10000,
@@ -61,13 +63,16 @@ const buildAdminPayload = (admin) => ({
   storeUrl: admin.storeUrl,
   storeCategory: admin.storeCategory,
   supportEmail: admin.supportEmail,
-  currency: admin.currency || 'USD',
+  currency: admin.currency || 'INR',
   timezone: admin.timezone || 'UTC',
   theme: admin.theme || 'light',
   webBotEnabled: admin.webBotEnabled === true,
   aiDraftMode: admin.aiDraftMode === true,
   shopifyEnabled: admin.shopifyEnabled !== false,
-  woocommerceEnabled: admin.woocommerceEnabled !== false
+  woocommerceEnabled: admin.woocommerceEnabled !== false,
+  profileCompleted: admin.profileCompleted === true,
+  profileCompletedAt: admin.profileCompletedAt,
+  trialStartedAt: admin.trialStartedAt
 });
 
 const pruneExpiredRefreshTokens = (admin) => {
@@ -530,6 +535,23 @@ exports.updateProfile = async (req, res) => {
     if (theme !== undefined) admin.theme = theme;
     if (aiDraftMode !== undefined) admin.aiDraftMode = aiDraftMode;
 
+    // Check if the profile is newly completed (all required fields present)
+    const isNowCompleted = !!(
+      (businessName !== undefined ? businessName : admin.businessName) &&
+      (businessPhone !== undefined ? businessPhone : admin.businessPhone) &&
+      (storeUrl !== undefined ? storeUrl : admin.storeUrl) &&
+      (supportEmail !== undefined ? supportEmail : admin.supportEmail)
+    );
+
+    if (isNowCompleted && !admin.profileCompleted) {
+      admin.profileCompleted = true;
+      admin.profileCompletedAt = new Date();
+      admin.trialStartedAt = new Date();
+      admin.subscriptionStatus = 'trial';
+      admin.subscriptionStartDate = new Date();
+      admin.subscriptionEndDate = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000); // 14-day free trial
+    }
+
     await admin.save();
 
     res.json({
@@ -886,6 +908,8 @@ exports.verifyRazorpayPayment = async (req, res) => {
     admin.monthlyPrice = originalPrice;
     admin.geminiTokensLimit = tokensLimit;
     admin.subscriptionStatus = 'active';
+    admin.subscriptionStartDate = new Date();
+    admin.subscriptionEndDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // 30-day active period
     admin.totalMessagesProcessed = 0; // reset usage for new billing cycle
     admin.geminiTokensUsed = 0;
     admin.limitNotificationSent = false;

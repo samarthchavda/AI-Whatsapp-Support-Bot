@@ -89,12 +89,81 @@ function Dashboard() {
     );
   }
 
+  const storedAdmin = localStorage.getItem('admin');
+  const admin = storedAdmin ? JSON.parse(storedAdmin) : null;
+
+  let trialBanner = null;
+  if (admin && admin.role !== 'super_admin') {
+    if (!admin.profileCompleted) {
+      trialBanner = (
+        <div className="alert-banner warning-banner" style={{
+          background: 'rgba(239, 68, 68, 0.15)',
+          border: '1px solid #ef4444',
+          color: '#fafafa',
+          padding: '12px 20px',
+          borderRadius: '8px',
+          marginBottom: '24px',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          fontSize: '14px'
+        }}>
+          <span>👋 <strong>Welcome to Kwickbot!</strong> Please complete your profile to activate your 14-day free trial.</span>
+          <Link to="/dashboard/profile" className="btn-primary" style={{ padding: '6px 12px', fontSize: '12px', textDecoration: 'none', background: '#6366f1', borderRadius: '4px', color: '#fff' }}>Complete Profile</Link>
+        </div>
+      );
+    } else if (admin.subscriptionStatus === 'trial' && admin.subscriptionEndDate) {
+      const remainingMs = new Date(admin.subscriptionEndDate) - Date.now();
+      const remainingDays = Math.ceil(remainingMs / (1000 * 60 * 60 * 24));
+      
+      if (remainingDays <= 2 && remainingDays >= 0) {
+        trialBanner = (
+          <div className="alert-banner warning-banner" style={{
+            background: 'rgba(245, 158, 11, 0.15)',
+            border: '1px solid #f59e0b',
+            color: '#fafafa',
+            padding: '12px 20px',
+            borderRadius: '8px',
+            marginBottom: '24px',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            fontSize: '14px'
+          }}>
+            <span>⏳ <strong>Choose a Plan:</strong> Your 14-day free trial has <strong>{remainingDays} days</strong> remaining. Upgrade your plan to avoid service interruption.</span>
+            <Link to="/dashboard/billing" className="btn-primary" style={{ padding: '6px 12px', fontSize: '12px', textDecoration: 'none', background: '#f59e0b', borderRadius: '4px', color: '#fff' }}>Choose a Plan</Link>
+          </div>
+        );
+      } else if (remainingDays < 0) {
+        trialBanner = (
+          <div className="alert-banner danger-banner" style={{
+            background: 'rgba(239, 68, 68, 0.2)',
+            border: '1px solid #ef4444',
+            color: '#fafafa',
+            padding: '12px 20px',
+            borderRadius: '8px',
+            marginBottom: '24px',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            fontSize: '14px'
+          }}>
+            <span>❌ <strong>Trial Expired:</strong> Your 14-day free trial has expired. Please upgrade your subscription to reactivate your AI support bot.</span>
+            <Link to="/dashboard/billing" className="btn-primary" style={{ padding: '6px 12px', fontSize: '12px', textDecoration: 'none', background: '#ef4444', borderRadius: '4px', color: '#fff' }}>Upgrade Plan</Link>
+          </div>
+        );
+      }
+    }
+  }
+
   return (
     <div className="container">
       <div className="page-header">
         <h1 className="page-title">Dashboard</h1>
         <p className="page-subtitle">Monitor conversations, orders, and escalations at a glance.</p>
       </div>
+
+      {trialBanner}
       
       {/* Stats Cards with Glassmorphism */}
       <div className="stats-grid">

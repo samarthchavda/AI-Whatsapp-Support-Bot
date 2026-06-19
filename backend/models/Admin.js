@@ -108,6 +108,17 @@ const adminSchema = new mongoose.Schema({
   whatsappConnectedAt: {
     type: Date
   },
+  // Profile completion status
+  profileCompleted: {
+    type: Boolean,
+    default: false
+  },
+  profileCompletedAt: {
+    type: Date
+  },
+  trialStartedAt: {
+    type: Date
+  },
   whatsappAccessToken: {
     type: String,
     default: null

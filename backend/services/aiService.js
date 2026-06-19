@@ -461,11 +461,17 @@ Smart Fallback Rules (when specific information is not available in the knowledg
           };
         }
 
+        const isTrialExpired = 
+          adminDoc.subscriptionStatus === 'trial' && 
+          adminDoc.subscriptionEndDate && 
+          new Date(adminDoc.subscriptionEndDate) < new Date();
+
         const isSubscriptionSuspended = 
           !adminDoc.isActive || 
           adminDoc.subscriptionStatus === 'inactive' || 
           adminDoc.subscriptionStatus === 'suspended' || 
-          adminDoc.subscriptionStatus === 'cancelled';
+          adminDoc.subscriptionStatus === 'cancelled' ||
+          isTrialExpired;
 
         if (isSubscriptionSuspended) {
           console.log(`🔕 Subscription suspended/inactive for tenant: ${adminDoc.email}. Skipping AI response.`);

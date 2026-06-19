@@ -60,33 +60,33 @@ const howItWorksSteps = [
 const workflows = [
   {
     icon: <FaBrain />,
-    title: 'AI replies trained on your store',
-    copy: 'Upload policies, product FAQs, delivery rules, and return flows so the bot answers like your support team.'
+    title: 'AI Customer Service Automation',
+    copy: 'Train your WhatsApp chatbot on store policies, product catalogs, refund windows, and FAQs. The bot resolves queries 24/7 with human-like precision.'
   },
   {
     icon: <FaBox />,
-    title: 'Order status without agent effort',
-    copy: 'Sync order data and let customers ask natural questions about tracking, cancellations, refunds, and COD status.'
+    title: 'Automated Order & Shipping Tracking',
+    copy: 'Sync live order data. Customers can inquire about tracking numbers, cancel orders, confirm Cash on Delivery (COD), or edit shipping addresses instantly.'
   },
   {
     icon: <FaHeadset />,
-    title: 'Human handoff when it matters',
-    copy: 'Escalate angry, urgent, or high-value conversations into a live queue with context already attached.'
+    title: 'Smart Helpdesk & Live Chat Takeover',
+    copy: 'Automatically pause the bot and escalate complex tickets or angry customer conversations to a live human agent with full chat context.'
   },
   {
     icon: <FaBroadcastTower />,
-    title: 'Broadcasts with operational control',
-    copy: 'Send campaign updates, delivery notices, and payment reminders while monitoring delivery and reply volume.'
+    title: 'WhatsApp Marketing & Broadcasts',
+    copy: 'Send high-converting bulk campaigns, order notifications, and cart recovery reminders. Analyze delivery rates and customer replies in real-time.'
   }
 ];
 
 const platformItems = [
-  'WhatsApp Cloud API and WhatsApp Web support',
-  'Shopify, WooCommerce, and webhook integrations',
-  'Role-based admin and super-admin controls',
-  'Conversation analytics, AI logs, and escalation tracking',
-  'Knowledge base manager for policies and FAQs',
-  'Secure auth with refresh-token session handling'
+  'Official WhatsApp Cloud API & Web connection options',
+  'One-click Shopify, WooCommerce, Magento & Custom API sync',
+  'Out-of-office auto-replies and 24/7 smart coverage',
+  'No-code AI training via PDF, text guides, and site URLs',
+  'Real-time conversation analytics, AI logs, and escalation alerts',
+  'Secure multi-agent role permissions and admin consoles'
 ];
 
 const testimonials = [
@@ -232,9 +232,9 @@ function LandingPage() {
               <FaBolt />
               WhatsApp support automation for commerce teams
             </div>
-            <h1>Kwickbot</h1>
+            <h1>Kwickbot — AI WhatsApp Customer Support Bot</h1>
             <p className="landing-hero-lede">
-              Run customer support, order updates, escalations, broadcasts, and analytics from one focused WhatsApp operations workspace.
+              Automate Shopify & WooCommerce customer support, track orders, manage escalations, send marketing broadcasts, and review analytics from one secure WhatsApp operations workspace.
             </p>
             <div className="landing-hero-actions">
               <button className="landing-primary-button" onClick={() => navigate('/book-demo')}>
@@ -565,10 +565,10 @@ function LandingPage() {
 
         <section id="platform" className="platform-section animate-on-scroll">
           <div className="platform-copy">
-            <span>Platform depth</span>
-            <h2>A real startup-grade backend is already part of the product.</h2>
+            <span>No-Code Platform Depth</span>
+            <h2>No-Code WhatsApp Chatbot Builder with Startup-Grade Power</h2>
             <p>
-              The UI is designed around the project you have: multi-tenant admins, WhatsApp connections, order syncing, AI logs, broadcasts, invoices, and demo request handling.
+              Deploy a complete customer service automation engine. Kwickbot features a fully-integrated backend supporting multi-tenant admin consoles, secure WhatsApp connections, instant order tracking sync, and marketing broadcast workflows.
             </p>
             <button className="landing-secondary-button" onClick={() => navigate('/dashboard')}>
               View product console

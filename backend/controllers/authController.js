@@ -944,6 +944,58 @@ exports.verifyRazorpayPayment = async (req, res) => {
     });
     await invoice.save();
 
+    // Send WhatsApp Invoice notification
+    try {
+      const whatsappCloudAPI = require('../services/whatsappCloudAPI');
+      const targetPhone = admin.phone || admin.businessPhone;
+      if (targetPhone) {
+        const formattedStartDate = new Date(admin.subscriptionStartDate).toLocaleDateString('en-IN', {
+          day: '2-digit',
+          month: 'short',
+          year: 'numeric'
+        });
+        const formattedEndDate = new Date(admin.subscriptionEndDate).toLocaleDateString('en-IN', {
+          day: '2-digit',
+          month: 'short',
+          year: 'numeric'
+        });
+
+        const whatsappMessage = `🧾 *Kwickbot AI - Invoice & Subscription Confirmation*
+
+Dear *${admin.name}*,
+
+Thank you for upgrading! Your payment has been successfully processed and your subscription is active.
+
+💳 *Invoice Details:*
+• *Invoice Number:* ${invoice.invoiceNumber}
+• *Plan Name:* ${planName.toUpperCase()} Plan
+• *Amount Paid:* ₹${originalPrice} (INR)
+• *Payment Status:* Paid
+• *Billing Cycle:* ${formattedStartDate} to ${formattedEndDate}
+
+🤖 *Usage Limits:*
+• *Gemini AI Tokens:* ${tokensLimit.toLocaleString()} / month
+
+Your AI support bot is now fully operational. You can manage your channels and templates directly from your dashboard:
+🔗 ${process.env.FRONTEND_URL || 'https://kwickbot.in'}/dashboard
+
+If you need any assistance, feel free to reply to this message.
+
+Best regards,
+*Kwickbot Team*`;
+
+        const waResult = await whatsappCloudAPI.sendMessage(targetPhone, whatsappMessage);
+        if (waResult.success) {
+          console.log(`✅ Invoice WhatsApp message sent to ${targetPhone}`);
+        } else {
+          console.error(`❌ Invoice WhatsApp message failed:`, waResult.error);
+        }
+      }
+    } catch (waError) {
+      console.error('❌ Error sending invoice WhatsApp notification:', waError.message);
+    }
+
+
     res.json({
       success: true,
       message: 'Payment verified and plan upgraded successfully!',

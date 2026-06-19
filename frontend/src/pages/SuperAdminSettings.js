@@ -10,9 +10,12 @@ function SuperAdminSettings() {
     whatsapp_access_token: '',
     whatsapp_phone_number_id: '',
     whatsapp_business_account_id: '',
-    whatsapp_webhook_verify_token: ''
+    whatsapp_webhook_verify_token: '',
+    razorpay_key_id: '',
+    razorpay_key_secret: ''
   });
   const [showToken, setShowToken] = useState(false);
+  const [showRazorpaySecret, setShowRazorpaySecret] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [successMsg, setSuccessMsg] = useState('');
@@ -42,7 +45,9 @@ function SuperAdminSettings() {
           whatsapp_access_token: settings.whatsapp_access_token || '',
           whatsapp_phone_number_id: settings.whatsapp_phone_number_id || '',
           whatsapp_business_account_id: settings.whatsapp_business_account_id || '',
-          whatsapp_webhook_verify_token: settings.whatsapp_webhook_verify_token || ''
+          whatsapp_webhook_verify_token: settings.whatsapp_webhook_verify_token || '',
+          razorpay_key_id: settings.razorpay_key_id || '',
+          razorpay_key_secret: settings.razorpay_key_secret || ''
         });
       }
     } catch (err) {
@@ -183,9 +188,48 @@ function SuperAdminSettings() {
             <span style={{ fontSize: '12px', color: '#71717a' }}>Generate a permanent system user token in your Business Manager settings with <code>whatsapp_business_messaging</code> permissions.</span>
           </div>
 
+          <h3 style={{ fontSize: '18px', fontWeight: '700', color: '#fafafa', marginTop: '30px', marginBottom: '24px', display: 'flex', alignItems: 'center', gap: '8px', borderTop: '1px solid rgba(63, 63, 70, 0.3)', paddingTop: '24px' }}>
+            Razorpay Payment Gateway Credentials
+          </h3>
+
+          <div className="settings-field" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            <label style={{ fontSize: '14px', fontWeight: '600', color: '#a1a1aa' }}>Razorpay Key ID</label>
+            <input
+              type="text"
+              name="razorpay_key_id"
+              value={formData.razorpay_key_id}
+              onChange={handleChange}
+              placeholder="e.g. rzp_test_xxxxxxxxxxxxxx"
+              style={{ width: '100%', padding: '12px 16px', background: '#18181b', border: '1px solid #3f3f46', borderRadius: '8px', color: '#fafafa' }}
+            />
+            <span style={{ fontSize: '12px', color: '#71717a' }}>This is the public Key ID generated from your Razorpay Dashboard Settings.</span>
+          </div>
+
+          <div className="settings-field" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            <label style={{ fontSize: '14px', fontWeight: '600', color: '#a1a1aa' }}>Razorpay Key Secret</label>
+            <div style={{ position: 'relative', width: '100%' }}>
+              <input
+                type={showRazorpaySecret ? 'text' : 'password'}
+                name="razorpay_key_secret"
+                value={formData.razorpay_key_secret}
+                onChange={handleChange}
+                placeholder="Enter your Razorpay Key Secret"
+                style={{ width: '100%', padding: '12px 50px 12px 16px', background: '#18181b', border: '1px solid #3f3f46', borderRadius: '8px', color: '#fafafa' }}
+              />
+              <button
+                type="button"
+                onClick={() => setShowRazorpaySecret(!showRazorpaySecret)}
+                style={{ position: 'absolute', right: '16px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: '#a1a1aa', cursor: 'pointer' }}
+              >
+                {showRazorpaySecret ? <FaEyeSlash /> : <FaEye />}
+              </button>
+            </div>
+            <span style={{ fontSize: '12px', color: '#71717a' }}>Keep this Key Secret secure. Never expose it to the frontend code.</span>
+          </div>
+
           <div style={{ marginTop: '12px', display: 'flex', alignItems: 'center', gap: '10px', padding: '12px', background: 'rgba(99, 102, 241, 0.08)', borderRadius: '8px', border: '1px solid rgba(99, 102, 241, 0.2)' }}>
             <FaInfoCircle style={{ color: '#6366f1', flexShrink: 0 }} />
-            <span style={{ fontSize: '12px', color: '#a1a1aa', lineHeight: '1.4' }}>Saving these settings will override any default credentials specified in the server `.env` file. The backend will immediately use these details without requiring a reboot.</span>
+            <span style={{ fontSize: '12px', color: '#a1a1aa', lineHeight: '1.4' }}>Saving these settings will override any default credentials specified in the server `.env` file. The backend will immediately use these details without requiring a server reboot.</span>
           </div>
 
           <button

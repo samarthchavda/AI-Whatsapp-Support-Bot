@@ -421,9 +421,19 @@ exports.getPlans = async (req, res) => {
       ];
     }
     
+    let rzpKeyId = process.env.RAZORPAY_KEY_ID || 'rzp_test_mockkey';
+    try {
+      const GlobalSettings = require('../models/GlobalSettings');
+      const keyIdSetting = await GlobalSettings.findOne({ key: 'razorpay_key_id' });
+      if (keyIdSetting && keyIdSetting.value) rzpKeyId = keyIdSetting.value;
+    } catch (err) {
+      console.error('Error fetching dynamic Razorpay key ID from DB:', err.message);
+    }
+
     res.json({
       success: true,
-      data: plans
+      data: plans,
+      razorpayKeyId: rzpKeyId
     });
   } catch (error) {
     res.status(500).json({
@@ -817,9 +827,18 @@ exports.createRazorpayOrder = async (req, res) => {
 
     const Razorpay = require('razorpay');
     // Initialize Razorpay
-    const rzpKeyId = process.env.RAZORPAY_KEY_ID || 'rzp_test_mockkey';
-    const rzpKeySecret = process.env.RAZORPAY_KEY_SECRET || 'rzp_mocksecret';
-    
+    let rzpKeyId = process.env.RAZORPAY_KEY_ID || 'rzp_test_mockkey';
+    let rzpKeySecret = process.env.RAZORPAY_KEY_SECRET || 'rzp_mocksecret';
+    try {
+      const GlobalSettings = require('../models/GlobalSettings');
+      const keyIdSetting = await GlobalSettings.findOne({ key: 'razorpay_key_id' });
+      const keySecretSetting = await GlobalSettings.findOne({ key: 'razorpay_key_secret' });
+      if (keyIdSetting && keyIdSetting.value) rzpKeyId = keyIdSetting.value;
+      if (keySecretSetting && keySecretSetting.value) rzpKeySecret = keySecretSetting.value;
+    } catch (err) {
+      console.error('Error fetching dynamic Razorpay credentials from DB:', err.message);
+    }
+
     const razorpay = new Razorpay({
       key_id: rzpKeyId,
       key_secret: rzpKeySecret
@@ -869,7 +888,14 @@ exports.verifyRazorpayPayment = async (req, res) => {
 
     // Verify signature
     const crypto = require('crypto');
-    const keySecret = process.env.RAZORPAY_KEY_SECRET || 'rzp_mocksecret';
+    let keySecret = process.env.RAZORPAY_KEY_SECRET || 'rzp_mocksecret';
+    try {
+      const GlobalSettings = require('../models/GlobalSettings');
+      const keySecretSetting = await GlobalSettings.findOne({ key: 'razorpay_key_secret' });
+      if (keySecretSetting && keySecretSetting.value) keySecret = keySecretSetting.value;
+    } catch (err) {
+      console.error('Error fetching dynamic Razorpay secret from DB:', err.message);
+    }
     const hmac = crypto.createHmac('sha256', keySecret);
     hmac.update(`${razorpay_order_id}|${razorpay_payment_id}`);
     const generatedSignature = hmac.digest('hex');

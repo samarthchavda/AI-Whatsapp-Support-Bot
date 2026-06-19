@@ -14,6 +14,7 @@ function Billing() {
   const [activeCoupon, setActiveCoupon] = useState(null);
   const [couponError, setCouponError] = useState(null);
   const [verifyingCoupon, setVerifyingCoupon] = useState(false);
+  const [razorpayKeyId, setRazorpayKeyId] = useState('');
 
   useEffect(() => {
     fetchBillingData();
@@ -28,6 +29,9 @@ function Billing() {
       ]);
       setProfile(profileRes.data.data.admin);
       setPlans(plansRes.data.data);
+      if (plansRes.data.razorpayKeyId) {
+        setRazorpayKeyId(plansRes.data.razorpayKeyId);
+      }
     } catch (error) {
       console.error('Error fetching billing data:', error);
     } finally {
@@ -97,7 +101,7 @@ function Billing() {
 
       // 3. Open Razorpay checkout modal
       const options = {
-        key: process.env.REACT_APP_RAZORPAY_KEY_ID || 'rzp_test_mockkey',
+        key: razorpayKeyId || process.env.REACT_APP_RAZORPAY_KEY_ID || 'rzp_test_mockkey',
         amount: amount,
         currency: currency,
         name: 'Kwickbot AI',

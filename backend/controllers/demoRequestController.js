@@ -302,7 +302,7 @@ exports.deleteDemoRequest = async (req, res) => {
 exports.approveDemoRequest = async (req, res) => {
   try {
     const { id } = req.params;
-    const { subscriptionPlan = 'starter', monthlyPrice = 29, geminiTokens = 10000 } = req.body;
+    const { subscriptionPlan = 'starter', monthlyPrice = 2999, geminiTokens = 10000 } = req.body;
 
     const demoRequest = await DemoRequest.findById(id);
 

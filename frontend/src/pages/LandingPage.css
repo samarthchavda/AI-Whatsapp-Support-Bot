@@ -178,10 +178,10 @@
   -webkit-text-fill-color: transparent;
   animation: shineText 6s linear infinite, fadeInUpSlight 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
   animation-delay: 0s, 0.25s;
-  font-size: 64px;
-  line-height: 1.02;
+  font-size: 48px;
+  line-height: 1.15;
   font-weight: 900;
-  letter-spacing: 0;
+  letter-spacing: -0.02em;
 }
 
 .landing-hero-lede {
@@ -1172,7 +1172,8 @@
   }
 
   .landing-hero h1 {
-    font-size: 44px;
+    font-size: 36px;
+    line-height: 1.2;
   }
 
   .landing-hero-lede {

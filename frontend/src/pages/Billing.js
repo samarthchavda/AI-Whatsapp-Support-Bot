@@ -100,6 +100,20 @@ function Billing() {
       const { id, amount, currency } = orderRes.data.data;
 
       // 3. Open Razorpay checkout modal
+      const prefillData = {};
+      if (profile?.name && profile.name.trim()) {
+        prefillData.name = profile.name.trim();
+      }
+      if (profile?.email && profile.email.trim()) {
+        prefillData.email = profile.email.trim();
+      }
+      if (profile?.businessPhone && profile.businessPhone.trim()) {
+        const phoneDigits = profile.businessPhone.replace(/\D/g, '');
+        if (phoneDigits) {
+          prefillData.contact = phoneDigits;
+        }
+      }
+
       const options = {
         key: razorpayKeyId || process.env.REACT_APP_RAZORPAY_KEY_ID || 'rzp_test_mockkey',
         amount: amount,
@@ -154,10 +168,7 @@ function Billing() {
             setUpgradingPlanName(null);
           }
         },
-        prefill: {
-          name: profile?.name || '',
-          email: profile?.email || ''
-        },
+        prefill: prefillData,
         theme: {
           color: '#6366f1'
         },

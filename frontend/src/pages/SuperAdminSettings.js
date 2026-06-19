@@ -40,9 +40,9 @@ function SuperAdminSettings() {
     fetchSettings();
   }, []);
 
-  const fetchSettings = async () => {
+  const fetchSettings = async (silent = false) => {
     try {
-      setLoading(true);
+      if (!silent) setLoading(true);
       setErrorMsg('');
       const response = await api.get('/super-admin/settings');
       if (response.data?.success) {
@@ -60,9 +60,9 @@ function SuperAdminSettings() {
       }
     } catch (err) {
       console.error('Error fetching settings:', err);
-      setErrorMsg('Failed to load system settings. Please try again.');
+      if (!silent) setErrorMsg('Failed to load system settings. Please try again.');
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   };
 
@@ -91,7 +91,7 @@ function SuperAdminSettings() {
 
       if (response.data?.success) {
         setSuccessMsg(hasWhatsAppKeys ? 'System WhatsApp credentials updated successfully! ✅' : 'System WhatsApp credentials saved successfully! ✅');
-        setHasWhatsAppKeys(true);
+        await fetchSettings(true);
         setTimeout(() => setSuccessMsg(''), 5000);
       }
     } catch (err) {
@@ -118,7 +118,7 @@ function SuperAdminSettings() {
 
       if (response.data?.success) {
         setSuccessMsg(hasRazorpayKeys ? 'Razorpay Gateway credentials updated successfully! ✅' : 'Razorpay Gateway credentials saved successfully! ✅');
-        setHasRazorpayKeys(true);
+        await fetchSettings(true);
         setTimeout(() => setSuccessMsg(''), 5000);
       }
     } catch (err) {
@@ -149,14 +149,7 @@ function SuperAdminSettings() {
 
       if (response.data?.success) {
         setSuccessMsg('System WhatsApp credentials deleted successfully! ✅');
-        setFormData(prev => ({
-          ...prev,
-          whatsapp_access_token: '',
-          whatsapp_phone_number_id: '',
-          whatsapp_business_account_id: '',
-          whatsapp_webhook_verify_token: ''
-        }));
-        setHasWhatsAppKeys(false);
+        await fetchSettings(true);
         setTimeout(() => setSuccessMsg(''), 5000);
       }
     } catch (err) {
@@ -185,12 +178,7 @@ function SuperAdminSettings() {
 
       if (response.data?.success) {
         setSuccessMsg('Razorpay Gateway credentials deleted successfully! ✅');
-        setFormData(prev => ({
-          ...prev,
-          razorpay_key_id: '',
-          razorpay_key_secret: ''
-        }));
-        setHasRazorpayKeys(false);
+        await fetchSettings(true);
         setTimeout(() => setSuccessMsg(''), 5000);
       }
     } catch (err) {

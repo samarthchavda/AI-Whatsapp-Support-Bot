@@ -125,10 +125,7 @@ function Login({ onLogin }) {
             </button>
           </form>
 
-          <div className="login-demo-hint">
-            <strong>Demo access:</strong> demo@store.com / Demo@123<br />
-            Super admin: admin@gmail.com / Admin@123
-          </div>
+
         </div>
       </div>
     </div>

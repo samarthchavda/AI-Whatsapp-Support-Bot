@@ -152,6 +152,10 @@ export const upgradePricingPlan = (planName, couponCode) => api.post('/auth/upgr
 export const getAdminProfile = () => api.get('/auth/profile');
 export const updateAdminProfile = (data) => api.put('/auth/profile', data);
 
+// Razorpay Payments
+export const createRazorpayOrder = (planName, couponCode) => api.post('/auth/razorpay/create-order', { planName, couponCode });
+export const verifyRazorpayPayment = (data) => api.post('/auth/razorpay/verify-payment', data);
+
 export const refreshAuth = () => refreshAccessToken();
 
 export const clearAuthState = () => clearStoredAuth();

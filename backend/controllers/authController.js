@@ -746,3 +746,192 @@ exports.verifyCoupon = async (req, res) => {
     res.status(500).json({ success: false, error: 'Failed to verify coupon' });
   }
 };
+
+/**
+ * Create Razorpay Order for Plan Subscription
+ */
+exports.createRazorpayOrder = async (req, res) => {
+  try {
+    const { planName, couponCode } = req.body;
+    const allowedPlans = ['starter', 'professional', 'enterprise'];
+    if (!allowedPlans.includes(planName)) {
+      return res.status(400).json({ success: false, error: 'Invalid plan selected' });
+    }
+
+    const admin = await Admin.findById(req.admin._id);
+    if (!admin) {
+      return res.status(404).json({ success: false, error: 'Merchant admin not found' });
+    }
+
+    // Get pricing plan details
+    const PricingPlan = require('../models/PricingPlan');
+    const planDetails = await PricingPlan.findOne({ name: planName, isActive: true });
+    
+    let originalPrice = 2999;
+    if (planDetails) {
+      originalPrice = planDetails.monthlyPrice;
+    } else {
+      const fallbacks = {
+        starter: 2999,
+        professional: 6999,
+        enterprise: 14999
+      };
+      originalPrice = fallbacks[planName];
+    }
+
+    let finalPrice = originalPrice;
+    let discountAmount = 0;
+    if (couponCode) {
+      const Coupon = require('../models/Coupon');
+      const coupon = await Coupon.findOne({ code: couponCode.toUpperCase(), isActive: true });
+      if (coupon && (!coupon.expiresAt || coupon.expiresAt > new Date())) {
+        discountAmount = (originalPrice * coupon.discountPercent) / 100;
+        finalPrice = originalPrice - discountAmount;
+      }
+    }
+
+    // Razorpay amount in paise (1 INR = 100 paise)
+    const amountInPaise = Math.round(finalPrice * 100);
+
+    const Razorpay = require('razorpay');
+    // Initialize Razorpay
+    const rzpKeyId = process.env.RAZORPAY_KEY_ID || 'rzp_test_mockkey';
+    const rzpKeySecret = process.env.RAZORPAY_KEY_SECRET || 'rzp_mocksecret';
+    
+    const razorpay = new Razorpay({
+      key_id: rzpKeyId,
+      key_secret: rzpKeySecret
+    });
+
+    const options = {
+      amount: amountInPaise,
+      currency: 'INR',
+      receipt: `subscription_rcpt_${admin._id.toString().slice(-6)}_${Date.now()}`,
+      notes: {
+        adminId: admin._id.toString(),
+        planName: planName,
+        couponCode: couponCode || ''
+      }
+    };
+
+    const order = await razorpay.orders.create(options);
+
+    res.json({
+      success: true,
+      data: {
+        id: order.id,
+        amount: order.amount,
+        currency: order.currency,
+        planName,
+        discountAmount,
+        finalPrice
+      }
+    });
+
+  } catch (error) {
+    console.error('Error creating Razorpay order:', error);
+    res.status(500).json({ success: false, error: 'Failed to initiate payment' });
+  }
+};
+
+/**
+ * Verify Razorpay Signature and Upgrade Plan
+ */
+exports.verifyRazorpayPayment = async (req, res) => {
+  try {
+    const { planName, razorpay_payment_id, razorpay_order_id, razorpay_signature } = req.body;
+    
+    if (!razorpay_payment_id || !razorpay_order_id || !razorpay_signature) {
+      return res.status(400).json({ success: false, error: 'Missing payment details for verification' });
+    }
+
+    // Verify signature
+    const crypto = require('crypto');
+    const keySecret = process.env.RAZORPAY_KEY_SECRET || 'rzp_mocksecret';
+    const hmac = crypto.createHmac('sha256', keySecret);
+    hmac.update(`${razorpay_order_id}|${razorpay_payment_id}`);
+    const generatedSignature = hmac.digest('hex');
+
+    if (generatedSignature !== razorpay_signature) {
+      return res.status(400).json({ success: false, error: 'Payment signature mismatch' });
+    }
+
+    const admin = await Admin.findById(req.admin._id);
+    if (!admin) {
+      return res.status(404).json({ success: false, error: 'Merchant admin not found' });
+    }
+
+    // Get pricing details
+    const PricingPlan = require('../models/PricingPlan');
+    const planDetails = await PricingPlan.findOne({ name: planName, isActive: true });
+    
+    let originalPrice = 2999;
+    let tokensLimit = 10000;
+    if (planDetails) {
+      originalPrice = planDetails.monthlyPrice;
+      tokensLimit = planDetails.features?.geminiTokensPerMonth || 10000;
+    } else {
+      const fallbacks = {
+        starter: { price: 2999, limit: 10000 },
+        professional: { price: 6999, limit: 50000 },
+        enterprise: { price: 14999, limit: 200000 }
+      };
+      const fallback = fallbacks[planName];
+      originalPrice = fallback.price;
+      tokensLimit = fallback.limit;
+    }
+
+    // Update admin subscription details
+    admin.subscriptionPlan = planName;
+    admin.monthlyPrice = originalPrice;
+    admin.geminiTokensLimit = tokensLimit;
+    admin.subscriptionStatus = 'active';
+    admin.totalMessagesProcessed = 0; // reset usage for new billing cycle
+    admin.geminiTokensUsed = 0;
+    admin.limitNotificationSent = false;
+    await admin.save();
+
+    // Create invoice history record
+    const Invoice = require('../models/Invoice');
+    const lastInvoice = await Invoice.findOne().sort({ createdAt: -1 });
+    let nextNum = 1001;
+    if (lastInvoice && lastInvoice.invoiceNumber) {
+      const parsed = parseInt(lastInvoice.invoiceNumber.replace('INV-', ''));
+      if (!isNaN(parsed)) nextNum = parsed + 1;
+    }
+
+    const invoice = new Invoice({
+      invoiceNumber: `INV-${nextNum}`,
+      adminId: admin._id,
+      merchantName: admin.name,
+      amount: originalPrice,
+      billingDate: new Date(),
+      dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days due
+      paymentStatus: 'completed',
+      paymentTerms: 'Due on Receipt',
+      lineItems: [
+        {
+          description: `Kwickbot ${planName.toUpperCase()} Plan Subscription`,
+          quantity: 1,
+          unitPrice: originalPrice,
+          total: originalPrice
+        }
+      ]
+    });
+    await invoice.save();
+
+    res.json({
+      success: true,
+      message: 'Payment verified and plan upgraded successfully!',
+      data: {
+        subscriptionPlan: admin.subscriptionPlan,
+        subscriptionStatus: admin.subscriptionStatus,
+        monthlyPrice: admin.monthlyPrice
+      }
+    });
+
+  } catch (error) {
+    console.error('Error verifying Razorpay payment:', error);
+    res.status(500).json({ success: false, error: 'Failed to verify payment' });
+  }
+};

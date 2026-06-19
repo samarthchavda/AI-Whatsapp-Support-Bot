@@ -56,4 +56,8 @@ router.get('/plans', verifyToken, authController.getPlans);
 router.post('/upgrade-plan', verifyToken, authController.upgradePlan);
 router.post('/verify-coupon', verifyToken, authController.verifyCoupon);
 
+// Razorpay subscription endpoints
+router.post('/razorpay/create-order', verifyToken, authController.createRazorpayOrder);
+router.post('/razorpay/verify-payment', verifyToken, authController.verifyRazorpayPayment);
+
 module.exports = router;

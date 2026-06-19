@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { FaCrown, FaCheck, FaInfoCircle, FaRegCreditCard, FaHistory, FaCalendarAlt, FaTicketAlt, FaWhatsapp } from 'react-icons/fa';
-import api, { getPricingPlans, upgradePricingPlan, getAdminProfile } from '../services/api';
+import api, { getAdminProfile, getPricingPlans, upgradePricingPlan, createRazorpayOrder, verifyRazorpayPayment } from '../services/api';
 import './Billing.css';
 
 function Billing() {
@@ -57,35 +57,119 @@ function Billing() {
     }
   };
 
+  const loadRazorpayScript = () => {
+    return new Promise((resolve) => {
+      if (window.Razorpay) {
+        resolve(true);
+        return;
+      }
+      const script = document.createElement('script');
+      script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+      script.onload = () => resolve(true);
+      script.onerror = () => resolve(false);
+      document.body.appendChild(script);
+    });
+  };
+
   const handleUpgrade = async (planName) => {
-    if (!window.confirm(`Are you sure you want to upgrade/change your subscription to ${planName.toUpperCase()} plan?`)) {
+    if (planName === profile?.subscriptionPlan) {
+      alert('You are already on this plan.');
+      return;
+    }
+
+    if (!window.confirm(`Proceed to subscribe to the ${planName.toUpperCase()} plan?`)) {
       return;
     }
 
     try {
       setUpgradingPlanName(planName);
-      const response = await upgradePricingPlan(planName, activeCoupon ? activeCoupon.code : undefined);
-      
-      // Update local profile state
-      setProfile(response.data.data.admin);
-      
-      // Save updated admin data to localStorage
-      const storedAdmin = localStorage.getItem('admin');
-      if (storedAdmin) {
-        const adminObj = JSON.parse(storedAdmin);
-        const updatedAdminObj = {
-          ...adminObj,
-          ...response.data.data.admin
-        };
-        localStorage.setItem('admin', JSON.stringify(updatedAdminObj));
+
+      // 1. Load Razorpay SDK
+      const scriptLoaded = await loadRazorpayScript();
+      if (!scriptLoaded) {
+        alert('Failed to load Razorpay Payment Gateway. Please check your internet connection.');
+        return;
       }
 
-      setSuccessMessage(`Plan updated successfully to ${planName.toUpperCase()}!`);
-      setTimeout(() => setSuccessMessage(null), 5000);
+      // 2. Create Razorpay order on backend
+      const orderRes = await createRazorpayOrder(planName, activeCoupon ? activeCoupon.code : undefined);
+      const { id, amount, currency } = orderRes.data.data;
+
+      // 3. Open Razorpay checkout modal
+      const options = {
+        key: process.env.REACT_APP_RAZORPAY_KEY_ID || 'rzp_test_mockkey',
+        amount: amount,
+        currency: currency,
+        name: 'Kwickbot AI',
+        description: `Upgrade to ${planName.toUpperCase()} Plan`,
+        image: '/logo.png',
+        order_id: id,
+        handler: async function (response) {
+          try {
+            setUpgradingPlanName(planName);
+            // 4. Verify payment signature on backend
+            const verifyRes = await verifyRazorpayPayment({
+              planName,
+              razorpay_payment_id: response.razorpay_payment_id,
+              razorpay_order_id: response.razorpay_order_id,
+              razorpay_signature: response.razorpay_signature
+            });
+
+            // Update local profile state
+            const updatedProfile = verifyRes.data.data;
+            setProfile(prev => ({
+              ...prev,
+              subscriptionPlan: updatedProfile.subscriptionPlan,
+              subscriptionStatus: updatedProfile.subscriptionStatus,
+              monthlyPrice: updatedProfile.monthlyPrice
+            }));
+
+            // Save updated admin data to localStorage
+            const storedAdmin = localStorage.getItem('admin');
+            if (storedAdmin) {
+              const adminObj = JSON.parse(storedAdmin);
+              const updatedAdminObj = {
+                ...adminObj,
+                subscriptionPlan: updatedProfile.subscriptionPlan,
+                subscriptionStatus: updatedProfile.subscriptionStatus,
+                monthlyPrice: updatedProfile.monthlyPrice
+              };
+              localStorage.setItem('admin', JSON.stringify(updatedAdminObj));
+            }
+
+            setSuccessMessage(`Payment successful! Welcome to Kwickbot ${planName.toUpperCase()} Plan.`);
+            setTimeout(() => setSuccessMessage(null), 5000);
+            
+            // Reload window to refresh all layout headers
+            window.location.reload();
+
+          } catch (verifyErr) {
+            console.error('Payment verification failed:', verifyErr);
+            alert(verifyErr.response?.data?.error || 'Payment verification failed. Please contact support.');
+          } finally {
+            setUpgradingPlanName(null);
+          }
+        },
+        prefill: {
+          name: profile?.name || '',
+          email: profile?.email || ''
+        },
+        theme: {
+          color: '#6366f1'
+        },
+        modal: {
+          ondismiss: function () {
+            setUpgradingPlanName(null);
+          }
+        }
+      };
+
+      const rzp = new window.Razorpay(options);
+      rzp.open();
+
     } catch (error) {
-      console.error('Error upgrading plan:', error);
-      alert(error.response?.data?.error || 'Failed to update pricing plan');
-    } finally {
+      console.error('Error initiating payment:', error);
+      alert(error.response?.data?.error || 'Failed to initiate checkout order.');
       setUpgradingPlanName(null);
     }
   };

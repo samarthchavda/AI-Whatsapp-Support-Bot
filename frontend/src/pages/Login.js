@@ -99,16 +99,7 @@ function Login({ onLogin }) {
             </div>
 
             <div className="login-field">
-              <div className="login-field-header">
-                <label htmlFor="password">Password</label>
-                <button
-                  type="button"
-                  className="login-forgot-link"
-                  onClick={() => navigate('/forgot-password')}
-                >
-                  Forgot password?
-                </button>
-              </div>
+              <label htmlFor="password">Password</label>
               <input
                 id="password"
                 type="password"
@@ -118,6 +109,15 @@ function Login({ onLogin }) {
                 placeholder="Enter your password"
                 autoComplete="current-password"
               />
+              <div className="login-forgot-wrapper">
+                <button
+                  type="button"
+                  className="login-forgot-link"
+                  onClick={() => navigate('/forgot-password')}
+                >
+                  Forgot password?
+                </button>
+              </div>
             </div>
 
             <button type="submit" className="login-submit" disabled={loading}>

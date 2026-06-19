@@ -257,15 +257,10 @@
   }
 }
 
-.login-field-header {
+.login-forgot-wrapper {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 8px;
-}
-
-.login-field-header label {
-  margin-bottom: 0 !important;
+  justify-content: flex-end;
+  margin-top: 8px;
 }
 
 .login-forgot-link {

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FaPlug, FaSave, FaEye, FaEyeSlash, FaInfoCircle, FaTrash } from 'react-icons/fa';
+import { FaPlug, FaSave, FaEye, FaEyeSlash, FaInfoCircle, FaTrash, FaCopy } from 'react-icons/fa';
 import api from '../services/api';
 import './SuperAdmin.css';
 
@@ -17,6 +17,25 @@ function SuperAdminSettings() {
   const [showToken, setShowToken] = useState(false);
   const [showRazorpayKey, setShowRazorpayKey] = useState(false);
   const [showRazorpaySecret, setShowRazorpaySecret] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  const getWebhookUrl = () => {
+    const apiBase = process.env.REACT_APP_API_URL || (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' ? 'http://localhost:5001/api' : '/api');
+    const baseUrl = apiBase.endsWith('/api') ? apiBase.slice(0, -4) : apiBase;
+    
+    if (baseUrl.startsWith('http://') || baseUrl.startsWith('https://')) {
+      return `${baseUrl}/api/webhook/whatsapp`;
+    }
+    
+    return `${window.location.origin}${baseUrl}/api/webhook/whatsapp`;
+  };
+
+  const handleCopyWebhook = () => {
+    const webhookUrl = getWebhookUrl();
+    navigator.clipboard.writeText(webhookUrl);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
   
   const [loading, setLoading] = useState(true);
   const [savingWhatsApp, setSavingWhatsApp] = useState(false);
@@ -265,6 +284,26 @@ function SuperAdminSettings() {
               required
             />
             <span style={{ fontSize: '12px', color: '#71717a' }}>Matches the verification token configured in Meta's Webhook settings.</span>
+          </div>
+
+          <div className="settings-field" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            <label style={{ fontSize: '14px', fontWeight: '600', color: '#a1a1aa' }}>WhatsApp Webhook Callback URL</label>
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <input
+                type="text"
+                readOnly
+                value={getWebhookUrl()}
+                style={{ width: '100%', padding: '12px 16px', background: '#27272a', border: '1px solid #3f3f46', borderRadius: '8px', color: '#a1a1aa', cursor: 'default' }}
+              />
+              <button
+                type="button"
+                onClick={handleCopyWebhook}
+                style={{ padding: '12px 20px', background: '#3f3f46', border: 'none', borderRadius: '8px', color: '#fafafa', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', whiteSpace: 'nowrap' }}
+              >
+                <FaCopy /> {copied ? 'Copied!' : 'Copy URL'}
+              </button>
+            </div>
+            <span style={{ fontSize: '12px', color: '#71717a' }}>Copy this URL and configure it as the Callback URL in your Meta WhatsApp Developer console.</span>
           </div>
 
           <div className="settings-field" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>

@@ -155,7 +155,7 @@ class KnowledgeBaseService {
         throw new Error('GEMINI_API_KEY not configured');
       }
 
-      const model = this.genAI.getGenerativeModel({ model: "text-embedding-004" });
+      const model = this.genAI.getGenerativeModel({ model: "gemini-embedding-001" });
       const result = await model.embedContent(text);
       
       if (result && result.embedding && result.embedding.values) {

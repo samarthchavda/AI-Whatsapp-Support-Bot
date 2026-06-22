@@ -1032,16 +1032,57 @@ Response format must be ONLY the product name or "NONE". Do not write any other 
   }
 
   detectIntent(message) {
-    const lowerMessage = message.toLowerCase();
+    const lowerMessage = message.toLowerCase().trim();
 
-    // Direct order ID lookup (e.g., ORD-013)
-    if (/^\s*ord-\d+\s*$/i.test(lowerMessage)) {
+    // 1. Direct order ID lookup (e.g., ORD-013 or #1008)
+    if (/^\s*ord-\d+\s*$/i.test(lowerMessage) || /^\s*#\d+\s*$/.test(lowerMessage)) {
       return 'order_status';
+    }
+
+    // Check if there is an order identifier in the message
+    const hasOrderIdentifier = this.extractOrderId(message) !== null;
+
+    // Explicit tracking patterns (e.g. "where is my order", "track order", "order status")
+    const explicitTrackingPatterns = [
+      /where is my order/i,
+      /where's my order/i,
+      /where is my package/i,
+      /where's my package/i,
+      /where is my delivery/i,
+      /where's my delivery/i,
+      /where is my shipment/i,
+      /where's my shipment/i,
+      /track my order/i,
+      /track the order/i,
+      /track order/i,
+      /track my package/i,
+      /track package/i,
+      /order status/i,
+      /status of my order/i,
+      /status of the order/i,
+      /check order status/i,
+      /check my order status/i,
+      /check order\s*#?\d+/i,
+      /track\s*#?\d+/i
+    ];
+    const isExplicitTracking = explicitTrackingPatterns.some(pattern => pattern.test(lowerMessage));
+
+    // Shipping, delivery, processing, courier, and general policy keywords
+    const isPolicyOrGeneralQuestion = /\b(policy|policies|polices|rule|rules|offer|options|rates|cost|expense|how much|charges|method|methods|carrier|courier|partner|processing|cutoff|cut-off|1 pm|1pm|time|timeline|time line|days|duration|how long|window|eligibility|condition)\b/i.test(lowerMessage);
+
+    // If it's a shipping/delivery/policy question and NO order identifier is provided,
+    // we must prioritize Knowledge Base (return_policy or general_inquiry)
+    if (isPolicyOrGeneralQuestion && !hasOrderIdentifier) {
+      const returnPatterns = /return|exchange|policy|policies|polices|rule|rules|send back|give back|return policy|how to return/i;
+      if (returnPatterns.test(lowerMessage)) {
+        return 'return_policy';
+      }
+      return 'general_inquiry';
     }
 
     // Cancel order patterns (exclude policy inquiries)
     const cancelPatterns = /cancel|cancle|cacel|cancell|cancelling|canceling/i;
-    if (cancelPatterns.test(lowerMessage) && !/policy|policies|polices|rule|rules/i.test(lowerMessage)) {
+    if (cancelPatterns.test(lowerMessage)) {
       return 'cancel_order';
     }
 
@@ -1051,13 +1092,18 @@ Response format must be ONLY the product name or "NONE". Do not write any other 
       return 'return_policy';
     }
 
-    // Refund patterns (exclude policy inquiries)
+    // Refund request patterns (exclude policy inquiries)
     const refundPatterns = /refund|money back|reimburse|get refund|request refund/i;
-    if (refundPatterns.test(lowerMessage) && !/policy|policies|polices|rule|rules/i.test(lowerMessage)) {
+    if (refundPatterns.test(lowerMessage)) {
       return 'refund_request';
     }
 
-    // New order/purchase patterns (e.g., "new order", "place order", "want to buy", "how to order")
+    // Trigger Order Tracking only for explicit tracking questions OR if it has an order ID
+    if (isExplicitTracking || (hasOrderIdentifier && /\b(order|track|status|where|when|shipped|package|delivery|shipment)\b/i.test(lowerMessage))) {
+      return 'order_status';
+    }
+
+    // New order/purchase patterns
     const newOrderKeywords = [
       'new order',
       'place order',
@@ -1076,17 +1122,10 @@ Response format must be ONLY the product name or "NONE". Do not write any other 
       'create order',
       'create new order'
     ];
-    const isNewOrder = (newOrderKeywords.some(kw => lowerMessage.includes(kw)) ||
-                       (/\b(buy|order|purchase)\b/i.test(lowerMessage) && /\b(new|take|place|make|want to|how to|web|link|online)\b/i.test(lowerMessage))) &&
-                       !/\b(status|track|check|where|when|shipped|delivered|cancel|return|refund)\b/i.test(lowerMessage);
+    const isNewOrder = newOrderKeywords.some(kw => lowerMessage.includes(kw)) ||
+                       (/\b(buy|order|purchase)\b/i.test(lowerMessage) && /\b(new|take|place|make|want to|how to|web|link|online)\b/i.test(lowerMessage));
     if (isNewOrder) {
       return 'new_order_inquiry';
-    }
-
-    // Order status patterns
-    const orderPatterns = /order|track|status|delivery|shipped|package|where is my|when will|track order|order status/i;
-    if (orderPatterns.test(lowerMessage)) {
-      return 'order_status';
     }
 
     // Complaint patterns
@@ -1447,7 +1486,7 @@ Response format must be ONLY the product name or "NONE". Do not write any other 
       return direct[0].toUpperCase();
     }
 
-    const contextual = message.match(/(?:order|#|order\s+id|order\s+no|number)\s*#?\s*([A-Z0-9_-]{3,25})/i);
+    const contextual = message.match(/(?:order\s+id|order\s+no|order\s+number|order\s+#|order|#|number|no)\s*#?\s*([A-Z0-9_-]*\d+[A-Z0-9_-]*)/i);
     if (contextual) {
       return contextual[1].toUpperCase();
     }

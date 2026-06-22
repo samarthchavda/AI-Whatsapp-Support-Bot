@@ -26,6 +26,11 @@ const demoRequestSchema = new mongoose.Schema({
     type: String,
     required: true
   },
+  websiteUrl: {
+    type: String,
+    required: true,
+    trim: true
+  },
   status: {
     type: String,
     enum: ['pending', 'approved', 'rejected', 'contacted', 'scheduled', 'completed', 'cancelled'],

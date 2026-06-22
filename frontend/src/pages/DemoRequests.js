@@ -208,6 +208,22 @@ function DemoRequests() {
 
             <div>
               <label style={{ color: '#a1a1aa', fontSize: '12px', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                Website URL
+              </label>
+              <div style={{ fontSize: '16px', marginTop: '8px', fontWeight: '600' }}>
+                <a 
+                  href={request.websiteUrl?.startsWith('http') ? request.websiteUrl : 'https://' + request.websiteUrl} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  style={{ color: '#8b5cf6', textDecoration: 'underline' }}
+                >
+                  {request.websiteUrl}
+                </a>
+              </div>
+            </div>
+
+            <div>
+              <label style={{ color: '#a1a1aa', fontSize: '12px', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                 Business Details
               </label>
               <div style={{
@@ -380,7 +396,20 @@ function DemoRequests() {
                       </div>
                     </td>
                     <td className="text-muted">{request.email}</td>
-                    <td>{request.businessName}</td>
+                    <td>
+                      <div style={{ fontWeight: '600', color: '#fafafa' }}>{request.businessName}</div>
+                      <div style={{ fontSize: '11px', color: '#a1a1aa', marginTop: '2px' }}>
+                        <a 
+                          href={request.websiteUrl?.startsWith('http') ? request.websiteUrl : 'https://' + request.websiteUrl} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          style={{ color: '#8b5cf6', textDecoration: 'underline' }}
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          {request.websiteUrl}
+                        </a>
+                      </div>
+                    </td>
                     <td>{getStatusBadge(request.status, request.approved)}</td>
                     <td className="text-muted">
                       {new Date(request.createdAt).toLocaleDateString()}

@@ -4,10 +4,10 @@ const emailService = require('../services/emailService');
 // Create a new demo request
 exports.createDemoRequest = async (req, res) => {
   try {
-    const { name, email, phone, businessName, businessDetails } = req.body;
+    const { name, email, phone, businessName, businessDetails, websiteUrl } = req.body;
 
     // Validate required fields
-    if (!name || !email || !phone || !businessName || !businessDetails) {
+    if (!name || !email || !phone || !businessName || !businessDetails || !websiteUrl) {
       return res.status(400).json({
         success: false,
         message: 'All fields are required'
@@ -33,7 +33,8 @@ exports.createDemoRequest = async (req, res) => {
       email,
       phone,
       businessName,
-      businessDetails
+      businessDetails,
+      websiteUrl
     });
 
     await demoRequest.save();
@@ -80,6 +81,10 @@ exports.createDemoRequest = async (req, res) => {
                   <span class="details-label">Phone Number:</span>
                   <span class="details-value">${phone}</span>
                 </div>
+                <div class="details-item">
+                  <span class="details-label">Website URL:</span>
+                  <span class="details-value">${websiteUrl}</span>
+                </div>
               </div>
               
               <p>In the meantime, feel free to reply to this email if you have any immediate questions.</p>
@@ -93,7 +98,7 @@ exports.createDemoRequest = async (req, res) => {
         </html>
       `;
 
-      const customerText = `Hello ${name},\n\nThank you for your interest in Kwickbot! We have successfully received your request for a personalized demo.\n\nOur team will contact you within the next 24 hours to schedule the demo.\n\nSubmitted Details:\n- Business Name: ${businessName}\n- Phone Number: ${phone}\n\nBest regards,\nKwickbot Team`;
+      const customerText = `Hello ${name},\n\nThank you for your interest in Kwickbot! We have successfully received your request for a personalized demo.\n\nOur team will contact you within the next 24 hours to schedule the demo.\n\nSubmitted Details:\n- Business Name: ${businessName}\n- Phone Number: ${phone}\n- Website URL: ${websiteUrl}\n\nBest regards,\nKwickbot Team`;
 
       await emailService.sendEmail({
         to: email,
@@ -150,6 +155,10 @@ exports.createDemoRequest = async (req, res) => {
                   <span class="details-label">Business Details / Challenges:</span>
                   <span class="details-value">${businessDetails}</span>
                 </div>
+                <div class="details-item">
+                  <span class="details-label">Website URL:</span>
+                  <span class="details-value"><a href="${websiteUrl.startsWith('http') ? websiteUrl : 'https://' + websiteUrl}" target="_blank" style="color: #4f46e5; text-decoration: underline;">${websiteUrl}</a></span>
+                </div>
               </div>
               
               <p style="text-align: center; margin-top: 30px;">
@@ -161,7 +170,7 @@ exports.createDemoRequest = async (req, res) => {
         </html>
       `;
 
-      const adminText = `A new demo request has been submitted on the Kwickbot website.\n\nDetails:\n- Full Name: ${name}\n- Email: ${email}\n- Phone: ${phone}\n- Business Name: ${businessName}\n- Business Details: ${businessDetails}`;
+      const adminText = `A new demo request has been submitted on the Kwickbot website.\n\nDetails:\n- Full Name: ${name}\n- Email: ${email}\n- Phone: ${phone}\n- Business Name: ${businessName}\n- Website URL: ${websiteUrl}\n- Business Details: ${businessDetails}`;
 
       await emailService.sendEmail({
         to: adminRecipient,

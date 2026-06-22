@@ -11,7 +11,8 @@ function BookDemo() {
     email: '',
     phone: '',
     businessName: '',
-    businessDetails: ''
+    businessDetails: '',
+    websiteUrl: ''
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -41,7 +42,8 @@ function BookDemo() {
           email: '',
           phone: '',
           businessName: '',
-          businessDetails: ''
+          businessDetails: '',
+          websiteUrl: ''
         });
       }
     } catch (err) {
@@ -150,6 +152,19 @@ function BookDemo() {
               value={formData.businessName}
               onChange={handleChange}
               placeholder="Your Company Name"
+              required
+            />
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="websiteUrl">Website URL *</label>
+            <input
+              type="text"
+              id="websiteUrl"
+              name="websiteUrl"
+              value={formData.websiteUrl}
+              onChange={handleChange}
+              placeholder="https://yourwebsite.com"
               required
             />
           </div>

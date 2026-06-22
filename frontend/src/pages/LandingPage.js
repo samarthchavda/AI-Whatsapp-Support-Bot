@@ -769,6 +769,11 @@ function LandingPage() {
             <button onClick={() => navigate('/login')}>Sign In</button>
             <button onClick={() => navigate('/book-demo')}>Book Demo</button>
           </div>
+          <div className="footer-links-col">
+            <h4>Contact</h4>
+            <a href="mailto:kwickbotai@gmail.com" style={{ color: 'var(--text-secondary)', textDecoration: 'none', fontSize: '13px', margin: '4px 0', display: 'block' }}>📧 kwickbotai@gmail.com</a>
+            <a href="tel:+918128420287" style={{ color: 'var(--text-secondary)', textDecoration: 'none', fontSize: '13px', margin: '4px 0', display: 'block' }}>📞 +91 8128420287</a>
+          </div>
         </div>
 
         <div className="footer-cta-container">

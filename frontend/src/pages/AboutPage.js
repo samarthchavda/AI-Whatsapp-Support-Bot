@@ -130,6 +130,10 @@ function AboutPage() {
           <span>Kwickbot</span>
         </div>
         <p>WhatsApp support automation for real commerce operations.</p>
+        <div className="footer-contacts" style={{ marginTop: '12px', marginBottom: '12px', fontSize: '13px', display: 'flex', flexDirection: 'column', gap: '6px', alignItems: 'center' }}>
+          <a href="mailto:kwickbotai@gmail.com" style={{ color: 'inherit', textDecoration: 'none' }}>📧 kwickbotai@gmail.com</a>
+          <a href="tel:+918128420287" style={{ color: 'inherit', textDecoration: 'none' }}>📞 +91 8128420287</a>
+        </div>
         <button onClick={() => navigate('/book-demo')}>Book demo <FaArrowRight /></button>
       </footer>
     </div>

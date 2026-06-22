@@ -173,8 +173,11 @@ function Blog() {
         )}
       </main>
 
-      {/* Footer */}
       <footer style={{ borderTop: '1px solid rgba(63, 63, 70, 0.3)', padding: '24px', textAlign: 'center', color: '#71717a', fontSize: '13px', marginTop: 'auto' }}>
+        <div style={{ marginBottom: '10px' }}>
+          <a href="mailto:kwickbotai@gmail.com" style={{ color: 'inherit', textDecoration: 'none', marginRight: '16px' }}>📧 kwickbotai@gmail.com</a>
+          <a href="tel:+918128420287" style={{ color: 'inherit', textDecoration: 'none' }}>📞 +91 8128420287</a>
+        </div>
         &copy; {new Date().getFullYear()} Kwickbot. All rights reserved.
       </footer>
     </div>

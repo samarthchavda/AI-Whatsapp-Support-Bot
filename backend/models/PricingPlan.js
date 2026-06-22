@@ -42,6 +42,14 @@ const pricingPlanSchema = new mongoose.Schema({
       type: Number,
       default: 1
     },
+    maxKbUploads: {
+      type: Number,
+      default: -1 // -1 means unlimited
+    },
+    maxIntegrations: {
+      type: Number,
+      default: -1 // -1 means unlimited
+    },
     advancedAnalytics: {
       type: Boolean,
       default: false

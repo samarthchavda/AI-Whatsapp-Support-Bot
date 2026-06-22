@@ -96,6 +96,36 @@ exports.createIntegration = async (req, res) => {
       });
     }
 
+    // Fetch user's subscription plan details to check limits
+    const PricingPlan = require('../models/PricingPlan');
+    const planName = (adminDoc.subscriptionPlan || 'starter').toLowerCase();
+
+    // Default limit mappings
+    const DEFAULT_INTEGRATION_LIMITS = {
+      starter: 1,
+      professional: 1,
+      enterprise: -1,
+      custom: -1
+    };
+
+    let limitVal = DEFAULT_INTEGRATION_LIMITS[planName] || 1;
+
+    // Check if there is a pricing plan features block in database
+    const pricingPlan = await PricingPlan.findOne({ name: planName, isActive: true });
+    if (pricingPlan && pricingPlan.features && typeof pricingPlan.features.maxIntegrations !== 'undefined') {
+      limitVal = pricingPlan.features.maxIntegrations;
+    }
+
+    if (limitVal !== -1) {
+      const existingCount = await Integration.countDocuments({ adminId: req.admin.id });
+      if (existingCount >= limitVal) {
+        return res.status(403).json({
+          success: false,
+          error: `Your ${planName.toUpperCase()} plan only allows a maximum of ${limitVal} active e-commerce integration. Please upgrade your subscription to connect multiple platforms.`
+        });
+      }
+    }
+
     // Create new integration
     const integration = new Integration({
       adminId: req.admin.id,

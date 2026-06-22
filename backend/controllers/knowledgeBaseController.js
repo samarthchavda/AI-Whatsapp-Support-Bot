@@ -23,6 +23,40 @@ exports.uploadKnowledgeBase = async (req, res) => {
       });
     }
 
+    // Fetch user's subscription plan details to check limits
+    const Admin = require('../models/Admin');
+    const PricingPlan = require('../models/PricingPlan');
+    const adminDoc = await Admin.findById(req.admin._id);
+    const planName = (adminDoc.subscriptionPlan || 'starter').toLowerCase();
+
+    // Default limit mappings
+    const DEFAULT_KB_LIMITS = {
+      starter: 1,
+      professional: 3,
+      enterprise: -1,
+      custom: -1
+    };
+
+    let limitVal = DEFAULT_KB_LIMITS[planName] || 1;
+
+    // Check if there is a pricing plan features block in database
+    const pricingPlan = await PricingPlan.findOne({ name: planName, isActive: true });
+    if (pricingPlan && pricingPlan.features && typeof pricingPlan.features.maxKbUploads !== 'undefined') {
+      limitVal = pricingPlan.features.maxKbUploads;
+    }
+
+    if (limitVal !== -1) {
+      const existingCount = await KnowledgeBase.countDocuments({ uploadedBy: req.admin._id });
+      if (existingCount >= limitVal) {
+        // Delete uploaded temp file
+        await fs.unlink(req.file.path);
+        return res.status(403).json({
+          success: false,
+          error: `Your ${planName.toUpperCase()} plan only allows a maximum of ${limitVal} Knowledge Base document(s). Please upgrade your subscription to upload more documents.`
+        });
+      }
+    }
+
     // Process the file and extract text
     const { text, length, fileType } = await knowledgeBaseService.processFile(req.file);
 

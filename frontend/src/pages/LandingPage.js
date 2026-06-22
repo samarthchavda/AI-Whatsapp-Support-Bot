@@ -213,6 +213,7 @@ function LandingPage() {
             <button onClick={() => scrollToSection('workflows')}>Workflows</button>
             <button onClick={() => navigate('/services')}>Services</button>
             <button onClick={() => navigate('/about')}>About Us</button>
+            <button onClick={() => navigate('/blog')}>Blog</button>
             <button onClick={() => scrollToSection('pricing')}>Pricing</button>
           </div>
 
@@ -737,6 +738,7 @@ function LandingPage() {
             <h4>Company</h4>
             <button onClick={() => navigate('/about')}>About Us</button>
             <button onClick={() => navigate('/services')}>Services</button>
+            <button onClick={() => navigate('/blog')}>Blog</button>
             <button onClick={() => navigate('/privacy')}>Privacy Policy</button>
           </div>
           <div className="footer-links-col">

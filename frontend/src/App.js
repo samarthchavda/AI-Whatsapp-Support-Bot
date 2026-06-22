@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Link, useLocation, useNavigate, Navigate } from 'react-router-dom';
-import { FaHome, FaComments, FaBox, FaExclamationTriangle, FaPlug, FaRobot, FaSearch, FaBell, FaPlus, FaSignOutAlt, FaUser, FaBrain, FaCommentDots, FaBroadcastTower, FaChartLine, FaCog, FaCrown, FaFileAlt, FaSun, FaMoon, FaShoppingCart, FaCoins, FaUserSecret, FaHeartbeat, FaBullhorn } from 'react-icons/fa';
+import { FaHome, FaComments, FaBox, FaExclamationTriangle, FaPlug, FaRobot, FaSearch, FaBell, FaPlus, FaSignOutAlt, FaUser, FaBrain, FaCommentDots, FaBroadcastTower, FaChartLine, FaCog, FaCrown, FaFileAlt, FaSun, FaMoon, FaShoppingCart, FaCoins, FaUserSecret, FaHeartbeat, FaBullhorn, FaBlog } from 'react-icons/fa';
 import api, { clearAuthState, refreshAuth, updateAdminProfile } from './services/api';
 import Dashboard from './pages/Dashboard';
 import Profile from './pages/Profile';
@@ -34,6 +34,9 @@ import ServicesPage from './pages/ServicesPage';
 import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
 import PrivacyPolicy from './pages/PrivacyPolicy';
+import Blog from './pages/Blog';
+import BlogPost from './pages/BlogPost';
+import SuperAdminBlog from './pages/SuperAdminBlog';
 import axios from 'axios';
 import './App.css';
 
@@ -135,6 +138,12 @@ function Sidebar({ admin, onLogout, isOpen, onToggle }) {
                   <Link to="/dashboard/super-admin/announcements" className={isActive('/dashboard/super-admin/announcements')} title="System Announcements">
                     <FaBullhorn />
                     <span className="nav-label">Announcements</span>
+                  </Link>
+                </li>
+                <li>
+                  <Link to="/dashboard/super-admin/blog" className={isActive('/dashboard/super-admin/blog')} title="Blog Manager">
+                    <FaBlog />
+                    <span className="nav-label">Blog Manager</span>
                   </Link>
                 </li>
                 <li>
@@ -592,6 +601,8 @@ function App() {
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/reset-password/:token" element={<ResetPassword />} />
         <Route path="/privacy" element={<PrivacyPolicy />} />
+        <Route path="/blog" element={<Blog />} />
+        <Route path="/blog/:slug" element={<BlogPost />} />
         
         <Route 
           path="/login" 
@@ -681,6 +692,7 @@ function App() {
                     <Route path="/super-admin/user/:userId" element={<SuperAdminUserDetail />} />
                     <Route path="/super-admin/plans" element={<PlanManager />} />
                     <Route path="/super-admin/budget" element={<SuperAdminBudget />} />
+                    <Route path="/super-admin/blog" element={<SuperAdminBlog />} />
                     <Route path="/super-admin/settings" element={<SuperAdminSettings />} />
                   </Routes>
                   </div>

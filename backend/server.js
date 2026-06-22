@@ -26,6 +26,7 @@ const superAdminRoutes = require('./routes/superAdminRoutes');
 const whatsappRoutes = require('./routes/whatsappRoutes');
 const trafficRoutes = require('./routes/trafficRoutes');
 const abandonedCartRoutes = require('./routes/abandonedCartRoutes');
+const blogRoutes = require('./routes/blogRoutes');
 
 // Import WhatsApp bot (optional - only if available)
 let whatsappWebBot = null;
@@ -205,6 +206,7 @@ app.use('/api/super-admin', superAdminRoutes);
 app.use('/api/whatsapp', whatsappRoutes);
 app.use('/api/traffic', trafficRoutes);
 app.use('/api/abandoned-carts', abandonedCartRoutes);
+app.use('/api/blog', blogRoutes);
 
 // Error handling middleware
 app.use((err, req, res, next) => {

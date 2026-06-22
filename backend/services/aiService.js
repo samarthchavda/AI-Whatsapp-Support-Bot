@@ -1080,10 +1080,14 @@ Response format must be ONLY the product name or "NONE". Do not write any other 
       return 'general_inquiry';
     }
 
-    // Cancel order patterns (exclude policy inquiries)
+    // Cancel order patterns (only route to cancel_order flow if order ID is provided)
     const cancelPatterns = /cancel|cancle|cacel|cancell|cancelling|canceling/i;
     if (cancelPatterns.test(lowerMessage)) {
-      return 'cancel_order';
+      if (hasOrderIdentifier) {
+        return 'cancel_order';
+      } else {
+        return 'general_inquiry';
+      }
     }
 
     // Return policy patterns (highest priority for policy/rules terms)
@@ -1092,10 +1096,14 @@ Response format must be ONLY the product name or "NONE". Do not write any other 
       return 'return_policy';
     }
 
-    // Refund request patterns (exclude policy inquiries)
+    // Refund request patterns (only route to refund_request if order ID is provided)
     const refundPatterns = /refund|money back|reimburse|get refund|request refund/i;
     if (refundPatterns.test(lowerMessage)) {
-      return 'refund_request';
+      if (hasOrderIdentifier) {
+        return 'refund_request';
+      } else {
+        return 'general_inquiry';
+      }
     }
 
     // Trigger Order Tracking only for explicit tracking questions OR if it has an order ID

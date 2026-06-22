@@ -6,6 +6,27 @@ import './AboutPage.css'; // Reuse nav/landing page styles
 
 const API_BASE = process.env.REACT_APP_API_URL || (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' ? 'http://localhost:5001/api' : '/api');
 
+const BlogImage = ({ src, alt, height = '200px' }) => {
+  const [error, setError] = useState(false);
+
+  if (error || !src) {
+    return (
+      <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(135deg, #1e1b4b 0%, #09090b 100%)', color: '#6366f1' }}>
+        <FaBlog size={height === '400px' ? 80 : 48} style={{ opacity: 0.5 }} />
+      </div>
+    );
+  }
+
+  return (
+    <img 
+      src={src} 
+      alt={alt} 
+      onError={() => setError(true)}
+      style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
+    />
+  );
+};
+
 function BlogPost() {
   const { slug } = useParams();
   const navigate = useNavigate();
@@ -142,11 +163,7 @@ function BlogPost() {
             {/* Cover Image */}
             {post.coverImage && (
               <div style={{ width: '100%', height: '400px', borderRadius: '16px', overflow: 'hidden', background: '#18181b', border: '1px solid rgba(63, 63, 70, 0.3)' }}>
-                <img 
-                  src={post.coverImage} 
-                  alt={post.title} 
-                  style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
-                />
+                <BlogImage src={post.coverImage} alt={post.title} height="400px" />
               </div>
             )}
 

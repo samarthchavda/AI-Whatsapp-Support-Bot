@@ -404,7 +404,12 @@ function ThemeHandler({ admin }) {
   const location = useLocation();
 
   useEffect(() => {
-    const isPublicPath = ['/', '/book-demo', '/login', '/about', '/services', '/forgot-password'].includes(location.pathname) || location.pathname.startsWith('/reset-password');
+    const isPublicPath = [
+      '/', '/book-demo', '/login', '/about', '/services', '/forgot-password', '/privacy', '/blog'
+    ].includes(location.pathname) || 
+    location.pathname.startsWith('/reset-password') ||
+    location.pathname.startsWith('/blog/');
+
     if (isPublicPath) {
       document.body.classList.add('dark-theme');
     } else if (admin && admin.theme) {

@@ -6,6 +6,27 @@ import './AboutPage.css'; // Reuse nav/landing page styles
 
 const API_BASE = process.env.REACT_APP_API_URL || (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' ? 'http://localhost:5001/api' : '/api');
 
+const BlogImage = ({ src, alt, height = '200px' }) => {
+  const [error, setError] = useState(false);
+
+  if (error || !src) {
+    return (
+      <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(135deg, #1e1b4b 0%, #09090b 100%)', color: '#6366f1' }}>
+        <FaBlog size={height === '400px' ? 80 : 48} style={{ opacity: 0.5 }} />
+      </div>
+    );
+  }
+
+  return (
+    <img 
+      src={src} 
+      alt={alt} 
+      onError={() => setError(true)}
+      style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
+    />
+  );
+};
+
 function Blog() {
   const navigate = useNavigate();
   const [posts, setPosts] = useState([]);
@@ -109,17 +130,7 @@ function Blog() {
               >
                 {/* Cover Image */}
                 <div style={{ height: '200px', background: '#18181b', position: 'relative', overflow: 'hidden' }}>
-                  {post.coverImage ? (
-                    <img 
-                      src={post.coverImage} 
-                      alt={post.title} 
-                      style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
-                    />
-                  ) : (
-                    <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(135deg, #1e1b4b 0%, #09090b 100%)', color: '#6366f1' }}>
-                      <FaBlog size={48} style={{ opacity: 0.5 }} />
-                    </div>
-                  )}
+                  <BlogImage src={post.coverImage} alt={post.title} />
                 </div>
 
                 {/* Content */}

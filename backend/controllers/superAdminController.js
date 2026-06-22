@@ -190,6 +190,87 @@ exports.updateUserSubscription = async (req, res) => {
 
     await user.save();
 
+    // Send email notification to user
+    try {
+      if (subscriptionStatus === 'active') {
+        const emailHtml = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <style>
+            body { font-family: 'Inter', Arial, sans-serif; background: #f3f4f6; margin: 0; padding: 0; }
+            .container { max-width: 600px; margin: 40px auto; background: white; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 24px rgba(0,0,0,0.1); }
+            .header { background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); padding: 40px; text-align: center; }
+            .header h1 { color: white; margin: 0; font-size: 28px; font-weight: 700; }
+            .content { padding: 40px; }
+            .content h2 { color: #1f2937; font-size: 24px; margin-bottom: 16px; }
+            .content p { color: #6b7280; line-height: 1.6; margin-bottom: 16px; }
+            .details { background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 12px; padding: 20px; margin: 24px 0; }
+            .details-item { margin-bottom: 10px; font-size: 15px; }
+            .details-label { font-weight: 600; color: #4b5563; }
+            .details-value { color: #1f2937; }
+            .footer { background: #f9fafb; padding: 24px; text-align: center; color: #9ca3af; font-size: 14px; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <h1>Subscription Activated</h1>
+            </div>
+            <div class="content">
+              <h2>Hi ${user.name || 'Merchant'},</h2>
+              <p>Your Kwickbot AI subscription has been successfully updated by the system administrator.</p>
+              <p>Your account is now fully active with premium access to the configured plan features.</p>
+              
+              <div class="details">
+                <h3 style="margin-top: 0; color: #1f2937; font-size: 16px;">Subscription Summary:</h3>
+                <div class="details-item">
+                  <span class="details-label">Plan Name:</span>
+                  <span class="details-value">${user.subscriptionPlan ? user.subscriptionPlan.toUpperCase() : 'N/A'} Plan</span>
+                </div>
+                <div class="details-item">
+                  <span class="details-label">Status:</span>
+                  <span class="details-value" style="color: #10b981; font-weight: 600;">Active</span>
+                </div>
+                <div class="details-item">
+                  <span class="details-label">Monthly Price:</span>
+                  <span class="details-value">₹${user.monthlyPrice || 0} INR</span>
+                </div>
+                <div class="details-item">
+                  <span class="details-label">Gemini Tokens Limit:</span>
+                  <span class="details-value">${(user.geminiTokensLimit || 0).toLocaleString()} / month</span>
+                </div>
+              </div>
+              
+              <p style="text-align: center; margin: 30px 0;">
+                <a href="${process.env.FRONTEND_URL || 'https://kwickbot.in'}/dashboard" style="background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: 600; display: inline-block;">Go to Dashboard</a>
+              </p>
+              
+              <p>If you have any questions or need billing support, feel free to reply directly to this email.</p>
+              <p>Best regards,<br><strong>Kwickbot Team</strong></p>
+            </div>
+            <div class="footer">
+              <p>© ${new Date().getFullYear()} Kwickbot. All rights reserved.</p>
+            </div>
+          </div>
+        </body>
+        </html>
+        `;
+
+        const emailText = `Hi ${user.name || 'Merchant'},\n\nYour Kwickbot AI subscription has been successfully updated by the system administrator.\n\nSubscription Summary:\n- Plan Name: ${user.subscriptionPlan ? user.subscriptionPlan.toUpperCase() : 'N/A'} Plan\n- Status: Active\n- Monthly Price: ₹${user.monthlyPrice || 0} INR\n- Gemini Tokens Limit: ${(user.geminiTokensLimit || 0).toLocaleString()} / month\n\nLogin to your dashboard here: ${process.env.FRONTEND_URL || 'https://kwickbot.in'}/dashboard\n\nBest regards,\nKwickbot Team`;
+
+        await emailService.sendEmail({
+          to: user.email,
+          subject: 'Your Kwickbot AI Subscription is Active!',
+          html: emailHtml,
+          text: emailText
+        });
+        console.log(`✅ Subscription activation email sent to ${user.email}`);
+      }
+    } catch (emailErr) {
+      console.error('❌ Error sending subscription update email:', emailErr.message);
+    }
+
     res.json({
       success: true,
       message: 'User subscription updated successfully',

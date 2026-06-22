@@ -51,6 +51,7 @@ function DemoRequests() {
       alert(`✅ Account created successfully!\n\nEmail: ${response.data.data.credentials.email}\nPassword: ${response.data.data.credentials.password}\n\nCredentials have been sent to the user's email.`);
       
       fetchRequests();
+      window.dispatchEvent(new Event('demoRequestUpdated'));
       setShowModal(false);
     } catch (error) {
       console.error('Error approving request:', error);
@@ -72,6 +73,7 @@ function DemoRequests() {
 
       alert('Request rejected successfully');
       fetchRequests();
+      window.dispatchEvent(new Event('demoRequestUpdated'));
       setShowModal(false);
     } catch (error) {
       console.error('Error rejecting request:', error);

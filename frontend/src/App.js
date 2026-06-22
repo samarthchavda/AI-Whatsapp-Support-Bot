@@ -64,7 +64,7 @@ function TrafficTracker() {
   return null;
 }
 
-function Sidebar({ admin, onLogout, isOpen, onToggle }) {
+function Sidebar({ admin, onLogout, isOpen, onToggle, pendingDemoRequestsCount }) {
   const location = useLocation();
 
   const isActive = (path) => {
@@ -127,7 +127,26 @@ function Sidebar({ admin, onLogout, isOpen, onToggle }) {
                 <li>
                   <Link to="/dashboard/demo-requests" className={isActive('/dashboard/demo-requests')} title="Demo Requests">
                     <FaBell />
-                    <span className="nav-label">Demo Requests</span>
+                    <span className="nav-label">
+                      Demo Requests
+                      {pendingDemoRequestsCount > 0 && (
+                        <span style={{
+                          marginLeft: '6px',
+                          backgroundColor: '#ef4444',
+                          color: 'white',
+                          borderRadius: '10px',
+                          padding: '2px 6px',
+                          fontSize: '11px',
+                          fontWeight: 'bold',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          lineHeight: 1
+                        }}>
+                          {pendingDemoRequestsCount}
+                        </span>
+                      )}
+                    </span>
                   </Link>
                 </li>
                 <li>
@@ -444,6 +463,7 @@ function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [admin, setAdmin] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [pendingDemoRequestsCount, setPendingDemoRequestsCount] = useState(0);
   const [sidebarOpen, setSidebarOpen] = useState(() => {
     return localStorage.getItem('sidebarOpen') === 'true';
   });
@@ -595,6 +615,35 @@ function App() {
     setAdmin(null);
   };
 
+  useEffect(() => {
+    if (isAuthenticated && admin && admin.role === 'super_admin') {
+      const fetchPendingCount = async () => {
+        try {
+          const response = await api.get('/demo-requests', {
+            params: { status: 'pending', limit: 1 }
+          });
+          if (response.data?.success) {
+            setPendingDemoRequestsCount(response.data.total || 0);
+          }
+        } catch (error) {
+          console.error('Error fetching pending demo requests count:', error);
+        }
+      };
+
+      fetchPendingCount();
+
+      window.addEventListener('demoRequestUpdated', fetchPendingCount);
+
+      const interval = setInterval(fetchPendingCount, 60000);
+      return () => {
+        clearInterval(interval);
+        window.removeEventListener('demoRequestUpdated', fetchPendingCount);
+      };
+    } else {
+      setPendingDemoRequestsCount(0);
+    }
+  }, [isAuthenticated, admin]);
+
 
   if (loading) {
     return (
@@ -642,7 +691,13 @@ function App() {
           element={
             <ProtectedRoute isAuthenticated={isAuthenticated}>
               <div className="App">
-                <Sidebar admin={admin} onLogout={handleLogout} isOpen={sidebarOpen} onToggle={handleToggleSidebar} />
+                 <Sidebar 
+                   admin={admin} 
+                   onLogout={handleLogout} 
+                   isOpen={sidebarOpen} 
+                   onToggle={handleToggleSidebar} 
+                   pendingDemoRequestsCount={pendingDemoRequestsCount} 
+                 />
 
                 <div className={`main-content${sidebarOpen ? ' main-content-expanded' : ''}`}>
                   {isImpersonated && (

@@ -181,6 +181,11 @@ const adminSchema = new mongoose.Schema({
     enum: ['light', 'dark'],
     default: 'light'
   },
+  customBranding: {
+    logoUrl: { type: String, default: null },
+    brandName: { type: String, default: null },
+    removeCredits: { type: Boolean, default: false }
+  },
   resetPasswordToken: {
     type: String,
     default: null

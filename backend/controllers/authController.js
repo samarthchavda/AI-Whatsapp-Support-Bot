@@ -72,7 +72,8 @@ const buildAdminPayload = (admin) => ({
   woocommerceEnabled: admin.woocommerceEnabled !== false,
   profileCompleted: admin.profileCompleted === true,
   profileCompletedAt: admin.profileCompletedAt,
-  trialStartedAt: admin.trialStartedAt
+  trialStartedAt: admin.trialStartedAt,
+  customBranding: admin.customBranding || { logoUrl: null, brandName: null, removeCredits: false }
 });
 
 const pruneExpiredRefreshTokens = (admin) => {
@@ -533,7 +534,7 @@ exports.upgradePlan = async (req, res) => {
  */
 exports.updateProfile = async (req, res) => {
   try {
-    const { name, businessName, businessPhone, storeUrl, storeCategory, supportEmail, currency, timezone, theme, aiDraftMode } = req.body;
+    const { name, businessName, businessPhone, storeUrl, storeCategory, supportEmail, currency, timezone, theme, aiDraftMode, customBranding } = req.body;
     
     const admin = await Admin.findById(req.admin._id);
     if (!admin) {
@@ -550,6 +551,21 @@ exports.updateProfile = async (req, res) => {
     if (timezone !== undefined) admin.timezone = timezone;
     if (theme !== undefined) admin.theme = theme;
     if (aiDraftMode !== undefined) admin.aiDraftMode = aiDraftMode;
+
+    if (customBranding !== undefined) {
+      const plan = (admin.subscriptionPlan || 'starter').toLowerCase();
+      if (plan !== 'enterprise' && plan !== 'custom') {
+        return res.status(403).json({
+          success: false,
+          error: 'Custom Branding (White-Labeling) is only available on Enterprise and Custom plans. Please upgrade to unlock.'
+        });
+      }
+      admin.customBranding = {
+        logoUrl: customBranding.logoUrl !== undefined ? customBranding.logoUrl : admin.customBranding?.logoUrl,
+        brandName: customBranding.brandName !== undefined ? customBranding.brandName : admin.customBranding?.brandName,
+        removeCredits: customBranding.removeCredits !== undefined ? customBranding.removeCredits : admin.customBranding?.removeCredits
+      };
+    }
 
     // Check if the profile is newly completed (all required fields present)
     const isNowCompleted = !!(

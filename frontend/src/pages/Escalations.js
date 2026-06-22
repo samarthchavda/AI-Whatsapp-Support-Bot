@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { getEscalations, updateEscalation } from '../services/api';
 
-function Escalations() {
+function Escalations({ admin }) {
   const [escalations, setEscalations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -11,12 +12,18 @@ function Escalations() {
     priority: ''
   });
 
+  const plan = (admin?.subscriptionPlan || JSON.parse(localStorage.getItem('admin') || '{}')?.subscriptionPlan || 'starter').toLowerCase();
+
   useEffect(() => {
-    fetchEscalations();
-    // Refresh every 30 seconds
-    const interval = setInterval(fetchEscalations, 30000);
-    return () => clearInterval(interval);
-  }, [filters]);
+    if (plan !== 'starter') {
+      fetchEscalations();
+      // Refresh every 30 seconds
+      const interval = setInterval(fetchEscalations, 30000);
+      return () => clearInterval(interval);
+    } else {
+      setLoading(false);
+    }
+  }, [filters, plan]);
 
   const fetchEscalations = async () => {
     try {
@@ -67,11 +74,52 @@ function Escalations() {
     }
   };
 
-  if (loading && escalations.length === 0) {
+  if (loading) {
     return (
       <div className="loading">
         <div className="spinner"></div>
         Loading escalations...
+      </div>
+    );
+  }
+
+  if (plan === 'starter') {
+    return (
+      <div className="container" style={{ position: 'relative' }}>
+        <h1>Escalations</h1>
+        
+        <div className="escalations-paywall-card" style={{
+          background: 'rgba(15, 23, 42, 0.4)',
+          border: '1px dashed rgba(236, 72, 153, 0.3)',
+          borderRadius: '16px',
+          padding: '60px 20px',
+          textAlign: 'center',
+          marginTop: '30px',
+          backdropFilter: 'blur(8px)',
+          boxShadow: '0 8px 32px 0 rgba(0, 0, 0, 0.37)'
+        }}>
+          <span style={{ fontSize: '48px', display: 'block', marginBottom: '16px' }}>🔒</span>
+          <h2 style={{ fontSize: '22px', fontWeight: 'bold', color: '#f472b6', marginBottom: '10px' }}>
+            Handoff Escalations is Locked
+          </h2>
+          <p style={{ maxWidth: '550px', margin: '0 auto 24px', fontSize: '14px', color: '#cbd5e1', lineHeight: '1.6' }}>
+            Upgrade your plan to the Professional or Enterprise tier to unlock Live Chat human escalations, configure automatic sentiment takeover alerts, and manage tickets.
+          </p>
+          <Link to="/dashboard/billing" style={{
+            display: 'inline-block',
+            background: 'linear-gradient(135deg, #ec4899 0%, #be185d 100%)',
+            color: 'white',
+            fontWeight: 'bold',
+            padding: '12px 30px',
+            borderRadius: '8px',
+            textDecoration: 'none',
+            fontSize: '14px',
+            boxShadow: '0 4px 14px rgba(236, 72, 153, 0.4)',
+            transition: 'all 0.2s ease'
+          }}>
+            Upgrade Subscription Plan
+          </Link>
+        </div>
       </div>
     );
   }

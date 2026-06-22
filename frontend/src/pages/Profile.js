@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { updateAdminProfile, getAdminProfile } from '../services/api';
-import { FaUser, FaStore, FaGlobe, FaSave, FaSun, FaMoon, FaEnvelope, FaPhone, FaLink, FaBuilding, FaDollarSign, FaClock, FaRobot, FaCheckCircle, FaTimesCircle, FaTimes } from 'react-icons/fa';
+import { FaUser, FaStore, FaGlobe, FaSave, FaSun, FaMoon, FaEnvelope, FaPhone, FaLink, FaBuilding, FaDollarSign, FaClock, FaRobot, FaCheckCircle, FaTimesCircle, FaTimes, FaPalette } from 'react-icons/fa';
 import './Profile.css';
 
 // Fields that are editable and should be compared for changes
@@ -32,6 +32,12 @@ function Profile({ admin, onUpdateAdmin }) {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState({ show: false, type: '', text: '' });
+  
+  // Custom Branding States
+  const [brandName, setBrandName] = useState('');
+  const [logoUrl, setLogoUrl] = useState('');
+  const [removeCredits, setRemoveCredits] = useState(false);
+  const [savingBranding, setSavingBranding] = useState(false);
 
   // Check if any editable field has changed from its original value
   const hasChanges = useCallback(() => {
@@ -55,6 +61,9 @@ function Profile({ admin, onUpdateAdmin }) {
         if (response.data?.success) {
           const fetchedAdmin = response.data.data.admin;
           setProfileData(fetchedAdmin);
+          setBrandName(fetchedAdmin.customBranding?.brandName || '');
+          setLogoUrl(fetchedAdmin.customBranding?.logoUrl || '');
+          setRemoveCredits(fetchedAdmin.customBranding?.removeCredits || false);
           // Store a snapshot of the original editable fields
           const snapshot = {};
           EDITABLE_FIELDS.forEach(f => { snapshot[f] = fetchedAdmin[f] || ''; });
@@ -133,6 +142,36 @@ function Profile({ admin, onUpdateAdmin }) {
       }
     } catch (error) {
       console.error('Failed to change theme:', error);
+    }
+  };
+
+  const handleSaveBranding = async (e) => {
+    e.preventDefault();
+    try {
+      setSavingBranding(true);
+      const response = await updateAdminProfile({
+        customBranding: {
+          brandName,
+          logoUrl,
+          removeCredits
+        }
+      });
+      if (response.data?.success) {
+        const updatedAdmin = response.data.data.admin;
+        setProfileData(updatedAdmin);
+        setBrandName(updatedAdmin.customBranding?.brandName || '');
+        setLogoUrl(updatedAdmin.customBranding?.logoUrl || '');
+        setRemoveCredits(updatedAdmin.customBranding?.removeCredits || false);
+        if (onUpdateAdmin) {
+          onUpdateAdmin(updatedAdmin);
+        }
+        showToast('success', 'Custom branding saved! 🎨');
+      }
+    } catch (error) {
+      console.error('Error updating branding:', error);
+      showToast('error', error.response?.data?.error || 'Failed to save branding.');
+    } finally {
+      setSavingBranding(false);
     }
   };
 
@@ -513,6 +552,81 @@ function Profile({ admin, onUpdateAdmin }) {
               </div>
             )}
           </form>
+
+          {/* Custom Branding Card */}
+          <div className="profile-card form-section-card branding-section-card" style={{ marginTop: '25px' }}>
+            <div className="section-title-wrapper">
+              <FaPalette className="section-icon text-accent" />
+              <h3>Custom Branding (White-Labeling)</h3>
+            </div>
+
+            {!(plan === 'enterprise' || plan === 'custom') ? (
+              <div className="branding-locked-overlay">
+                <div className="locked-content">
+                  <span className="lock-icon">🔒</span>
+                  <h4>Enterprise & Custom Feature Only</h4>
+                  <p>Upgrade your subscription to white-label this console and replace Kwickbot branding with your own brand name and logo.</p>
+                  <Link to="/dashboard/billing" className="btn-upgrade-branding">
+                    Upgrade Subscription Plan
+                  </Link>
+                </div>
+              </div>
+            ) : (
+              <div className="form-group-grid">
+                <div className="form-group">
+                  <label htmlFor="brandName">Custom Brand Name</label>
+                  <input
+                    type="text"
+                    id="brandName"
+                    value={brandName}
+                    onChange={(e) => setBrandName(e.target.value)}
+                    placeholder="e.g. Acme Support"
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label htmlFor="logoUrl">Custom Logo URL</label>
+                  <input
+                    type="url"
+                    id="logoUrl"
+                    value={logoUrl}
+                    onChange={(e) => setLogoUrl(e.target.value)}
+                    placeholder="e.g. https://mystore.com/logo.png"
+                  />
+                </div>
+
+                <div className="form-group full-width" style={{ marginTop: '10px' }}>
+                  <label className="checkbox-switch-label">
+                    <input
+                      type="checkbox"
+                      checked={removeCredits}
+                      onChange={(e) => setRemoveCredits(e.target.checked)}
+                    />
+                    <span className="checkbox-slider"></span>
+                    <div className="checkbox-text-info">
+                      <strong>Remove Kwickbot Branding</strong>
+                      <p>Fully strip "Powered by Kwickbot" and other credit labels from this application dashboard.</p>
+                    </div>
+                  </label>
+                </div>
+
+                {(brandName !== (profileData.customBranding?.brandName || '') ||
+                  logoUrl !== (profileData.customBranding?.logoUrl || '') ||
+                  removeCredits !== (profileData.customBranding?.removeCredits || false)) && (
+                  <div className="branding-action-row" style={{ width: '100%', marginTop: '16px', display: 'flex', justifyContent: 'flex-end', gridColumn: '1 / -1' }}>
+                    <button 
+                      type="button" 
+                      className="btn-save-branding" 
+                      onClick={handleSaveBranding} 
+                      disabled={savingBranding}
+                    >
+                      <FaSave /> {savingBranding ? 'Saving...' : 'Save Branding'}
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>

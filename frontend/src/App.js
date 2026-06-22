@@ -87,8 +87,22 @@ function Sidebar({ admin, onLogout, isOpen, onToggle }) {
       <div className="sidebar-inner">
         <div className="sidebar-header">
           <div className="sidebar-logo">
-            <img src="/logo.png" className="logo-img" alt="Kwickbot Logo" style={{ width: '36px', height: '36px', borderRadius: '8px', flexShrink: 0 }} />
-            {isOpen && <span className="sidebar-brand-name">Kwickbot</span>}
+            {(() => {
+              const isBrandingAllowed = admin && (admin.subscriptionPlan === 'enterprise' || admin.subscriptionPlan === 'custom');
+              const customLogo = isBrandingAllowed && admin.customBranding?.logoUrl;
+              const customName = isBrandingAllowed && admin.customBranding?.brandName;
+              return (
+                <>
+                  <img 
+                    src={customLogo || "/logo.png"} 
+                    className="logo-img" 
+                    alt={customName ? `${customName} Logo` : "Kwickbot Logo"} 
+                    style={{ width: '36px', height: '36px', borderRadius: '8px', flexShrink: 0, objectFit: 'contain' }} 
+                  />
+                  {isOpen && <span className="sidebar-brand-name">{customName || "Kwickbot"}</span>}
+                </>
+              );
+            })()}
           </div>
         </div>
 
@@ -195,13 +209,17 @@ function Sidebar({ admin, onLogout, isOpen, onToggle }) {
                   <li>
                     <Link to="/dashboard/escalations" className={isActive('/dashboard/escalations')} title="Escalations">
                       <FaExclamationTriangle />
-                      <span className="nav-label">Escalations</span>
+                      <span className="nav-label">
+                        Escalations {admin?.subscriptionPlan === 'starter' && <span style={{ marginLeft: '4px', fontSize: '10px' }}>🔒</span>}
+                      </span>
                     </Link>
                   </li>
                   <li>
                     <Link to="/dashboard/analytics" className={isActive('/dashboard/analytics')} title="Analytics">
                       <FaChartLine />
-                      <span className="nav-label">Analytics</span>
+                      <span className="nav-label">
+                        Analytics {admin?.subscriptionPlan === 'starter' && <span style={{ marginLeft: '4px', fontSize: '10px' }}>🔒</span>}
+                      </span>
                     </Link>
                   </li>
                 </ul>
@@ -673,11 +691,11 @@ function App() {
                           <Dashboard />
                       } 
                     />
-                    <Route path="/analytics" element={<Analytics />} />
+                    <Route path="/analytics" element={<Analytics admin={admin} />} />
                     <Route path="/live-chat" element={<LiveChat />} />
                     <Route path="/conversations" element={<Conversations />} />
                     <Route path="/orders" element={<Orders admin={admin} />} />
-                    <Route path="/escalations" element={<Escalations />} />
+                    <Route path="/escalations" element={<Escalations admin={admin} />} />
                     <Route path="/broadcast" element={<Broadcast />} />
                     <Route path="/knowledge-base" element={<KnowledgeBase />} />
                     <Route path="/integrations" element={<Integrations admin={admin} />} />

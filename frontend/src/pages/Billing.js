@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { FaCrown, FaCheck, FaInfoCircle, FaRegCreditCard, FaHistory, FaCalendarAlt, FaTicketAlt, FaWhatsapp } from 'react-icons/fa';
+import { FaCrown, FaCheck, FaTimes, FaInfoCircle, FaRegCreditCard, FaHistory, FaCalendarAlt, FaTicketAlt, FaWhatsapp } from 'react-icons/fa';
 import api, { getAdminProfile, getPricingPlans, upgradePricingPlan, createRazorpayOrder, verifyRazorpayPayment } from '../services/api';
 import './Billing.css';
 
@@ -445,27 +445,70 @@ function Billing() {
 
                 <ul className="upgrade-features-list">
                   {features.maxConversations === -1 ? (
-                    <li><FaCheck /> Unlimited Conversations</li>
+                    <li><FaCheck style={{ color: '#10b981' }} /> Unlimited Conversations</li>
                   ) : (
-                    <li><FaCheck /> Up to {features.maxConversations} Conversations</li>
+                    <li><FaCheck style={{ color: '#10b981' }} /> Up to {features.maxConversations} Conversations</li>
                   )}
                   
                   {features.maxMessages === -1 ? (
-                    <li><FaCheck /> Unlimited Messages</li>
+                    <li><FaCheck style={{ color: '#10b981' }} /> Unlimited Messages</li>
                   ) : (
-                    <li><FaCheck /> Up to {features.maxMessages} Messages</li>
+                    <li><FaCheck style={{ color: '#10b981' }} /> Up to {features.maxMessages} Messages</li>
                   )}
 
-                  <li><FaCheck /> {features.geminiTokensPerMonth.toLocaleString()} Gemini Tokens/mo</li>
-                  <li><FaCheck /> {features.maxWhatsAppConnections} WhatsApp Connection{features.maxWhatsAppConnections > 1 ? 's' : ''}</li>
+                  <li><FaCheck style={{ color: '#10b981' }} /> {features.geminiTokensPerMonth.toLocaleString()} Gemini Tokens/mo</li>
+                  <li><FaCheck style={{ color: '#10b981' }} /> {features.maxWhatsAppConnections} WhatsApp Connection{features.maxWhatsAppConnections > 1 ? 's' : ''}</li>
                   
-                  {features.advancedAnalytics && <li><FaCheck /> Advanced Analytics</li>}
-                  {features.customBranding && <li><FaCheck /> Custom Branding</li>}
-                  {features.liveChat && <li><FaCheck /> Live Chat Support</li>}
-                  {features.knowledgeBase && <li><FaCheck /> Knowledge Base</li>}
-                  {features.integrations && <li><FaCheck /> E-commerce Integrations</li>}
-                  {features.apiAccess && <li><FaCheck /> API Access</li>}
-                  {features.prioritySupport && <li><FaCheck /> Priority Support</li>}
+                  <li>
+                    <FaCheck style={{ color: '#10b981' }} /> {features.maxKbUploads === -1 ? 'Unlimited PDF KB Uploads' : `Max ${features.maxKbUploads} PDF Upload${features.maxKbUploads > 1 ? 's' : ''}`}
+                  </li>
+
+                  <li>
+                    <FaCheck style={{ color: '#10b981' }} /> {features.maxIntegrations === -1 ? 'Both Shopify & WooCommerce' : '1 E-commerce Integration'}
+                  </li>
+
+                  <li><FaCheck style={{ color: '#10b981' }} /> Knowledge Base Retrieval</li>
+                  <li><FaCheck style={{ color: '#10b981' }} /> Live Chat CRM Panel</li>
+
+                  <li style={{ opacity: features.advancedAnalytics ? 1 : 0.5 }}>
+                    {features.advancedAnalytics ? (
+                      <><FaCheck style={{ color: '#10b981' }} /> Advanced Analytics Dashboard</>
+                    ) : (
+                      <><FaTimes style={{ color: '#ef4444', marginRight: '8px' }} /> <span style={{ textDecoration: 'line-through' }}>Advanced Analytics Dashboard</span></>
+                    )}
+                  </li>
+
+                  <li style={{ opacity: (plan.name !== 'starter') ? 1 : 0.5 }}>
+                    {plan.name !== 'starter' ? (
+                      <><FaCheck style={{ color: '#10b981' }} /> Live Chat Handoff Escalations</>
+                    ) : (
+                      <><FaTimes style={{ color: '#ef4444', marginRight: '8px' }} /> <span style={{ textDecoration: 'line-through' }}>Live Chat Handoff Escalations</span></>
+                    )}
+                  </li>
+
+                  <li style={{ opacity: features.customBranding ? 1 : 0.5 }}>
+                    {features.customBranding ? (
+                      <><FaCheck style={{ color: '#10b981' }} /> Custom Branding (White-Labeling)</>
+                    ) : (
+                      <><FaTimes style={{ color: '#ef4444', marginRight: '8px' }} /> <span style={{ textDecoration: 'line-through' }}>Custom Branding (White-Labeling)</span></>
+                    )}
+                  </li>
+
+                  <li style={{ opacity: features.apiAccess ? 1 : 0.5 }}>
+                    {features.apiAccess ? (
+                      <><FaCheck style={{ color: '#10b981' }} /> API & Developer Access</>
+                    ) : (
+                      <><FaTimes style={{ color: '#ef4444', marginRight: '8px' }} /> <span style={{ textDecoration: 'line-through' }}>API & Developer Access</span></>
+                    )}
+                  </li>
+
+                  <li style={{ opacity: features.prioritySupport ? 1 : 0.5 }}>
+                    {features.prioritySupport ? (
+                      <><FaCheck style={{ color: '#10b981' }} /> Priority Email & Chat Support</>
+                    ) : (
+                      <><FaTimes style={{ color: '#ef4444', marginRight: '8px' }} /> <span style={{ textDecoration: 'line-through' }}>Priority Email & Chat Support</span></>
+                    )}
+                  </li>
                 </ul>
 
                 <button

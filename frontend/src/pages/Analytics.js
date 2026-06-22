@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import api from '../services/api';
 import {
   BarChart,
@@ -16,16 +17,22 @@ import {
 import { FaChartBar, FaChartPie, FaSmile, FaSync } from 'react-icons/fa';
 import './Analytics.css';
 
-function Analytics() {
+function Analytics({ admin }) {
   const [conversationsData, setConversationsData] = useState([]);
   const [resolutionData, setResolutionData] = useState(null);
   const [sentimentData, setSentimentData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [sentimentLoading, setSentimentLoading] = useState(false);
 
+  const plan = (admin?.subscriptionPlan || JSON.parse(localStorage.getItem('admin') || '{}')?.subscriptionPlan || 'starter').toLowerCase();
+
   useEffect(() => {
-    fetchAnalytics();
-  }, []);
+    if (plan !== 'starter') {
+      fetchAnalytics();
+    } else {
+      setLoading(false);
+    }
+  }, [plan]);
 
   const fetchAnalytics = async () => {
     try {
@@ -90,6 +97,52 @@ function Analytics() {
         <div style={{ padding: '40px', textAlign: 'center', color: '#71717a' }}>
           <div className="spinner" style={{ margin: '0 auto 16px' }}></div>
           Loading analytics...
+        </div>
+      </div>
+    );
+  }
+
+  if (plan === 'starter') {
+    return (
+      <div className="container" style={{ position: 'relative' }}>
+        <div className="page-header">
+          <div>
+            <h1 className="page-title">📊 Analytics Overview</h1>
+            <p className="page-subtitle">Insights and performance metrics</p>
+          </div>
+        </div>
+        
+        <div className="analytics-paywall-card" style={{
+          background: 'rgba(15, 23, 42, 0.4)',
+          border: '1px dashed rgba(236, 72, 153, 0.3)',
+          borderRadius: '16px',
+          padding: '60px 20px',
+          textAlign: 'center',
+          marginTop: '30px',
+          backdropFilter: 'blur(8px)',
+          boxShadow: '0 8px 32px 0 rgba(0, 0, 0, 0.37)'
+        }}>
+          <span style={{ fontSize: '48px', display: 'block', marginBottom: '16px' }}>🔒</span>
+          <h2 style={{ fontSize: '22px', fontWeight: 'bold', color: '#f472b6', marginBottom: '10px' }}>
+            Advanced Analytics is Locked
+          </h2>
+          <p style={{ maxWidth: '500px', margin: '0 auto 24px', fontSize: '14px', color: '#cbd5e1', lineHeight: '1.6' }}>
+            Upgrade your plan to the Professional or Enterprise tier to unlock real-time message volume charts, resolution ratios, and sentiment analysis for your customers.
+          </p>
+          <Link to="/dashboard/billing" style={{
+            display: 'inline-block',
+            background: 'linear-gradient(135deg, #ec4899 0%, #be185d 100%)',
+            color: 'white',
+            fontWeight: 'bold',
+            padding: '12px 30px',
+            borderRadius: '8px',
+            textDecoration: 'none',
+            fontSize: '14px',
+            boxShadow: '0 4px 14px rgba(236, 72, 153, 0.4)',
+            transition: 'all 0.2s ease'
+          }}>
+            Upgrade Subscription Plan
+          </Link>
         </div>
       </div>
     );

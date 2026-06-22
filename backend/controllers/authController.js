@@ -982,19 +982,22 @@ exports.verifyRazorpayPayment = async (req, res) => {
 
     const invoice = new Invoice({
       invoiceNumber: `INV-${nextNum}`,
-      adminId: admin._id,
-      merchantName: admin.name,
-      amount: originalPrice,
-      billingDate: new Date(),
-      dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days due
+      customerId: admin._id, // Using admin ID as customer reference for subscription invoices
+      customerPhone: admin.phone || admin.businessPhone || '9999999999',
+      customerName: admin.name || admin.businessName || 'Merchant',
+      customerEmail: admin.email,
+      subtotal: originalPrice,
+      totalAmount: originalPrice,
+      status: 'paid',
       paymentStatus: 'completed',
       paymentTerms: 'Due on Receipt',
-      lineItems: [
+      dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days due
+      items: [
         {
           description: `Kwickbot ${planName.toUpperCase()} Plan Subscription`,
           quantity: 1,
           unitPrice: originalPrice,
-          total: originalPrice
+          amount: originalPrice
         }
       ]
     });

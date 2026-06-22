@@ -837,11 +837,19 @@ exports.createRazorpayOrder = async (req, res) => {
     let discountAmount = 0;
     if (couponCode) {
       const Coupon = require('../models/Coupon');
-      const coupon = await Coupon.findOne({ code: couponCode.toUpperCase(), isActive: true });
-      if (coupon && (!coupon.expiresAt || coupon.expiresAt > new Date())) {
-        discountAmount = (originalPrice * coupon.discountPercent) / 100;
-        finalPrice = originalPrice - discountAmount;
+      const coupon = await Coupon.findOne({ code: couponCode.toUpperCase() });
+      if (!coupon) {
+        return res.status(400).json({ success: false, error: 'Invalid coupon code' });
       }
+      if (!coupon.isActive) {
+        return res.status(400).json({ success: false, error: 'This coupon is no longer active' });
+      }
+      if (coupon.expiresAt && coupon.expiresAt < new Date()) {
+        return res.status(400).json({ success: false, error: 'This coupon has expired' });
+      }
+      
+      discountAmount = (originalPrice * coupon.discountPercent) / 100;
+      finalPrice = originalPrice - discountAmount;
     }
 
     // Razorpay amount in paise (1 INR = 100 paise)

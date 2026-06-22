@@ -391,7 +391,7 @@ function WhatsAppConnect() {
 
   // Web Bot Socket Handshake
   useEffect(() => {
-    const newSocket = io(BASE_URL);
+    const newSocket = io(BASE_URL, { transports: ['websocket'] });
 
     newSocket.on('connect', () => {
       setIsServerConnected(true);

@@ -71,7 +71,7 @@ function SuperAdmin() {
     if (!token) return;
 
     const API_URL = process.env.REACT_APP_API_URL?.replace('/api', '') || (window.location.hostname === 'localhost' ? 'http://localhost:5001' : '/');
-    const socket = io(API_URL);
+    const socket = io(API_URL, { transports: ['websocket'] });
 
     socket.on('connect', () => {
       console.log('🔌 Connected to live audit log socket stream');

@@ -15,7 +15,7 @@ function Dashboard() {
     fetchStats(false); // Initial load: show spinner
 
     // Connect to Socket.IO for real-time dashboard updates
-    const socket = io(SOCKET_URL);
+    const socket = io(SOCKET_URL, { transports: ['websocket'] });
 
     socket.on('new_message', () => {
       fetchStats(true); // Silent update: no spinner

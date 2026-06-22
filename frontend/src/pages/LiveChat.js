@@ -89,7 +89,7 @@ function LiveChat() {
   }, [fetchConversations]);
 
   useEffect(() => {
-    const socket = io(SOCKET_URL);
+    const socket = io(SOCKET_URL, { transports: ['websocket'] });
     socket.on('new_message', (data) => {
       fetchConversations();
       if (selectedConversation && data && data.customerPhone === selectedConversation.customerPhone) {

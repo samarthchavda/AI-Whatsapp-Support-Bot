@@ -762,16 +762,25 @@ function App() {
                     <Route path="/profile" element={<Profile admin={admin} onUpdateAdmin={handleUpdateAdmin} />} />
                     
                     {/* Super Admin Routes */}
-                    <Route path="/super-admin" element={<SuperAdmin />} />
-                    <Route path="/super-admin/leads" element={<LeadsCRM />} />
-                    <Route path="/super-admin/health" element={<SuperAdminHealth />} />
-                    <Route path="/super-admin/announcements" element={<SuperAdminAnnouncements />} />
-                    <Route path="/demo-requests" element={<DemoRequests />} />
-                    <Route path="/super-admin/user/:userId" element={<SuperAdminUserDetail />} />
-                    <Route path="/super-admin/plans" element={<PlanManager />} />
-                    <Route path="/super-admin/budget" element={<SuperAdminBudget />} />
-                    <Route path="/super-admin/blog" element={<SuperAdminBlog />} />
-                    <Route path="/super-admin/settings" element={<SuperAdminSettings />} />
+                    {admin && admin.role === 'super_admin' ? (
+                      <>
+                        <Route path="/super-admin" element={<SuperAdmin />} />
+                        <Route path="/super-admin/leads" element={<LeadsCRM />} />
+                        <Route path="/super-admin/health" element={<SuperAdminHealth />} />
+                        <Route path="/super-admin/announcements" element={<SuperAdminAnnouncements />} />
+                        <Route path="/demo-requests" element={<DemoRequests />} />
+                        <Route path="/super-admin/user/:userId" element={<SuperAdminUserDetail />} />
+                        <Route path="/super-admin/plans" element={<PlanManager />} />
+                        <Route path="/super-admin/budget" element={<SuperAdminBudget />} />
+                        <Route path="/super-admin/blog" element={<SuperAdminBlog />} />
+                        <Route path="/super-admin/settings" element={<SuperAdminSettings />} />
+                      </>
+                    ) : (
+                      <>
+                        <Route path="/super-admin/*" element={<Navigate to="/dashboard" replace />} />
+                        <Route path="/demo-requests" element={<Navigate to="/dashboard" replace />} />
+                      </>
+                    )}
                   </Routes>
                   </div>
                 </div>

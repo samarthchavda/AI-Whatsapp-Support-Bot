@@ -377,7 +377,6 @@ function Billing() {
               placeholder="e.g. BotReply50"
               value={couponCode}
               onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
-              disabled={profile?.role !== 'super_admin'}
               style={{
                 flex: 1,
                 background: 'var(--bg-input)',
@@ -391,18 +390,13 @@ function Billing() {
             />
             <button
               type="submit"
-              disabled={verifyingCoupon || !couponCode.trim() || profile?.role !== 'super_admin'}
+              disabled={verifyingCoupon || !couponCode.trim()}
               className="btn-primary"
               style={{ padding: '8px 16px', fontSize: '13px' }}
             >
               {verifyingCoupon ? 'Applying...' : 'Apply Code'}
             </button>
           </form>
-          {profile?.role !== 'super_admin' && (
-            <div style={{ marginTop: '10px', fontSize: '12px', color: 'var(--text-muted)' }}>
-              Note: Promo codes can only be applied by a Super Admin.
-            </div>
-          )}
           {activeCoupon && (
             <div style={{ marginTop: '10px', fontSize: '13px', color: 'var(--success)', fontWeight: '600' }}>
               ✓ Code {activeCoupon.code} applied! Enjoy {activeCoupon.discountPercent}% OFF on checkout.

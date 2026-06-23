@@ -75,6 +75,41 @@ function SuperAdmin() {
 
     socket.on('connect', () => {
       console.log('🔌 Connected to live audit log socket stream');
+      const connectionLog = {
+        _id: 'local_' + Math.random(),
+        createdAt: new Date(),
+        actorEmail: 'SYSTEM (LOCAL)',
+        action: 'socket_connected',
+        target: 'Event Server Stream',
+        details: { message: 'Successfully connected to backend real-time event pipeline.' }
+      };
+      setAuditLogs(prev => [connectionLog, ...prev].slice(0, 100));
+    });
+
+    socket.on('connect_error', (error) => {
+      console.error('Socket connection error:', error);
+      const errorLog = {
+        _id: 'local_' + Math.random(),
+        createdAt: new Date(),
+        actorEmail: 'SYSTEM (LOCAL)',
+        action: 'network_error',
+        target: 'Server Gateway',
+        details: { message: `Connection failed: ${error.message}. Checking backup connection...` }
+      };
+      setAuditLogs(prev => [errorLog, ...prev].slice(0, 100));
+    });
+
+    socket.on('disconnect', (reason) => {
+      console.log('Socket disconnected:', reason);
+      const disconnectLog = {
+        _id: 'local_' + Math.random(),
+        createdAt: new Date(),
+        actorEmail: 'SYSTEM (LOCAL)',
+        action: 'connection_lost',
+        target: 'Socket.io Stream',
+        details: { message: `Disconnected from live event stream. Reason: ${reason}` }
+      };
+      setAuditLogs(prev => [disconnectLog, ...prev].slice(0, 100));
     });
 
     socket.on('audit_log', (newLog) => {
@@ -707,9 +742,9 @@ function SuperAdmin() {
               ) : auditLogs.map((log) => {
                 const dateStr = new Date(log.createdAt).toLocaleString();
                 let logColor = '#34d399'; // default green
-                if (log.action.includes('delete') || log.action.includes('revoke') || log.action.includes('suspend') || log.action.includes('deactivate')) {
+                if (log.action.includes('delete') || log.action.includes('revoke') || log.action.includes('suspend') || log.action.includes('deactivate') || log.action.includes('error') || log.action.includes('lost')) {
                   logColor = '#f87171'; // red
-                } else if (log.action.includes('impersonate') || log.action.includes('restore') || log.action.includes('backup')) {
+                } else if (log.action.includes('impersonate') || log.action.includes('restore') || log.action.includes('backup') || log.action.includes('disconnect') || log.action.includes('connection_lost')) {
                   logColor = '#fbbf24'; // orange/amber
                 }
 

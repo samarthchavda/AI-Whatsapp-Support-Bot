@@ -28,7 +28,8 @@ const demoRequestSchema = new mongoose.Schema({
   },
   websiteUrl: {
     type: String,
-    required: true,
+    required: false,
+    default: '',
     trim: true
   },
   status: {

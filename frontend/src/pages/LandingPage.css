@@ -1596,7 +1596,7 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 16px;
+  gap: 24px;
 }
 
 .partner-badges-title {
@@ -1612,38 +1612,107 @@
   justify-content: center;
   align-items: center;
   flex-wrap: wrap;
-  gap: 40px;
+  gap: 32px;
 }
 
 .partner-logo-item {
   display: flex;
   align-items: center;
-  gap: 10px;
-  color: #a1a1aa;
-  font-size: 16px;
-  font-weight: 700;
-  opacity: 0.75;
-  transition: opacity 0.2s ease, color 0.2s ease;
+  gap: 12px;
+  opacity: 0.65;
+  transition: opacity 0.25s ease, transform 0.25s ease;
+  cursor: default;
 }
 
 .partner-logo-item:hover {
   opacity: 1;
-  color: #fafafa;
+  transform: translateY(-2px);
 }
 
-.partner-logo-item.shopify svg {
-  color: #95bf47;
+.partner-logo-item svg {
+  flex-shrink: 0;
+  filter: grayscale(20%);
+  transition: filter 0.25s ease;
 }
 
-.partner-logo-item.woocommerce svg {
-  color: #7f54b3;
+.partner-logo-item:hover svg {
+  filter: grayscale(0%);
 }
 
-.partner-logo-item.whatsapp svg {
-  color: #25d366;
+.partner-label {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
 }
 
-/* Customer Testimonials Styles */
+.partner-name {
+  font-size: 15px;
+  font-weight: 700;
+  color: #e4e4e7;
+  line-height: 1;
+}
+
+.partner-sub {
+  font-size: 11px;
+  font-weight: 500;
+  color: #71717a;
+  letter-spacing: 0.03em;
+  line-height: 1;
+}
+
+/* Brand-specific hover colors for name */
+.partner-logo-item.whatsapp:hover .partner-name  { color: #25D366; }
+.partner-logo-item.meta:hover      .partner-name  { color: #0081FB; }
+.partner-logo-item.shopify:hover   .partner-name  { color: #95BF47; }
+.partner-logo-item.woocommerce:hover .partner-name { color: #7F54B3; }
+.partner-logo-item.openai:hover    .partner-name  { color: #10a37f; }
+
+/* Brand icon circle background */
+.partner-icon-wrap {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+}
+
+.partner-logo-item:hover .partner-icon-wrap {
+  transform: scale(1.08);
+  box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+}
+
+.partner-icon-wrap img {
+  display: block;
+}
+
+.whatsapp-bg  { background: #25D366; }
+.meta-bg      { background: linear-gradient(135deg, #0081FB, #00C6FF); }
+.shopify-bg   { background: #95BF47; }
+.woo-bg       { background: #7F54B3; }
+.openai-bg    { background: #10a37f; }
+
+
+/* Partner Logos Stagger */
+.partner-logo-item {
+  opacity: 0;
+  transform: translateY(10px);
+  transition: opacity 0.5s ease, transform 0.5s ease;
+}
+
+.animate-on-scroll.in-view .partner-logo-item {
+  opacity: 0.65;
+  transform: translateY(0);
+}
+
+.animate-on-scroll.in-view .partner-logo-item:nth-child(1) { transition-delay: 0.08s; }
+.animate-on-scroll.in-view .partner-logo-item:nth-child(2) { transition-delay: 0.18s; }
+.animate-on-scroll.in-view .partner-logo-item:nth-child(3) { transition-delay: 0.28s; }
+.animate-on-scroll.in-view .partner-logo-item:nth-child(4) { transition-delay: 0.38s; }
+.animate-on-scroll.in-view .partner-logo-item:nth-child(5) { transition-delay: 0.48s; }
+
 .testimonials-section {
   background: rgba(9, 9, 11, 0.2);
 }

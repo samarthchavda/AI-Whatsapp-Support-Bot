@@ -398,20 +398,64 @@ function LandingPage() {
         {/* Platform Partner Badges */}
         <section className="partner-badges-section animate-on-scroll">
           <div className="partner-badges-container">
-            <div className="partner-badges-title">INTEGRATES WITH THE SERVICES YOU USE</div>
+            <div className="partner-badges-title">TRUSTED INTEGRATIONS &amp; POWERED BY</div>
             <div className="partners-grid">
-              <div className="partner-logo-item shopify">
-                <FaShoppingCart />
-                <span>Shopify Sync</span>
-              </div>
-              <div className="partner-logo-item woocommerce">
-                <FaShoppingCart />
-                <span>WooCommerce Connection</span>
-              </div>
+
+              {/* WhatsApp */}
               <div className="partner-logo-item whatsapp">
-                <FaWhatsapp />
-                <span>Official WhatsApp API</span>
+                <div className="partner-icon-wrap whatsapp-bg">
+                  <img src="https://cdn.simpleicons.org/whatsapp/ffffff" alt="WhatsApp" width="22" height="22" />
+                </div>
+                <div className="partner-label">
+                  <span className="partner-name">WhatsApp</span>
+                  <span className="partner-sub">Official Cloud API</span>
+                </div>
               </div>
+
+              {/* Meta */}
+              <div className="partner-logo-item meta">
+                <div className="partner-icon-wrap meta-bg">
+                  <img src="https://cdn.simpleicons.org/meta/ffffff" alt="Meta" width="22" height="22" />
+                </div>
+                <div className="partner-label">
+                  <span className="partner-name">Meta</span>
+                  <span className="partner-sub">Business Partner</span>
+                </div>
+              </div>
+
+              {/* Shopify */}
+              <div className="partner-logo-item shopify">
+                <div className="partner-icon-wrap shopify-bg">
+                  <img src="https://cdn.simpleicons.org/shopify/ffffff" alt="Shopify" width="22" height="22" />
+                </div>
+                <div className="partner-label">
+                  <span className="partner-name">Shopify</span>
+                  <span className="partner-sub">Native Sync</span>
+                </div>
+              </div>
+
+              {/* WooCommerce */}
+              <div className="partner-logo-item woocommerce">
+                <div className="partner-icon-wrap woo-bg">
+                  <img src="https://cdn.simpleicons.org/woocommerce/ffffff" alt="WooCommerce" width="22" height="22" />
+                </div>
+                <div className="partner-label">
+                  <span className="partner-name">WooCommerce</span>
+                  <span className="partner-sub">Connected</span>
+                </div>
+              </div>
+
+              {/* OpenAI */}
+              <div className="partner-logo-item openai">
+                <div className="partner-icon-wrap openai-bg">
+                  <img src="https://cdn.simpleicons.org/openai/ffffff" alt="OpenAI" width="22" height="22" />
+                </div>
+                <div className="partner-label">
+                  <span className="partner-name">OpenAI</span>
+                  <span className="partner-sub">AI Powered</span>
+                </div>
+              </div>
+
             </div>
           </div>
         </section>

@@ -132,6 +132,7 @@ const WIDGET_GUIDE_STEPS = [
 ];
 
 function WhatsAppConnect() {
+  const admin = JSON.parse(localStorage.getItem('admin') || '{}');
   const [activeTab, setActiveTab] = useState('cloudapi');
   
   // Onboarding Guide States
@@ -502,7 +503,7 @@ function WhatsAppConnect() {
         marginBottom: '24px',
         gap: '16px'
       }}>
-        {cloudStatus?.webBotEnabled && (
+        {admin?.role === 'super_admin' && cloudStatus?.webBotEnabled && (
           <button
             onClick={() => setActiveTab('webbot')}
             style={{
@@ -558,7 +559,7 @@ function WhatsAppConnect() {
       </div>
 
       {/* Content Area */}
-      {activeTab === 'webbot' && (
+      {admin?.role === 'super_admin' && activeTab === 'webbot' && (
         <div style={{
           display: 'grid',
           gridTemplateColumns: '1fr 1fr',

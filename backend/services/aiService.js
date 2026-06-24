@@ -838,6 +838,14 @@ Smart Fallback Rules (when specific information is not available in the knowledg
         typingDelayMs = this.getTypingDelayMs();
       }
 
+      // Check if Kwickbot branding should be removed
+      const isBrandingAllowed = adminDoc && (adminDoc.subscriptionPlan === 'enterprise' || adminDoc.subscriptionPlan === 'custom');
+      const removeCredits = isBrandingAllowed && adminDoc.customBranding?.removeCredits === true;
+      
+      if (!removeCredits && response && typeof response === 'string' && !response.includes('⚡ Powered by Kwickbot AI')) {
+        response = `${response}\n\n⚡ Powered by Kwickbot AI`;
+      }
+
       if (!responseParts || responseParts.length === 0) {
         responseParts = this.buildResponseParts(response);
       }

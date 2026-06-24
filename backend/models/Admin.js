@@ -77,7 +77,7 @@ const adminSchema = new mongoose.Schema({
   },
   geminiTokensLimit: {
     type: Number,
-    default: 10000 // Default limit
+    default: 50000 // Default limit (Starter plan)
   },
   lastTokenReset: {
     type: Date,

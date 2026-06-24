@@ -374,7 +374,7 @@ exports.getPlans = async (req, res) => {
           features: {
             maxConversations: 500,
             maxMessages: 2000,
-            geminiTokensPerMonth: 10000,
+            geminiTokensPerMonth: 50000,
             maxWhatsAppConnections: 1,
             maxKbUploads: 1,
             maxIntegrations: 1,
@@ -393,7 +393,7 @@ exports.getPlans = async (req, res) => {
           features: {
             maxConversations: 3000,
             maxMessages: 15000,
-            geminiTokensPerMonth: 50000,
+            geminiTokensPerMonth: 200000,
             maxWhatsAppConnections: 2,
             maxKbUploads: 3,
             maxIntegrations: 1,
@@ -413,7 +413,7 @@ exports.getPlans = async (req, res) => {
           features: {
             maxConversations: -1,
             maxMessages: -1,
-            geminiTokensPerMonth: 200000,
+            geminiTokensPerMonth: -1,
             maxWhatsAppConnections: 5,
             maxKbUploads: -1,
             maxIntegrations: -1,
@@ -490,9 +490,9 @@ exports.upgradePlan = async (req, res) => {
     let originalPrice = 29;
     if (!planDetails) {
       const fallbacks = {
-        starter: { price: 2999, limit: 10000 },
-        professional: { price: 6999, limit: 50000 },
-        enterprise: { price: 14000, limit: 200000 }
+        starter: { price: 2999, limit: 50000 },
+        professional: { price: 6999, limit: 200000 },
+        enterprise: { price: 14000, limit: -1 }
       };
       
       const fallback = fallbacks[planName];

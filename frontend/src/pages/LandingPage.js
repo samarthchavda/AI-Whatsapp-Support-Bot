@@ -807,6 +807,8 @@ function LandingPage() {
             <button onClick={() => navigate('/services')}>Services</button>
             <button onClick={() => navigate('/blog')}>Blog</button>
             <button onClick={() => navigate('/privacy')}>Privacy Policy</button>
+            <button onClick={() => navigate('/terms')}>Terms & Conditions</button>
+            <button onClick={() => navigate('/refund-policy')}>Refund Policy</button>
           </div>
           <div className="footer-links-col">
             <h4>Account</h4>

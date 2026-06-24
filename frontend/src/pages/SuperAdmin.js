@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import io from 'socket.io-client';
 import {
   FaUsers,
-  FaDollarSign,
+  FaRupeeSign,
   FaRobot,
   FaComments,
   FaToggleOn,
@@ -500,11 +500,11 @@ function SuperAdmin() {
             <div className="analytics-cards">
               <div className="stat-card revenue">
                 <div className="stat-icon">
-                  <FaDollarSign />
+                  <FaRupeeSign />
                 </div>
                 <div className="stat-info">
                   <h3>Total Revenue</h3>
-                  <p className="stat-value">${analytics.totalRevenue}</p>
+                  <p className="stat-value">₹{analytics.totalRevenue}</p>
                   <small>Monthly recurring revenue</small>
                 </div>
               </div>
@@ -644,7 +644,7 @@ function SuperAdmin() {
                         </td>
                         <td>
                           <div className="revenue-cell">
-                            <strong className="revenue-amount">${finalPrice}</strong>
+                            <strong className="revenue-amount">₹{finalPrice}</strong>
                             {user.customDiscount > 0 && (
                               <span className="discount-applied">-{user.customDiscount}%</span>
                             )}
@@ -1119,7 +1119,7 @@ function SuperAdmin() {
 
                     <div className="form-row" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                       <div className="form-group">
-                        <label>Monthly Price ($)</label>
+                        <label>Monthly Price (₹)</label>
                         <input
                           type="number"
                           min="0"

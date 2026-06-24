@@ -6,14 +6,15 @@ const aiService = require('../services/aiService');
 // Get conversations per day for last 7 days
 exports.getConversationsPerDay = async (req, res) => {
   try {
-    const sevenDaysAgo = new Date();
-    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+    const days = parseInt(req.query.days) || 7;
+    const daysAgo = new Date();
+    daysAgo.setDate(daysAgo.getDate() - days);
 
     const conversations = await Conversation.aggregate([
       {
         $match: {
           admin: req.admin._id,
-          createdAt: { $gte: sevenDaysAgo }
+          createdAt: { $gte: daysAgo }
         }
       },
       {
@@ -31,15 +32,23 @@ exports.getConversationsPerDay = async (req, res) => {
 
     // Fill in missing days with 0
     const result = [];
-    for (let i = 6; i >= 0; i--) {
+    for (let i = days - 1; i >= 0; i--) {
       const date = new Date();
       date.setDate(date.getDate() - i);
       const dateStr = date.toISOString().split('T')[0];
       
       const found = conversations.find(c => c._id === dateStr);
+      
+      let dayLabel = '';
+      if (days <= 15) {
+        dayLabel = date.toLocaleDateString('en-US', { weekday: 'short' });
+      } else {
+        dayLabel = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      }
+
       result.push({
         date: dateStr,
-        day: date.toLocaleDateString('en-US', { weekday: 'short' }),
+        day: dayLabel,
         count: found ? found.count : 0
       });
     }
@@ -60,7 +69,14 @@ exports.getConversationsPerDay = async (req, res) => {
 // Get resolution rate (AI vs Human)
 exports.getResolutionRate = async (req, res) => {
   try {
-    const adminQuery = { admin: req.admin._id };
+    const days = parseInt(req.query.days) || 7;
+    const daysAgo = new Date();
+    daysAgo.setDate(daysAgo.getDate() - days);
+
+    const adminQuery = { 
+      admin: req.admin._id,
+      createdAt: { $gte: daysAgo }
+    };
     
     const [totalConversations, escalatedConversations] = await Promise.all([
       Conversation.countDocuments(adminQuery),

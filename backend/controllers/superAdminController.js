@@ -5,6 +5,7 @@ const Broadcast = require('../models/Broadcast');
 const Lead = require('../models/Lead');
 const Announcement = require('../models/Announcement');
 const emailService = require('../services/emailService');
+const { getFrontendUrl } = require('../services/urlHelper');
 const PageVisit = require('../models/PageVisit');
 const whatsappCloudAPI = require('../services/whatsappCloudAPI');
 const crypto = require('crypto');
@@ -243,7 +244,7 @@ exports.updateUserSubscription = async (req, res) => {
               </div>
               
               <p style="text-align: center; margin: 30px 0;">
-                <a href="${process.env.FRONTEND_URL || 'https://kwickbot.in'}/dashboard" style="background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: 600; display: inline-block;">Go to Dashboard</a>
+                <a href="${getFrontendUrl(req)}/dashboard" style="background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: 600; display: inline-block;">Go to Dashboard</a>
               </p>
               
               <p>If you have any questions or need billing support, feel free to reply directly to this email.</p>
@@ -257,7 +258,7 @@ exports.updateUserSubscription = async (req, res) => {
         </html>
         `;
 
-        const emailText = `Hi ${user.name || 'Merchant'},\n\nYour Kwickbot AI subscription has been successfully updated by the system administrator.\n\nSubscription Summary:\n- Plan Name: ${user.subscriptionPlan ? user.subscriptionPlan.toUpperCase() : 'N/A'} Plan\n- Status: Active\n- Monthly Price: ₹${user.monthlyPrice || 0} INR\n- Gemini Tokens Limit: ${(user.geminiTokensLimit || 0).toLocaleString()} / month\n\nLogin to your dashboard here: ${process.env.FRONTEND_URL || 'https://kwickbot.in'}/dashboard\n\nBest regards,\nKwickbot Team`;
+        const emailText = `Hi ${user.name || 'Merchant'},\n\nYour Kwickbot AI subscription has been successfully updated by the system administrator.\n\nSubscription Summary:\n- Plan Name: ${user.subscriptionPlan ? user.subscriptionPlan.toUpperCase() : 'N/A'} Plan\n- Status: Active\n- Monthly Price: ₹${user.monthlyPrice || 0} INR\n- Gemini Tokens Limit: ${(user.geminiTokensLimit || 0).toLocaleString()} / month\n\nLogin to your dashboard here: ${getFrontendUrl(req)}/dashboard\n\nBest regards,\nKwickbot Team`;
 
         await emailService.sendEmail({
           to: user.email,
@@ -1524,7 +1525,7 @@ exports.convertLeadToClient = async (req, res) => {
                 <p><strong>⚠️ Important:</strong> Please change your password after your first login for security purposes.</p>
               </div>
 
-              <a href="${process.env.FRONTEND_URL || 'http://localhost:3000'}/login" class="button">Login to Dashboard</a>
+              <a href="${getFrontendUrl(req)}/login" class="button">Login to Dashboard</a>
 
               <p>Best regards,<br><strong>Kwickbot Team</strong></p>
             </div>
@@ -1536,7 +1537,7 @@ exports.convertLeadToClient = async (req, res) => {
         </html>
       `;
 
-      const emailText = `Hi ${lead.name},\n\nYour Kwickbot merchant account is ready!\n\nYour Login Credentials:\n- Email: ${lead.email}\n- Password: ${generatedPassword}\n- Subscription Plan: ${subscriptionPlan}\n\nImportant: Please change your password after your first login.\n\nLogin to Dashboard here: ${process.env.FRONTEND_URL || 'http://localhost:3000'}/login\n\nBest regards,\nKwickbot Team`;
+      const emailText = `Hi ${lead.name},\n\nYour Kwickbot merchant account is ready!\n\nYour Login Credentials:\n- Email: ${lead.email}\n- Password: ${generatedPassword}\n- Subscription Plan: ${subscriptionPlan}\n\nImportant: Please change your password after your first login.\n\nLogin to Dashboard here: ${getFrontendUrl(req)}/login\n\nBest regards,\nKwickbot Team`;
 
       await emailService.sendEmail({
         to: lead.email,
@@ -1559,7 +1560,7 @@ Here are your login credentials:
 🔑 *Password:* ${generatedPassword}
 
 Please log in to your dashboard here to connect your WhatsApp bot:
-🔗 ${process.env.FRONTEND_URL || 'http://localhost:3000'}/login
+🔗 ${getFrontendUrl(req)}/login
 
 _Note: For security, please change your password after your first login._`;
 
@@ -1698,7 +1699,7 @@ exports.alertUserConnectionOffline = async (req, res) => {
 
             <p>To resolve this, please log in to your dashboard, navigate to <strong>WA Connect</strong> under your accounts section, and reconnect your credentials.</p>
             
-            <a href="${process.env.FRONTEND_URL || 'http://localhost:3000'}/dashboard/whatsapp-connect" class="button">Reconnect WhatsApp</a>
+            <a href="${getFrontendUrl(req)}/dashboard/whatsapp-connect" class="button">Reconnect WhatsApp</a>
 
             <p>Best regards,<br><strong>Kwickbot Support Team</strong></p>
           </div>
@@ -1710,7 +1711,7 @@ exports.alertUserConnectionOffline = async (req, res) => {
       </html>
     `;
 
-    const emailText = `Hello ${user.name},\n\nOur system detected that your Kwickbot WhatsApp connection has gone offline because your credentials could not be verified.\n\nWhile disconnected, your automated chatbot will not respond to customer queries. Please log in and reconnect your account:\n${process.env.FRONTEND_URL || 'http://localhost:3000'}/dashboard/whatsapp-connect\n\nBest regards,\nKwickbot Support Team`;
+    const emailText = `Hello ${user.name},\n\nOur system detected that your Kwickbot WhatsApp connection has gone offline because your credentials could not be verified.\n\nWhile disconnected, your automated chatbot will not respond to customer queries. Please log in and reconnect your account:\n${getFrontendUrl(req)}/dashboard/whatsapp-connect\n\nBest regards,\nKwickbot Support Team`;
 
     await emailService.sendEmail({
       to: user.email,

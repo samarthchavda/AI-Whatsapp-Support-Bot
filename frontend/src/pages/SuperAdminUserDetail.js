@@ -274,7 +274,7 @@ function SuperAdminUserDetail() {
             </div>
             <div className="detail-row">
               <span>Monthly Price:</span>
-              <strong>${user.monthlyPrice}/mo</strong>
+              <strong>₹{user.monthlyPrice}/mo</strong>
             </div>
             {user.customDiscount > 0 && (
               <div className="detail-row">
@@ -287,7 +287,7 @@ function SuperAdminUserDetail() {
             <div className="detail-row">
               <span>Final Price:</span>
               <strong style={{ color: '#10b981' }}>
-                ${(user.monthlyPrice - (user.monthlyPrice * user.customDiscount / 100)).toFixed(2)}/mo
+                ₹{(user.monthlyPrice - (user.monthlyPrice * user.customDiscount / 100)).toFixed(2)}/mo
               </strong>
             </div>
             {user.subscriptionEndDate && (
@@ -622,7 +622,7 @@ function SuperAdminUserDetail() {
               </div>
 
               <div className="form-group">
-                <label>Monthly Price ($)</label>
+                <label>Monthly Price (₹)</label>
                 <input
                   type="number"
                   min="0"
@@ -698,7 +698,7 @@ function SuperAdminUserDetail() {
               <div className="discount-preview">
                 <div className="preview-row">
                   <span>Original Price:</span>
-                  <span>${user.monthlyPrice}/mo</span>
+                  <span>₹{user.monthlyPrice}/mo</span>
                 </div>
                 <div className="preview-row">
                   <span>Discount:</span>
@@ -706,7 +706,7 @@ function SuperAdminUserDetail() {
                 </div>
                 <div className="preview-row final">
                   <span>Final Price:</span>
-                  <span>${(user.monthlyPrice - (user.monthlyPrice * discountValue / 100)).toFixed(2)}/mo</span>
+                  <span>₹{(user.monthlyPrice - (user.monthlyPrice * discountValue / 100)).toFixed(2)}/mo</span>
                 </div>
               </div>
 

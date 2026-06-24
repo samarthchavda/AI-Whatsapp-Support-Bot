@@ -1,5 +1,6 @@
 const Admin = require('../models/Admin');
 const emailService = require('../services/emailService');
+const { getFrontendUrl } = require('../services/urlHelper');
 const {
   generateAccessToken,
   generateRefreshToken,
@@ -407,7 +408,7 @@ exports.getPlans = async (req, res) => {
           name: 'enterprise',
           displayName: 'Enterprise Plan',
           description: 'For large-scale operations requiring maximum power and volume.',
-          monthlyPrice: 14999,
+          monthlyPrice: 14000,
           badge: 'BEST VALUE',
           features: {
             maxConversations: -1,
@@ -491,7 +492,7 @@ exports.upgradePlan = async (req, res) => {
       const fallbacks = {
         starter: { price: 2999, limit: 10000 },
         professional: { price: 6999, limit: 50000 },
-        enterprise: { price: 14999, limit: 200000 }
+        enterprise: { price: 14000, limit: 200000 }
       };
       
       const fallback = fallbacks[planName];
@@ -632,7 +633,7 @@ exports.forgotPassword = async (req, res) => {
     await admin.save();
 
     // Reset URL
-    const resetUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/reset-password/${resetToken}`;
+    const resetUrl = `${getFrontendUrl(req)}/reset-password/${resetToken}`;
 
     const mailHtml = `
       <!DOCTYPE html>
@@ -828,7 +829,7 @@ exports.createRazorpayOrder = async (req, res) => {
       const fallbacks = {
         starter: 2999,
         professional: 6999,
-        enterprise: 14999
+        enterprise: 14000
       };
       originalPrice = fallbacks[planName];
     }
@@ -952,7 +953,7 @@ exports.verifyRazorpayPayment = async (req, res) => {
       const fallbacks = {
         starter: { price: 2999, limit: 10000 },
         professional: { price: 6999, limit: 50000 },
-        enterprise: { price: 14999, limit: 200000 }
+        enterprise: { price: 14000, limit: 200000 }
       };
       const fallback = fallbacks[planName];
       originalPrice = fallback.price;
@@ -1036,7 +1037,7 @@ Thank you for upgrading! Your payment has been successfully processed and your s
 • *Gemini AI Tokens:* ${tokensLimit.toLocaleString()} / month
 
 Your AI support bot is now fully operational. You can manage your channels and templates directly from your dashboard:
-🔗 ${process.env.FRONTEND_URL || 'https://kwickbot.in'}/dashboard
+🔗 ${getFrontendUrl(req)}/dashboard
 
 If you need any assistance, feel free to reply to this message.
 

@@ -327,7 +327,7 @@ function Integrations({ admin, onUpdateAdmin }) {
     <div className="container">
       <div className="page-header">
         <div>
-          <h1 className="page-title">🔌 Integrations</h1>
+          <h1 className="page-title">Integrations</h1>
           <p className="page-subtitle">Connect your e-commerce platforms</p>
         </div>
       </div>

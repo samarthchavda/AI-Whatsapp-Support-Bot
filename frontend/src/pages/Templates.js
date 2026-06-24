@@ -122,7 +122,7 @@ function Templates() {
     <div className="container">
       <div className="page-header">
         <div>
-          <h1 className="page-title">📝 WhatsApp Template Manager</h1>
+          <h1 className="page-title">WhatsApp Template Manager</h1>
           <p className="page-subtitle">View your Meta-approved messaging templates and map them to transactional webhook triggers.</p>
         </div>
         <button

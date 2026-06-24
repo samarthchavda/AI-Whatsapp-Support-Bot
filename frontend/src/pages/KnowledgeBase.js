@@ -112,7 +112,7 @@ function KnowledgeBase() {
       <div className="page-header">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>
-            <h1 className="page-title">🧠 AI Knowledge Base</h1>
+            <h1 className="page-title">AI Knowledge Base</h1>
             <p className="page-subtitle">Upload FAQs and documents for AI-powered responses</p>
           </div>
           <div style={{ display: 'flex', gap: '12px' }}>

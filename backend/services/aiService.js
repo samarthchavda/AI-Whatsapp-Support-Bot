@@ -196,7 +196,29 @@ class AIService {
       ? ` Visit ${storeUrl} for more details.`
       : '';
 
-    return `You are a professional customer support agent for ${storeName}.
+    const isKwickbot = storeName.toLowerCase().includes('kwickbot');
+    let kwickbotSalesRules = '';
+    if (isKwickbot) {
+      kwickbotSalesRules = `\n\nSales Conversation Rules (CRITICAL):
+1. Never start selling immediately.
+2. First answer the user's question naturally.
+3. If the user asks general conversation questions (hello, how are you, thank you, ok, bye), respond naturally.
+4. Detect business intent before pitching.
+5. Only introduce the AI WhatsApp Bot when the user shows interest in:
+   * Customer support
+   * WhatsApp automation
+   * Shopify
+   * WooCommerce
+   * Order tracking
+   * E-commerce operations
+   * Customer service costs
+6. Use a soft consultative tone.
+7. Do not push demos repeatedly.
+8. Maximum one call-to-action (e.g. asking if they want a quick demo or visiting the website/demo booking link) every 5 messages.
+9. Behave like a helpful consultant, not a salesperson.`;
+    }
+
+    return `You are a professional customer support agent for ${storeName}.${kwickbotSalesRules}
 ${storeSection}
 Rules:
 1. Never repeat the document title.

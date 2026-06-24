@@ -14,7 +14,7 @@ import {
   Legend,
   ResponsiveContainer
 } from 'recharts';
-import { FaChartBar, FaChartPie, FaSmile, FaSync } from 'react-icons/fa';
+import { FaChartBar, FaChartPie, FaSmile, FaSync, FaMeh, FaFrown } from 'react-icons/fa';
 import './Analytics.css';
 
 function Analytics({ admin }) {
@@ -23,6 +23,7 @@ function Analytics({ admin }) {
   const [sentimentData, setSentimentData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [sentimentLoading, setSentimentLoading] = useState(false);
+  const [selectedDays, setSelectedDays] = useState(7);
 
   const plan = (admin?.subscriptionPlan || JSON.parse(localStorage.getItem('admin') || '{}')?.subscriptionPlan || 'starter').toLowerCase();
 
@@ -32,7 +33,7 @@ function Analytics({ admin }) {
     } else {
       setLoading(false);
     }
-  }, [plan]);
+  }, [plan, selectedDays]);
 
   const fetchAnalytics = async () => {
     try {
@@ -40,8 +41,8 @@ function Analytics({ admin }) {
 
       // Fetch all analytics data using central API client
       const [conversationsRes, resolutionRes, sentimentRes] = await Promise.all([
-        api.get('/analytics/conversations-per-day'),
-        api.get('/analytics/resolution-rate'),
+        api.get(`/analytics/conversations-per-day?days=${selectedDays}`),
+        api.get(`/analytics/resolution-rate?days=${selectedDays}`),
         api.get('/analytics/sentiment')
       ]);
 
@@ -107,7 +108,7 @@ function Analytics({ admin }) {
       <div className="container" style={{ position: 'relative' }}>
         <div className="page-header">
           <div>
-            <h1 className="page-title">📊 Analytics Overview</h1>
+            <h1 className="page-title">Analytics Overview</h1>
             <p className="page-subtitle">Insights and performance metrics</p>
           </div>
         </div>
@@ -150,10 +151,34 @@ function Analytics({ admin }) {
 
   return (
     <div className="container">
-      <div className="page-header">
+      <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
         <div>
-          <h1 className="page-title">📊 Analytics Overview</h1>
+          <h1 className="page-title">Analytics Overview</h1>
           <p className="page-subtitle">Insights and performance metrics</p>
+        </div>
+        <div>
+          <select 
+            value={selectedDays} 
+            onChange={(e) => setSelectedDays(Number(e.target.value))}
+            style={{
+              background: 'var(--bg-elevated)',
+              border: '1px solid var(--border-default)',
+              borderRadius: '10px',
+              padding: '10px 20px',
+              color: 'var(--text-primary)',
+              fontSize: '14px',
+              fontWeight: '600',
+              outline: 'none',
+              cursor: 'pointer',
+              boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+              transition: 'border-color 0.2s ease'
+            }}
+          >
+            <option value={7}>Last 7 Days</option>
+            <option value={15}>Last 15 Days</option>
+            <option value={30}>Last 30 Days</option>
+            <option value={90}>Last 90 Days</option>
+          </select>
         </div>
       </div>
 
@@ -177,8 +202,11 @@ function Analytics({ admin }) {
           </div>
           
           <div className="sentiment-display">
-            <div className="sentiment-emoji">
-              {sentimentData?.emoji || '😐'}
+            <div className="sentiment-emoji" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '32px' }}>
+              {sentimentData?.sentiment === 'happy' && <FaSmile style={{ color: '#10b981' }} />}
+              {sentimentData?.sentiment === 'neutral' && <FaMeh style={{ color: '#6366f1' }} />}
+              {sentimentData?.sentiment === 'frustrated' && <FaFrown style={{ color: '#ef4444' }} />}
+              {!sentimentData?.sentiment && <FaMeh style={{ color: '#6366f1' }} />}
             </div>
             <div className="sentiment-info">
               <h2 className={`sentiment-${sentimentData?.sentiment || 'neutral'}`}>
@@ -193,7 +221,7 @@ function Analytics({ admin }) {
           {sentimentData?.breakdown && (
             <div className="sentiment-breakdown">
               <div className="breakdown-item">
-                <span className="breakdown-label">😊 Happy</span>
+                <span className="breakdown-label">Happy</span>
                 <div className="breakdown-bar">
                   <div 
                     className="breakdown-fill happy"
@@ -203,7 +231,7 @@ function Analytics({ admin }) {
                 <span className="breakdown-value">{sentimentData.breakdown.happy.toFixed(0)}%</span>
               </div>
               <div className="breakdown-item">
-                <span className="breakdown-label">😐 Neutral</span>
+                <span className="breakdown-label">Neutral</span>
                 <div className="breakdown-bar">
                   <div 
                     className="breakdown-fill neutral"
@@ -213,7 +241,7 @@ function Analytics({ admin }) {
                 <span className="breakdown-value">{sentimentData.breakdown.neutral.toFixed(0)}%</span>
               </div>
               <div className="breakdown-item">
-                <span className="breakdown-label">😤 Frustrated</span>
+                <span className="breakdown-label">Frustrated</span>
                 <div className="breakdown-bar">
                   <div 
                     className="breakdown-fill frustrated"
@@ -238,7 +266,7 @@ function Analytics({ admin }) {
         {/* Conversations Bar Chart */}
         <div className="chart-container">
           <div className="chart-header">
-            <h3><FaChartBar /> Conversations (Last 7 Days)</h3>
+            <h3><FaChartBar /> Conversations (Last {selectedDays} Days)</h3>
           </div>
           <ResponsiveContainer width="100%" height={300}>
             <BarChart data={conversationsData}>

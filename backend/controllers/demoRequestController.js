@@ -1,5 +1,6 @@
 const DemoRequest = require('../models/DemoRequest');
 const emailService = require('../services/emailService');
+const { getFrontendUrl } = require('../services/urlHelper');
 
 // Create a new demo request
 exports.createDemoRequest = async (req, res) => {
@@ -162,7 +163,7 @@ exports.createDemoRequest = async (req, res) => {
               </div>
               
               <p style="text-align: center; margin-top: 30px;">
-                <a href="${process.env.FRONTEND_URL || 'http://localhost:3000'}/super-admin" style="background: #4f46e5; color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: 600;">Open Super Admin Dashboard</a>
+                <a href="${getFrontendUrl(req)}/super-admin" style="background: #4f46e5; color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: 600;">Open Super Admin Dashboard</a>
               </p>
             </div>
           </div>
@@ -425,7 +426,7 @@ exports.approveDemoRequest = async (req, res) => {
                 <p><strong>⚠️ Important:</strong> Please change your password after your first login for security purposes.</p>
               </div>
 
-              <a href="${process.env.FRONTEND_URL || 'http://localhost:3000'}/login" class="button">Login to Dashboard</a>
+              <a href="${getFrontendUrl(req)}/login" class="button">Login to Dashboard</a>
 
               <p><strong>What's Next?</strong></p>
               <ul style="color: #6b7280; line-height: 1.8;">
@@ -448,7 +449,7 @@ exports.approveDemoRequest = async (req, res) => {
         </html>
       `;
 
-      const emailText = `Hi ${demoRequest.name},\n\nGreat news! Your demo request has been approved. We've created your account and you can now access the Kwickbot dashboard.\n\nYour Login Credentials:\n- Email: ${demoRequest.email}\n- Password: ${generatedPassword}\n- Subscription Plan: ${subscriptionPlan}\n\nImportant: Please change your password after your first login for security purposes.\n\nLogin to Dashboard here: ${process.env.FRONTEND_URL || 'http://localhost:3000'}/login\n\nBest regards,\nKwickbot Team`;
+      const emailText = `Hi ${demoRequest.name},\n\nGreat news! Your demo request has been approved. We've created your account and you can now access the Kwickbot dashboard.\n\nYour Login Credentials:\n- Email: ${demoRequest.email}\n- Password: ${generatedPassword}\n- Subscription Plan: ${subscriptionPlan}\n\nImportant: Please change your password after your first login for security purposes.\n\nLogin to Dashboard here: ${getFrontendUrl(req)}/login\n\nBest regards,\nKwickbot Team`;
 
       await emailService.sendEmail({
         to: demoRequest.email,
@@ -471,7 +472,7 @@ Here are your login credentials:
 🔑 *Password:* ${generatedPassword}
 
 Please log in to your dashboard here:
-🔗 ${process.env.FRONTEND_URL || 'http://localhost:3000'}/login
+🔗 ${getFrontendUrl(req)}/login
 
 _Note: For security, please change your password after your first login._`;
 

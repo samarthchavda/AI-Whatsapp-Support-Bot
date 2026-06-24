@@ -8,33 +8,78 @@ const { createReadStream } = require('fs');
 // Create new broadcast
 exports.createBroadcast = async (req, res) => {
   try {
-    const { title, message, scheduledFor } = req.body;
+    const { title, message, scheduledFor, recipientSource } = req.body;
     let recipients = [];
+    let csvFileName = 'Imported from CRM/Orders';
 
     // Validate required fields
     if (!title || !message) {
+      if (req.file) await fs.unlink(req.file.path).catch(() => {});
       return res.status(400).json({
         success: false,
         error: 'Title and message are required'
       });
     }
 
-    // Parse CSV file if uploaded
-    if (req.file) {
-      recipients = await parseCSVFile(req.file.path);
-      
-      if (recipients.length === 0) {
-        await fs.unlink(req.file.path);
-        return res.status(400).json({
+    if (recipientSource === 'crm') {
+      // Delete uploaded file if it was sent by mistake
+      if (req.file) {
+        await fs.unlink(req.file.path).catch(() => {});
+      }
+
+      // Check plan restriction: Starter plan is blocked from direct CRM import
+      if (req.admin.subscriptionPlan === 'starter') {
+        return res.status(403).json({
           success: false,
-          error: 'No valid recipients found in CSV file'
+          error: 'Direct import from CRM/Orders is not available on the Starter plan. Please upgrade to a higher plan.'
         });
       }
-    } else {
-      return res.status(400).json({
-        success: false,
-        error: 'CSV file with recipients is required'
+
+      // Fetch from orders
+      const Order = require('../models/Order');
+      const orders = await Order.find({ admin: req.admin._id });
+      
+      const contactsMap = new Map();
+      orders.forEach(order => {
+        if (order.customerPhone) {
+          const phone = order.customerPhone.toString().trim().replace(/\s+/g, '');
+          // Filter out missing, invalid, or obviously placeholder numbers (e.g. less than 6 digits)
+          if (phone && phone.length > 5 && !phone.includes('undefined') && !phone.includes('null')) {
+            const name = order.customerName || 'Customer';
+            contactsMap.set(phone, name);
+          }
+        }
       });
+
+      if (contactsMap.size === 0) {
+        return res.status(400).json({
+          success: false,
+          error: 'No customer contacts with valid phone numbers found in your orders database.'
+        });
+      }
+
+      contactsMap.forEach((name, phone) => {
+        recipients.push({ phone, name });
+      });
+    } else {
+      // Parse CSV file if uploaded
+      if (req.file) {
+        recipients = await parseCSVFile(req.file.path);
+        
+        if (recipients.length === 0) {
+          await fs.unlink(req.file.path).catch(() => {});
+          return res.status(400).json({
+            success: false,
+            error: 'No valid recipients found in CSV file'
+          });
+        }
+        csvFileName = req.file.originalname;
+      } else {
+        return res.status(400).json({
+          success: false,
+          error: 'CSV file with recipients is required'
+        });
+      }
     }
 
     // Create broadcast
@@ -50,7 +95,7 @@ exports.createBroadcast = async (req, res) => {
       createdBy: req.admin._id,
       createdByName: req.admin.name,
       admin: req.admin._id,
-      csvFileName: req.file.originalname
+      csvFileName: csvFileName
     });
 
     // Handle scheduling
@@ -59,6 +104,7 @@ exports.createBroadcast = async (req, res) => {
       const now = new Date();
 
       if (scheduledDate <= now) {
+        if (req.file) await fs.unlink(req.file.path).catch(() => {});
         return res.status(400).json({
           success: false,
           error: 'Scheduled time must be in the future'
@@ -73,7 +119,9 @@ exports.createBroadcast = async (req, res) => {
       scheduleBroadcast(broadcast._id, scheduledDate);
 
       // Delete CSV file after processing
-      await fs.unlink(req.file.path);
+      if (req.file) {
+        await fs.unlink(req.file.path).catch(() => {});
+      }
 
       return res.status(201).json({
         success: true,
@@ -92,7 +140,9 @@ exports.createBroadcast = async (req, res) => {
     await broadcast.save();
 
     // Delete CSV file after processing
-    await fs.unlink(req.file.path);
+    if (req.file) {
+      await fs.unlink(req.file.path).catch(() => {});
+    }
 
     // Add to queue
     await addBroadcastToQueue(broadcast._id);

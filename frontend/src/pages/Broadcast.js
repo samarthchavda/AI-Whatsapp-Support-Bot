@@ -7,6 +7,9 @@ function Broadcast() {
   const [loading, setLoading] = useState(true);
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(null);
+  const [recipientSource, setRecipientSource] = useState('csv');
+
+  const plan = (JSON.parse(localStorage.getItem('admin') || '{}')?.subscriptionPlan || 'starter').toLowerCase();
 
   useEffect(() => {
     fetchBroadcasts();
@@ -41,6 +44,7 @@ function Broadcast() {
       if (response.data.success) {
         setShowCreateForm(false);
         setUploadProgress(null);
+        setRecipientSource('csv');
         fetchBroadcasts();
         alert('Broadcast created successfully!');
         e.target.reset();
@@ -208,23 +212,26 @@ function Broadcast() {
               </div>
 
               <div className="filter-group">
-                <label>Upload Recipients CSV *</label>
-                <input 
-                  type="file" 
-                  name="csvFile" 
-                  accept=".csv"
-                  required
+                <label>Recipient Source *</label>
+                <select
+                  name="recipientSource"
+                  value={recipientSource}
+                  onChange={(e) => setRecipientSource(e.target.value)}
                   style={{
                     width: '100%',
                     padding: '14px',
-                    border: '2px dashed rgba(99, 102, 241, 0.5)',
+                    border: '1px solid rgba(63, 63, 70, 0.5)',
                     borderRadius: '12px',
                     fontSize: '14px',
                     background: 'rgba(39, 39, 42, 0.6)',
-                    color: '#fafafa',
-                    cursor: 'pointer'
+                    color: '#fafafa'
                   }}
-                />
+                >
+                  <option value="csv">📁 Upload CSV File</option>
+                  <option value="crm" disabled={plan === 'starter'}>
+                    👥 Import from CRM/Orders {plan === 'starter' ? '🔒 (Upgrade Plan)' : ''}
+                  </option>
+                </select>
               </div>
 
               <div className="filter-group">
@@ -246,6 +253,44 @@ function Broadcast() {
                   Leave empty to send immediately
                 </small>
               </div>
+
+              {recipientSource === 'csv' ? (
+                <div className="filter-group" style={{ gridColumn: 'span 2' }}>
+                  <label>Upload Recipients CSV *</label>
+                  <input 
+                    type="file" 
+                    name="csvFile" 
+                    accept=".csv"
+                    required
+                    style={{
+                      width: '100%',
+                      padding: '14px',
+                      border: '2px dashed rgba(99, 102, 241, 0.5)',
+                      borderRadius: '12px',
+                      fontSize: '14px',
+                      background: 'rgba(39, 39, 42, 0.6)',
+                      color: '#fafafa',
+                      cursor: 'pointer'
+                    }}
+                  />
+                </div>
+              ) : (
+                <div className="filter-group" style={{ gridColumn: 'span 2' }}>
+                  <label>Import Configuration</label>
+                  <div style={{
+                    padding: '16px',
+                    background: 'rgba(16, 185, 129, 0.1)',
+                    border: '1px solid rgba(16, 185, 129, 0.3)',
+                    borderRadius: '12px',
+                    color: '#10b981',
+                    fontSize: '14px',
+                    fontWeight: '600',
+                    lineHeight: '1.5'
+                  }}>
+                    ✨ Direct CRM Import Enabled! We will automatically fetch unique customer names and phone numbers from your orders database. No duplicates or empty contacts will be imported.
+                  </div>
+                </div>
+              )}
             </div>
 
             {uploadProgress && (

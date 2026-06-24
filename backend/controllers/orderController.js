@@ -293,9 +293,22 @@ exports.bulkUploadOrders = async (req, res) => {
       const row = results[i];
       
       try {
-        const csvOrderId = row.orderId || row.orderNumber || row.order_id || row.id || row.order_number;
-        let existingOrder = null;
+        // Resolve headers with fallback support for Shopify export CSV format
+        const csvOrderId = row.orderId || row.orderNumber || row.order_id || row.id || row.order_number || row.Name || row.Id;
+        const rawPhone = row.customerPhone || row.customer_phone || row.Phone || row['Billing Phone'] || row['Shipping Phone'] || row.phone;
+        const customerName = row.customerName || row.customer_name || row['Billing Name'] || row['Shipping Name'] || 'Customer';
+        const productName = row.productName || row.product_name || row['Lineitem name'] || 'Product';
+        const quantity = row.quantity || row.qty || row['Lineitem quantity'] || 1;
+        const totalAmount = row.totalAmount || row.amount || row.Total || row.total || 0;
+        
+        let status = (row.status || row['Fulfillment Status'] || 'pending').toString().trim().toLowerCase();
+        if (status === 'fulfilled') {
+          status = 'delivered';
+        } else if (status === 'unfulfilled') {
+          status = 'pending';
+        }
 
+        let existingOrder = null;
         if (csvOrderId) {
           existingOrder = await Order.findOne({
             admin: req.admin._id,
@@ -308,9 +321,9 @@ exports.bulkUploadOrders = async (req, res) => {
 
         if (existingOrder) {
           // Update status and tracking of existing order (shipped, delivered, etc.)
-          if (row.status) {
-            existingOrder.status = row.status.trim().toLowerCase();
-            if (existingOrder.status === 'delivered' && !existingOrder.deliveredDate) {
+          if (status) {
+            existingOrder.status = status;
+            if (status === 'delivered' && !existingOrder.deliveredDate) {
               existingOrder.deliveredDate = new Date();
             }
           }
@@ -318,16 +331,31 @@ exports.bulkUploadOrders = async (req, res) => {
           if (row.carrier) existingOrder.carrier = row.carrier.trim();
           if (row.trackingUrl) existingOrder.trackingUrl = row.trackingUrl.trim();
           
+          // Shopify multi-item orders format: append subsequent lineitems to the existing order
+          const lineItemName = row['Lineitem name'] || row.productName || row.product_name;
+          if (lineItemName) {
+            const itemExists = existingOrder.items.some(item => item.productName === lineItemName.trim());
+            if (!itemExists) {
+              const itemQty = parseInt(row['Lineitem quantity'] || row.quantity || 1);
+              const itemPrice = parseFloat(row['Lineitem price'] || row.price || 0);
+              existingOrder.items.push({
+                productName: lineItemName.trim(),
+                quantity: itemQty,
+                price: itemPrice
+              });
+            }
+          }
+
           await existingOrder.save();
           successCount++;
           continue;
         }
 
-        // Validate required fields for NEW orders
-        if (!row.customerName || !row.customerPhone || !row.productName || !row.quantity || !row.totalAmount) {
+        // Validate required fields for NEW orders (using resolved values)
+        if (!customerName || !rawPhone || !productName || !quantity) {
           errors.push({
             row: i + 2, // +2 because CSV is 1-indexed and has header
-            error: 'Missing required fields for new order creation (customerName, customerPhone, productName, quantity, totalAmount)',
+            error: 'Missing required fields for new order creation (name, phone, product name, quantity)',
             data: row
           });
           failedCount++;
@@ -335,19 +363,29 @@ exports.bulkUploadOrders = async (req, res) => {
         }
 
         // Normalize phone number
-        const normalizedPhone = (row.customerPhone || '')
+        const normalizedPhone = rawPhone
           .toString()
           .replace(/\s+/g, '')
           .replace(/[^\d+]/g, '');
+
+        if (!normalizedPhone || normalizedPhone.length < 6) {
+          errors.push({
+            row: i + 2,
+            error: 'Invalid or missing customer phone number',
+            data: row
+          });
+          failedCount++;
+          continue;
+        }
 
         // Find or create customer
         let customer = await Customer.findOne({ phone: normalizedPhone });
         
         if (!customer) {
           customer = new Customer({
-            name: row.customerName,
+            name: customerName.toString().trim(),
             phone: normalizedPhone,
-            email: row.customerEmail || '',
+            email: row.customerEmail || row.Email || '',
             admin: req.admin._id
           });
           await customer.save();
@@ -368,17 +406,17 @@ exports.bulkUploadOrders = async (req, res) => {
           orderId: finalOrderId,
           externalOrderId: csvOrderId ? csvOrderId.toString().trim() : undefined,
           customerId: customer._id,
-          customerName: row.customerName,
+          customerName: customerName.toString().trim(),
           customerPhone: normalizedPhone,
-          customerEmail: row.customerEmail || '',
-          totalAmount: parseFloat(row.totalAmount) || 0,
-          status: row.status || 'pending',
+          customerEmail: row.customerEmail || row.Email || '',
+          totalAmount: parseFloat(totalAmount) || 0,
+          status: status || 'pending',
           trackingNumber: row.trackingNumber || null,
           admin: req.admin._id,
           items: [{
-            productName: row.productName,
-            quantity: parseInt(row.quantity) || 1,
-            price: parseFloat(row.totalAmount) || 0
+            productName: productName.toString().trim(),
+            quantity: parseInt(quantity) || 1,
+            price: parseFloat(row['Lineitem price'] || row.price || totalAmount || 0)
           }]
         };
 

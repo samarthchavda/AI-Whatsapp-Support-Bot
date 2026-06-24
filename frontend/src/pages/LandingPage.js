@@ -797,7 +797,7 @@ function LandingPage() {
           </div>
           <p>WhatsApp support automation for real commerce operations.</p>
           <div className="footer-socials">
-            <a href="https://linkedin.com" target="_blank" rel="noopener noreferrer" title="LinkedIn"><FaLinkedin /></a>
+            <a href="https://www.linkedin.com/company/kwickbot/" target="_blank" rel="noopener noreferrer" title="LinkedIn"><FaLinkedin /></a>
             <a href="https://twitter.com" target="_blank" rel="noopener noreferrer" title="Twitter"><FaTwitter /></a>
             <a href="https://wa.me/918128420287" target="_blank" rel="noopener noreferrer" title="WhatsApp Support"><FaWhatsapp /></a>
           </div>

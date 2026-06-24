@@ -34,6 +34,7 @@ const formatCurrency = (amount, currencyCode) => {
 };
 
 function Orders({ admin }) {
+  const plan = (admin?.subscriptionPlan || JSON.parse(localStorage.getItem('admin') || '{}')?.subscriptionPlan || 'starter').toLowerCase();
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -300,6 +301,29 @@ Bob Johnson,+1234567892,bob@example.com,Standard Item,3,149.99,shipped`;
           </div>
           <form onSubmit={handleBulkUpload} style={{ padding: '28px' }} encType="multipart/form-data">
             <div style={{ marginBottom: '24px' }}>
+              {plan === 'starter' && (
+                <div style={{ 
+                  background: 'rgba(245, 158, 11, 0.1)', 
+                  border: '1px solid rgba(245, 158, 11, 0.3)',
+                  borderRadius: '12px',
+                  padding: '16px',
+                  marginBottom: '20px'
+                }}>
+                  <h3 style={{ color: '#f59e0b', fontSize: '14px', fontWeight: '600', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    💡 Shopify Basic & Starter Plan Sync:
+                  </h3>
+                  <p style={{ color: '#d4d4d8', fontSize: '13px', lineHeight: '1.6', margin: 0 }}>
+                    Since you are on the <strong>Starter Plan</strong> and using <strong>Shopify Basic</strong>, automatic real-time sync via API webhook is restricted. You can easily sync your orders and keep your WhatsApp bot and broadcast notifications active by manually importing your Shopify orders:
+                  </p>
+                  <ol style={{ color: '#a1a1aa', fontSize: '12px', lineHeight: '1.7', paddingLeft: '20px', marginTop: '8px', marginBottom: 0 }}>
+                    <li>Go to your <strong>Shopify Admin Panel</strong> ➔ <strong>Orders</strong>.</li>
+                    <li>Click the <strong>Export</strong> button at the top and select <strong>CSV for Excel, Numbers, or other spreadsheet programs</strong>.</li>
+                    <li>Choose either "Current page" or "All orders" and download the CSV.</li>
+                    <li>Upload that exact downloaded CSV file below and click <strong>Upload & Import</strong>. Kwickbot will automatically parse the headers and consolidate items.</li>
+                  </ol>
+                </div>
+              )}
+
               <div style={{ 
                 background: 'rgba(99, 102, 241, 0.1)', 
                 border: '1px solid rgba(99, 102, 241, 0.3)',
@@ -311,11 +335,10 @@ Bob Johnson,+1234567892,bob@example.com,Standard Item,3,149.99,shipped`;
                   📋 CSV Format Requirements:
                 </h3>
                 <ul style={{ color: '#a1a1aa', fontSize: '13px', lineHeight: '1.8', paddingLeft: '20px', margin: 0 }}>
-                  <li><strong>Required columns:</strong> customerName, customerPhone, productName, quantity, totalAmount</li>
-                  <li><strong>Optional columns:</strong> customerEmail, status (default: pending)</li>
+                  <li><strong>Shopify Export CSV:</strong> Directly upload the raw CSV file exported from your Shopify store! The uploader automatically consolidates multi-item orders, uses the Shopify order ID, and maps fulfillment statuses.</li>
+                  <li><strong>Standard Columns (Custom CSV):</strong> Required fields are: <code>customerName</code>, <code>customerPhone</code>, <code>productName</code>, <code>quantity</code>, <code>totalAmount</code>. Optional fields: <code>customerEmail</code>, <code>status</code>.</li>
                   <li><strong>Status values:</strong> pending, processing, shipped, delivered, cancelled</li>
-                  <li><strong>Phone format:</strong> Include country code (e.g., +1234567890)</li>
-                  <li><strong>Amount format:</strong> Numbers only (e.g., 199.99)</li>
+                  <li><strong>Phone format:</strong> Include country code (e.g., +919876543210 or +1234567890)</li>
                 </ul>
               </div>
 

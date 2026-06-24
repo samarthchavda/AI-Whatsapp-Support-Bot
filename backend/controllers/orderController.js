@@ -293,11 +293,41 @@ exports.bulkUploadOrders = async (req, res) => {
       const row = results[i];
       
       try {
-        // Validate required fields
+        const csvOrderId = row.orderId || row.orderNumber || row.order_id || row.id || row.order_number;
+        let existingOrder = null;
+
+        if (csvOrderId) {
+          existingOrder = await Order.findOne({
+            admin: req.admin._id,
+            $or: [
+              { orderId: csvOrderId.toString().trim() },
+              { externalOrderId: csvOrderId.toString().trim() }
+            ]
+          });
+        }
+
+        if (existingOrder) {
+          // Update status and tracking of existing order (shipped, delivered, etc.)
+          if (row.status) {
+            existingOrder.status = row.status.trim().toLowerCase();
+            if (existingOrder.status === 'delivered' && !existingOrder.deliveredDate) {
+              existingOrder.deliveredDate = new Date();
+            }
+          }
+          if (row.trackingNumber) existingOrder.trackingNumber = row.trackingNumber.trim();
+          if (row.carrier) existingOrder.carrier = row.carrier.trim();
+          if (row.trackingUrl) existingOrder.trackingUrl = row.trackingUrl.trim();
+          
+          await existingOrder.save();
+          successCount++;
+          continue;
+        }
+
+        // Validate required fields for NEW orders
         if (!row.customerName || !row.customerPhone || !row.productName || !row.quantity || !row.totalAmount) {
           errors.push({
             row: i + 2, // +2 because CSV is 1-indexed and has header
-            error: 'Missing required fields',
+            error: 'Missing required fields for new order creation (customerName, customerPhone, productName, quantity, totalAmount)',
             data: row
           });
           failedCount++;
@@ -306,6 +336,7 @@ exports.bulkUploadOrders = async (req, res) => {
 
         // Normalize phone number
         const normalizedPhone = (row.customerPhone || '')
+          .toString()
           .replace(/\s+/g, '')
           .replace(/[^\d+]/g, '');
 
@@ -322,22 +353,27 @@ exports.bulkUploadOrders = async (req, res) => {
           await customer.save();
         }
 
-        // Generate unique order ID
-        const nextOrderId = await getNextOrderId({
-          CounterModel: Counter,
-          OrderModel: Order,
-          adminId: req.admin._id
-        });
+        // Use CSV order ID if available, otherwise generate one
+        let finalOrderId = csvOrderId ? csvOrderId.toString().trim() : null;
+        if (!finalOrderId) {
+          finalOrderId = await getNextOrderId({
+            CounterModel: Counter,
+            OrderModel: Order,
+            adminId: req.admin._id
+          });
+        }
 
         // Create order
         const orderData = {
-          orderId: nextOrderId,
+          orderId: finalOrderId,
+          externalOrderId: csvOrderId ? csvOrderId.toString().trim() : undefined,
           customerId: customer._id,
           customerName: row.customerName,
           customerPhone: normalizedPhone,
           customerEmail: row.customerEmail || '',
           totalAmount: parseFloat(row.totalAmount) || 0,
           status: row.status || 'pending',
+          trackingNumber: row.trackingNumber || null,
           admin: req.admin._id,
           items: [{
             productName: row.productName,

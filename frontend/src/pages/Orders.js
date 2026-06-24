@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { getOrders, updateOrder } from '../services/api';
-import { FaUpload, FaPlus, FaBox, FaTimes } from 'react-icons/fa';
+import { FaUpload, FaPlus, FaBox, FaTimes, FaBroadcastTower } from 'react-icons/fa';
 import './Orders.css';
 
 const API_BASE = process.env.REACT_APP_API_URL || (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' ? 'http://localhost:5001/api' : '/api');
@@ -75,6 +75,48 @@ function Orders({ admin }) {
     } finally {
       setLoading(false);
     }
+  };
+
+  const exportCSVForBroadcast = () => {
+    if (!orders || orders.length === 0) {
+      alert('No order data available to export');
+      return;
+    }
+
+    // Extract unique customer contacts
+    const contactsMap = new Map();
+    orders.forEach(order => {
+      if (order.customerPhone) {
+        // Use normalized phone as key
+        const phone = order.customerPhone.toString().trim().replace(/\s+/g, '');
+        const name = order.customerName || 'Customer';
+        contactsMap.set(phone, name);
+      }
+    });
+
+    if (contactsMap.size === 0) {
+      alert('No customer phone numbers found in order data');
+      return;
+    }
+
+    // Create CSV content
+    let csvContent = 'phoneNumber,name\n';
+    contactsMap.forEach((name, phone) => {
+      // Escape quotes and commas in name
+      const safeName = name.replace(/"/g, '""');
+      csvContent += `${phone},"${safeName}"\n`;
+    });
+
+    // Trigger download
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', 'orders_customers_broadcast.csv');
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(url);
   };
 
   const handleStatusUpdate = async (orderId, newStatus) => {
@@ -205,6 +247,13 @@ Bob Johnson,+1234567892,bob@example.com,Standard Item,3,149.99,shipped`;
           <p className="page-subtitle">Manage and track all customer orders in one place</p>
         </div>
         <div className="orders-header-actions">
+          <button
+            className="btn-secondary"
+            onClick={exportCSVForBroadcast}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}
+          >
+            <FaBroadcastTower /> Export for Broadcast
+          </button>
           <button
             className="btn-secondary"
             onClick={() => setShowBulkUpload(!showBulkUpload)}

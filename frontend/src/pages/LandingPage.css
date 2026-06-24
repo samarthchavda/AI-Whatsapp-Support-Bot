@@ -130,7 +130,7 @@
 .landing-primary-button:hover,
 .landing-secondary-button:hover,
 .pricing-card button:hover,
-.landing-footer button:hover {
+.landing-footer .footer-cta-btn:hover {
   transform: translateY(-2px);
 }
 
@@ -627,7 +627,7 @@
 }
 
 .pricing-card button,
-.landing-footer button {
+.landing-footer .footer-cta-btn {
   min-height: 44px;
   margin-top: auto;
   border: 1px solid rgba(82, 82, 91, 0.78);
@@ -641,7 +641,7 @@
 }
 
 .pricing-card.featured button,
-.landing-footer button {
+.landing-footer .footer-cta-btn {
   background: #22c55e;
   color: #052e16;
   border-color: #22c55e;
@@ -1232,7 +1232,7 @@
     grid-template-columns: repeat(2, 1fr);
   }
 
-  .landing-footer button {
+  .landing-footer .footer-cta-btn {
     width: 100%;
   }
 }

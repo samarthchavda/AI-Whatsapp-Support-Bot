@@ -448,15 +448,19 @@ exports.getGlobalAnalytics = async (req, res) => {
     // Get all non-super-admin users
     const allUsers = await Admin.find({ role: { $ne: 'super_admin' } });
 
-    // Calculate total revenue (monthly)
-    const totalRevenue = allUsers.reduce((sum, user) => {
-      if (user.subscriptionStatus === 'active') {
-        const price = user.monthlyPrice || 0;
-        const discount = user.customDiscount || 0;
-        const finalPrice = price - (price * discount / 100);
-        return sum + finalPrice;
-      }
-      return sum;
+    // Calculate total revenue from actual completed subscription payments/invoices
+    const Invoice = require('../models/Invoice');
+    const adminIds = allUsers.map(user => user._id);
+    const paidInvoices = await Invoice.find({
+      customerId: { $in: adminIds },
+      $or: [
+        { paymentStatus: 'completed' },
+        { status: 'paid' }
+      ]
+    });
+
+    const totalRevenue = paidInvoices.reduce((sum, invoice) => {
+      return sum + (invoice.totalAmount || 0);
     }, 0);
 
     // Count active bots (users with WhatsApp connected)

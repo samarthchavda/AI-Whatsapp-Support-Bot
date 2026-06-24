@@ -427,11 +427,11 @@ function SuperAdminUserDetail() {
               </div>
               <div className="token-stat">
                 <span>Limit</span>
-                <strong>{user.geminiTokensLimit.toLocaleString()}</strong>
+                <strong>{user.geminiTokensLimit === -1 || user.geminiTokensLimit === Infinity ? 'Unlimited' : user.geminiTokensLimit.toLocaleString()}</strong>
               </div>
               <div className="token-stat">
                 <span>Remaining</span>
-                <strong>{(user.geminiTokensLimit - user.geminiTokensUsed).toLocaleString()}</strong>
+                <strong>{user.geminiTokensLimit === -1 || user.geminiTokensLimit === Infinity ? 'Unlimited' : (user.geminiTokensLimit - user.geminiTokensUsed).toLocaleString()}</strong>
               </div>
             </div>
             <div className="token-progress">

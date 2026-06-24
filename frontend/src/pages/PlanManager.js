@@ -329,7 +329,7 @@ function PlanManager() {
                   <li>Up to {plan.features.maxMessages} Messages</li>
                 )}
 
-                <li><FaCheck /> {plan.features.geminiTokensPerMonth.toLocaleString()} Gemini Tokens/month</li>
+                <li><FaCheck /> {plan.features.geminiTokensPerMonth === -1 ? 'Unlimited' : plan.features.geminiTokensPerMonth.toLocaleString()} Gemini Tokens/month</li>
                 <li><FaCheck /> {plan.features.maxWhatsAppConnections} WhatsApp Connection{plan.features.maxWhatsAppConnections > 1 ? 's' : ''}</li>
 
                 {plan.features.advancedAnalytics && <li><FaCheck /> Advanced Analytics</li>}

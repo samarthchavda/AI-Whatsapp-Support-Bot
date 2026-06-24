@@ -47,8 +47,8 @@ function SuperAdmin() {
     role: 'admin',
     subscriptionPlan: 'starter',
     subscriptionStatus: 'trial',
-    monthlyPrice: 29,
-    geminiTokensLimit: 10000,
+    monthlyPrice: 2999,
+    geminiTokensLimit: 50000,
     webBotEnabled: false,
   });
   const [globalSettings, setGlobalSettings] = useState({ webBotEnabled: false });
@@ -239,8 +239,8 @@ function SuperAdmin() {
         role: 'admin',
         subscriptionPlan: 'starter',
         subscriptionStatus: 'trial',
-        monthlyPrice: 29,
-        geminiTokensLimit: 10000,
+        monthlyPrice: 2999,
+        geminiTokensLimit: 50000,
         webBotEnabled: false,
         shopifyEnabled: true,
         woocommerceEnabled: true
@@ -659,7 +659,10 @@ function SuperAdmin() {
                               />
                             </div>
                             <span className="token-usage-text">
-                              {tokenPercentage}% · {user.geminiTokensUsed?.toLocaleString()} used
+                              {user.geminiTokensLimit === -1 || user.geminiTokensLimit === Infinity
+                                ? `Unlimited · ${user.geminiTokensUsed?.toLocaleString() || 0} used`
+                                : `${tokenPercentage}% · ${user.geminiTokensUsed?.toLocaleString() || 0} used`
+                              }
                             </span>
                           </div>
                         </td>
@@ -1077,10 +1080,10 @@ function SuperAdmin() {
                           value={newUser.subscriptionPlan}
                           onChange={(e) => {
                             const plan = e.target.value;
-                            let price = 29;
-                            let tokens = 10000;
-                            if (plan === 'professional') { price = 79; tokens = 50000; }
-                            if (plan === 'enterprise') { price = 199; tokens = 200000; }
+                            let price = 2999;
+                            let tokens = 50000;
+                            if (plan === 'professional') { price = 6999; tokens = 200000; }
+                            if (plan === 'enterprise') { price = 14000; tokens = -1; }
                             setNewUser({ ...newUser, subscriptionPlan: plan, monthlyPrice: price, geminiTokensLimit: tokens });
                           }}
                           style={{

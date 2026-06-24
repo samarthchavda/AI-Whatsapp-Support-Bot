@@ -670,7 +670,7 @@ function LandingPage() {
               <ul>
                 <li><FaCheck style={{ color: '#10b981', marginRight: '8px' }} /> Up to 500 WhatsApp Conversations/mo</li>
                 <li><FaCheck style={{ color: '#10b981', marginRight: '8px' }} /> Up to 2,000 messages/mo</li>
-                <li><FaCheck style={{ color: '#10b981', marginRight: '8px' }} /> 10,000 Gemini Tokens/mo (standard replies)</li>
+                <li><FaCheck style={{ color: '#10b981', marginRight: '8px' }} /> 50,000 Gemini Tokens/mo (standard replies)</li>
                 <li><FaCheck style={{ color: '#10b981', marginRight: '8px' }} /> 1 Active WhatsApp connection</li>
                 <li><FaCheck style={{ color: '#10b981', marginRight: '8px' }} /> Max 1 PDF document Knowledge Base upload</li>
                 <li><FaCheck style={{ color: '#10b981', marginRight: '8px' }} /> 1 Store Integration (Shopify OR WooCommerce)</li>
@@ -692,7 +692,7 @@ function LandingPage() {
               <ul>
                 <li><FaCheck style={{ color: '#10b981', marginRight: '8px' }} /> Up to 3,000 WhatsApp Conversations/mo</li>
                 <li><FaCheck style={{ color: '#10b981', marginRight: '8px' }} /> Up to 15,000 messages/mo</li>
-                <li><FaCheck style={{ color: '#10b981', marginRight: '8px' }} /> 50,000 Gemini Tokens/mo (detailed AI replies)</li>
+                <li><FaCheck style={{ color: '#10b981', marginRight: '8px' }} /> 200,000 Gemini Tokens/mo (detailed AI replies)</li>
                 <li><FaCheck style={{ color: '#10b981', marginRight: '8px' }} /> Up to 2 Active WhatsApp connections</li>
                 <li><FaCheck style={{ color: '#10b981', marginRight: '8px' }} /> Max 3 PDF document Knowledge Base uploads</li>
                 <li><FaCheck style={{ color: '#10b981', marginRight: '8px' }} /> 1 Store Integration (Shopify OR WooCommerce)</li>
@@ -712,7 +712,7 @@ function LandingPage() {
               <p>For teams needing higher limits and custom workflows.</p>
               <ul>
                 <li><FaCheck style={{ color: '#10b981', marginRight: '8px' }} /> Unlimited WhatsApp Conversations & Messages</li>
-                <li><FaCheck style={{ color: '#10b981', marginRight: '8px' }} /> 200,000+ Gemini Tokens/mo (high AI response speed)</li>
+                <li><FaCheck style={{ color: '#10b981', marginRight: '8px' }} /> Unlimited Gemini Tokens/mo (high AI response speed)</li>
                 <li><FaCheck style={{ color: '#10b981', marginRight: '8px' }} /> Up to 5 Active WhatsApp connections simultaneously</li>
                 <li><FaCheck style={{ color: '#10b981', marginRight: '8px' }} /> Unlimited PDF document Knowledge Base uploads</li>
                 <li><FaCheck style={{ color: '#10b981', marginRight: '8px' }} /> Multiple Integrations (Shopify & WooCommerce both)</li>

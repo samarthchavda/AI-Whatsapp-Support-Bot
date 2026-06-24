@@ -49,8 +49,8 @@ function LeadsCRM() {
   });
   const [convertPlan, setConvertPlan] = useState({
     subscriptionPlan: 'starter',
-    monthlyPrice: 29,
-    geminiTokensLimit: 10000
+    monthlyPrice: 2999,
+    geminiTokensLimit: 50000
   });
 
   // Fetch B2B Leads
@@ -366,7 +366,7 @@ function LeadsCRM() {
                             <button
                               onClick={() => {
                                 setSelectedLead(lead);
-                                setConvertPlan({ subscriptionPlan: 'starter', monthlyPrice: 29, geminiTokensLimit: 10000 });
+                                setConvertPlan({ subscriptionPlan: 'starter', monthlyPrice: 2999, geminiTokensLimit: 50000 });
                                 setShowConvertLeadModal(true);
                               }}
                               className="action-btn"
@@ -673,7 +673,14 @@ function LeadsCRM() {
                   <label>Subscription Plan</label>
                   <select
                     value={convertPlan.subscriptionPlan}
-                    onChange={(e) => setConvertPlan({...convertPlan, subscriptionPlan: e.target.value})}
+                    onChange={(e) => {
+                      const plan = e.target.value;
+                      let price = 2999;
+                      let tokens = 50000;
+                      if (plan === 'professional') { price = 6999; tokens = 200000; }
+                      if (plan === 'enterprise') { price = 14000; tokens = -1; }
+                      setConvertPlan({ ...convertPlan, subscriptionPlan: plan, monthlyPrice: price, geminiTokensLimit: tokens });
+                    }}
                     style={{ width: '100%', padding: '12px', borderRadius: '10px', fontSize: '14px', cursor: 'pointer' }}
                   >
                     <option value="starter">Starter Plan</option>
@@ -685,7 +692,7 @@ function LeadsCRM() {
 
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', textAlign: 'left' }}>
                   <div className="form-group">
-                    <label>Monthly Price ($)</label>
+                    <label>Monthly Price (₹)</label>
                     <input
                       type="number"
                       required

@@ -200,7 +200,7 @@ function Billing() {
     );
   }
 
-  const tokenUsagePercentage = profile 
+  const tokenUsagePercentage = profile && profile.geminiTokensLimit > 0
     ? Math.min(100, Math.round((profile.geminiTokensUsed / profile.geminiTokensLimit) * 100))
     : 0;
 
@@ -215,12 +215,12 @@ function Billing() {
   const currentFeatures = currentPlanDetails?.features || (profile?.subscriptionPlan === 'custom' ? {
     maxConversations: -1,
     maxMessages: -1,
-    geminiTokensPerMonth: profile?.geminiTokensLimit || 10000,
+    geminiTokensPerMonth: profile?.geminiTokensLimit || -1,
     maxWhatsAppConnections: 5
   } : {
     maxConversations: profile?.subscriptionPlan === 'professional' ? 3000 : profile?.subscriptionPlan === 'enterprise' ? -1 : 500,
     maxMessages: profile?.subscriptionPlan === 'professional' ? 15000 : profile?.subscriptionPlan === 'enterprise' ? -1 : 2000,
-    geminiTokensPerMonth: profile?.geminiTokensLimit || 10000,
+    geminiTokensPerMonth: profile?.geminiTokensLimit || (profile?.subscriptionPlan === 'professional' ? 200000 : profile?.subscriptionPlan === 'enterprise' ? -1 : 50000),
     maxWhatsAppConnections: profile?.subscriptionPlan === 'professional' ? 2 : profile?.subscriptionPlan === 'enterprise' ? 5 : 1
   });
 
@@ -289,7 +289,11 @@ function Billing() {
                 WhatsApp Connections: <strong style={{ color: '#fafafa' }}>{currentFeatures.maxWhatsAppConnections} max</strong>
               </div>
               <div style={{ fontSize: '13px', color: '#a1a1aa' }}>
-                Gemini Tokens: <strong style={{ color: '#fafafa' }}>{(profile?.geminiTokensLimit || currentFeatures.geminiTokensPerMonth || 10000).toLocaleString()}</strong>
+                Gemini Tokens: <strong style={{ color: '#fafafa' }}>
+                  {profile?.geminiTokensLimit === -1 || currentFeatures.geminiTokensPerMonth === -1
+                    ? 'Unlimited'
+                    : (profile?.geminiTokensLimit || currentFeatures.geminiTokensPerMonth || 50000).toLocaleString()}
+                </strong>
               </div>
             </div>
           </div>
@@ -304,10 +308,16 @@ function Billing() {
             <div>
               <span className="used-amount">{profile?.geminiTokensUsed?.toLocaleString() || 0}</span>
               <span className="divider"> / </span>
-              <span className="limit-amount">{profile?.geminiTokensLimit?.toLocaleString() || '10,000'}</span>
+              <span className="limit-amount">
+                {profile?.geminiTokensLimit === -1 || profile?.geminiTokensLimit === Infinity 
+                  ? 'Unlimited' 
+                  : (profile?.geminiTokensLimit?.toLocaleString() || '50,000')}
+              </span>
               <span className="unit"> tokens</span>
             </div>
-            <div className="percentage-display">{tokenUsagePercentage}%</div>
+            {profile?.geminiTokensLimit !== -1 && profile?.geminiTokensLimit !== Infinity && (
+              <div className="percentage-display">{tokenUsagePercentage}%</div>
+            )}
           </div>
 
           <div className="progress-bar-container">
@@ -462,13 +472,13 @@ function Billing() {
 
                   {/* Gemini Tokens */}
                   {plan.name === 'starter' && (
-                    <li><FaCheck style={{ color: '#10b981' }} /> 10,000 Gemini Tokens/mo (for standard automated bot replies)</li>
+                    <li><FaCheck style={{ color: '#10b981' }} /> 50,000 Gemini Tokens/mo (for standard automated bot replies)</li>
                   )}
                   {plan.name === 'professional' && (
-                    <li><FaCheck style={{ color: '#10b981' }} /> 50,000 Gemini Tokens/mo (for rich product advice & detailed conversations)</li>
+                    <li><FaCheck style={{ color: '#10b981' }} /> 200,000 Gemini Tokens/mo (for rich product advice & detailed conversations)</li>
                   )}
                   {plan.name === 'enterprise' && (
-                    <li><FaCheck style={{ color: '#10b981' }} /> 200,000 Gemini Tokens/mo (high-speed processing & complex customer queries)</li>
+                    <li><FaCheck style={{ color: '#10b981' }} /> Unlimited Gemini Tokens/mo (high-speed processing & complex customer queries)</li>
                   )}
 
                   {/* WhatsApp Connections */}

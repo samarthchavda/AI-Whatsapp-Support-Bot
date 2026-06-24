@@ -620,9 +620,9 @@ exports.forgotPassword = async (req, res) => {
     const admin = await Admin.findOne({ email: email.toLowerCase() });
 
     if (!admin) {
-      return res.json({
-        success: true,
-        message: 'If an account exists with that email, a password reset link has been sent.'
+      return res.status(404).json({
+        success: false,
+        error: 'Email address not found in our database'
       });
     }
 
@@ -697,7 +697,7 @@ exports.forgotPassword = async (req, res) => {
 
     res.json({
       success: true,
-      message: 'If an account exists with that email, a password reset link has been sent.'
+      message: 'A password reset link has been sent to your email address.'
     });
 
   } catch (error) {

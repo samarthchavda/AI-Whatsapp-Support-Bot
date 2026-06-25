@@ -137,11 +137,19 @@ function LandingPage() {
   const [activeStep, setActiveStep] = useState(0);
   const [openFaqIndex, setOpenFaqIndex] = useState(null);
   const [isChatOpen, setIsChatOpen] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const [showPromoBar, setShowPromoBar] = useState(true);
   const [chatMessages, setChatMessages] = useState([
     { role: 'assistant', content: 'Hi there! 👋 I am the Kwickbot Sales & Setup Assistant. Ask me about features, plans, extra charges, integration setup, or how to give access permissions!' }
   ]);
   const [chatInput, setChatInput] = useState('');
   const chatEndRef = useRef(null);
+
+  const handleCopyCode = () => {
+    navigator.clipboard.writeText('KWICK60');
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -206,6 +214,20 @@ function LandingPage() {
 
   return (
     <div className="landing-page">
+      {showPromoBar && (
+        <div className="promo-banner-bar">
+          <div className="promo-content">
+            <span className="promo-badge">60% OFF</span>
+            <span className="promo-text">First-Time Offer: Get 60% off! Copy code <strong>KWICK60</strong> and apply it inside your dashboard when upgrading.</span>
+            <button className="promo-copy-btn" onClick={handleCopyCode}>
+              {copied ? 'Copied! 🎉' : 'Copy Code'}
+            </button>
+          </div>
+          <button className="promo-close-btn" onClick={() => setShowPromoBar(false)} aria-label="Close offer banner">
+            <FaTimes />
+          </button>
+        </div>
+      )}
       <nav className="landing-nav">
         <div className="landing-nav-inner">
           <button className="landing-logo" onClick={() => scrollToSection('top')} aria-label="Kwickbot home">
@@ -729,6 +751,10 @@ function LandingPage() {
               </ul>
               <button onClick={() => navigate('/book-demo')}>Talk to sales</button>
             </article>
+          </div>
+          <div className="pricing-promo-notice animate-on-scroll">
+            <FaBolt style={{ color: '#ec4899', marginRight: '8px' }} />
+            <span><strong>First-Time Discount:</strong> Get 60% off your first month on any plan. Copy coupon code <strong>KWICK60</strong> and apply it inside your dashboard when upgrading.</span>
           </div>
         </section>
 

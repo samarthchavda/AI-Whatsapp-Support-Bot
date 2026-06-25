@@ -25,7 +25,7 @@ function LeadsCRM() {
     if (!admin || admin.role !== 'super_admin') {
       navigate('/dashboard');
     }
-  }, [admin, navigate]);
+  }, [admin?.role, navigate]);
 
   // Leads CRM State
   const [leads, setLeads] = useState([]);
@@ -80,7 +80,7 @@ function LeadsCRM() {
     if (admin && admin.role === 'super_admin') {
       fetchLeads();
     }
-  }, [admin, fetchLeads]);
+  }, [admin?.role, fetchLeads]);
 
   const handleCreateLead = async (e) => {
     e.preventDefault();
@@ -336,8 +336,8 @@ function LeadsCRM() {
                         </span>
                       </td>
                       <td>
-                        <span className={`status-badge status-${lead.status}`} style={{ fontSize: '11px', padding: '4px 8px' }}>
-                          {lead.status.replace('_', ' ')}
+                        <span className={`status-badge status-${lead.status || 'new'}`} style={{ fontSize: '11px', padding: '4px 8px' }}>
+                          {(lead.status || 'new').replace('_', ' ')}
                         </span>
                       </td>
                       <td>

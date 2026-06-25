@@ -22,7 +22,7 @@ function SuperAdminAnnouncements() {
     if (!admin || admin.role !== 'super_admin') {
       navigate('/dashboard');
     }
-  }, [admin, navigate]);
+  }, [admin?.role, navigate]);
 
   // System Announcements states
   const getAnnouncementBadgeStyle = (type) => {

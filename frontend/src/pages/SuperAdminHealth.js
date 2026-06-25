@@ -19,7 +19,7 @@ function SuperAdminHealth() {
     if (!admin || admin.role !== 'super_admin') {
       navigate('/dashboard');
     }
-  }, [admin, navigate]);
+  }, [admin?.role, navigate]);
 
   // Connection Health states
   const getHealthStatusBadgeStyle = (status) => {

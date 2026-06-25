@@ -22,7 +22,7 @@ function SuperAdminBlog() {
     if (!admin || admin.role !== 'super_admin') {
       navigate('/dashboard');
     }
-  }, [admin, navigate]);
+  }, [admin?.role, navigate]);
 
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);

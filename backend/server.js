@@ -72,7 +72,7 @@ app.use(helmet());
 // Rate limiting
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: process.env.NODE_ENV === 'production' ? 100 : 2000, // limit each IP to 2000 requests per windowMs in dev, 100 in production
+  max: process.env.NODE_ENV === 'production' ? 1000 : 2000, // limit each IP to 2000 requests per windowMs in dev, 1000 in production
   message: {
     success: false,
     message: 'Too many requests, please try again later.',

@@ -391,13 +391,13 @@ function DemoRequests() {
                 {requests.map((request) => (
                   <tr key={request._id} className="table-row-premium">
                     <td>
-                      <div style={{ fontWeight: '600', color: '#fafafa' }}>
+                      <div style={{ fontWeight: '600', color: 'var(--text-primary)' }}>
                         {request.name}
                       </div>
                     </td>
                     <td className="text-muted">{request.email}</td>
                     <td>
-                      <div style={{ fontWeight: '600', color: '#fafafa' }}>{request.businessName}</div>
+                      <div style={{ fontWeight: '600', color: 'var(--text-primary)' }}>{request.businessName}</div>
                       <div style={{ fontSize: '11px', color: '#a1a1aa', marginTop: '2px' }}>
                         <a 
                           href={request.websiteUrl?.startsWith('http') ? request.websiteUrl : 'https://' + request.websiteUrl} 
@@ -422,10 +422,10 @@ function DemoRequests() {
                         }}
                         style={{
                           padding: '8px 16px',
-                          background: 'rgba(99, 102, 241, 0.1)',
-                          border: '1px solid rgba(99, 102, 241, 0.3)',
+                          background: 'var(--bg-hover)',
+                          border: '1px solid var(--border)',
                           borderRadius: '8px',
-                          color: '#a5b4fc',
+                          color: 'var(--text-secondary)',
                           fontSize: '13px',
                           fontWeight: '600',
                           cursor: 'pointer',

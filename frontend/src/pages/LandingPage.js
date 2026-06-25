@@ -146,7 +146,7 @@ function LandingPage() {
   const chatEndRef = useRef(null);
 
   const handleCopyCode = () => {
-    navigator.clipboard.writeText('KWICK60');
+    navigator.clipboard.writeText('NEW15');
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
@@ -218,7 +218,7 @@ function LandingPage() {
         <div className="promo-banner-bar">
           <div className="promo-content">
             <span className="promo-badge">60% OFF</span>
-            <span className="promo-text">First-Time Offer: Get 60% off! Copy code <strong>KWICK60</strong> and apply it inside your dashboard when upgrading.</span>
+            <span className="promo-text">First-Time Offer: Get 60% off! Copy code <strong>NEW15</strong> and apply it inside your dashboard when upgrading.</span>
             <button className="promo-copy-btn" onClick={handleCopyCode}>
               {copied ? 'Copied! 🎉' : 'Copy Code'}
             </button>
@@ -754,7 +754,7 @@ function LandingPage() {
           </div>
           <div className="pricing-promo-notice animate-on-scroll">
             <FaBolt style={{ color: '#ec4899', marginRight: '8px' }} />
-            <span><strong>First-Time Discount:</strong> Get 60% off your first month on any plan. Copy coupon code <strong>KWICK60</strong> and apply it inside your dashboard when upgrading.</span>
+            <span><strong>First-Time Discount:</strong> Get 60% off your first month on any plan. Copy coupon code <strong>NEW15</strong> and apply it inside your dashboard when upgrading.</span>
           </div>
         </section>
 

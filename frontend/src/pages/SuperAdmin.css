@@ -1115,3 +1115,76 @@ body.dark-theme .btn-impersonate:hover {
 .btn-delete-merchant:hover {
   background: #dc2626 !important;
 }
+
+/* Coupon Action Buttons Styles */
+.coupon-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-start;
+  align-items: center;
+}
+
+.btn-action-toggle,
+.btn-action-delete {
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-height: 28px;
+  height: 28px;
+  border: 1px solid transparent;
+  flex: none !important; /* Make sure it doesn't stretch! */
+}
+
+/* Activate / Deactivate colors */
+.btn-action-toggle.btn-deactivate {
+  background: rgba(245, 158, 11, 0.12) !important;
+  color: #d97706 !important;
+  border-color: rgba(245, 158, 11, 0.25) !important;
+}
+.btn-action-toggle.btn-deactivate:hover {
+  background: rgba(245, 158, 11, 0.2) !important;
+}
+
+.btn-action-toggle.btn-activate {
+  background: rgba(16, 185, 129, 0.12) !important;
+  color: #059669 !important;
+  border-color: rgba(16, 185, 129, 0.25) !important;
+}
+.btn-action-toggle.btn-activate:hover {
+  background: rgba(16, 185, 129, 0.2) !important;
+}
+
+/* Delete Button */
+.btn-action-delete {
+  background: rgba(239, 68, 68, 0.12) !important;
+  color: #dc2626 !important;
+  border-color: rgba(239, 68, 68, 0.25) !important;
+}
+.btn-action-delete:hover {
+  background: rgba(239, 68, 68, 0.2) !important;
+  border-color: rgba(239, 68, 68, 0.4) !important;
+}
+
+/* Dark theme specific overrides */
+body.dark-theme .btn-action-toggle.btn-deactivate {
+  background: rgba(245, 158, 11, 0.15) !important;
+  color: #fbbf24 !important;
+  border-color: rgba(245, 158, 11, 0.3) !important;
+}
+body.dark-theme .btn-action-toggle.btn-activate {
+  background: rgba(16, 185, 129, 0.15) !important;
+  color: #34d399 !important;
+  border-color: rgba(16, 185, 129, 0.3) !important;
+}
+body.dark-theme .btn-action-delete {
+  background: rgba(239, 68, 68, 0.15) !important;
+  color: #f87171 !important;
+  border-color: rgba(239, 68, 68, 0.3) !important;
+}

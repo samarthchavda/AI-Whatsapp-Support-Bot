@@ -550,20 +550,18 @@ function PlanManager() {
                         {coupon.expiresAt ? new Date(coupon.expiresAt).toLocaleDateString() : 'Never'}
                       </td>
                       <td>
-                        <div className="action-buttons">
+                        <div className="action-buttons coupon-actions">
                           <button
                             onClick={() => handleToggleCoupon(coupon._id)}
-                            className={coupon.isActive ? "btn-icon-impersonate" : "btn-icon-reset"}
+                            className={`btn-action-toggle ${coupon.isActive ? 'btn-deactivate' : 'btn-activate'}`}
                             title={coupon.isActive ? "Deactivate Code" : "Activate Code"}
-                            style={{ padding: '6px 12px', fontSize: '12px' }}
                           >
                             {coupon.isActive ? 'Deactivate' : 'Activate'}
                           </button>
                           <button
                             onClick={() => handleDeleteCoupon(coupon._id)}
-                            className="btn-icon-delete"
+                            className="btn-action-delete"
                             title="Delete Code"
-                            style={{ padding: '6px 12px', fontSize: '12px' }}
                           >
                             <FaTrash /> Delete
                           </button>

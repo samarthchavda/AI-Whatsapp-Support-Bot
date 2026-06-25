@@ -170,7 +170,7 @@ function LeadsCRM() {
     <div className="super-admin-container" style={{ padding: '24px' }}>
       <div className="super-admin-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
         <div>
-          <h1 style={{ fontSize: '28px', fontWeight: '700', color: '#fafafa', margin: 0 }}>Leads CRM</h1>
+          <h1 style={{ fontSize: '28px', fontWeight: '700', color: 'var(--text-primary)', margin: 0 }}>Leads CRM</h1>
           <p style={{ color: 'var(--text-secondary)', margin: '4px 0 0 0', fontSize: '14px' }}>
             Manage prospective e-commerce merchants and convert outreach leads to platform clients
           </p>
@@ -192,7 +192,7 @@ function LeadsCRM() {
             </div>
             <div className="stat-info">
               <h3 style={{ margin: 0, fontSize: '12px', color: 'var(--text-secondary)', fontWeight: '500' }}>Total Prospects</h3>
-              <p className="stat-value" style={{ margin: '4px 0 0 0', fontSize: '26px', fontWeight: '700', color: '#fafafa' }}>{leads.length}</p>
+              <p className="stat-value" style={{ margin: '4px 0 0 0', fontSize: '26px', fontWeight: '700', color: 'var(--text-primary)' }}>{leads.length}</p>
               <small style={{ fontSize: '11px', color: '#71717a' }}>Outreach sales pipeline</small>
             </div>
           </div>
@@ -202,7 +202,7 @@ function LeadsCRM() {
             </div>
             <div className="stat-info">
               <h3 style={{ margin: 0, fontSize: '12px', color: 'var(--text-secondary)', fontWeight: '500' }}>Converted</h3>
-              <p className="stat-value" style={{ margin: '4px 0 0 0', fontSize: '26px', fontWeight: '700', color: '#fafafa' }}>{leads.filter(l => l.status === 'converted').length}</p>
+              <p className="stat-value" style={{ margin: '4px 0 0 0', fontSize: '26px', fontWeight: '700', color: 'var(--text-primary)' }}>{leads.filter(l => l.status === 'converted').length}</p>
               <small style={{ fontSize: '11px', color: '#71717a' }}>New paying merchants</small>
             </div>
           </div>
@@ -212,7 +212,7 @@ function LeadsCRM() {
             </div>
             <div className="stat-info">
               <h3 style={{ margin: 0, fontSize: '12px', color: 'var(--text-secondary)', fontWeight: '500' }}>Proposals Sent</h3>
-              <p className="stat-value" style={{ margin: '4px 0 0 0', fontSize: '26px', fontWeight: '700', color: '#fafafa' }}>{leads.filter(l => l.status === 'proposal_sent').length}</p>
+              <p className="stat-value" style={{ margin: '4px 0 0 0', fontSize: '26px', fontWeight: '700', color: 'var(--text-primary)' }}>{leads.filter(l => l.status === 'proposal_sent').length}</p>
               <small style={{ fontSize: '11px', color: '#71717a' }}>Awaiting response</small>
             </div>
           </div>
@@ -222,7 +222,7 @@ function LeadsCRM() {
             </div>
             <div className="stat-info">
               <h3 style={{ margin: 0, fontSize: '12px', color: 'var(--text-secondary)', fontWeight: '500' }}>Follow-Ups</h3>
-              <p className="stat-value" style={{ margin: '4px 0 0 0', fontSize: '26px', fontWeight: '700', color: '#fafafa' }}>{leads.filter(l => l.status === 'followed_up' || l.remindAt).length}</p>
+              <p className="stat-value" style={{ margin: '4px 0 0 0', fontSize: '26px', fontWeight: '700', color: 'var(--text-primary)' }}>{leads.filter(l => l.status === 'followed_up' || l.remindAt).length}</p>
               <small style={{ fontSize: '11px', color: '#71717a' }}>Pending actions</small>
             </div>
           </div>
@@ -240,10 +240,10 @@ function LeadsCRM() {
               style={{
                 width: '100%',
                 padding: '12px 12px 12px 40px',
-                background: 'var(--bg-input)',
-                border: '1px solid var(--border-default)',
+                background: 'var(--bg-hover)',
+                border: '1.5px solid var(--border)',
                 borderRadius: '10px',
-                color: '#fafafa',
+                color: 'var(--text-primary)',
                 fontSize: '14px'
               }}
             />
@@ -253,10 +253,10 @@ function LeadsCRM() {
             onChange={(e) => setLeadStatusFilter(e.target.value)}
             style={{
               padding: '12px',
-              background: 'var(--bg-input)',
-              border: '1px solid var(--border-default)',
+              background: 'var(--bg-hover)',
+              border: '1.5px solid var(--border)',
               borderRadius: '10px',
-              color: '#fafafa',
+              color: 'var(--text-primary)',
               fontSize: '14px',
               cursor: 'pointer'
             }}
@@ -274,10 +274,10 @@ function LeadsCRM() {
             onChange={(e) => setLeadSourceFilter(e.target.value)}
             style={{
               padding: '12px',
-              background: 'var(--bg-input)',
-              border: '1px solid var(--border-default)',
+              background: 'var(--bg-hover)',
+              border: '1.5px solid var(--border)',
               borderRadius: '10px',
-              color: '#fafafa',
+              color: 'var(--text-primary)',
               fontSize: '14px',
               cursor: 'pointer'
             }}
@@ -318,7 +318,7 @@ function LeadsCRM() {
                   {leads.map((lead) => (
                     <tr key={lead._id}>
                       <td>
-                        <div style={{ fontWeight: '600', color: '#fafafa' }}>{lead.businessName}</div>
+                        <div style={{ fontWeight: '600', color: 'var(--text-primary)' }}>{lead.businessName}</div>
                         {lead.websiteUrl && (
                           <a href={lead.websiteUrl} target="_blank" rel="noopener noreferrer" style={{ fontSize: '12px', color: 'var(--accent)', textDecoration: 'none' }}>
                             {lead.websiteUrl.replace(/https?:\/\//, '')}
@@ -358,7 +358,7 @@ function LeadsCRM() {
                             }}
                             className="action-btn"
                             title="Edit details & notes"
-                            style={{ padding: '6px 10px', fontSize: '12px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: '#e4e4e7', borderRadius: '6px', cursor: 'pointer' }}
+                             style={{ padding: '6px 10px', fontSize: '12px', background: 'var(--bg-hover)', border: '1px solid var(--border)', color: 'var(--text-secondary)', borderRadius: '6px', cursor: 'pointer' }}
                           >
                             <FaEye /> Edit
                           </button>
@@ -666,7 +666,7 @@ function LeadsCRM() {
             <form onSubmit={handleConvertLead}>
               <div className="modal-body">
                 <p style={{ color: 'var(--text-secondary)', fontSize: '14px', marginBottom: '20px', lineHeight: '1.6', textAlign: 'left' }}>
-                  This will register a new merchant workspace under the email: <strong style={{ color: '#fafafa' }}>{selectedLead.email}</strong>, generate their secure credentials, and send their onboarding setup details via both Email and WhatsApp instantly.
+                  This will register a new merchant workspace under the email: <strong style={{ color: 'var(--text-primary)' }}>{selectedLead.email}</strong>, generate their secure credentials, and send their onboarding setup details via both Email and WhatsApp instantly.
                 </p>
 
                 <div className="form-group" style={{ textAlign: 'left' }}>

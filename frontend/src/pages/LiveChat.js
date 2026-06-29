@@ -205,7 +205,7 @@ function LiveChat() {
           </div>
 
           <div className="search-box">
-            <FaSearch className="search-icon" />
+            <FaSearch className="chat-search-icon" />
             <input
               type="text"
               placeholder="Search by name or phone..."

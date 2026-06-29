@@ -1269,15 +1269,48 @@
 
   .preview-grid {
     grid-template-columns: 1fr;
+    min-height: auto;
   }
 
   .preview-sidebar {
     grid-row: auto;
+    flex-direction: row;
+    overflow-x: auto;
+    white-space: nowrap;
+    padding: 8px 12px;
+    gap: 6px;
     border-right: 0;
     border-bottom: 1px solid rgba(63, 63, 70, 0.7);
+    -webkit-overflow-scrolling: touch;
   }
 
-  .preview-insights,
+  .preview-tab {
+    min-height: 36px;
+    padding: 0 10px;
+    font-size: 12px;
+    flex: 0 0 auto;
+    gap: 6px;
+  }
+
+  .preview-tab span {
+    display: none;
+  }
+
+  .preview-conversation {
+    padding: 16px;
+    min-height: 240px;
+  }
+
+  .preview-message {
+    padding: 10px 14px;
+    font-size: 13px;
+    max-width: 90%;
+  }
+
+  .preview-insights {
+    display: none;
+  }
+
   .workflow-grid,
   .pricing-grid,
   .security-band {

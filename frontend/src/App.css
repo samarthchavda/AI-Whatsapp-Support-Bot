@@ -1129,17 +1129,87 @@ select:focus, textarea:focus {
 /* ============================================================
    RESPONSIVE
    ============================================================ */
+.mobile-menu-toggle {
+  display: none;
+}
+
 @media (max-width: 1024px) {
   .sidebar     { width: 85px; }
   .main-content { margin-left: 85px; }
 }
 
 @media (max-width: 768px) {
-  .sidebar      { transform: translateX(-100%); }
-  .main-content { margin-left: 0; }
-  .stats-grid   { grid-template-columns: 1fr; }
-  .top-bar      { padding: 12px 16px; }
-  .container    { padding: 16px; }
+  .sidebar {
+    transform: translateX(-100%) !important;
+    width: 248px !important;
+    box-shadow: 8px 0 32px rgba(0, 0, 0, 0.15) !important;
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  }
+  
+  .sidebar.sidebar-expanded {
+    transform: translateX(0) !important;
+  }
+
+  .sidebar-toggle-btn {
+    display: none !important;
+  }
+
+  .mobile-menu-toggle {
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: none;
+    font-size: 20px;
+    color: var(--text-primary);
+    cursor: pointer;
+    margin-right: 12px;
+    padding: 6px;
+    border-radius: 8px;
+    transition: background 0.2s;
+  }
+  
+  .mobile-menu-toggle:hover {
+    background: var(--bg-hover);
+  }
+
+  .main-content {
+    margin-left: 0 !important;
+    width: 100% !important;
+  }
+
+  .top-bar {
+    flex-wrap: wrap !important;
+    height: auto !important;
+    padding: 16px !important;
+    gap: 16px !important;
+  }
+
+  .top-bar-left {
+    display: flex !important;
+    align-items: center !important;
+    flex: 1 !important;
+  }
+
+  .search-bar {
+    width: 100% !important;
+    order: 3 !important;
+  }
+
+  .top-bar-actions {
+    display: flex !important;
+    align-items: center !important;
+    gap: 12px !important;
+    margin-left: auto !important;
+  }
+
+  .stats-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .container {
+    padding: 16px !important;
+  }
 }
 
 /* ============================================================

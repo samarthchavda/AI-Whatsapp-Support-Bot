@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Link, useLocation, useNavigate, Navigate } from 'react-router-dom';
-import { FaHome, FaComments, FaBox, FaExclamationTriangle, FaPlug, FaRobot, FaSearch, FaBell, FaPlus, FaSignOutAlt, FaUser, FaBrain, FaCommentDots, FaBroadcastTower, FaChartLine, FaCog, FaCrown, FaFileAlt, FaSun, FaMoon, FaShoppingCart, FaCoins, FaUserSecret, FaHeartbeat, FaBullhorn, FaBlog } from 'react-icons/fa';
+import { FaHome, FaComments, FaBox, FaExclamationTriangle, FaPlug, FaRobot, FaSearch, FaBell, FaPlus, FaSignOutAlt, FaUser, FaBrain, FaCommentDots, FaBroadcastTower, FaChartLine, FaCog, FaCrown, FaFileAlt, FaSun, FaMoon, FaShoppingCart, FaCoins, FaUserSecret, FaHeartbeat, FaBullhorn, FaBlog, FaBars } from 'react-icons/fa';
 import api, { clearAuthState, refreshAuth, updateAdminProfile } from './services/api';
 import Dashboard from './pages/Dashboard';
 import Profile from './pages/Profile';
@@ -338,7 +338,7 @@ function Sidebar({ admin, onLogout, isOpen, onToggle, pendingDemoRequestsCount }
   );
 }
 
-function TopBar({ admin, onUpdateAdmin, isImpersonated }) {
+function TopBar({ admin, onUpdateAdmin, isImpersonated, onToggleSidebar }) {
   const navigate = useNavigate();
   const greeting = () => {
     const hour = new Date().getHours();
@@ -364,6 +364,9 @@ function TopBar({ admin, onUpdateAdmin, isImpersonated }) {
     <div className="top-bar" style={isImpersonated ? { top: '42px' } : {}}>
 
       <div className="top-bar-left">
+        <button className="mobile-menu-toggle" onClick={onToggleSidebar} aria-label="Toggle Menu">
+          <FaBars />
+        </button>
         <div className="top-bar-greeting">
           <span className="greeting-text">{greeting()}, {admin?.name?.split(' ')[0] || 'there'}</span>
           <span className="greeting-sub">Here&apos;s your support overview</span>
@@ -736,7 +739,7 @@ function App() {
                       </div>
                     );
                   })}
-                  <TopBar admin={admin} onUpdateAdmin={handleUpdateAdmin} isImpersonated={isImpersonated} />
+                  <TopBar admin={admin} onUpdateAdmin={handleUpdateAdmin} isImpersonated={isImpersonated} onToggleSidebar={handleToggleSidebar} />
 
 
                   <div className="page-content">

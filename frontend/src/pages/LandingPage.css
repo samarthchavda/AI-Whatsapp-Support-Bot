@@ -1312,9 +1312,29 @@
   }
 
   .workflow-grid,
-  .pricing-grid,
   .security-band {
     grid-template-columns: 1fr;
+  }
+
+  /* Horizontal swipe pricing carousel for mobile */
+  .pricing-grid {
+    display: flex !important;
+    flex-direction: row !important;
+    overflow-x: auto !important;
+    scroll-snap-type: x mandatory !important;
+    gap: 16px !important;
+    padding: 10px 18px 30px !important;
+    margin-left: -18px !important;
+    margin-right: -18px !important;
+    width: calc(100% + 36px) !important;
+    box-sizing: border-box !important;
+    -webkit-overflow-scrolling: touch !important;
+  }
+
+  .pricing-card {
+    flex: 0 0 82% !important;
+    scroll-snap-align: center !important;
+    box-sizing: border-box !important;
   }
 
   .section-heading h2,

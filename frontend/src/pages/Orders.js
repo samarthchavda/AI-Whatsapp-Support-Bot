@@ -561,7 +561,7 @@ Bob Johnson,+1234567892,bob@example.com,Standard Item,3,149.99,shipped`;
 
       <div className="orders-table-card">
         <div className="table-header">
-          <h2><FaBox style={{ marginRight: '10px', color: '#10b981' }} />All Orders ({orders.length})</h2>
+          <h2><FaBox style={{ marginRight: '10px', color: 'var(--accent)' }} />All Orders ({orders.length})</h2>
         </div>
         <div className="table-wrapper">
           {orders.length > 0 ? (

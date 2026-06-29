@@ -1606,38 +1606,10 @@ Response format must be ONLY the product name or "NONE". Do not write any other 
           return kbResult.answer;
         }
       }
-
-      // Get active return policies
-      const policies = await ReturnPolicy.find({ isActive: true });
-
-      if (policies.length === 0) {
-        return "Our standard return policy allows returns within 30 days of delivery. Items must be unused and in original packaging. Please contact support for specific return requests.";
-      }
-
-      // Get general policy
-      const generalPolicy = policies.find(p => p.category === 'general') || policies[0];
-
-      let response = `📋 *Return Policy*\n\n`;
-      response += `${generalPolicy.content}\n\n`;
-
-      if (generalPolicy.timeFrame) {
-        response += `⏰ Return Window: ${generalPolicy.timeFrame.value} ${generalPolicy.timeFrame.unit}\n\n`;
-      }
-
-      if (generalPolicy.conditions && generalPolicy.conditions.length > 0) {
-        response += `✓ Conditions:\n`;
-        generalPolicy.conditions.forEach(condition => {
-          response += `  • ${condition}\n`;
-        });
-      }
-
-      response += `\n💡 To process a return, please reply with "I want to return order [ORDER_ID]" and I'll help you get started.`;
-
-      return response;
-
+      return null;
     } catch (error) {
       console.error('Error handling return policy query:', error);
-      return "Our return policy allows returns within 30 days of delivery. Items must be unused and in original packaging. For specific return requests, please contact our support team.";
+      return null;
     }
   }
 

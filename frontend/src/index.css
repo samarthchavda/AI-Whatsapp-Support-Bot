@@ -1,25 +1,25 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
 
 :root {
-  --bg-base:        #F4F6FB;
+  --bg-base:        #F5F7FA;
   --bg-elevated:    #FFFFFF;
-  --bg-surface:     rgba(255,255,255,0.85);
-  --bg-input:       #F8FAFC;
-  --border-subtle:  rgba(232,237,245,0.9);
+  --bg-surface:     #FFFFFF;
+  --bg-input:       #F5F7FA;
+  --border-subtle:  #E8EDF5;
   --border-default: #E8EDF5;
-  --text-primary:   #0F1C2E;
-  --text-secondary: #5A6A7A;
-  --text-muted:     #94A3B8;
-  --accent:         #25D366;
-  --accent-secondary: #128C7E;
+  --text-primary:   #232323;
+  --text-secondary: #718096;
+  --text-muted:     #B1B1B1;
+  --accent:         #396AFF;
+  --accent-secondary: #1D4ED8;
   --success:        #25D366;
-  --danger:         #EF4444;
-  --warning:        #F59E0B;
+  --danger:         #FE5C73;
+  --warning:        #FFBB38;
   --radius-sm:  8px;
-  --radius-md:  12px;
-  --radius-lg:  16px;
-  --radius-xl:  20px;
-  --shadow-glow: 0 4px 20px rgba(37,211,102,0.2);
+  --radius-md:  15px;
+  --radius-lg:  20px;
+  --radius-xl:  25px;
+  --shadow-glow: 0 4px 20px rgba(57,106,255,0.15);
 }
 
 body.dark-theme {
@@ -82,25 +82,75 @@ textarea:focus {
 }
 
 /* Light Theme Component Overrides */
+body:not(.dark-theme) {
+  --brand: #396AFF !important;
+  --brand-dark: #1D4ED8 !important;
+  --brand-light: #EBF2FF !important;
+  --brand-glow: rgba(57, 106, 255, 0.18) !important;
+  
+  --bg-app: #F5F7FA !important;
+  --bg-card: #FFFFFF !important;
+  --bg-hover: #F5F7FA !important;
+  --border: #E8EDF5 !important;
+  
+  --accent: #396AFF !important;
+  --accent-secondary: #1D4ED8 !important;
+  --text-primary: #232323 !important;
+  --text-secondary: #718096 !important;
+  --text-muted: #B1B1B1 !important;
+}
+
 body:not(.dark-theme) .sidebar {
-  background: var(--bg-surface);
-  border-right: 1px solid var(--border-subtle);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.05);
+  background: #FFFFFF !important;
+  border-right: 1px solid var(--border-default) !important;
+  box-shadow: none !important;
 }
 body:not(.dark-theme) .sidebar-logo {
   color: var(--text-primary);
 }
 body:not(.dark-theme) .nav-links li a {
-  color: var(--text-secondary);
+  color: var(--text-secondary) !important;
+  border-radius: 0 !important;
+  padding-left: 18px !important;
+  transition: all 0.2s ease !important;
+}
+body:not(.dark-theme) .nav-links li a svg {
+  color: var(--text-muted) !important;
+  opacity: 1 !important;
 }
 body:not(.dark-theme) .nav-links li a:hover {
-  background: var(--bg-input);
-  color: var(--text-primary);
+  background: var(--bg-base) !important;
+  color: var(--accent) !important;
+}
+body:not(.dark-theme) .nav-links li a:hover svg {
+  color: var(--accent) !important;
 }
 body:not(.dark-theme) .nav-links li a.active {
-  background: linear-gradient(135deg, rgba(79, 70, 229, 0.1) 0%, rgba(124, 58, 237, 0.1) 100%);
-  color: var(--accent);
-  box-shadow: 0 0 20px rgba(79, 70, 229, 0.08);
+  background: transparent !important;
+  color: var(--accent) !important;
+  box-shadow: none !important;
+  font-weight: 700 !important;
+}
+body:not(.dark-theme) .nav-links li a.active svg {
+  color: var(--accent) !important;
+  opacity: 1 !important;
+}
+body:not(.dark-theme) .nav-links li a.active::before {
+  background: var(--accent) !important;
+  width: 6px !important;
+  border-radius: 0 10px 10px 0 !important;
+  top: 0 !important;
+  bottom: 0 !important;
+}
+body:not(.dark-theme) .sidebar-toggle-btn {
+  background: #FFFFFF !important;
+  border: 1px solid var(--border-default) !important;
+  color: var(--text-secondary) !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05) !important;
+}
+body:not(.dark-theme) .sidebar-toggle-btn:hover {
+  background: var(--bg-base) !important;
+  color: var(--accent) !important;
 }
 body:not(.dark-theme) .sidebar-user-name {
   color: var(--text-primary);
@@ -148,6 +198,9 @@ body:not(.dark-theme) .icon-button:hover {
 /* Card and Container overrides */
 body:not(.dark-theme) .dashboard-stat-card,
 body:not(.dark-theme) .stat-card,
+body:not(.dark-theme) .stat-card-premium,
+body:not(.dark-theme) .quick-action-card,
+body:not(.dark-theme) .table-container-premium,
 body:not(.dark-theme) .analytics-card,
 body:not(.dark-theme) .billing-card,
 body:not(.dark-theme) .card,
@@ -165,7 +218,8 @@ body:not(.dark-theme) .template-card,
 body:not(.dark-theme) .super-admin-card {
   background: var(--bg-elevated) !important;
   border: 1px solid var(--border-subtle) !important;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04) !important;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03) !important;
+  border-radius: var(--radius-lg) !important;
 }
 
 body:not(.dark-theme) h1,
@@ -297,7 +351,7 @@ body:not(.dark-theme) .table-row-premium {
 }
 
 body:not(.dark-theme) .table-row-premium:hover {
-  background: rgba(0, 0, 0, 0.01) !important;
+  background: var(--bg-hover) !important;
 }
 
 body:not(.dark-theme) .table-row-premium td {

@@ -730,6 +730,7 @@ Smart Fallback Rules (when specific information is not available in the knowledg
         completionTokens: 0,
         totalTokens: 0
       };
+      let typingDelayMs = 0;
       let responseParts = [];
       let systemPrompt = null;
       let userPrompt = null;

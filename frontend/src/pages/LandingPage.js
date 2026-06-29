@@ -23,6 +23,7 @@ import {
   FaLinkedin,
   FaTwitter
 } from 'react-icons/fa';
+import { SiWhatsapp, SiMeta, SiShopify, SiWoocommerce, SiOpenai } from 'react-icons/si';
 import './LandingPage.css';
 
 const metrics = [
@@ -430,7 +431,7 @@ function LandingPage() {
               {/* WhatsApp */}
               <div className="partner-logo-item whatsapp">
                 <div className="partner-icon-wrap whatsapp-bg">
-                  <img src="https://cdn.simpleicons.org/whatsapp/ffffff" alt="WhatsApp" width="22" height="22" />
+                  <SiWhatsapp size={22} color="#ffffff" />
                 </div>
                 <div className="partner-label">
                   <span className="partner-name">WhatsApp</span>
@@ -441,7 +442,7 @@ function LandingPage() {
               {/* Meta */}
               <div className="partner-logo-item meta">
                 <div className="partner-icon-wrap meta-bg">
-                  <img src="https://cdn.simpleicons.org/meta/ffffff" alt="Meta" width="22" height="22" />
+                  <SiMeta size={22} color="#ffffff" />
                 </div>
                 <div className="partner-label">
                   <span className="partner-name">Meta</span>
@@ -452,7 +453,7 @@ function LandingPage() {
               {/* Shopify */}
               <div className="partner-logo-item shopify">
                 <div className="partner-icon-wrap shopify-bg">
-                  <img src="https://cdn.simpleicons.org/shopify/ffffff" alt="Shopify" width="22" height="22" />
+                  <SiShopify size={22} color="#ffffff" />
                 </div>
                 <div className="partner-label">
                   <span className="partner-name">Shopify</span>
@@ -463,7 +464,7 @@ function LandingPage() {
               {/* WooCommerce */}
               <div className="partner-logo-item woocommerce">
                 <div className="partner-icon-wrap woo-bg">
-                  <img src="https://cdn.simpleicons.org/woocommerce/ffffff" alt="WooCommerce" width="22" height="22" />
+                  <SiWoocommerce size={22} color="#ffffff" />
                 </div>
                 <div className="partner-label">
                   <span className="partner-name">WooCommerce</span>
@@ -474,13 +475,14 @@ function LandingPage() {
               {/* OpenAI */}
               <div className="partner-logo-item openai">
                 <div className="partner-icon-wrap openai-bg">
-                  <img src="https://cdn.simpleicons.org/openai/ffffff" alt="OpenAI" width="22" height="22" />
+                  <SiOpenai size={22} color="#ffffff" />
                 </div>
                 <div className="partner-label">
                   <span className="partner-name">OpenAI</span>
                   <span className="partner-sub">AI Powered</span>
                 </div>
               </div>
+
 
             </div>
           </div>

@@ -950,6 +950,13 @@ tbody td, .table-row-premium td {
   color: var(--text-secondary);
 }
 
+.table-wrapper {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+
 /* Customer cell */
 .customer-cell {
   display: flex;

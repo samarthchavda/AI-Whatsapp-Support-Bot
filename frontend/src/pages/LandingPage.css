@@ -1302,7 +1302,71 @@
   .landing-footer .footer-cta-btn {
     width: 100%;
   }
+
+  /* Partners grid mobile layout */
+  .partners-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 16px;
+    width: 100%;
+    justify-items: center;
+  }
+  
+  .partner-logo-item {
+    width: 100%;
+    max-width: 165px;
+    justify-content: flex-start;
+    padding: 8px 12px;
+    background: rgba(39, 39, 42, 0.25);
+    border: 1px solid rgba(63, 63, 70, 0.3);
+    border-radius: 12px;
+    box-sizing: border-box;
+  }
+  
+  .partner-logo-item.whatsapp {
+    grid-column: span 2;
+    max-width: 346px;
+    justify-content: center;
+  }
+
+  /* Stepper mobile layout */
+  .stepper-grid {
+    grid-template-columns: 1fr;
+    gap: 28px;
+  }
+
+  .stepper-nav {
+    flex-direction: column;
+    gap: 12px;
+    width: 100%;
+  }
+
+  .stepper-nav-item {
+    padding: 16px;
+    gap: 14px;
+  }
+
+  .stepper-nav-item h3 {
+    font-size: 16px;
+  }
+
+  .step-number {
+    width: 38px;
+    height: 38px;
+    font-size: 14px;
+  }
+
+  .stepper-visual {
+    width: 100%;
+    margin-top: 8px;
+  }
+
+  .stepper-visual-inner {
+    padding: 24px 16px;
+    min-height: auto;
+  }
 }
+
 
 /* Interactive Preview Styling */
 .preview-tab {

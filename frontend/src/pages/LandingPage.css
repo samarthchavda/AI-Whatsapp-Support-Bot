@@ -1316,26 +1316,40 @@
     grid-template-columns: 1fr;
   }
 
-  /* Horizontal swipe pricing carousel for mobile */
+  /* Compact vertical stacked pricing grid for mobile */
   .pricing-grid {
-    display: flex !important;
-    flex-direction: row !important;
-    overflow-x: auto !important;
-    scroll-snap-type: x mandatory !important;
-    gap: 16px !important;
-    padding: 10px 18px 30px !important;
-    margin-left: -18px !important;
-    margin-right: -18px !important;
-    width: calc(100% + 36px) !important;
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    gap: 20px !important;
+    width: 100% !important;
+    padding: 0 !important;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
     box-sizing: border-box !important;
-    -webkit-overflow-scrolling: touch !important;
   }
 
   .pricing-card {
-    flex: 0 0 82% !important;
-    scroll-snap-align: center !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    padding: 20px !important;
     box-sizing: border-box !important;
   }
+
+  .pricing-card ul {
+    margin: 12px 0 16px !important;
+    padding: 12px 0 0 !important;
+    gap: 8px !important;
+  }
+
+  .pricing-card ul li {
+    font-size: 13px !important;
+  }
+
+  .price {
+    font-size: 32px !important;
+    margin: 10px 0 6px !important;
+  }
+
 
   .section-heading h2,
   .platform-copy h2 {

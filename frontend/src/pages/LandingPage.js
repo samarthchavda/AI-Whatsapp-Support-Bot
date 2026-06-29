@@ -259,7 +259,7 @@ function LandingPage() {
           <div className="landing-hero-copy">
             <div className="landing-kicker">
               <FaBolt />
-              WhatsApp support automation for commerce teams
+              WhatsApp support automation for E-commerce teams
             </div>
             <h1>Kwickbot — AI WhatsApp Customer Support Bot</h1>
             <p className="landing-hero-lede">
@@ -823,7 +823,7 @@ function LandingPage() {
             <img src="/logo.png" className="logo-img" alt="Kwickbot Logo" style={{ width: '30px', height: '30px' }} />
             <span>Kwickbot</span>
           </div>
-          <p>WhatsApp support automation for real commerce operations.</p>
+          <p>WhatsApp support automation for real E-commerce operations.</p>
           <div className="footer-socials">
             <a href="https://www.linkedin.com/company/kwickbot/" target="_blank" rel="noopener noreferrer" title="LinkedIn"><FaLinkedin /></a>
             <a href="https://twitter.com" target="_blank" rel="noopener noreferrer" title="Twitter"><FaTwitter /></a>

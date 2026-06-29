@@ -1349,11 +1349,12 @@
     width: 100%;
     max-width: 165px;
     justify-content: flex-start;
-    padding: 8px 12px;
+    padding: 6px 10px;
     background: rgba(39, 39, 42, 0.25);
     border: 1px solid rgba(63, 63, 70, 0.3);
-    border-radius: 12px;
+    border-radius: 10px;
     box-sizing: border-box;
+    gap: 8px;
   }
   
   .partner-logo-item.whatsapp {
@@ -1361,6 +1362,26 @@
     max-width: 346px;
     justify-content: center;
   }
+
+  .partner-icon-wrap {
+    width: 32px !important;
+    height: 32px !important;
+    border-radius: 8px !important;
+  }
+
+  .partner-icon-wrap svg {
+    width: 16px !important;
+    height: 16px !important;
+  }
+
+  .partner-name {
+    font-size: 13px !important;
+  }
+
+  .partner-sub {
+    font-size: 9.5px !important;
+  }
+
 
   /* Stepper mobile layout */
   .stepper-grid {

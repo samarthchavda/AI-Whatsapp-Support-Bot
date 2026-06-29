@@ -266,7 +266,7 @@ body {
   font-size: 10px;
   font-weight: 700;
   text-transform: uppercase;
-  color: var(--text-secondary);
+  color: var(--accent);
   padding: 10px 10px 5px;
   letter-spacing: 1.2px;
   white-space: nowrap;
@@ -283,7 +283,7 @@ body {
   display: inline-block;
   width: 14px;
   height: 1.5px;
-  background: var(--text-secondary);
+  background: var(--accent);
   border-radius: 2px;
   flex-shrink: 0;
   opacity: 0.7;

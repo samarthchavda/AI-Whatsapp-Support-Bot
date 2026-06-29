@@ -46,7 +46,7 @@ class AIService {
     this.minTypingDelayMs = Number(process.env.AI_MIN_TYPING_DELAY_MS || 300);
     this.maxTypingDelayMs = Number(process.env.AI_MAX_TYPING_DELAY_MS || 800);
     this.maxResponseSplitLength = Number(process.env.AI_RESPONSE_SPLIT_LENGTH || 220);
-    this.maxOutputTokens = Number(process.env.AI_MAX_OUTPUT_TOKENS || 180);
+    this.maxOutputTokens = Number(process.env.AI_MAX_OUTPUT_TOKENS || 1000);
   }
 
   normalizeMessage(message = '') {
@@ -276,7 +276,7 @@ Smart Fallback Rules (when specific information is not available in the knowledg
     };
   }
 
-  buildAiLogPayload({ conversationId, customerPhone, intent, userMessage, assistantMessage, aiModel, structuredOutput, duration, error }) {
+  buildAiLogPayload({ conversationId, customerPhone, intent, userMessage, assistantMessage, aiModel, structuredOutput, duration, error, systemPrompt = null, userPrompt = null, temperature = 0.6 }) {
     return {
       conversationId,
       customerPhone,
@@ -286,7 +286,10 @@ Smart Fallback Rules (when specific information is not available in the knowledg
       aiModel: aiModel || 'none',
       structuredOutput,
       duration,
-      error
+      error,
+      systemPrompt,
+      userPrompt,
+      temperature
     };
   }
 
@@ -727,8 +730,10 @@ Smart Fallback Rules (when specific information is not available in the knowledg
         completionTokens: 0,
         totalTokens: 0
       };
-      let typingDelayMs = 0;
       let responseParts = [];
+      let systemPrompt = null;
+      let userPrompt = null;
+      let temperature = 0.6;
 
       // Process based on intent
       switch (intent) {
@@ -759,6 +764,11 @@ Smart Fallback Rules (when specific information is not available in the knowledg
           tokenUsage = returnAiResult.tokenUsage || tokenUsage;
           typingDelayMs = returnAiResult.typingDelayMs || 0;
           responseParts = returnAiResult.responseParts || [];
+          if (returnAiResult.aiLogPayload) {
+            systemPrompt = returnAiResult.aiLogPayload.systemPrompt;
+            userPrompt = returnAiResult.aiLogPayload.userPrompt;
+            temperature = returnAiResult.aiLogPayload.temperature;
+          }
           break;
 
         case 'refund_request':
@@ -805,6 +815,11 @@ Smart Fallback Rules (when specific information is not available in the knowledg
               tokenUsage = aiResult.tokenUsage || tokenUsage;
               typingDelayMs = aiResult.typingDelayMs || 0;
               responseParts = aiResult.responseParts || [];
+              if (aiResult.aiLogPayload) {
+                systemPrompt = aiResult.aiLogPayload.systemPrompt;
+                userPrompt = aiResult.aiLogPayload.userPrompt;
+                temperature = aiResult.aiLogPayload.temperature;
+              }
 
               cacheRecord = {
                 message: response,
@@ -948,7 +963,10 @@ Smart Fallback Rules (when specific information is not available in the knowledg
         aiModel: aiModel || structuredOutput.metadata.modelUsed,
         structuredOutput,
         duration,
-        error: { occurred: false }
+        error: { occurred: false },
+        systemPrompt,
+        userPrompt,
+        temperature
       }));
       await aiLogDoc.save();
 

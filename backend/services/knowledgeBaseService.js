@@ -354,7 +354,7 @@ Now answer the following customer question using the knowledge base above. If th
           temperature: 0.3, // Lower temperature for more factual responses
           topP: 0.95,
           topK: 40,
-          maxOutputTokens: 300,
+          maxOutputTokens: 1000,
         }
       });
 

@@ -245,11 +245,25 @@ class KnowledgeBaseService {
   async searchChunks(queryText, adminId, limit = 3) {
     try {
       const queryEmbedding = await this.generateEmbedding(queryText);
-      const chunks = await KnowledgeBaseChunk.find({ admin: adminId });
       
-      if (chunks.length === 0) {
+      const KnowledgeBase = require('../models/KnowledgeBase');
+      const kbQuery = { isActive: true };
+      if (adminId) {
+        kbQuery.uploadedBy = adminId;
+      }
+      const activeKBs = await KnowledgeBase.find(kbQuery);
+      const activeKBIds = activeKBs.map(kb => kb._id);
+      
+      if (activeKBIds.length === 0) {
         return [];
       }
+      
+      const chunkQuery = { knowledgeBaseId: { $in: activeKBIds } };
+      if (adminId) {
+        chunkQuery.admin = adminId;
+      }
+      
+      const chunks = await KnowledgeBaseChunk.find(chunkQuery);
       
       const matches = chunks.map(chunk => {
         const score = this.cosineSimilarity(queryEmbedding, chunk.embedding);

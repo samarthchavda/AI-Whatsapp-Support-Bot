@@ -43,10 +43,10 @@ const server = http.createServer(app);
 // Allow any localhost, local network IPs (e.g. 192.168.x.x, 172.x.x.x, 10.x.x.x), or configured FRONTEND_URL (supports comma-separated list)
 const corsOriginHelper = (origin, callback) => {
   if (!origin) return callback(null, true);
-  
+
   const allowedOrigins = (process.env.FRONTEND_URL || '').split(',').map(item => item.trim());
   const isAllowed = allowedOrigins.includes(origin) ||
-                    /^http:\/\/(localhost|127\.0\.0\.1|192\.168\.\d+\.\d+|172\.\d+\.\d+\.\d+|10\.\d+\.\d+\.\d+)(:\d+)?$/.test(origin);
+    /^http:\/\/(localhost|127\.0\.0\.1|192\.168\.\d+\.\d+|172\.\d+\.\d+\.\d+|10\.\d+\.\d+\.\d+)(:\d+)?$/.test(origin);
   if (isAllowed) {
     callback(null, true);
   } else {
@@ -69,7 +69,7 @@ global.io = io;
 // Security middleware
 app.use(helmet());
 
-// Rate limiting
+
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: process.env.NODE_ENV === 'production' ? 1000 : 2000, // limit each IP to 2000 requests per windowMs in dev, 1000 in production
@@ -99,18 +99,18 @@ app.use(morgan('dev'));
 // Socket.IO connection handling
 io.on('connection', (socket) => {
   console.log('🔌 Frontend connected to Socket.IO');
-  
+
   // Send current WhatsApp status
   if (whatsappWebBot) {
     const status = whatsappWebBot.getStatus();
     socket.emit('whatsapp-status', status);
-    
+
     // If there is an active QR code, emit it to the connecting client immediately
     if (status.qrCode) {
       socket.emit('whatsapp-qr', { qr: status.qrCode, timestamp: new Date() });
     }
   }
-  
+
   socket.on('disconnect', () => {
     console.log('🔌 Frontend disconnected from Socket.IO');
   });
@@ -122,66 +122,66 @@ mongoose.connect(process.env.MONGODB_URI, {
   useUnifiedTopology: true,
   maxPoolSize: 50, // Increase connection pool size to handle high concurrent traffic
 })
-.then(() => {
-  console.log('✅ Connected to MongoDB');
-  
-  // Initialize WhatsApp bot after DB connection (if available and enabled)
-  if (whatsappWebBot) {
-    try {
-      const GlobalSettings = require('./models/GlobalSettings');
-      GlobalSettings.findOne({ key: 'webBotEnabled' }).then((setting) => {
-        if (setting && setting.value === true) {
+  .then(() => {
+    console.log('✅ Connected to MongoDB');
+
+    // Initialize WhatsApp bot after DB connection (if available and enabled)
+    if (whatsappWebBot) {
+      try {
+        const GlobalSettings = require('./models/GlobalSettings');
+        GlobalSettings.findOne({ key: 'webBotEnabled' }).then((setting) => {
+          if (setting && setting.value === true) {
+            whatsappWebBot.initialize(io);
+          } else {
+            console.log('📱 WhatsApp Web Bot is disabled globally by Super Admin');
+          }
+        }).catch((err) => {
+          console.error('Error reading global settings for Web Bot:', err.message);
           whatsappWebBot.initialize(io);
-        } else {
-          console.log('📱 WhatsApp Web Bot is disabled globally by Super Admin');
-        }
-      }).catch((err) => {
-        console.error('Error reading global settings for Web Bot:', err.message);
-        whatsappWebBot.initialize(io);
-      });
-    } catch (error) {
-      console.log('⚠️  Could not initialize WhatsApp bot:', error.message);
+        });
+      } catch (error) {
+        console.log('⚠️  Could not initialize WhatsApp bot:', error.message);
+      }
+    } else {
+      console.log('📱 WhatsApp Web Bot not available - using demo mode');
     }
-  } else {
-    console.log('📱 WhatsApp Web Bot not available - using demo mode');
-  }
-  
-  // Initialize broadcast scheduler
-  const { initializeScheduler, startScheduler } = require('./services/broadcastScheduler');
-  initializeScheduler().then(() => {
-    startScheduler();
-  });
 
-  // Schedule daily subscription token resets
-  const cron = require('node-cron');
-  const { checkAndResetMonthlyTokens } = require('./services/subscriptionService');
-  cron.schedule('0 0 * * *', () => {
-    checkAndResetMonthlyTokens();
-  });
+    // Initialize broadcast scheduler
+    const { initializeScheduler, startScheduler } = require('./services/broadcastScheduler');
+    initializeScheduler().then(() => {
+      startScheduler();
+    });
 
-  // Schedule Shopify order sync for all active Shopify integrations
-  const shopifyOrderSyncService = require('./services/shopifyOrderSyncService');
-  const shopifySyncSchedule = process.env.SHOPIFY_SYNC_CRON || '*/15 * * * *';
-  cron.schedule(shopifySyncSchedule, async () => {
-    try {
-      const results = await shopifyOrderSyncService.syncAllShopifyIntegrations();
-      const totalFetched = results.reduce((sum, item) => sum + (item.fetched || 0), 0);
-      const totalCreated = results.reduce((sum, item) => sum + (item.created || 0), 0);
-      const totalUpdated = results.reduce((sum, item) => sum + (item.updated || 0), 0);
-      console.log(`🛍️ Shopify sync completed: ${totalFetched} fetched, ${totalCreated} created, ${totalUpdated} updated`);
-    } catch (error) {
-      console.error('❌ Shopify sync cron failed:', error.message);
-    }
+    // Schedule daily subscription token resets
+    const cron = require('node-cron');
+    const { checkAndResetMonthlyTokens } = require('./services/subscriptionService');
+    cron.schedule('0 0 * * *', () => {
+      checkAndResetMonthlyTokens();
+    });
+
+    // Schedule Shopify order sync for all active Shopify integrations
+    const shopifyOrderSyncService = require('./services/shopifyOrderSyncService');
+    const shopifySyncSchedule = process.env.SHOPIFY_SYNC_CRON || '*/15 * * * *';
+    cron.schedule(shopifySyncSchedule, async () => {
+      try {
+        const results = await shopifyOrderSyncService.syncAllShopifyIntegrations();
+        const totalFetched = results.reduce((sum, item) => sum + (item.fetched || 0), 0);
+        const totalCreated = results.reduce((sum, item) => sum + (item.created || 0), 0);
+        const totalUpdated = results.reduce((sum, item) => sum + (item.updated || 0), 0);
+        console.log(`🛍️ Shopify sync completed: ${totalFetched} fetched, ${totalCreated} created, ${totalUpdated} updated`);
+      } catch (error) {
+        console.error('❌ Shopify sync cron failed:', error.message);
+      }
+    });
+  })
+  .catch((err) => {
+    console.error('❌ MongoDB connection error:', err);
+    process.exit(1);
   });
-})
-.catch((err) => {
-  console.error('❌ MongoDB connection error:', err);
-  process.exit(1);
-});
 
 // Test route
 app.get('/', (req, res) => {
-  res.json({ 
+  res.json({
     message: 'Kwickbot API',
     status: 'running',
     version: '1.0.0'

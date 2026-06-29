@@ -8,7 +8,7 @@ const SOCKET_URL = process.env.REACT_APP_API_URL?.replace('/api', '') || (window
 
 const AVATAR_COLORS = [
   'linear-gradient(135deg, #6366f1, #8b5cf6)',
-  'linear-gradient(135deg, #10b981, #059669)',
+  'linear-gradient(135deg, #396AFF, #1D4ED8)',
   'linear-gradient(135deg, #f59e0b, #d97706)',
   'linear-gradient(135deg, #ec4899, #be185d)',
   'linear-gradient(135deg, #3b82f6, #1d4ed8)'

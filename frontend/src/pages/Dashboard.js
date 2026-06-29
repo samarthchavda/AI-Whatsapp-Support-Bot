@@ -65,7 +65,7 @@ function Dashboard() {
       'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
       'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
       'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
-      'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)',
+      'linear-gradient(135deg, #396AFF 0%, #2D60FF 100%)',
       'linear-gradient(135deg, #fa709a 0%, #fee140 100%)',
     ];
     const index = name.charCodeAt(0) % colors.length;
@@ -183,7 +183,7 @@ function Dashboard() {
         <div className="stat-card-premium">
           <div className="stat-card-header">
             <h3>Total Orders</h3>
-            <div className="stat-icon-premium" style={{ background: 'rgba(16, 185, 129, 0.1)', color: '#10b981' }}>
+            <div className="stat-icon-premium" style={{ background: 'var(--brand-light)', color: 'var(--accent)' }}>
               <FaBox />
             </div>
           </div>

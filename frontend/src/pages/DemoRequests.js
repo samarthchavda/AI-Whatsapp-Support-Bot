@@ -351,18 +351,7 @@ function DemoRequests() {
           <button
             key={status}
             onClick={() => setFilter(status)}
-            style={{
-              padding: '10px 20px',
-              background: filter === status ? 'rgba(99, 102, 241, 0.2)' : 'rgba(39, 39, 42, 0.6)',
-              border: filter === status ? '1px solid rgba(99, 102, 241, 0.5)' : '1px solid rgba(63, 63, 70, 0.3)',
-              borderRadius: '10px',
-              color: filter === status ? '#a5b4fc' : '#a1a1aa',
-              fontSize: '14px',
-              fontWeight: '600',
-              cursor: 'pointer',
-              textTransform: 'capitalize',
-              transition: 'all 0.2s ease'
-            }}
+            className={`demo-filter-btn ${filter === status ? 'active' : ''}`}
           >
             {status}
           </button>

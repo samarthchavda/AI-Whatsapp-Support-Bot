@@ -731,3 +731,46 @@ body:not(.dark-theme) .chat-filter-tab.active {
   color: var(--accent) !important;
   font-weight: 700 !important;
 }
+
+/* Demo Requests Filter Buttons */
+.demo-filter-btn {
+  padding: 8px 18px;
+  background: rgba(39, 39, 42, 0.6);
+  border: 1px solid rgba(63, 63, 70, 0.3);
+  border-radius: 20px;
+  color: #a1a1aa;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  text-transform: capitalize;
+  transition: all 0.2s ease;
+}
+
+.demo-filter-btn:hover {
+  border-color: rgba(99, 102, 241, 0.5);
+  color: #fafafa;
+}
+
+.demo-filter-btn.active {
+  background: rgba(99, 102, 241, 0.2);
+  border-color: rgba(99, 102, 241, 0.5);
+  color: #a5b4fc;
+}
+
+body:not(.dark-theme) .demo-filter-btn {
+  background: transparent !important;
+  border: 1px solid var(--border-default) !important;
+  color: var(--text-secondary) !important;
+}
+
+body:not(.dark-theme) .demo-filter-btn:hover {
+  border-color: var(--accent) !important;
+  color: var(--text-primary) !important;
+}
+
+body:not(.dark-theme) .demo-filter-btn.active {
+  background: var(--brand-light) !important;
+  border-color: var(--accent) !important;
+  color: var(--accent) !important;
+  font-weight: 700 !important;
+}

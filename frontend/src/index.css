@@ -703,7 +703,8 @@ body:not(.dark-theme) .chat-filter-tab:hover {
 }
 
 body:not(.dark-theme) .chat-filter-tab.active {
-  background: linear-gradient(135deg, rgba(79, 70, 229, 0.1) 0%, rgba(124, 58, 237, 0.1) 100%) !important;
+  background: var(--brand-light) !important;
   border-color: var(--accent) !important;
   color: var(--accent) !important;
+  font-weight: 700 !important;
 }

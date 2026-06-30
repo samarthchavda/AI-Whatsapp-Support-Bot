@@ -48,6 +48,7 @@ router.get('/', verifyToken, broadcastController.getAllBroadcasts);
 router.get('/stats', verifyToken, broadcastController.getBroadcastStats);
 router.get('/:id', verifyToken, broadcastController.getBroadcastById);
 router.post('/:id/cancel', verifyToken, broadcastController.cancelBroadcast);
+router.post('/:id/send', verifyToken, broadcastController.sendBroadcastNow);
 router.delete('/:id', verifyToken, broadcastController.deleteBroadcast);
 
 module.exports = router;

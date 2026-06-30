@@ -315,6 +315,56 @@ exports.cancelBroadcast = async (req, res) => {
   }
 };
 
+// Send broadcast now (immediate dispatch)
+exports.sendBroadcastNow = async (req, res) => {
+  try {
+    const broadcast = await Broadcast.findOne({
+      _id: req.params.id,
+      admin: req.admin._id
+    });
+
+    if (!broadcast) {
+      return res.status(404).json({
+        success: false,
+        error: 'Broadcast not found'
+      });
+    }
+
+    if (broadcast.status === 'completed' || broadcast.status === 'sending') {
+      return res.status(400).json({
+        success: false,
+        error: `Broadcast is already ${broadcast.status}`
+      });
+    }
+
+    // Cancel scheduled task if it was scheduled
+    if (broadcast.status === 'scheduled') {
+      cancelScheduledBroadcast(broadcast._id);
+    }
+
+    // Update status to sending and save
+    broadcast.status = 'sending';
+    await broadcast.save();
+
+    // Trigger queue sending in background without blocking HTTP response
+    addBroadcastToQueue(broadcast._id).catch((err) => {
+      console.error('Error executing immediate background broadcast:', err);
+    });
+
+    res.json({
+      success: true,
+      message: 'Broadcast triggered successfully',
+      data: broadcast
+    });
+  } catch (error) {
+    console.error('Error triggering broadcast:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to send broadcast'
+    });
+  }
+};
+
 // Delete broadcast
 exports.deleteBroadcast = async (req, res) => {
   try {

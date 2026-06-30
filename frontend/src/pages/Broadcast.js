@@ -32,6 +32,11 @@ function Broadcast() {
     e.preventDefault();
     const formData = new FormData(e.target);
 
+    const scheduledFor = e.target.scheduledFor?.value;
+    if (scheduledFor) {
+      formData.set('scheduledFor', new Date(scheduledFor).toISOString());
+    }
+
     try {
       setUploadProgress('Creating broadcast...');
       

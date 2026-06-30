@@ -515,13 +515,13 @@ function Billing() {
                   )}
 
                   {/* Knowledge Base & Live Chat */}
-                  <li><FaCheck style={{ color: '#10b981' }} /> RAG-driven Knowledge Base PDF Retrieval</li>
-                  <li><FaCheck style={{ color: '#10b981' }} /> Real-time Live Chat Console for Human Takeovers</li>
+                  <li><FaCheck style={{ color: '#10b981' }} /> Instant AI Answers (reads your store FAQ & policy PDFs)</li>
+                  <li><FaCheck style={{ color: '#10b981' }} /> Live Chat Console for manual customer reply</li>
 
                   {/* Advanced Analytics */}
                   <li style={{ opacity: features.advancedAnalytics ? 1 : 0.5 }}>
                     {features.advancedAnalytics ? (
-                      <><FaCheck style={{ color: '#10b981' }} /> Advanced Analytics Dashboard (view charts, resolution ratios & logs)</>
+                      <><FaCheck style={{ color: '#10b981' }} /> Advanced Analytics (real-time chat reports & charts)</>
                     ) : (
                       <><FaTimes style={{ color: '#ef4444', marginRight: '8px' }} /> <span style={{ textDecoration: 'line-through' }}>Advanced Analytics Dashboard</span></>
                     )}
@@ -530,25 +530,25 @@ function Billing() {
                   {/* Handoff Escalations */}
                   <li style={{ opacity: (plan.name !== 'starter') ? 1 : 0.5 }}>
                     {plan.name !== 'starter' ? (
-                      <><FaCheck style={{ color: '#10b981' }} /> Live Chat Handoff Escalations (sentiment alert triggers & ticket manager)</>
+                      <><FaCheck style={{ color: '#10b981' }} /> Live Agent Handoff (auto-alerts team for complex queries)</>
                     ) : (
-                      <><FaTimes style={{ color: '#ef4444', marginRight: '8px' }} /> <span style={{ textDecoration: 'line-through' }}>Live Chat Handoff Escalations</span></>
+                      <><FaTimes style={{ color: '#ef4444', marginRight: '8px' }} /> <span style={{ textDecoration: 'line-through' }}>Live Agent Handoff Escalations</span></>
                     )}
                   </li>
 
                   {/* Order Cancellation */}
                   <li style={{ opacity: (plan.name !== 'starter') ? 1 : 0.5 }}>
                     {plan.name !== 'starter' ? (
-                      <><FaCheck style={{ color: '#10b981' }} /> Automated WhatsApp Order Cancellations (Growth & Scale)</>
+                      <><FaCheck style={{ color: '#10b981' }} /> Automated Order Cancellations via WhatsApp</>
                     ) : (
-                      <><FaTimes style={{ color: '#ef4444', marginRight: '8px' }} /> <span style={{ textDecoration: 'line-through' }}>Automated WhatsApp Order Cancellations</span></>
+                      <><FaTimes style={{ color: '#ef4444', marginRight: '8px' }} /> <span style={{ textDecoration: 'line-through' }}>Automated Order Cancellations via WhatsApp</span></>
                     )}
                   </li>
 
                   {/* Custom Branding */}
                   <li style={{ opacity: features.customBranding ? 1 : 0.5 }}>
                     {features.customBranding ? (
-                      <><FaCheck style={{ color: '#10b981' }} /> Custom Branding (replace name, logo & strip Kwickbot credits)</>
+                      <><FaCheck style={{ color: '#10b981' }} /> White-Labeling (remove Kwickbot branding & add your logo)</>
                     ) : (
                       <><FaTimes style={{ color: '#ef4444', marginRight: '8px' }} /> <span style={{ textDecoration: 'line-through' }}>Custom Branding (White-Labeling)</span></>
                     )}
@@ -557,7 +557,7 @@ function Billing() {
                   {/* API Access */}
                   <li style={{ opacity: features.apiAccess ? 1 : 0.5 }}>
                     {features.apiAccess ? (
-                      <><FaCheck style={{ color: '#10b981' }} /> Developer API & Webhooks Access</>
+                      <><FaCheck style={{ color: '#10b981' }} /> Developer API & Webhooks (for custom websites)</>
                     ) : (
                       <><FaTimes style={{ color: '#ef4444', marginRight: '8px' }} /> <span style={{ textDecoration: 'line-through' }}>Developer API & Webhooks Access</span></>
                     )}

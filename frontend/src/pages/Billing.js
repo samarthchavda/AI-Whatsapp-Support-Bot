@@ -289,7 +289,7 @@ function Billing() {
                 WhatsApp Connections: <strong style={{ color: '#fafafa' }}>{currentFeatures.maxWhatsAppConnections} max</strong>
               </div>
               <div style={{ fontSize: '13px', color: '#a1a1aa' }}>
-                Gemini Tokens: <strong style={{ color: '#fafafa' }}>
+                AI Response Units: <strong style={{ color: '#fafafa' }}>
                   {profile?.geminiTokensLimit === -1 || currentFeatures.geminiTokensPerMonth === -1
                     ? 'Unlimited'
                     : (profile?.geminiTokensLimit || currentFeatures.geminiTokensPerMonth || 50000).toLocaleString()}
@@ -301,7 +301,7 @@ function Billing() {
 
         {/* Token Usage Card */}
         <div className="billing-card token-usage-card">
-          <h3>Gemini AI Token Usage</h3>
+          <h3>AI Chatbot Processing Usage</h3>
           <p className="usage-subtitle">Your monthly AI usage limits reset every 30 days.</p>
 
           <div className="usage-numeric-row">
@@ -313,7 +313,7 @@ function Billing() {
                   ? 'Unlimited' 
                   : (profile?.geminiTokensLimit?.toLocaleString() || '50,000')}
               </span>
-              <span className="unit"> tokens</span>
+              <span className="unit"> units</span>
             </div>
             {profile?.geminiTokensLimit !== -1 && profile?.geminiTokensLimit !== Infinity && (
               <div className="percentage-display">{tokenUsagePercentage}%</div>
@@ -329,12 +329,12 @@ function Billing() {
 
           {isUsageDanger && (
             <div className="usage-alertdanger">
-              <FaInfoCircle /> You have reached your AI token limit! Suspending bot auto-replies until upgrade or monthly reset.
+              <FaInfoCircle /> You have reached your AI chat limit! Suspending bot auto-replies until upgrade or monthly reset.
             </div>
           )}
           {!isUsageDanger && isUsageWarning && (
             <div className="usage-alertwarning">
-              <FaInfoCircle /> Warning: You are running low on monthly AI tokens. Upgrade your plan to avoid service interruption.
+              <FaInfoCircle /> Warning: You are running low on monthly AI chat credits. Upgrade your plan to avoid service interruption.
             </div>
           )}
         </div>
@@ -470,16 +470,6 @@ function Billing() {
                     <li><FaCheck style={{ color: '#10b981' }} /> Unlimited incoming & outgoing messages/mo</li>
                   )}
 
-                  {/* Gemini Tokens */}
-                  {plan.name === 'starter' && (
-                    <li><FaCheck style={{ color: '#10b981' }} /> 50,000 Gemini Tokens/mo (for standard automated bot replies)</li>
-                  )}
-                  {plan.name === 'professional' && (
-                    <li><FaCheck style={{ color: '#10b981' }} /> 200,000 Gemini Tokens/mo (for rich product advice & detailed conversations)</li>
-                  )}
-                  {plan.name === 'enterprise' && (
-                    <li><FaCheck style={{ color: '#10b981' }} /> Unlimited Gemini Tokens/mo (high-speed processing & complex customer queries)</li>
-                  )}
 
                   {/* WhatsApp Connections */}
                   {plan.name === 'starter' && (

@@ -698,13 +698,13 @@ function LandingPage() {
               <ul>
                 <li><FaCheck style={{ color: '#10b981', marginRight: '8px' }} /> Up to 500 WhatsApp Conversations/mo</li>
                 <li><FaCheck style={{ color: '#10b981', marginRight: '8px' }} /> Up to 2,000 messages/mo</li>
-                <li><FaCheck style={{ color: '#10b981', marginRight: '8px' }} /> 50,000 Gemini Tokens/mo (standard replies)</li>
                 <li><FaCheck style={{ color: '#10b981', marginRight: '8px' }} /> 1 Active WhatsApp connection</li>
                 <li><FaCheck style={{ color: '#10b981', marginRight: '8px' }} /> Max 1 PDF document Knowledge Base upload</li>
                 <li><FaCheck style={{ color: '#10b981', marginRight: '8px' }} /> 1 Store Integration (Shopify OR WooCommerce)</li>
                 <li><FaCheck style={{ color: '#10b981', marginRight: '8px' }} /> Knowledge Base Retrieval & Live Chat CRM</li>
                 <li style={{ opacity: 0.5 }}><FaTimes style={{ color: '#ef4444', marginRight: '8px' }} /> <span style={{ textDecoration: 'line-through' }}>Advanced Analytics Dashboard</span></li>
                 <li style={{ opacity: 0.5 }}><FaTimes style={{ color: '#ef4444', marginRight: '8px' }} /> <span style={{ textDecoration: 'line-through' }}>Live Chat Handoff Escalations</span></li>
+                <li style={{ opacity: 0.5 }}><FaTimes style={{ color: '#ef4444', marginRight: '8px' }} /> <span style={{ textDecoration: 'line-through' }}>Automated Order Cancellations</span></li>
                 <li style={{ opacity: 0.5 }}><FaTimes style={{ color: '#ef4444', marginRight: '8px' }} /> <span style={{ textDecoration: 'line-through' }}>Custom Branding (White-Labeling)</span></li>
                 <li style={{ opacity: 0.5 }}><FaTimes style={{ color: '#ef4444', marginRight: '8px' }} /> <span style={{ textDecoration: 'line-through' }}>Developer API & Webhooks Access</span></li>
                 <li style={{ opacity: 0.5 }}><FaTimes style={{ color: '#ef4444', marginRight: '8px' }} /> <span style={{ textDecoration: 'line-through' }}>Priority Support</span></li>
@@ -720,13 +720,13 @@ function LandingPage() {
               <ul>
                 <li><FaCheck style={{ color: '#10b981', marginRight: '8px' }} /> Up to 3,000 WhatsApp Conversations/mo</li>
                 <li><FaCheck style={{ color: '#10b981', marginRight: '8px' }} /> Up to 15,000 messages/mo</li>
-                <li><FaCheck style={{ color: '#10b981', marginRight: '8px' }} /> 200,000 Gemini Tokens/mo (detailed AI replies)</li>
                 <li><FaCheck style={{ color: '#10b981', marginRight: '8px' }} /> Up to 2 Active WhatsApp connections</li>
                 <li><FaCheck style={{ color: '#10b981', marginRight: '8px' }} /> Max 3 PDF document Knowledge Base uploads</li>
                 <li><FaCheck style={{ color: '#10b981', marginRight: '8px' }} /> 1 Store Integration (Shopify OR WooCommerce)</li>
                 <li><FaCheck style={{ color: '#10b981', marginRight: '8px' }} /> Knowledge Base Retrieval & Live Chat CRM</li>
                 <li><FaCheck style={{ color: '#10b981', marginRight: '8px' }} /> Advanced Analytics Dashboard (view metrics & logs)</li>
                 <li><FaCheck style={{ color: '#10b981', marginRight: '8px' }} /> Live Chat Handoff Escalations (automatic takeover)</li>
+                <li><FaCheck style={{ color: '#10b981', marginRight: '8px' }} /> Automated Order Cancellations via WhatsApp</li>
                 <li style={{ opacity: 0.5 }}><FaTimes style={{ color: '#ef4444', marginRight: '8px' }} /> <span style={{ textDecoration: 'line-through' }}>Custom Branding (White-Labeling)</span></li>
                 <li style={{ opacity: 0.5 }}><FaTimes style={{ color: '#ef4444', marginRight: '8px' }} /> <span style={{ textDecoration: 'line-through' }}>Developer API & Webhooks Access</span></li>
                 <li><FaCheck style={{ color: '#10b981', marginRight: '8px' }} /> Priority Email & Chat Support (under 4 hours)</li>
@@ -740,13 +740,13 @@ function LandingPage() {
               <p>For teams needing higher limits and custom workflows.</p>
               <ul>
                 <li><FaCheck style={{ color: '#10b981', marginRight: '8px' }} /> Unlimited WhatsApp Conversations & Messages</li>
-                <li><FaCheck style={{ color: '#10b981', marginRight: '8px' }} /> Unlimited Gemini Tokens/mo (high AI response speed)</li>
                 <li><FaCheck style={{ color: '#10b981', marginRight: '8px' }} /> Up to 5 Active WhatsApp connections simultaneously</li>
                 <li><FaCheck style={{ color: '#10b981', marginRight: '8px' }} /> Unlimited PDF document Knowledge Base uploads</li>
                 <li><FaCheck style={{ color: '#10b981', marginRight: '8px' }} /> Multiple Integrations (Shopify & WooCommerce both)</li>
                 <li><FaCheck style={{ color: '#10b981', marginRight: '8px' }} /> Knowledge Base Retrieval & Live Chat CRM</li>
                 <li><FaCheck style={{ color: '#10b981', marginRight: '8px' }} /> Advanced Analytics Dashboard (view metrics & logs)</li>
                 <li><FaCheck style={{ color: '#10b981', marginRight: '8px' }} /> Live Chat Handoff Escalations (automatic takeover)</li>
+                <li><FaCheck style={{ color: '#10b981', marginRight: '8px' }} /> Automated Order Cancellations via WhatsApp</li>
                 <li><FaCheck style={{ color: '#10b981', marginRight: '8px' }} /> Custom Branding (rebrand console with logo & name)</li>
                 <li><FaCheck style={{ color: '#10b981', marginRight: '8px' }} /> Developer API & Webhooks Access</li>
                 <li><FaCheck style={{ color: '#10b981', marginRight: '8px' }} /> Dedicated Account Manager & 24/7 Slack Support</li>

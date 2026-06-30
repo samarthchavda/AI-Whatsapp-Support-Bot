@@ -135,25 +135,25 @@ function Templates() {
       </div>
 
       {/* Filter and Search Bar */}
-      <div className="filter-bar">
-        <div className="search-wrapper">
-          <FaSearch className="search-icon" />
+      <div className="tmpl-filter-bar">
+        <div className="tmpl-search-wrapper">
+          <FaSearch className="tmpl-search-icon" />
           <input
             type="text"
             placeholder="Search templates by name or content..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="search-input"
+            className="tmpl-search-input"
           />
         </div>
 
-        <div className="filters-container">
-          <div className="filter-group">
-            <FaFilter className="filter-icon" />
+        <div className="tmpl-filters-container">
+          <div className="tmpl-filter-group">
+            <FaFilter className="tmpl-filter-icon" />
             <select
               value={categoryFilter}
               onChange={(e) => setCategoryFilter(e.target.value)}
-              className="filter-select"
+              className="tmpl-filter-select"
             >
               <option value="ALL">All Categories</option>
               <option value="UTILITY">Utility</option>
@@ -162,11 +162,11 @@ function Templates() {
             </select>
           </div>
 
-          <div className="filter-group">
+          <div className="tmpl-filter-group">
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="filter-select"
+              className="tmpl-filter-select"
             >
               <option value="ALL">All Statuses</option>
               <option value="APPROVED">Approved</option>

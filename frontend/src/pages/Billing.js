@@ -277,19 +277,19 @@ function Billing() {
           </div>
 
           <div className="plan-limits-section" style={{ marginTop: '20px', borderTop: '1px solid rgba(255, 255, 255, 0.1)', paddingTop: '16px' }}>
-            <h4 style={{ margin: '0 0 10px 0', fontSize: '12px', color: '#a5b4fc', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: '700' }}>Plan Limits</h4>
+            <h4 style={{ margin: '0 0 10px 0', fontSize: '12px', color: 'var(--primary-color, #6366f1)', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: '700' }}>Plan Limits</h4>
             <div className="plan-limits-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '10px 16px' }}>
-              <div style={{ fontSize: '13px', color: '#a1a1aa' }}>
-                Conversations (Unique Chats): <strong style={{ color: '#fafafa' }}>{currentFeatures.maxConversations === -1 ? 'Unlimited' : currentFeatures.maxConversations}</strong>
+              <div style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>
+                Conversations (Unique Chats): <strong style={{ color: 'var(--text-primary)' }}>{currentFeatures.maxConversations === -1 ? 'Unlimited' : currentFeatures.maxConversations}</strong>
               </div>
-              <div style={{ fontSize: '13px', color: '#a1a1aa' }}>
-                Messages (Text Bubbles): <strong style={{ color: '#fafafa' }}>{currentFeatures.maxMessages === -1 ? 'Unlimited' : currentFeatures.maxMessages}</strong>
+              <div style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>
+                Messages (Text Bubbles): <strong style={{ color: 'var(--text-primary)' }}>{currentFeatures.maxMessages === -1 ? 'Unlimited' : currentFeatures.maxMessages}</strong>
               </div>
-              <div style={{ fontSize: '13px', color: '#a1a1aa' }}>
-                WhatsApp Connections: <strong style={{ color: '#fafafa' }}>{currentFeatures.maxWhatsAppConnections} max</strong>
+              <div style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>
+                WhatsApp Connections: <strong style={{ color: 'var(--text-primary)' }}>{currentFeatures.maxWhatsAppConnections} max</strong>
               </div>
-              <div style={{ fontSize: '13px', color: '#a1a1aa' }}>
-                AI Response Units: <strong style={{ color: '#fafafa' }}>
+              <div style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>
+                AI Response Units: <strong style={{ color: 'var(--text-primary)' }}>
                   {profile?.geminiTokensLimit === -1 || currentFeatures.geminiTokensPerMonth === -1
                     ? 'Unlimited'
                     : (profile?.geminiTokensLimit || currentFeatures.geminiTokensPerMonth || 50000).toLocaleString()}

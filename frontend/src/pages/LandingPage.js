@@ -146,6 +146,31 @@ function LandingPage() {
   const [chatInput, setChatInput] = useState('');
   const chatEndRef = useRef(null);
 
+  // Hero Real-time Live Demo Animation State
+  // States: 'customer-typing' | 'customer-sent' | 'ai-typing' | 'ai-sent' | 'note-sent' | 'reset'
+  const [animState, setAnimState] = useState('customer-typing');
+
+  useEffect(() => {
+    if (activeTab !== 'inbox') return;
+
+    let timer;
+    if (animState === 'customer-typing') {
+      timer = setTimeout(() => setAnimState('customer-sent'), 2200);
+    } else if (animState === 'customer-sent') {
+      timer = setTimeout(() => setAnimState('ai-typing'), 1200);
+    } else if (animState === 'ai-typing') {
+      timer = setTimeout(() => setAnimState('ai-sent'), 1800);
+    } else if (animState === 'ai-sent') {
+      timer = setTimeout(() => setAnimState('note-sent'), 1200);
+    } else if (animState === 'note-sent') {
+      timer = setTimeout(() => setAnimState('reset'), 4500);
+    } else if (animState === 'reset') {
+      timer = setTimeout(() => setAnimState('customer-typing'), 400);
+    }
+
+    return () => clearTimeout(timer);
+  }, [animState, activeTab]);
+
   const handleCopyCode = () => {
     navigator.clipboard.writeText('NEW15');
     setCopied(true);
@@ -321,19 +346,62 @@ function LandingPage() {
               </aside>
 
               {activeTab === 'inbox' && (
-                <div className="preview-conversation">
-                  <div className="preview-message customer">
-                    <span>Customer</span>
-                    Is my order arriving today?
+                <div className="preview-conversation" style={{ minHeight: '300px' }}>
+                  {/* Status pill header inside conversation box */}
+                  <div className="preview-live-indicator">
+                    <span className="live-dot animate-pulse"></span>
+                    <span>
+                      {animState === 'customer-typing' && 'Live Customer (Typing...)'}
+                      {animState === 'customer-sent' && 'Live Customer (Online)'}
+                      {animState === 'ai-typing' && 'AI Assistant (Typing...)'}
+                      {animState === 'ai-sent' && 'AI Assistant (Online)'}
+                      {animState === 'note-sent' && 'AI Resolved'}
+                      {animState === 'reset' && 'Waiting for customer...'}
+                    </span>
                   </div>
-                  <div className="preview-message bot">
-                    <span>AI assistant</span>
-                    Yes. Order #ORD-1017 is out for delivery and should arrive between 4-7 PM.
-                  </div>
-                  <div className="preview-message note">
-                    <FaCheck />
-                    Tracking link sent. No agent needed.
-                  </div>
+
+                  {/* Customer Message */}
+                  {(animState !== 'customer-typing' && animState !== 'reset') && (
+                    <div className="preview-message customer fade-in-slide">
+                      <span>Customer</span>
+                      Is my order arriving today?
+                    </div>
+                  )}
+
+                  {/* Customer Typing Dot Indicator */}
+                  {animState === 'customer-typing' && (
+                    <div className="typing-indicator customer">
+                      <span>Customer</span>
+                      <div className="dot-flashing"></div>
+                    </div>
+                  )}
+
+                  {/* AI Typing Dot Indicator */}
+                  {animState === 'ai-typing' && (
+                    <div className="typing-indicator bot">
+                      <span>AI assistant</span>
+                      <div className="dot-flashing"></div>
+                    </div>
+                  )}
+
+                  {/* AI Message & Reply Time stats */}
+                  {(animState === 'ai-sent' || animState === 'note-sent') && (
+                    <div className="preview-message bot fade-in-slide">
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                        <span>AI assistant</span>
+                        <span className="reply-speed-tag">⚡ AI Reply in 1.3 sec</span>
+                      </div>
+                      Yes. Order #ORD-1017 is out for delivery and should arrive between 4-7 PM.
+                    </div>
+                  )}
+
+                  {/* Note message */}
+                  {animState === 'note-sent' && (
+                    <div className="preview-message note fade-in-slide">
+                      <FaCheck />
+                      Tracking link sent. No agent needed.
+                    </div>
+                  )}
                 </div>
               )}
 

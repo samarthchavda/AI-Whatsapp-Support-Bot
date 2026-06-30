@@ -2534,3 +2534,147 @@
   flex-shrink: 0;
 }
 
+/* Real-time Hero Animation Styles */
+.preview-live-indicator {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(34, 197, 94, 0.08);
+  border: 1px solid rgba(34, 197, 94, 0.2);
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #86efac;
+  width: fit-content;
+  margin-bottom: 16px;
+  animation: fadeIn 0.3s ease-out;
+}
+
+.live-dot {
+  width: 8px;
+  height: 8px;
+  background-color: #22c55e;
+  border-radius: 50%;
+  box-shadow: 0 0 8px #22c55e;
+}
+
+.live-dot.animate-pulse {
+  animation: pulse 1.5s infinite alternate;
+}
+
+@keyframes pulse {
+  0% { transform: scale(0.9); opacity: 0.6; }
+  100% { transform: scale(1.1); opacity: 1; box-shadow: 0 0 12px #22c55e; }
+}
+
+.reply-speed-tag {
+  background: rgba(34, 197, 94, 0.15);
+  color: #86efac;
+  border: 1px solid rgba(34, 197, 94, 0.3);
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+}
+
+/* Typing Dot Animation */
+.typing-indicator {
+  padding: 16px;
+  border: 1px solid rgba(63, 63, 70, 0.65);
+  border-radius: 8px;
+  max-width: 410px;
+  margin-bottom: 16px;
+  animation: fadeIn 0.3s ease-out;
+  display: flex;
+  flex-direction: column;
+}
+
+.typing-indicator.customer {
+  background: rgba(39, 39, 42, 0.76);
+  align-self: flex-start;
+}
+
+.typing-indicator.bot {
+  margin-left: auto;
+  background: rgba(20, 83, 45, 0.45);
+  border-color: rgba(34, 197, 94, 0.24);
+  align-self: flex-end;
+}
+
+.typing-indicator span {
+  display: block;
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  color: #71717a;
+  margin-bottom: 8px;
+}
+
+.dot-flashing {
+  position: relative;
+  width: 6px;
+  height: 6px;
+  border-radius: 3px;
+  background-color: #22c55e;
+  color: #22c55e;
+  animation: dotFlashing 1s infinite linear alternate;
+  animation-delay: .5s;
+  margin-left: 10px;
+  display: inline-block;
+}
+
+.dot-flashing::before, .dot-flashing::after {
+  content: '';
+  display: inline-block;
+  position: absolute;
+  top: 0;
+}
+
+.dot-flashing::before {
+  left: -10px;
+  width: 6px;
+  height: 6px;
+  border-radius: 3px;
+  background-color: #22c55e;
+  color: #22c55e;
+  animation: dotFlashing 1s infinite linear alternate;
+  animation-delay: 0s;
+}
+
+.dot-flashing::after {
+  left: 10px;
+  width: 6px;
+  height: 6px;
+  border-radius: 3px;
+  background-color: #22c55e;
+  color: #22c55e;
+  animation: dotFlashing 1s infinite linear alternate;
+  animation-delay: 1s;
+}
+
+@keyframes dotFlashing {
+  0% { background-color: #22c55e; }
+  50%, 100% { background-color: rgba(34, 197, 94, 0.2); }
+}
+
+/* Fade in Slide transition */
+.fade-in-slide {
+  animation: fadeInSlide 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes fadeInSlide {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+

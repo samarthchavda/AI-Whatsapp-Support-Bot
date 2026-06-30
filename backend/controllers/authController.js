@@ -369,7 +369,7 @@ exports.getPlans = async (req, res) => {
           name: 'starter',
           displayName: 'Starter Plan',
           description: 'Perfect for small e-commerce stores starting out.',
-          monthlyPrice: 2999,
+          monthlyPrice: 1499,
           badge: null,
           features: {
             maxConversations: 500,
@@ -388,7 +388,7 @@ exports.getPlans = async (req, res) => {
           name: 'professional',
           displayName: 'Professional Plan',
           description: 'Great for growing businesses looking for premium support.',
-          monthlyPrice: 6999,
+          monthlyPrice: 2999,
           badge: 'POPULAR',
           features: {
             maxConversations: 3000,
@@ -408,7 +408,7 @@ exports.getPlans = async (req, res) => {
           name: 'enterprise',
           displayName: 'Enterprise Plan',
           description: 'For large-scale operations requiring maximum power and volume.',
-          monthlyPrice: 14000,
+          monthlyPrice: 9999,
           badge: 'BEST VALUE',
           features: {
             maxConversations: -1,
@@ -490,9 +490,9 @@ exports.upgradePlan = async (req, res) => {
     let originalPrice = 29;
     if (!planDetails) {
       const fallbacks = {
-        starter: { price: 2999, limit: 50000 },
-        professional: { price: 6999, limit: 200000 },
-        enterprise: { price: 14000, limit: -1 }
+        starter: { price: 1499, limit: 50000 },
+        professional: { price: 2999, limit: 200000 },
+        enterprise: { price: 9999, limit: -1 }
       };
       
       const fallback = fallbacks[planName];
@@ -822,14 +822,14 @@ exports.createRazorpayOrder = async (req, res) => {
     const PricingPlan = require('../models/PricingPlan');
     const planDetails = await PricingPlan.findOne({ name: planName, isActive: true });
     
-    let originalPrice = 2999;
+    let originalPrice = 1499;
     if (planDetails) {
       originalPrice = planDetails.monthlyPrice;
     } else {
       const fallbacks = {
-        starter: 2999,
-        professional: 6999,
-        enterprise: 14000
+        starter: 1499,
+        professional: 2999,
+        enterprise: 9999
       };
       originalPrice = fallbacks[planName];
     }
@@ -944,16 +944,16 @@ exports.verifyRazorpayPayment = async (req, res) => {
     const PricingPlan = require('../models/PricingPlan');
     const planDetails = await PricingPlan.findOne({ name: planName, isActive: true });
     
-    let originalPrice = 2999;
+    let originalPrice = 1499;
     let tokensLimit = 10000;
     if (planDetails) {
       originalPrice = planDetails.monthlyPrice;
       tokensLimit = planDetails.features?.geminiTokensPerMonth || 10000;
     } else {
       const fallbacks = {
-        starter: { price: 2999, limit: 10000 },
-        professional: { price: 6999, limit: 50000 },
-        enterprise: { price: 14000, limit: 200000 }
+        starter: { price: 1499, limit: 10000 },
+        professional: { price: 2999, limit: 50000 },
+        enterprise: { price: 9999, limit: 200000 }
       };
       const fallback = fallbacks[planName];
       originalPrice = fallback.price;

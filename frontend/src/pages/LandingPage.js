@@ -226,7 +226,7 @@ function LandingPage() {
       const input = userMessage.toLowerCase();
 
       if (input.includes('price') || input.includes('pricing') || input.includes('cost') || input.includes('plan') || input.includes('money')) {
-        reply = '💰 Kwickbot Plans:\n• Starter (₹2999/mo): 500 AI messages, standard knowledge base.\n• Growth (₹6999/mo): 2,500 AI messages, WooCommerce/Shopify sync, campaigns.\n• Scale (₹14000/mo): Unlimited volume, custom CRM integrations.';
+        reply = '💰 Kwickbot Plans:\n• Starter (₹1499/mo): 500 AI messages, standard knowledge base.\n• Growth (₹2999/mo): 2,500 AI messages, WooCommerce/Shopify sync, campaigns.\n• Scale (₹9999/mo): Unlimited volume, custom CRM integrations.';
       } else if (input.includes('charge') || input.includes('pay') || input.includes('extra') || input.includes('hidden') || input.includes('fee')) {
         reply = '⚠️ Hidden/Extra Charges:\nThere are no hidden fees or extra charges from Kwickbot. If you integrate the official WhatsApp Cloud API, Meta charges directly per conversation (typically around $0.008 to $0.015 depending on the country).';
       } else if (input.includes('setup') || input.includes('integrate') || input.includes('integration') || input.includes('how to use') || input.includes('start') || input.includes('connect')) {
@@ -806,7 +806,7 @@ function LandingPage() {
           <div className="pricing-grid">
             <article className="pricing-card">
               <h3>Starter</h3>
-              <div className="price">₹2999<span>/month</span></div>
+              <div className="price">₹1499<span>/month</span></div>
               <p>For small stores validating AI support.</p>
               <ul>
                 <li><FaCheck style={{ color: '#10b981', marginRight: '8px' }} /> Up to 500 WhatsApp Conversations/mo (customer chats)</li>
@@ -828,7 +828,7 @@ function LandingPage() {
             <article className="pricing-card featured">
               <div className="pricing-tag">Best fit</div>
               <h3>Growth</h3>
-              <div className="price">₹6999<span>/month</span></div>
+              <div className="price">₹2999<span>/month</span></div>
               <p>For stores managing regular order and support volume.</p>
               <ul>
                 <li><FaCheck style={{ color: '#10b981', marginRight: '8px' }} /> Up to 3,000 WhatsApp Conversations/mo (customer chats)</li>
@@ -849,7 +849,7 @@ function LandingPage() {
 
             <article className="pricing-card">
               <h3>Scale</h3>
-              <div className="price">₹14000<span>/month</span></div>
+              <div className="price">₹9999<span>/month</span></div>
               <p>For teams needing higher limits and custom workflows.</p>
               <ul>
                 <li><FaCheck style={{ color: '#10b981', marginRight: '8px' }} /> Unlimited WhatsApp Conversations & Messages</li>

@@ -65,7 +65,7 @@ exports.createUser = async (req, res) => {
       role: validatedRole,
       subscriptionPlan: subscriptionPlan || 'starter',
       subscriptionStatus: subscriptionStatus || 'trial',
-      monthlyPrice: monthlyPrice || 2999,
+      monthlyPrice: monthlyPrice || 1499,
       geminiTokensLimit: geminiTokensLimit || 50000,
       geminiTokensUsed: 0,
       webBotEnabled: webBotEnabled === true || webBotEnabled === 'true',
@@ -1434,7 +1434,7 @@ exports.deleteLead = async (req, res) => {
 // Convert Lead to Registered Client/Merchant
 exports.convertLeadToClient = async (req, res) => {
   try {
-    const { subscriptionPlan = 'starter', monthlyPrice = 2999, geminiTokensLimit = 50000 } = req.body;
+    const { subscriptionPlan = 'starter', monthlyPrice = 1499, geminiTokensLimit = 50000 } = req.body;
     const lead = await Lead.findById(req.params.id);
 
     if (!lead) {

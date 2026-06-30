@@ -49,7 +49,7 @@ function LeadsCRM() {
   });
   const [convertPlan, setConvertPlan] = useState({
     subscriptionPlan: 'starter',
-    monthlyPrice: 2999,
+    monthlyPrice: 1499,
     geminiTokensLimit: 50000
   });
 
@@ -366,7 +366,7 @@ function LeadsCRM() {
                             <button
                               onClick={() => {
                                 setSelectedLead(lead);
-                                setConvertPlan({ subscriptionPlan: 'starter', monthlyPrice: 2999, geminiTokensLimit: 50000 });
+                                setConvertPlan({ subscriptionPlan: 'starter', monthlyPrice: 1499, geminiTokensLimit: 50000 });
                                 setShowConvertLeadModal(true);
                               }}
                               className="action-btn"
@@ -675,10 +675,10 @@ function LeadsCRM() {
                     value={convertPlan.subscriptionPlan}
                     onChange={(e) => {
                       const plan = e.target.value;
-                      let price = 2999;
+                      let price = 1499;
                       let tokens = 50000;
-                      if (plan === 'professional') { price = 6999; tokens = 200000; }
-                      if (plan === 'enterprise') { price = 14000; tokens = -1; }
+                      if (plan === 'professional') { price = 2999; tokens = 200000; }
+                      if (plan === 'enterprise') { price = 9999; tokens = -1; }
                       setConvertPlan({ ...convertPlan, subscriptionPlan: plan, monthlyPrice: price, geminiTokensLimit: tokens });
                     }}
                     style={{ width: '100%', padding: '12px', borderRadius: '10px', fontSize: '14px', cursor: 'pointer' }}

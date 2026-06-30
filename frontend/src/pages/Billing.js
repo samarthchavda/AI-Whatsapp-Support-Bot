@@ -260,7 +260,7 @@ function Billing() {
             <span className={`status-badge-saas status-${profile?.subscriptionStatus || 'trial'}`}>
               {profile?.subscriptionStatus || 'Trial'}
             </span>
-            <span className="monthly-price-display">₹{profile?.monthlyPrice || 2999}/mo</span>
+            <span className="monthly-price-display">₹{profile?.monthlyPrice || 1499}/mo</span>
           </div>
 
           <div className="plan-meta-list">

@@ -47,7 +47,7 @@ function SuperAdmin() {
     role: 'admin',
     subscriptionPlan: 'starter',
     subscriptionStatus: 'trial',
-    monthlyPrice: 2999,
+    monthlyPrice: 1499,
     geminiTokensLimit: 50000,
     webBotEnabled: false,
   });
@@ -239,7 +239,7 @@ function SuperAdmin() {
         role: 'admin',
         subscriptionPlan: 'starter',
         subscriptionStatus: 'trial',
-        monthlyPrice: 2999,
+        monthlyPrice: 1499,
         geminiTokensLimit: 50000,
         webBotEnabled: false,
         shopifyEnabled: true,
@@ -1080,10 +1080,10 @@ function SuperAdmin() {
                           value={newUser.subscriptionPlan}
                           onChange={(e) => {
                             const plan = e.target.value;
-                            let price = 2999;
+                            let price = 1499;
                             let tokens = 50000;
-                            if (plan === 'professional') { price = 6999; tokens = 200000; }
-                            if (plan === 'enterprise') { price = 14000; tokens = -1; }
+                            if (plan === 'professional') { price = 2999; tokens = 200000; }
+                            if (plan === 'enterprise') { price = 9999; tokens = -1; }
                             setNewUser({ ...newUser, subscriptionPlan: plan, monthlyPrice: price, geminiTokensLimit: tokens });
                           }}
                           style={{

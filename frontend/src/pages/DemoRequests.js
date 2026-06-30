@@ -43,7 +43,7 @@ function DemoRequests() {
         `/demo-requests/${requestId}/approve`,
         {
           subscriptionPlan: 'starter',
-          monthlyPrice: 2999,
+          monthlyPrice: 1499,
           geminiTokens: 10000
         }
       );

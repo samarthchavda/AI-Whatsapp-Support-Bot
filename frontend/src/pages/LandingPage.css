@@ -2677,4 +2677,335 @@
   }
 }
 
+/* Journey Visualizer & Stepper Styles */
+.journey-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.journey-step-item {
+  text-align: left;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.journey-status-badge {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.badge-success {
+  background: rgba(34, 197, 94, 0.12);
+  color: #4ade80;
+  border: 1px solid rgba(34, 197, 94, 0.2);
+}
+
+.badge-info {
+  background: rgba(14, 165, 233, 0.12);
+  color: #38bdf8;
+  border: 1px solid rgba(14, 165, 233, 0.2);
+}
+
+.badge-ai {
+  background: rgba(139, 92, 246, 0.12);
+  color: #a78bfa;
+  border: 1px solid rgba(139, 92, 246, 0.2);
+}
+
+.badge-chat {
+  background: rgba(156, 163, 175, 0.12);
+  color: #d1d5db;
+  border: 1px solid rgba(156, 163, 175, 0.2);
+}
+
+.badge-bolt {
+  background: rgba(245, 158, 11, 0.12);
+  color: #fbbf24;
+  border: 1px solid rgba(245, 158, 11, 0.2);
+}
+
+.badge-human {
+  background: rgba(239, 68, 68, 0.12);
+  color: #fca5a5;
+  border: 1px solid rgba(239, 68, 68, 0.2);
+}
+
+.journey-visualizer {
+  display: flex;
+  flex-direction: column;
+}
+
+.journey-panel {
+  display: flex;
+  flex-direction: column;
+  padding: 24px;
+}
+
+.visual-panel-title {
+  font-size: 16px;
+  font-weight: 800;
+  color: #fafafa;
+  margin-bottom: 24px;
+  text-align: center;
+  letter-spacing: -0.3px;
+  border-bottom: 1px solid rgba(63, 63, 70, 0.5);
+  padding-bottom: 12px;
+}
+
+.workflow-pipeline {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+}
+
+.pipeline-node-v2 {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 10px 16px;
+  background: rgba(24, 24, 27, 0.5);
+  border: 1px solid rgba(63, 63, 70, 0.6);
+  border-radius: 12px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.pipeline-node-v2.active {
+  background: rgba(39, 39, 42, 0.8);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.pipeline-node-v2.glow {
+  box-shadow: 0 0 16px rgba(34, 197, 94, 0.15);
+}
+
+.pipeline-node-v2.meta-v2.glow {
+  border-color: rgba(0, 100, 224, 0.5);
+  box-shadow: 0 0 16px rgba(0, 100, 224, 0.2);
+}
+
+.pipeline-node-v2.store-v2.glow {
+  border-color: rgba(149, 193, 31, 0.5);
+  box-shadow: 0 0 16px rgba(149, 193, 31, 0.2);
+}
+
+.pipeline-node-v2.kb-v2.glow {
+  border-color: rgba(99, 102, 241, 0.5);
+  box-shadow: 0 0 16px rgba(99, 102, 241, 0.2);
+}
+
+.pipeline-node-v2.ai-v2.glow {
+  border-color: rgba(167, 139, 250, 0.5);
+  box-shadow: 0 0 16px rgba(167, 139, 250, 0.2);
+}
+
+.pipeline-node-v2.chat-v2.glow {
+  border-color: rgba(156, 163, 175, 0.5);
+  box-shadow: 0 0 16px rgba(156, 163, 175, 0.2);
+}
+
+.pipeline-node-v2.reply-v2.glow {
+  border-color: rgba(34, 197, 94, 0.5);
+  box-shadow: 0 0 20px rgba(34, 197, 94, 0.35);
+  background: rgba(20, 83, 45, 0.15);
+}
+
+.pipeline-node-v2.handoff-v2.glow {
+  border-color: rgba(239, 68, 68, 0.5);
+  box-shadow: 0 0 16px rgba(239, 68, 68, 0.25);
+  background: rgba(239, 68, 68, 0.05);
+}
+
+.node-icon-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.node-icon-v2 {
+  font-size: 18px;
+  color: #a1a1aa;
+}
+
+.pipeline-node-v2.active .node-icon-v2 {
+  color: #fafafa;
+}
+
+.pipeline-node-v2.meta-v2 .node-icon-v2 {
+  color: #0064e0;
+}
+
+.text-shopify {
+  color: #95c11f !important;
+}
+
+.text-woo {
+  color: #7f54b3 !important;
+}
+
+.text-kb {
+  color: #38bdf8 !important;
+}
+
+.text-ai {
+  color: #a78bfa !important;
+}
+
+.text-chat {
+  color: #fbbf24 !important;
+}
+
+.text-reply {
+  color: #4ade80 !important;
+}
+
+.text-handoff {
+  color: #f87171 !important;
+}
+
+.node-details {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex: 1;
+}
+
+.node-details strong {
+  font-size: 13px;
+  color: #d4d4d8;
+  font-weight: 700;
+}
+
+.pipeline-node-v2.active .node-details strong {
+  color: #ffffff;
+}
+
+.live-status-pill {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 6px;
+}
+
+.live-status-pill.connected {
+  background: rgba(34, 197, 94, 0.1);
+  color: #4ade80;
+}
+
+.live-status-pill.synced {
+  background: rgba(14, 165, 233, 0.1);
+  color: #38bdf8;
+}
+
+.live-status-pill.online {
+  background: rgba(139, 92, 246, 0.1);
+  color: #a78bfa;
+}
+
+.live-status-pill.chat-active {
+  background: rgba(255, 255, 255, 0.05);
+  color: #e4e4e7;
+  font-style: italic;
+  font-weight: 500;
+  max-width: 140px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.live-status-pill.reply-sent {
+  background: rgba(34, 197, 94, 0.2);
+  color: #4ade80;
+  border: 1px solid rgba(34, 197, 94, 0.3);
+}
+
+.live-status-pill.handoff-ready {
+  background: rgba(239, 68, 68, 0.15);
+  color: #fca5a5;
+  border: 1px solid rgba(239, 68, 68, 0.25);
+}
+
+.pipeline-connector-v2 {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 16px;
+  width: 100%;
+}
+
+.pipeline-connector-v2::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: rgba(63, 63, 70, 0.4);
+}
+
+.pipeline-connector-v2.active-pulse::before {
+  background: linear-gradient(180deg, #22c55e, rgba(63, 63, 70, 0.4));
+}
+
+.pipeline-connector-v2.active-pulse .pulse-dot {
+  position: absolute;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #22c55e;
+  box-shadow: 0 0 8px #22c55e;
+  animation: flowDown 1.2s infinite linear;
+}
+
+@keyframes flowDown {
+  0% { transform: translateY(-8px); opacity: 0; }
+  20% { opacity: 1; }
+  80% { opacity: 1; }
+  100% { transform: translateY(8px); opacity: 0; }
+}
+
+/* Trust Badges Below Section */
+.journey-trust-badges {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 32px;
+  margin-top: 48px;
+  padding-top: 24px;
+  border-top: 1px solid rgba(63, 63, 70, 0.4);
+}
+
+.trust-badge {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 14px;
+  font-weight: 700;
+  color: #a1a1aa;
+}
+
+.badge-check-icon {
+  color: #22c55e;
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+@media (max-width: 768px) {
+  .journey-trust-badges {
+    flex-direction: column;
+    gap: 16px;
+    align-items: flex-start;
+    padding-left: 20px;
+  }
+}
+
+
 

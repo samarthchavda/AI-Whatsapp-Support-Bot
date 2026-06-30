@@ -32,34 +32,55 @@ const metrics = [
   { value: '24/7', label: 'WhatsApp coverage' }
 ];
 
-const howItWorksSteps = [
+const journeySteps = [
   {
     number: '01',
-    title: 'Connect WhatsApp',
-    description: 'Establish WhatsApp Cloud API connection or scan the secure QR code to pair your business number with our platform. Takes under 2 minutes.',
-    badge: 'Step 1: Onboarding',
-    visualType: 'connect'
+    title: 'Meta WhatsApp API',
+    description: 'Direct integration with Meta Cloud API for official business phone number routing.',
+    badge: '✓ Connected',
+    badgeType: 'success'
   },
   {
     number: '02',
-    title: 'Train FAQs & Policies',
-    description: 'Feed your store FAQs, custom refund windows, and support documentation directly into the knowledge base. The AI learns your specific business policies.',
-    badge: 'Step 2: Knowledge Ingestion',
-    visualType: 'train'
+    title: 'Shopify & WooCommerce',
+    description: 'Real-time database sync for checking order statuses, tracking details, and processing cancellations.',
+    badge: '✓ Connected',
+    badgeType: 'success'
   },
   {
     number: '03',
-    title: 'Automate 24/7 Support',
-    description: 'The AI WhatsApp Bot immediately begins resolving customer tracking queries, cancellation requests, and policy FAQs without agent intervention.',
-    badge: 'Step 3: Auto-Resolution',
-    visualType: 'automate'
+    title: 'Knowledge Base (PDFs)',
+    description: 'Upload your store FAQs and policies. Information is digested instantly by the AI.',
+    badge: '✓ Knowledge Synced',
+    badgeType: 'info'
   },
   {
     number: '04',
-    title: 'Human Agency Handoff',
-    description: 'If a customer asks for a human, expresses high frustration, or triggers refund escalations, the AI pauses and alerts your live support team.',
-    badge: 'Step 4: Live Handoff',
-    visualType: 'takeover'
+    title: 'AI Processing',
+    description: 'Google Gemini engine analyzes user context, intent, store policies, and real-time order data.',
+    badge: '✓ AI Online',
+    badgeType: 'ai'
+  },
+  {
+    number: '05',
+    title: 'Customer Message',
+    description: 'Shopper asks a question or requests order updates on WhatsApp (e.g., tracking, returns, cancellations).',
+    badge: '✓ Active Chat',
+    badgeType: 'chat'
+  },
+  {
+    number: '06',
+    title: 'Instant AI Reply',
+    description: 'Automated policy-compliant bot reply sent back in under 1.5 seconds. Solves 82%+ of tickets.',
+    badge: '⚡ Auto-Reply',
+    badgeType: 'bolt'
+  },
+  {
+    number: '07',
+    title: 'Human Handoff (if needed)',
+    description: 'If high frustration is detected or a refund is requested, the AI pauses and routes to live agents.',
+    badge: '👥 Live Handoff Ready',
+    badgeType: 'human'
   }
 ];
 
@@ -135,8 +156,15 @@ const faqs = [
 function LandingPage() {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('inbox');
-  const [activeStep, setActiveStep] = useState(0);
+  const [activeJourneyStep, setActiveJourneyStep] = useState(0);
   const [openFaqIndex, setOpenFaqIndex] = useState(null);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setActiveJourneyStep((prev) => (prev + 1) % 7);
+    }, 3200);
+    return () => clearInterval(interval);
+  }, []);
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [copied, setCopied] = useState(false);
   const [showPromoBar, setShowPromoBar] = useState(true);
@@ -544,9 +572,7 @@ function LandingPage() {
               <div className="partner-logo-item openai">
                 <div className="partner-icon-wrap openai-bg">
                   <SiOpenai size={22} color="#ffffff" />
-                </div>
-                <div className="partner-label">
-                  <span className="partner-name">OpenAI</span>
+                    <span className="partner-name">OpenAI</span>
                   <span className="partner-sub">AI Powered</span>
                 </div>
               </div>
@@ -559,130 +585,164 @@ function LandingPage() {
         <section id="how-it-works" className="how-it-works-section animate-on-scroll">
           <div className="section-heading centered">
             <span>Operational Flow</span>
-            <h2>How It Works in 4 Steps</h2>
-            <p>From connection to automation and human collaboration, see how our bot integrates with your support desk.</p>
+            <h2>How It Works</h2>
+            <p>From Meta API connection to automatic resolution and human takeover control.</p>
           </div>
 
           <div className="stepper-grid">
-            <div className="stepper-nav">
-              {howItWorksSteps.map((step, idx) => (
+            {/* Left side: Automated loop steps */}
+            <div className="stepper-nav journey-nav">
+              {journeySteps.map((step, idx) => (
                 <button
                   key={idx}
-                  className={`stepper-nav-item ${activeStep === idx ? 'active' : ''}`}
-                  onClick={() => setActiveStep(idx)}
+                  className={`stepper-nav-item journey-step-item ${activeJourneyStep === idx ? 'active' : ''}`}
+                  onClick={() => setActiveJourneyStep(idx)}
                 >
                   <span className="step-number">{step.number}</span>
                   <div className="step-content">
-                    <span className="step-badge">{step.badge}</span>
-                    <h3>{step.title}</h3>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px', flexWrap: 'wrap' }}>
+                      <h3 style={{ margin: 0, fontSize: '15px' }}>{step.title}</h3>
+                      <span className={`journey-status-badge badge-${step.badgeType}`}>
+                        {step.badge}
+                      </span>
+                    </div>
                     <p>{step.description}</p>
                   </div>
                 </button>
               ))}
             </div>
 
-            <div className="stepper-visual">
+            {/* Right side: Modern Animated Visualizer */}
+            <div className="stepper-visual journey-visualizer">
               <div className="stepper-visual-inner">
-                {activeStep === 0 && (
-                  <div className="visual-panel connect-visual">
-                    <div className="qr-container">
-                      <div className="qr-scanner-mock">
-                        <FaWhatsapp className="qr-whatsapp-icon" />
-                        <div className="qr-pattern-mock">
-                          <div className="qr-dots"></div>
-                        </div>
+                <div className="visual-panel journey-panel">
+                  <h4 className="visual-panel-title">
+                    Your AI Support Bot Goes Live in Under 5 Minutes
+                  </h4>
+                  
+                  <div className="workflow-pipeline">
+                    {/* Meta node */}
+                    <div className={`pipeline-node-v2 meta-v2 ${activeJourneyStep === 0 ? 'active glow' : ''}`}>
+                      <div className="node-icon-wrapper">
+                        <SiMeta className="node-icon-v2" />
                       </div>
-                      <div className="qr-status-indicator">
-                        <span className="status-dot pulsing"></span>
-                        <span>Waiting for QR Scan...</span>
+                      <div className="node-details">
+                        <strong>Meta WhatsApp API</strong>
+                        <span className="live-status-pill connected">✓ Connected</span>
                       </div>
                     </div>
-                    <h4>Direct Connection</h4>
-                    <p>Open WhatsApp on your phone, navigate to Linked Devices, and scan the QR code to activate support instantly.</p>
-                  </div>
-                )}
 
-                {activeStep === 1 && (
-                  <div className="visual-panel train-visual">
-                    <div className="doc-list-mock">
-                      <div className="doc-row-mock">
-                        <FaFileAlt className="doc-icon-mock" />
-                        <div>
-                          <strong>shipping_policies.txt</strong>
-                          <span>2.4 KB • Sync completed</span>
-                        </div>
-                        <span className="doc-badge-mock">Trained</span>
-                      </div>
-                      <div className="doc-row-mock">
-                        <FaFileAlt className="doc-icon-mock" />
-                        <div>
-                          <strong>return_faqs.pdf</strong>
-                          <span>182 KB • Sync completed</span>
-                        </div>
-                        <span className="doc-badge-mock">Trained</span>
-                      </div>
-                      <div className="doc-row-mock">
-                        <FaFileAlt className="doc-icon-mock" />
-                        <div>
-                          <strong>product_catalog.json</strong>
-                          <span>14.8 KB • 38 items updated</span>
-                        </div>
-                        <span className="doc-badge-mock">Synced</span>
-                      </div>
+                    <div className={`pipeline-connector-v2 ${activeJourneyStep === 0 ? 'active-pulse' : ''}`}>
+                      <div className="pulse-dot"></div>
                     </div>
-                    <h4>AI Knowledge Library</h4>
-                    <p>Drag and drop text guides, PDF files, or link your Shopify/WooCommerce store catalog. The AI updates its behavior instantly.</p>
-                  </div>
-                )}
 
-                {activeStep === 2 && (
-                  <div className="visual-panel automate-visual">
-                    <div className="whatsapp-chat-mock">
-                      <div className="chat-header-mock">
-                        <FaWhatsapp />
-                        <span>Store Support Chat</span>
+                    {/* Shopify/WooCommerce Node */}
+                    <div className={`pipeline-node-v2 store-v2 ${activeJourneyStep === 1 ? 'active glow' : ''}`}>
+                      <div className="node-icon-wrapper">
+                        <div style={{ display: 'flex', gap: '4px' }}>
+                          <SiShopify className="node-icon-v2 text-shopify" />
+                          <SiWoocommerce className="node-icon-v2 text-woo" />
+                        </div>
                       </div>
-                      <div className="chat-body-mock">
-                        <div className="bubble-mock user">
-                          Is there a shipping charge for orders below $50?
-                        </div>
-                        <div className="bubble-mock bot">
-                          Yes! For orders under $50, our standard shipping fee is $4.99. Orders above $50 qualify for free shipping! 🚚
-                        </div>
-                        <div className="bubble-system-mock">
-                          Resolved automatically by AI
-                        </div>
+                      <div className="node-details">
+                        <strong>Shopify & WooCommerce</strong>
+                        <span className="live-status-pill connected">✓ Connected</span>
                       </div>
                     </div>
-                    <h4>Automated Resolution</h4>
-                    <p>82%+ of common inquiries are handled instantly by the AI, requiring 0 human staff hours.</p>
-                  </div>
-                )}
 
-                {activeStep === 3 && (
-                  <div className="visual-panel takeover-visual">
-                    <div className="whatsapp-chat-mock">
-                      <div className="chat-header-mock">
-                        <FaWhatsapp />
-                        <span>Store Support Chat</span>
+                    <div className={`pipeline-connector-v2 ${activeJourneyStep === 1 ? 'active-pulse' : ''}`}>
+                      <div className="pulse-dot"></div>
+                    </div>
+
+                    {/* Knowledge Base Node */}
+                    <div className={`pipeline-node-v2 kb-v2 ${activeJourneyStep === 2 ? 'active glow' : ''}`}>
+                      <div className="node-icon-wrapper">
+                        <FaFileAlt className="node-icon-v2 text-kb" />
                       </div>
-                      <div className="chat-body-mock">
-                        <div className="bubble-mock user">
-                          My package was damaged and I want a refund right now.
-                        </div>
-                        <div className="bubble-system-mock warning">
-                          ⚠️ Frustration detected. Pausing bot...
-                        </div>
-                        <div className="bubble-mock bot agent">
-                          Hi there, I am Sarah from customer support. I have taken over this chat. Let me process this refund right away!
-                        </div>
+                      <div className="node-details">
+                        <strong>Knowledge Base (PDFs)</strong>
+                        <span className="live-status-pill synced">✓ Knowledge Synced</span>
                       </div>
                     </div>
-                    <h4>Human Takeover Control</h4>
-                    <p>Automatic takeover guarantees a smooth handoff. High-priority escalation lists notify your staff via email or sound alerts.</p>
+
+                    <div className={`pipeline-connector-v2 ${activeJourneyStep === 2 ? 'active-pulse' : ''}`}>
+                      <div className="pulse-dot"></div>
+                    </div>
+
+                    {/* AI Processing Node */}
+                    <div className={`pipeline-node-v2 ai-v2 ${activeJourneyStep === 3 ? 'active glow' : ''}`}>
+                      <div className="node-icon-wrapper">
+                        <FaBrain className="node-icon-v2 text-ai" />
+                      </div>
+                      <div className="node-details">
+                        <strong>AI Processing</strong>
+                        <span className="live-status-pill online">✓ AI Online</span>
+                      </div>
+                    </div>
+
+                    <div className={`pipeline-connector-v2 ${activeJourneyStep === 3 ? 'active-pulse' : ''}`}>
+                      <div className="pulse-dot"></div>
+                    </div>
+
+                    {/* Customer Message Node */}
+                    <div className={`pipeline-node-v2 chat-v2 ${activeJourneyStep === 4 ? 'active glow' : ''}`}>
+                      <div className="node-icon-wrapper">
+                        <FaComments className="node-icon-v2 text-chat" />
+                      </div>
+                      <div className="node-details">
+                        <strong>Customer Message</strong>
+                        <span className="live-status-pill chat-active">“Is my order arriving today?”</span>
+                      </div>
+                    </div>
+
+                    <div className={`pipeline-connector-v2 ${activeJourneyStep === 4 ? 'active-pulse' : ''}`}>
+                      <div className="pulse-dot"></div>
+                    </div>
+
+                    {/* Instant AI Reply Node */}
+                    <div className={`pipeline-node-v2 reply-v2 ${activeJourneyStep === 5 ? 'active glow' : ''}`}>
+                      <div className="node-icon-wrapper">
+                        <FaBolt className="node-icon-v2 text-reply" />
+                      </div>
+                      <div className="node-details">
+                        <strong>Instant AI Reply</strong>
+                        <span className="live-status-pill reply-sent">⚡ Reply sent in 1.3s</span>
+                      </div>
+                    </div>
+
+                    <div className={`pipeline-connector-v2 ${activeJourneyStep === 5 ? 'active-pulse' : ''}`}>
+                      <div className="pulse-dot"></div>
+                    </div>
+
+                    {/* Human Handoff Node */}
+                    <div className={`pipeline-node-v2 handoff-v2 ${activeJourneyStep === 6 ? 'active glow' : ''}`}>
+                      <div className="node-icon-wrapper">
+                        <FaHeadset className="node-icon-v2 text-handoff" />
+                      </div>
+                      <div className="node-details">
+                        <strong>Human Handoff (if needed)</strong>
+                        <span className="live-status-pill handoff-ready">👥 Live Agent Takeover Ready</span>
+                      </div>
+                    </div>
                   </div>
-                )}
+                </div>
               </div>
+            </div>
+          </div>
+
+          {/* Three Trust Badges Below */}
+          <div className="journey-trust-badges">
+            <div className="trust-badge">
+              <FaCheck className="badge-check-icon" />
+              <span>Setup in under 5 minutes</span>
+            </div>
+            <div className="trust-badge">
+              <FaCheck className="badge-check-icon" />
+              <span>No coding required</span>
+            </div>
+            <div className="trust-badge">
+              <FaCheck className="badge-check-icon" />
+              <span>Official WhatsApp Cloud API</span>
             </div>
           </div>
         </section>

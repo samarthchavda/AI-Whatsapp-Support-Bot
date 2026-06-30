@@ -42,30 +42,18 @@ function Orders({ admin }) {
   const [showBulkUpload, setShowBulkUpload] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(null);
   const [filters, setFilters] = useState({
-    status: '',
-    search: ''
+    status: ''
   });
-  const [searchInput, setSearchInput] = useState('');
-
-  // Debounce search input
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setFilters(prev => ({ ...prev, search: searchInput }));
-    }, 500); // Wait 500ms after user stops typing
-
-    return () => clearTimeout(timer);
-  }, [searchInput]);
 
   useEffect(() => {
     fetchOrders();
-  }, [filters.status, filters.search]);
+  }, [filters.status]);
 
   const fetchOrders = async () => {
     try {
       setLoading(true);
       const params = { limit: 100 }; // Fetch up to 100 orders
       if (filters.status) params.status = filters.status;
-      if (filters.search) params.search = filters.search;
 
       const response = await getOrders(params);
       setOrders(response.data.orders);
@@ -231,14 +219,7 @@ Bob Johnson,+1234567892,bob@example.com,Standard Item,3,149.99,shipped`;
     delivered: orders.filter((o) => o.status === 'delivered').length
   }), [orders]);
 
-  if (loading && orders.length === 0) {
-    return (
-      <div className="loading">
-        <div className="spinner"></div>
-        <span>Loading orders...</span>
-      </div>
-    );
-  }
+  // No full page loading blocker so headers and stats render instantly
 
   return (
     <div className="container">
@@ -501,60 +482,6 @@ Bob Johnson,+1234567892,bob@example.com,Standard Item,3,149.99,shipped`;
           </select>
         </div>
 
-        <div className="filter-group" style={{ flex: 1, minWidth: '300px' }}>
-          <label>Search</label>
-          <div style={{ position: 'relative', display: 'flex', gap: '8px', alignItems: 'flex-end' }}>
-            <div style={{ flex: 1, position: 'relative' }}>
-              <input 
-                type="text" 
-                placeholder="Order ID, Customer Name, Phone"
-                value={searchInput}
-                onChange={(e) => setSearchInput(e.target.value)}
-                style={{ width: '100%', paddingRight: searchInput ? '36px' : '14px' }}
-              />
-              {searchInput && (
-                <button
-                  onClick={() => setSearchInput('')}
-                  style={{
-                    position: 'absolute',
-                    right: '8px',
-                    top: '50%',
-                    transform: 'translateY(-50%)',
-                    background: 'rgba(63, 63, 70, 0.5)',
-                    border: 'none',
-                    borderRadius: '6px',
-                    width: '24px',
-                    height: '24px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    cursor: 'pointer',
-                    color: '#a1a1aa',
-                    fontSize: '14px'
-                  }}
-                  title="Clear search"
-                >
-                  ✕
-                </button>
-              )}
-            </div>
-          </div>
-          {loading && searchInput && (
-            <small style={{ color: '#6366f1', fontSize: '11px', marginTop: '4px', display: 'block' }}>
-              🔍 Searching...
-            </small>
-          )}
-          {!loading && searchInput && orders.length === 0 && (
-            <small style={{ color: '#ef4444', fontSize: '11px', marginTop: '4px', display: 'block' }}>
-              No results found for "{searchInput}"
-            </small>
-          )}
-          {!loading && searchInput && orders.length > 0 && (
-            <small style={{ color: '#10b981', fontSize: '11px', marginTop: '4px', display: 'block' }}>
-              Found {orders.length} result{orders.length !== 1 ? 's' : ''}
-            </small>
-          )}
-        </div>
       </div>
 
       {error && <div className="error">{error}</div>}
@@ -564,7 +491,12 @@ Bob Johnson,+1234567892,bob@example.com,Standard Item,3,149.99,shipped`;
           <h2><FaBox style={{ marginRight: '10px', color: 'var(--accent)' }} />All Orders ({orders.length})</h2>
         </div>
         <div className="table-wrapper">
-          {orders.length > 0 ? (
+          {loading ? (
+            <div className="orders-empty" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '60px 24px', gap: '16px' }}>
+              <div className="spinner"></div>
+              <span>Loading orders...</span>
+            </div>
+          ) : orders.length > 0 ? (
             <table className="premium-table">
               <thead>
                 <tr>

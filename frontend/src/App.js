@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Link, useLocation, useNavigate, Navigate } from 'react-router-dom';
-import { FaHome, FaComments, FaBox, FaExclamationTriangle, FaPlug, FaRobot, FaSearch, FaBell, FaPlus, FaSignOutAlt, FaUser, FaBrain, FaCommentDots, FaBroadcastTower, FaChartLine, FaCog, FaCrown, FaFileAlt, FaSun, FaMoon, FaShoppingCart, FaCoins, FaUserSecret, FaHeartbeat, FaBullhorn, FaBlog, FaBars } from 'react-icons/fa';
-import api, { clearAuthState, refreshAuth, updateAdminProfile } from './services/api';
+import { FaHome, FaComments, FaBox, FaExclamationTriangle, FaPlug, FaRobot, FaSearch, FaBell, FaPlus, FaSignOutAlt, FaUser, FaBrain, FaCommentDots, FaBroadcastTower, FaChartLine, FaCog, FaCrown, FaFileAlt, FaShoppingCart, FaCoins, FaUserSecret, FaHeartbeat, FaBullhorn, FaBlog, FaBars } from 'react-icons/fa';
+import api, { clearAuthState, refreshAuth } from './services/api';
 import Dashboard from './pages/Dashboard';
 import Profile from './pages/Profile';
 import Conversations from './pages/Conversations';
@@ -347,18 +347,7 @@ function TopBar({ admin, onUpdateAdmin, isImpersonated, onToggleSidebar }) {
     return 'Good evening';
   };
 
-  const toggleTheme = async () => {
-    if (!admin) return;
-    const newTheme = admin.theme === 'dark' ? 'light' : 'dark';
-    try {
-      const response = await updateAdminProfile({ theme: newTheme });
-      if (response.data?.success) {
-        onUpdateAdmin(response.data.data.admin);
-      }
-    } catch (error) {
-      console.error('Failed to toggle theme:', error);
-    }
-  };
+
 
   return (
     <div className="top-bar" style={isImpersonated ? { top: '42px' } : {}}>
@@ -385,14 +374,7 @@ function TopBar({ admin, onUpdateAdmin, isImpersonated, onToggleSidebar }) {
       </div>
 
       <div className="top-bar-actions">
-        <button 
-          className="icon-button theme-toggle" 
-          onClick={toggleTheme} 
-          title={`Switch to ${admin?.theme === 'dark' ? 'light' : 'dark'} theme`}
-          aria-label="Toggle Theme"
-        >
-          {admin?.theme === 'dark' ? <FaSun /> : <FaMoon />}
-        </button>
+
 
         <button className="icon-button" title="Notifications" aria-label="Notifications">
           <FaBell />
@@ -454,12 +436,10 @@ function ThemeHandler({ admin }) {
 
     if (isPublicPath) {
       document.body.classList.add('dark-theme');
-    } else if (admin && admin.theme) {
-      document.body.classList.toggle('dark-theme', admin.theme === 'dark');
     } else {
       document.body.classList.remove('dark-theme');
     }
-  }, [admin, location.pathname]);
+  }, [location.pathname]);
 
   return null;
 }

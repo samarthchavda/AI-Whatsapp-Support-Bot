@@ -116,23 +116,8 @@ const platformItems = [
   'Secure multi-agent role permissions and admin consoles'
 ];
 
-const testimonials = [
-  {
-    quote: "Kwickbot has completely transformed our customer operations. We synced our Shopify store and the AI immediately began resolving 80% of our order tracking and cancellation tickets automatically.",
-    author: "Elena R.",
-    role: "Founder, EcoStyle Apparel"
-  },
-  {
-    quote: "The instant human handoff feature is a lifesaver. When customers request refunds, the AI pauses itself and alerts our team immediately in the live chat workspace. Setup took us less than 5 minutes.",
-    author: "Marcus K.",
-    role: "Support Director, FitGear Store"
-  },
-  {
-    quote: "Being able to send bulk campaign updates while keeping Gemini AI budgets under control is exactly what we needed. Our WhatsApp customer engagement is up 3x since we started.",
-    author: "Aarav S.",
-    role: "Operations Head, OrganicGlow"
-  }
-];
+
+
 
 const faqs = [
   {
@@ -888,27 +873,46 @@ function LandingPage() {
           </div>
         </section>
 
-        {/* Customer Testimonials */}
-        <section className="testimonials-section animate-on-scroll">
+        {/* Early Access Partner Program */}
+        <section className="testimonials-section early-access-section animate-on-scroll">
           <div className="testimonials-container">
             <div className="section-heading centered">
-              <span>Testimonials</span>
-              <h2>What e-commerce founders are saying</h2>
-              <p>Loved by online store owners managing automated customer support pipelines.</p>
+              <span>Early Access Program</span>
+              <h2>Looking for our first 10 partner stores</h2>
+              <p>Skip the wait and get personal launch support. Join our Early Access cohort to build your store AI bot together.</p>
             </div>
-            <div className="testimonials-grid">
-              {testimonials.map((t, idx) => (
-                <div className="testimonial-card" key={idx}>
-                  <p className="testimonial-quote">"{t.quote}"</p>
-                  <div className="testimonial-author">
-                    <div className="avatar-placeholder">{t.author.charAt(0)}</div>
-                    <div className="author-meta">
-                      <h4>{t.author}</h4>
-                      <p>{t.role}</p>
+            
+            <div className="early-access-card-wrapper">
+              <div className="early-access-card">
+                <div className="early-access-badge">Limited Opportunities</div>
+                <h3>Partner with Kwickbot Founders</h3>
+                <p className="early-access-pitch">
+                  We are selecting exactly <strong>10 Shopify & WooCommerce brands</strong> to act as our launching design partners. Our core engineering team will personally build, train, and configure your store's AI bot to resolve queries and handle cancellations automatically.
+                </p>
+                <div className="early-access-benefits">
+                  <div className="benefit-item">
+                    <span className="benefit-icon">✓</span>
+                    <div>
+                      <strong>Free Custom Setup:</strong> We design your bot flow and train the FAQs on your policies from scratch.
+                    </div>
+                  </div>
+                  <div className="benefit-item">
+                    <span className="benefit-icon">✓</span>
+                    <div>
+                      <strong>60% Lifelong Discount:</strong> Locked-in premium subscription plans for being an early adopter.
+                    </div>
+                  </div>
+                  <div className="benefit-item">
+                    <span className="benefit-icon">✓</span>
+                    <div>
+                      <strong>Founder Chat Access:</strong> A direct Slack/WhatsApp connection with Kwickbot developers for feature requests.
                     </div>
                   </div>
                 </div>
-              ))}
+                <button className="early-access-action-btn" onClick={() => navigate('/book-demo')}>
+                  Apply for Early Partner Access <FaArrowRight style={{ marginLeft: '8px' }} />
+                </button>
+              </div>
             </div>
           </div>
         </section>

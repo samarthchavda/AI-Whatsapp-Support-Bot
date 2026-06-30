@@ -280,10 +280,10 @@ function Billing() {
             <h4 style={{ margin: '0 0 10px 0', fontSize: '12px', color: '#a5b4fc', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: '700' }}>Plan Limits</h4>
             <div className="plan-limits-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '10px 16px' }}>
               <div style={{ fontSize: '13px', color: '#a1a1aa' }}>
-                Conversations: <strong style={{ color: '#fafafa' }}>{currentFeatures.maxConversations === -1 ? 'Unlimited' : currentFeatures.maxConversations}</strong>
+                Conversations (Unique Chats): <strong style={{ color: '#fafafa' }}>{currentFeatures.maxConversations === -1 ? 'Unlimited' : currentFeatures.maxConversations}</strong>
               </div>
               <div style={{ fontSize: '13px', color: '#a1a1aa' }}>
-                Messages: <strong style={{ color: '#fafafa' }}>{currentFeatures.maxMessages === -1 ? 'Unlimited' : currentFeatures.maxMessages}</strong>
+                Messages (Text Bubbles): <strong style={{ color: '#fafafa' }}>{currentFeatures.maxMessages === -1 ? 'Unlimited' : currentFeatures.maxMessages}</strong>
               </div>
               <div style={{ fontSize: '13px', color: '#a1a1aa' }}>
                 WhatsApp Connections: <strong style={{ color: '#fafafa' }}>{currentFeatures.maxWhatsAppConnections} max</strong>
@@ -461,13 +461,13 @@ function Billing() {
                   
                   {/* Messages */}
                   {plan.name === 'starter' && (
-                    <li><FaCheck style={{ color: '#10b981' }} /> Up to 2,000 incoming & outgoing messages/mo</li>
+                    <li><FaCheck style={{ color: '#10b981' }} /> Up to 2,000 incoming & outgoing messages/mo (individual text bubbles)</li>
                   )}
                   {plan.name === 'professional' && (
-                    <li><FaCheck style={{ color: '#10b981' }} /> Up to 15,000 incoming & outgoing messages/mo</li>
+                    <li><FaCheck style={{ color: '#10b981' }} /> Up to 15,000 incoming & outgoing messages/mo (individual text bubbles)</li>
                   )}
                   {plan.name === 'enterprise' && (
-                    <li><FaCheck style={{ color: '#10b981' }} /> Unlimited incoming & outgoing messages/mo</li>
+                    <li><FaCheck style={{ color: '#10b981' }} /> Unlimited incoming & outgoing messages/mo (individual text bubbles)</li>
                   )}
 
 

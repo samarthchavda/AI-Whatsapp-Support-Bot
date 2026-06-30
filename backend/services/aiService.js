@@ -749,7 +749,7 @@ Smart Fallback Rules (when specific information is not available in the knowledg
           break;
 
         case 'cancel_order':
-          const cancelResult = await this.handleCancelOrderRequest(customerPhone, message, adminDoc ? adminDoc._id : null);
+          const cancelResult = await this.handleCancelOrderRequest(customerPhone, message, adminDoc);
           response = cancelResult.message;
           relatedOrderIds = cancelResult.orderIds || [];
           break;
@@ -1552,8 +1552,19 @@ Response format must be ONLY the product name or "NONE". Do not write any other 
     return null;
   }
 
-  async handleCancelOrderRequest(customerPhone, message, adminId = null) {
+  async handleCancelOrderRequest(customerPhone, message, adminDoc = null) {
     try {
+      const adminId = adminDoc ? adminDoc._id : null;
+
+      // Restrict order cancellation to Professional and Enterprise/Scale plans
+      const plan = (adminDoc && adminDoc.subscriptionPlan) ? adminDoc.subscriptionPlan.toLowerCase() : 'starter';
+      if (plan === 'starter') {
+        return {
+          success: false,
+          message: "Order cancellation via WhatsApp is not supported on our Starter plan. Please contact our support team or log in to your account on our website to request order cancellation."
+        };
+      }
+
       const phoneFormats = this.getPhoneFormats(customerPhone);
       const requestedOrderId = this.extractOrderId(message);
       const phoneQuery = this.buildPhoneSearchQuery(phoneFormats);

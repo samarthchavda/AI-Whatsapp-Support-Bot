@@ -536,6 +536,15 @@ function Billing() {
                     )}
                   </li>
 
+                  {/* Order Cancellation */}
+                  <li style={{ opacity: (plan.name !== 'starter') ? 1 : 0.5 }}>
+                    {plan.name !== 'starter' ? (
+                      <><FaCheck style={{ color: '#10b981' }} /> Automated WhatsApp Order Cancellations (Growth & Scale)</>
+                    ) : (
+                      <><FaTimes style={{ color: '#ef4444', marginRight: '8px' }} /> <span style={{ textDecoration: 'line-through' }}>Automated WhatsApp Order Cancellations</span></>
+                    )}
+                  </li>
+
                   {/* Custom Branding */}
                   <li style={{ opacity: features.customBranding ? 1 : 0.5 }}>
                     {features.customBranding ? (

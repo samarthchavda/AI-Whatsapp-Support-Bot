@@ -327,52 +327,51 @@ function Broadcast() {
                 <div className="filter-group" style={{ gridColumn: 'span 2' }}>
                   <label>Import Preview</label>
                   {importPreview?.loading ? (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '16px', background: 'rgba(99,102,241,0.08)', border: '1px solid rgba(99,102,241,0.2)', borderRadius: '12px', color: '#a5b4fc', fontSize: '14px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', padding: '24px', background: 'rgba(99,102,241,0.06)', border: '1px solid rgba(99,102,241,0.15)', borderRadius: '14px', color: '#a5b4fc', fontSize: '14px' }}>
                       <div className="spinner" style={{ width: '18px', height: '18px', margin: 0 }} />
-                      Loading contact preview...
+                      Fetching contacts from Orders...
                     </div>
                   ) : importPreview?.error ? (
-                    <div style={{ padding: '16px', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: '12px', color: '#ef4444', fontSize: '14px' }}>
+                    <div style={{ padding: '16px', background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: '14px', color: '#ef4444', fontSize: '14px' }}>
                       ⚠️ {importPreview.error}
                     </div>
                   ) : importPreview ? (
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                      <div style={{ padding: '18px 20px', background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.25)', borderRadius: '12px', textAlign: 'center' }}>
-                        <div style={{ fontSize: '32px', fontWeight: '800', color: '#10b981', lineHeight: 1 }}>{importPreview.count}</div>
-                        <div style={{ fontSize: '12px', color: '#a1a1aa', marginTop: '6px', fontWeight: '500' }}>Unique Contacts Ready</div>
+                    <div style={{ padding: '24px 28px', background: 'rgba(16,185,129,0.06)', border: '1px solid rgba(16,185,129,0.2)', borderRadius: '14px', borderLeft: '4px solid #10b981', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '20px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+                        <div style={{ width: '56px', height: '56px', borderRadius: '14px', background: 'rgba(16,185,129,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px', flexShrink: 0 }}>📦</div>
+                        <div>
+                          <div style={{ fontSize: '13px', color: '#a1a1aa', fontWeight: '500', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Unique Contacts Ready</div>
+                          <div style={{ fontSize: '42px', fontWeight: '900', color: '#10b981', lineHeight: 1, letterSpacing: '-1px' }}>{importPreview.count.toLocaleString()}</div>
+                          <div style={{ fontSize: '12px', color: '#71717a', marginTop: '4px' }}>Imported from: <span style={{ color: '#a5b4fc', fontWeight: '600' }}>{importPreview.source}</span> · Duplicates removed</div>
+                        </div>
                       </div>
-                      <div style={{ padding: '18px 20px', background: 'rgba(99,102,241,0.08)', border: '1px solid rgba(99,102,241,0.2)', borderRadius: '12px', display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: '6px' }}>
-                        <div style={{ fontSize: '13px', color: '#a5b4fc', fontWeight: '600' }}>✅ Ready to Import</div>
-                        <div style={{ fontSize: '12px', color: '#71717a' }}>From: {importPreview.source}</div>
-                        <div style={{ fontSize: '12px', color: '#71717a' }}>Duplicates removed automatically</div>
-                      </div>
+                      <div style={{ padding: '8px 16px', background: 'rgba(16,185,129,0.15)', borderRadius: '20px', color: '#10b981', fontSize: '13px', fontWeight: '700', whiteSpace: 'nowrap', flexShrink: 0 }}>✅ Ready</div>
                     </div>
                   ) : null}
                 </div>
               ) : (
-
                 <div className="filter-group" style={{ gridColumn: 'span 2' }}>
                   <label>Import Preview</label>
                   {importPreview?.loading ? (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '16px', background: 'rgba(99,102,241,0.08)', border: '1px solid rgba(99,102,241,0.2)', borderRadius: '12px', color: '#a5b4fc', fontSize: '14px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', padding: '24px', background: 'rgba(99,102,241,0.06)', border: '1px solid rgba(99,102,241,0.15)', borderRadius: '14px', color: '#a5b4fc', fontSize: '14px' }}>
                       <div className="spinner" style={{ width: '18px', height: '18px', margin: 0 }} />
-                      Loading contact preview...
+                      Fetching contacts from Abandoned Carts...
                     </div>
                   ) : importPreview?.error ? (
-                    <div style={{ padding: '16px', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: '12px', color: '#ef4444', fontSize: '14px' }}>
+                    <div style={{ padding: '16px', background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: '14px', color: '#ef4444', fontSize: '14px' }}>
                       ⚠️ {importPreview.error}
                     </div>
                   ) : importPreview ? (
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                      <div style={{ padding: '18px 20px', background: recipientSource === 'crm' ? 'rgba(16,185,129,0.08)' : 'rgba(245,158,11,0.08)', border: `1px solid ${recipientSource === 'crm' ? 'rgba(16,185,129,0.25)' : 'rgba(245,158,11,0.25)'}`, borderRadius: '12px', textAlign: 'center' }}>
-                        <div style={{ fontSize: '32px', fontWeight: '800', color: recipientSource === 'crm' ? '#10b981' : '#f59e0b', lineHeight: 1 }}>{importPreview.count}</div>
-                        <div style={{ fontSize: '12px', color: '#a1a1aa', marginTop: '6px', fontWeight: '500' }}>Unique Contacts Ready</div>
+                    <div style={{ padding: '24px 28px', background: 'rgba(245,158,11,0.06)', border: '1px solid rgba(245,158,11,0.2)', borderRadius: '14px', borderLeft: '4px solid #f59e0b', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '20px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+                        <div style={{ width: '56px', height: '56px', borderRadius: '14px', background: 'rgba(245,158,11,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px', flexShrink: 0 }}>🛒</div>
+                        <div>
+                          <div style={{ fontSize: '13px', color: '#a1a1aa', fontWeight: '500', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Unique Contacts Ready</div>
+                          <div style={{ fontSize: '42px', fontWeight: '900', color: '#f59e0b', lineHeight: 1, letterSpacing: '-1px' }}>{importPreview.count.toLocaleString()}</div>
+                          <div style={{ fontSize: '12px', color: '#71717a', marginTop: '4px' }}>Imported from: <span style={{ color: '#a5b4fc', fontWeight: '600' }}>{importPreview.source}</span> · Duplicates removed</div>
+                        </div>
                       </div>
-                      <div style={{ padding: '18px 20px', background: 'rgba(99,102,241,0.08)', border: '1px solid rgba(99,102,241,0.2)', borderRadius: '12px', display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: '6px' }}>
-                        <div style={{ fontSize: '13px', color: '#a5b4fc', fontWeight: '600' }}>✅ Ready to Import</div>
-                        <div style={{ fontSize: '12px', color: '#71717a' }}>From: {importPreview.source}</div>
-                        <div style={{ fontSize: '12px', color: '#71717a' }}>Duplicates removed automatically</div>
-                      </div>
+                      <div style={{ padding: '8px 16px', background: 'rgba(245,158,11,0.15)', borderRadius: '20px', color: '#f59e0b', fontSize: '13px', fontWeight: '700', whiteSpace: 'nowrap', flexShrink: 0 }}>✅ Ready</div>
                     </div>
                   ) : null}
                 </div>

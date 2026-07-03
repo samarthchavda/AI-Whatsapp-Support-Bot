@@ -1,6 +1,4 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { io } from 'socket.io-client';
-import { QRCodeSVG } from 'qrcode.react';
 import { FaPlug, FaWhatsapp, FaServer, FaCheckCircle, FaExclamationTriangle, FaInfoCircle, FaArrowRight, FaKey, FaBuilding, FaUserCheck, FaCode, FaLaptop, FaCopy, FaChevronDown, FaChevronUp, FaExternalLinkAlt } from 'react-icons/fa';
 
 const BASE_URL = process.env.REACT_APP_API_URL?.replace('/api', '') || (window.location.hostname === 'localhost' ? 'http://localhost:5001' : window.location.origin);
@@ -132,7 +130,6 @@ const WIDGET_GUIDE_STEPS = [
 ];
 
 function WhatsAppConnect() {
-  const admin = JSON.parse(localStorage.getItem('admin') || '{}');
   const [activeTab, setActiveTab] = useState('cloudapi');
   
   // Onboarding Guide States
@@ -142,12 +139,7 @@ function WhatsAppConnect() {
   const [currentWidgetGuideStep, setCurrentWidgetGuideStep] = useState(0);
 
   
-  // Web Bot States
-  const [qrCode, setQrCode] = useState(null);
-  const [webStatus, setWebStatus] = useState('connecting');
-  const [webStatusMessage, setWebStatusMessage] = useState('Connecting to server...');
-  const [isServerConnected, setIsServerConnected] = useState(false);
-  const [socket, setSocket] = useState(null);
+
 
   // Cloud API States
   const [cloudStatus, setCloudStatus] = useState(null);
@@ -390,102 +382,10 @@ function WhatsAppConnect() {
   }, [isWidgetGuideOpen]);
 
 
-  // Web Bot Socket Handshake
+  // Fetch Cloud API status on load
   useEffect(() => {
-    const newSocket = io(BASE_URL, { transports: ['websocket'] });
-
-    newSocket.on('connect', () => {
-      setIsServerConnected(true);
-      setWebStatus('waiting');
-      setWebStatusMessage('Waiting for WhatsApp QR code...');
-    });
-
-    newSocket.on('disconnect', () => {
-      setIsServerConnected(false);
-      setWebStatus('disconnected');
-      setWebStatusMessage('Disconnected from server');
-    });
-
-    newSocket.on('whatsapp-qr', (data) => {
-      setQrCode(data.qr);
-      setWebStatus('qr_ready');
-      setWebStatusMessage('Scan this QR code with WhatsApp');
-    });
-
-    newSocket.on('whatsapp-status', (data) => {
-      setWebStatus(data.status);
-      setWebStatusMessage(data.message || getStatusMessage(data.status));
-      
-      if (data.status === 'ready' || data.isReady) {
-        setQrCode(null);
-        setWebStatus('ready');
-        setWebStatusMessage('WhatsApp connected successfully!');
-      }
-    });
-
-    setSocket(newSocket);
-
-    // Initial load for Cloud API
     fetchCloudStatus();
-
-    return () => {
-      newSocket.close();
-    };
   }, [fetchCloudStatus]);
-
-  const getStatusMessage = (status) => {
-    const messages = {
-      connecting: 'Connecting to server...',
-      waiting: 'Waiting for WhatsApp initialization...',
-      waiting_qr: 'Generating QR code...',
-      qr_ready: 'Scan this QR code with WhatsApp',
-      restoring: 'Restoring previous session...',
-      authenticated: 'Authentication successful!',
-      ready: 'WhatsApp connected and ready!',
-      disconnected: 'Disconnected from WhatsApp',
-      error: 'Connection error occurred'
-    };
-    return messages[status] || 'Unknown status';
-  };
-
-  const getStatusIcon = (status) => {
-    switch (status) {
-      case 'ready':
-      case 'active':
-        return <FaCheckCircle style={{ color: '#10b981', fontSize: '48px' }} />;
-      case 'qr_ready':
-        return <FaWhatsapp style={{ color: '#14b8a6', fontSize: '48px' }} />;
-      case 'waiting':
-      case 'waiting_qr':
-      case 'restoring':
-      case 'connecting':
-        return <div className="spinner" style={{ width: '48px', height: '48px', margin: '0 auto' }}></div>;
-      case 'disconnected':
-      case 'error':
-        return <FaExclamationTriangle style={{ color: '#ef4444', fontSize: '48px' }} />;
-      default:
-        return <FaPlug style={{ color: '#6b7280', fontSize: '48px' }} />;
-    }
-  };
-
-  const getStatusBadgeColor = (status) => {
-    switch (status) {
-      case 'ready':
-      case 'active':
-        return { bg: '#d1fae5', text: '#065f46' };
-      case 'qr_ready':
-        return { bg: '#ccfbf1', text: '#0f766e' };
-      case 'waiting':
-      case 'waiting_qr':
-      case 'restoring':
-        return { bg: '#fef3c7', text: '#92400e' };
-      case 'disconnected':
-      case 'error':
-        return { bg: '#fee2e2', text: '#991b1b' };
-      default:
-        return { bg: '#f3f4f6', text: '#374151' };
-    }
-  };
 
   return (
     <div className="container" style={{ padding: '24px', maxWidth: '1000px', margin: '0 auto' }}>
@@ -503,24 +403,7 @@ function WhatsAppConnect() {
         marginBottom: '24px',
         gap: '16px'
       }}>
-        {admin?.role === 'super_admin' && cloudStatus?.webBotEnabled && (
-          <button
-            onClick={() => setActiveTab('webbot')}
-            style={{
-              padding: '12px 20px',
-              fontSize: '16px',
-              fontWeight: '600',
-              border: 'none',
-              background: 'none',
-              borderBottom: activeTab === 'webbot' ? '3px solid #25d366' : '3px solid transparent',
-              color: activeTab === 'webbot' ? '#25d366' : '#71717a',
-              cursor: 'pointer',
-              transition: 'all 0.2s ease'
-            }}
-          >
-            📱 WhatsApp Web Bot (Demo/QR Code)
-          </button>
-        )}
+
         <button
           onClick={() => {
             setActiveTab('cloudapi');
@@ -559,108 +442,7 @@ function WhatsAppConnect() {
       </div>
 
       {/* Content Area */}
-      {admin?.role === 'super_admin' && activeTab === 'webbot' && (
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: '1fr 1fr',
-          gap: '24px',
-          alignItems: 'start'
-        }}>
-          {/* Status Column */}
-          <div style={{
-            backgroundColor: '#ffffff',
-            borderRadius: '16px',
-            padding: '32px',
-            boxShadow: '0 4px 20px rgba(0,0,0,0.05)',
-            textAlign: 'center',
-            border: '1px solid #f4f4f5'
-          }}>
-            <div style={{ marginBottom: '16px' }}>
-              {getStatusIcon(webStatus)}
-            </div>
-            
-            <h3 style={{ fontSize: '20px', fontWeight: '700', marginBottom: '8px', color: '#18181b' }}>
-              {webStatusMessage}
-            </h3>
 
-            <div style={{
-              display: 'inline-block',
-              padding: '6px 12px',
-              borderRadius: '20px',
-              fontSize: '14px',
-              fontWeight: '600',
-              backgroundColor: getStatusBadgeColor(webStatus).bg,
-              color: getStatusBadgeColor(webStatus).text,
-              marginBottom: '20px'
-            }}>
-              Status: {webStatus.toUpperCase().replace('_', ' ')}
-            </div>
-
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '8px',
-              borderTop: '1px solid #e4e4e7',
-              paddingTop: '16px',
-              fontSize: '14px',
-              color: '#71717a'
-            }}>
-              <FaServer style={{ color: isServerConnected ? '#10b981' : '#ef4444' }} />
-              <span>{isServerConnected ? 'Backend Server Online' : 'Backend Server Offline'}</span>
-            </div>
-          </div>
-
-          {/* QR Code / Action Column */}
-          <div style={{
-            backgroundColor: '#ffffff',
-            borderRadius: '16px',
-            padding: '32px',
-            boxShadow: '0 4px 20px rgba(0,0,0,0.05)',
-            border: '1px solid #f4f4f5'
-          }}>
-            {qrCode && webStatus === 'qr_ready' ? (
-              <div style={{ textAlign: 'center' }}>
-                <h3 style={{ fontSize: '18px', fontWeight: '700', marginBottom: '16px', color: '#18181b' }}>Pair with Your Mobile Account</h3>
-                <div style={{
-                  display: 'inline-block',
-                  padding: '16px',
-                  backgroundColor: '#ffffff',
-                  borderRadius: '12px',
-                  border: '1px solid #e4e4e7',
-                  marginBottom: '16px'
-                }}>
-                  <QRCodeSVG value={qrCode} size={200} level="H" includeMargin={true} />
-                </div>
-                <div style={{ textAlign: 'left', padding: '16px', backgroundColor: '#f4f4f5', borderRadius: '12px' }}>
-                  <h4 style={{ fontSize: '14px', fontWeight: '700', marginBottom: '8px', color: '#18181b' }}>Pairing Instructions:</h4>
-                  <ol style={{ paddingLeft: '18px', fontSize: '13px', color: '#52525b', lineHeight: '1.6', margin: 0 }}>
-                    <li>Open WhatsApp on your mobile phone.</li>
-                    <li>Tap <strong>Settings</strong> or <strong>Menu (⋮)</strong>.</li>
-                    <li>Select <strong>Linked Devices</strong>.</li>
-                    <li>Tap <strong>Link a Device</strong> and point your camera to this QR code.</li>
-                  </ol>
-                </div>
-              </div>
-            ) : webStatus === 'ready' ? (
-              <div style={{ textAlign: 'center', padding: '24px 0' }}>
-                <FaCheckCircle style={{ color: '#10b981', fontSize: '64px', marginBottom: '16px' }} />
-                <h3 style={{ fontSize: '20px', fontWeight: '700', color: '#065f46', marginBottom: '8px' }}>Active Session Connected</h3>
-                <p style={{ fontSize: '14px', color: '#047857', margin: 0 }}>
-                  The demo WhatsApp Web client is active. All incoming customer queries will automatically trigger AI responses.
-                </p>
-              </div>
-            ) : (
-              <div style={{ padding: '20px', textAlign: 'center', color: '#71717a' }}>
-                <FaInfoCircle style={{ fontSize: '32px', color: '#a1a1aa', marginBottom: '12px' }} />
-                <p style={{ fontSize: '14px', lineHeight: '1.5', margin: 0 }}>
-                  The Web Bot is initializing. If no session is saved, a QR code will display here shortly. Ensure chromium dependencies are active.
-                </p>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
 
       {activeTab === 'cloudapi' && (
         <div style={{

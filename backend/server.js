@@ -30,11 +30,6 @@ const blogRoutes = require('./routes/blogRoutes');
 
 // Import WhatsApp bot (optional - only if available)
 let whatsappWebBot = null;
-try {
-  whatsappWebBot = require('./services/whatsappWebBot');
-} catch (error) {
-  console.log('⚠️  WhatsApp Web Bot not available:', error.message);
-}
 
 const app = express();
 app.set('trust proxy', 1);

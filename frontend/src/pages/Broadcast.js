@@ -327,25 +327,17 @@ function Broadcast() {
                 <div className="filter-group" style={{ gridColumn: 'span 2' }}>
                   <label>Import Preview</label>
                   {importPreview?.loading ? (
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', padding: '24px', background: 'rgba(99,102,241,0.06)', border: '1px solid rgba(99,102,241,0.15)', borderRadius: '14px', color: '#a5b4fc', fontSize: '14px' }}>
-                      <div className="spinner" style={{ width: '18px', height: '18px', margin: 0 }} />
-                      Fetching contacts from Orders...
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 16px', background: 'var(--bg-elevated)', border: '1px solid var(--border-default)', borderRadius: '10px', color: 'var(--text-muted)', fontSize: '14px' }}>
+                      <div className="spinner" style={{ width: '14px', height: '14px', margin: 0 }} /> Fetching contacts...
                     </div>
                   ) : importPreview?.error ? (
-                    <div style={{ padding: '16px', background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: '14px', color: '#ef4444', fontSize: '14px' }}>
+                    <div style={{ padding: '12px 16px', background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: '10px', color: '#ef4444', fontSize: '14px' }}>
                       ⚠️ {importPreview.error}
                     </div>
                   ) : importPreview ? (
-                    <div style={{ padding: '24px 28px', background: 'rgba(16,185,129,0.06)', border: '1px solid rgba(16,185,129,0.2)', borderRadius: '14px', borderLeft: '4px solid #10b981', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '20px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
-                        <div style={{ width: '56px', height: '56px', borderRadius: '14px', background: 'rgba(16,185,129,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px', flexShrink: 0 }}>📦</div>
-                        <div>
-                          <div style={{ fontSize: '13px', color: '#a1a1aa', fontWeight: '500', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Unique Contacts Ready</div>
-                          <div style={{ fontSize: '42px', fontWeight: '900', color: '#10b981', lineHeight: 1, letterSpacing: '-1px' }}>{importPreview.count.toLocaleString()}</div>
-                          <div style={{ fontSize: '12px', color: '#71717a', marginTop: '4px' }}>Imported from: <span style={{ color: '#a5b4fc', fontWeight: '600' }}>{importPreview.source}</span> · Duplicates removed</div>
-                        </div>
-                      </div>
-                      <div style={{ padding: '8px 16px', background: 'rgba(16,185,129,0.15)', borderRadius: '20px', color: '#10b981', fontSize: '13px', fontWeight: '700', whiteSpace: 'nowrap', flexShrink: 0 }}>✅ Ready</div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', background: 'rgba(16,185,129,0.06)', border: '1px solid rgba(16,185,129,0.2)', borderRadius: '10px' }}>
+                      <span style={{ fontSize: '20px', fontWeight: '800', color: '#10b981' }}>{importPreview.count.toLocaleString()}</span>
+                      <span style={{ fontSize: '14px', color: 'var(--text-secondary)' }}>unique contacts from <strong style={{ color: 'var(--text-primary)' }}>{importPreview.source}</strong> — duplicates removed ✅</span>
                     </div>
                   ) : null}
                 </div>
@@ -353,25 +345,17 @@ function Broadcast() {
                 <div className="filter-group" style={{ gridColumn: 'span 2' }}>
                   <label>Import Preview</label>
                   {importPreview?.loading ? (
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', padding: '24px', background: 'rgba(99,102,241,0.06)', border: '1px solid rgba(99,102,241,0.15)', borderRadius: '14px', color: '#a5b4fc', fontSize: '14px' }}>
-                      <div className="spinner" style={{ width: '18px', height: '18px', margin: 0 }} />
-                      Fetching contacts from Abandoned Carts...
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 16px', background: 'var(--bg-elevated)', border: '1px solid var(--border-default)', borderRadius: '10px', color: 'var(--text-muted)', fontSize: '14px' }}>
+                      <div className="spinner" style={{ width: '14px', height: '14px', margin: 0 }} /> Fetching contacts...
                     </div>
                   ) : importPreview?.error ? (
-                    <div style={{ padding: '16px', background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: '14px', color: '#ef4444', fontSize: '14px' }}>
+                    <div style={{ padding: '12px 16px', background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: '10px', color: '#ef4444', fontSize: '14px' }}>
                       ⚠️ {importPreview.error}
                     </div>
                   ) : importPreview ? (
-                    <div style={{ padding: '24px 28px', background: 'rgba(245,158,11,0.06)', border: '1px solid rgba(245,158,11,0.2)', borderRadius: '14px', borderLeft: '4px solid #f59e0b', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '20px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
-                        <div style={{ width: '56px', height: '56px', borderRadius: '14px', background: 'rgba(245,158,11,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px', flexShrink: 0 }}>🛒</div>
-                        <div>
-                          <div style={{ fontSize: '13px', color: '#a1a1aa', fontWeight: '500', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Unique Contacts Ready</div>
-                          <div style={{ fontSize: '42px', fontWeight: '900', color: '#f59e0b', lineHeight: 1, letterSpacing: '-1px' }}>{importPreview.count.toLocaleString()}</div>
-                          <div style={{ fontSize: '12px', color: '#71717a', marginTop: '4px' }}>Imported from: <span style={{ color: '#a5b4fc', fontWeight: '600' }}>{importPreview.source}</span> · Duplicates removed</div>
-                        </div>
-                      </div>
-                      <div style={{ padding: '8px 16px', background: 'rgba(245,158,11,0.15)', borderRadius: '20px', color: '#f59e0b', fontSize: '13px', fontWeight: '700', whiteSpace: 'nowrap', flexShrink: 0 }}>✅ Ready</div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', background: 'rgba(245,158,11,0.06)', border: '1px solid rgba(245,158,11,0.2)', borderRadius: '10px' }}>
+                      <span style={{ fontSize: '20px', fontWeight: '800', color: '#f59e0b' }}>{importPreview.count.toLocaleString()}</span>
+                      <span style={{ fontSize: '14px', color: 'var(--text-secondary)' }}>unique contacts from <strong style={{ color: 'var(--text-primary)' }}>{importPreview.source}</strong> — duplicates removed ✅</span>
                     </div>
                   ) : null}
                 </div>

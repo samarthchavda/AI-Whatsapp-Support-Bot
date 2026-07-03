@@ -45,18 +45,26 @@ function Orders({ admin }) {
     status: ''
   });
 
+  // Pagination State
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
+
   useEffect(() => {
-    fetchOrders();
+    setPage(1);
+    fetchOrders(1);
   }, [filters.status]);
 
-  const fetchOrders = async () => {
+  const fetchOrders = async (currentPage = page) => {
     try {
       setLoading(true);
-      const params = { limit: 100 }; // Fetch up to 100 orders
+      const params = { page: currentPage, limit: 10 };
       if (filters.status) params.status = filters.status;
 
       const response = await getOrders(params);
       setOrders(response.data.orders);
+      setTotalPages(response.data.totalPages || 1);
+      setTotalCount(response.data.total || response.data.orders.length);
       setError(null);
     } catch (err) {
       setError('Failed to load orders');
@@ -66,46 +74,57 @@ function Orders({ admin }) {
     }
   };
 
-  const exportCSVForBroadcast = () => {
-    if (!orders || orders.length === 0) {
-      alert('No order data available to export');
-      return;
-    }
+  const exportCSVForBroadcast = async () => {
+    try {
+      const params = { limit: 50000 };
+      if (filters.status) params.status = filters.status;
 
-    // Extract unique customer contacts
-    const contactsMap = new Map();
-    orders.forEach(order => {
-      if (order.customerPhone) {
-        // Use normalized phone as key
-        const phone = order.customerPhone.toString().trim().replace(/\s+/g, '');
-        const name = order.customerName || 'Customer';
-        contactsMap.set(phone, name);
+      const response = await getOrders(params);
+      const allOrders = response.data.orders;
+
+      if (!allOrders || allOrders.length === 0) {
+        alert('No order data available to export');
+        return;
       }
-    });
 
-    if (contactsMap.size === 0) {
-      alert('No customer phone numbers found in order data');
-      return;
+      // Extract unique customer contacts
+      const contactsMap = new Map();
+      allOrders.forEach(order => {
+        if (order.customerPhone) {
+          // Use normalized phone as key
+          const phone = order.customerPhone.toString().trim().replace(/\s+/g, '');
+          const name = order.customerName || 'Customer';
+          contactsMap.set(phone, name);
+        }
+      });
+
+      if (contactsMap.size === 0) {
+        alert('No customer phone numbers found in order data');
+        return;
+      }
+
+      // Create CSV content
+      let csvContent = 'phoneNumber,name\n';
+      contactsMap.forEach((name, phone) => {
+        // Escape quotes and commas in name
+        const safeName = name.replace(/"/g, '""');
+        csvContent += `${phone},"${safeName}"\n`;
+      });
+
+      // Trigger download
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.setAttribute('href', url);
+      link.setAttribute('download', 'orders_customers_broadcast.csv');
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      alert('Failed to export orders');
+      console.error(err);
     }
-
-    // Create CSV content
-    let csvContent = 'phoneNumber,name\n';
-    contactsMap.forEach((name, phone) => {
-      // Escape quotes and commas in name
-      const safeName = name.replace(/"/g, '""');
-      csvContent += `${phone},"${safeName}"\n`;
-    });
-
-    // Trigger download
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = window.URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.setAttribute('href', url);
-    link.setAttribute('download', 'orders_customers_broadcast.csv');
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    window.URL.revokeObjectURL(url);
   };
 
   const handleStatusUpdate = async (orderId, newStatus) => {
@@ -117,6 +136,59 @@ function Orders({ admin }) {
       alert('Failed to update order status');
       console.error('Error updating order:', err);
     }
+  };
+
+  const handlePageChange = (newPage) => {
+    if (newPage >= 1 && newPage <= totalPages) {
+      setPage(newPage);
+      fetchOrders(newPage);
+    }
+  };
+
+  const renderPageNumbers = () => {
+    const pages = [];
+    const start = Math.max(1, page - 2);
+    const end = Math.min(totalPages, page + 2);
+
+    if (start > 1) {
+      pages.push(
+        <button key={1} onClick={() => handlePageChange(1)} className={`btn-pagination ${page === 1 ? 'active' : ''}`}>
+          1
+        </button>
+      );
+      if (start > 2) {
+        pages.push(<span key="dots-start" className="pagination-dots">...</span>);
+      }
+    }
+
+    for (let i = start; i <= end; i++) {
+      pages.push(
+        <button 
+          key={i} 
+          onClick={() => handlePageChange(i)} 
+          className={`btn-pagination ${page === i ? 'active' : ''}`}
+        >
+          {i}
+        </button>
+      );
+    }
+
+    if (end < totalPages) {
+      if (end < totalPages - 1) {
+        pages.push(<span key="dots-end" className="pagination-dots">...</span>);
+      }
+      pages.push(
+        <button 
+          key={totalPages} 
+          onClick={() => handlePageChange(totalPages)} 
+          className={`btn-pagination ${page === totalPages ? 'active' : ''}`}
+        >
+          {totalPages}
+        </button>
+      );
+    }
+
+    return pages;
   };
 
   const handleCreateOrder = async (e) => {
@@ -634,6 +706,32 @@ Bob Johnson,+1234567892,bob@example.com,Standard Item,3,149.99,shipped`;
             </div>
           )}
         </div>
+        
+        {/* Pagination Controls */}
+        {!loading && !error && totalPages > 1 && (
+          <div className="pagination-bar">
+            <div className="pagination-info">
+              Showing Page <strong>{page}</strong> of <strong>{totalPages}</strong> ({totalCount} total orders)
+            </div>
+            <div className="pagination-buttons">
+              <button 
+                onClick={() => handlePageChange(page - 1)} 
+                disabled={page === 1}
+                className="btn-pagination"
+              >
+                Prev
+              </button>
+              {renderPageNumbers()}
+              <button 
+                onClick={() => handlePageChange(page + 1)} 
+                disabled={page === totalPages}
+                className="btn-pagination"
+              >
+                Next
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

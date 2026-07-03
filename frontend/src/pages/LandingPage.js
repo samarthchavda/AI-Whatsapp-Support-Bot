@@ -332,25 +332,25 @@ function LandingPage() {
 
             <div className="preview-grid">
               <aside className="preview-sidebar">
-                <button 
+                <button
                   className={`preview-tab ${activeTab === 'inbox' ? 'active' : ''}`}
                   onClick={() => setActiveTab('inbox')}
                 >
                   <FaComments /> Inbox <span>18</span>
                 </button>
-                <button 
+                <button
                   className={`preview-tab ${activeTab === 'orders' ? 'active' : ''}`}
                   onClick={() => setActiveTab('orders')}
                 >
                   <FaBox /> Orders <span>42</span>
                 </button>
-                <button 
+                <button
                   className={`preview-tab alert ${activeTab === 'escalations' ? 'active' : ''}`}
                   onClick={() => setActiveTab('escalations')}
                 >
                   <FaHeadset /> Escalations <span>5</span>
                 </button>
-                <button 
+                <button
                   className={`preview-tab ${activeTab === 'analytics' ? 'active' : ''}`}
                   onClick={() => setActiveTab('analytics')}
                 >
@@ -557,7 +557,7 @@ function LandingPage() {
               <div className="partner-logo-item openai">
                 <div className="partner-icon-wrap openai-bg">
                   <SiOpenai size={22} color="#ffffff" />
-                    <span className="partner-name">OpenAI</span>
+                  <span className="partner-name">OpenAI</span>
                   <span className="partner-sub">AI Powered</span>
                 </div>
               </div>
@@ -604,7 +604,7 @@ function LandingPage() {
                   <h4 className="visual-panel-title">
                     Your AI Support Bot Goes Live in Under 5 Minutes
                   </h4>
-                  
+
                   <div className="workflow-pipeline">
                     {/* Meta node */}
                     <div className={`pipeline-node-v2 meta-v2 ${activeJourneyStep === 0 ? 'active glow' : ''}`}>
@@ -881,7 +881,7 @@ function LandingPage() {
               <h2>Looking for our first 10 partner stores</h2>
               <p>Skip the wait and get personal launch support. Join our Early Access cohort to build your store AI bot together.</p>
             </div>
-            
+
             <div className="early-access-card-wrapper">
               <div className="early-access-card">
                 <div className="early-access-badge">Limited Opportunities</div>
@@ -962,7 +962,7 @@ function LandingPage() {
             <a href="https://wa.me/918128420287" target="_blank" rel="noopener noreferrer" title="WhatsApp Support"><FaWhatsapp /></a>
           </div>
         </div>
-        
+
         <div className="footer-links-grid">
           <div className="footer-links-col">
             <h4>Product</h4>
@@ -1003,8 +1003,8 @@ function LandingPage() {
       {/* Floating WhatsApp Demo Widget */}
       <div className={`floating-chat-widget ${isChatOpen ? 'open' : ''}`}>
         {!isChatOpen ? (
-          <button 
-            className="chat-trigger-button" 
+          <button
+            className="chat-trigger-button"
             onClick={() => setIsChatOpen(true)}
             aria-label="Open AI Demo Chat"
           >

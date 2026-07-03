@@ -42,6 +42,11 @@ function AbandonedCarts({ admin }) {
     search: ''
   });
   const [searchInput, setSearchInput] = useState('');
+  
+  // Pagination State
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
 
   const storeCurrency = admin?.storeCurrency || 'USD';
 
@@ -54,21 +59,24 @@ function AbandonedCarts({ admin }) {
   }, [searchInput]);
 
   useEffect(() => {
-    fetchCarts();
+    setPage(1);
+    fetchCarts(1);
     fetchStats();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filters.status, filters.search]);
 
-  const fetchCarts = async () => {
+  const fetchCarts = async (currentPage = page) => {
     try {
       setLoading(true);
-      const params = { limit: 100 };
+      const params = { page: currentPage, limit: 10 };
       if (filters.status) params.status = filters.status;
       if (filters.search) params.search = filters.search;
 
       const response = await getAbandonedCarts(params);
       if (response.data && response.data.success) {
         setCarts(response.data.carts);
+        setTotalPages(response.data.totalPages || 1);
+        setTotalCount(response.data.total || response.data.carts.length);
       }
       setError(null);
     } catch (err) {
@@ -107,6 +115,59 @@ function AbandonedCarts({ admin }) {
     } finally {
       setSendingReminderId(null);
     }
+  };
+
+  const handlePageChange = (newPage) => {
+    if (newPage >= 1 && newPage <= totalPages) {
+      setPage(newPage);
+      fetchCarts(newPage);
+    }
+  };
+
+  const renderPageNumbers = () => {
+    const pages = [];
+    const start = Math.max(1, page - 2);
+    const end = Math.min(totalPages, page + 2);
+
+    if (start > 1) {
+      pages.push(
+        <button key={1} onClick={() => handlePageChange(1)} className={`btn-pagination ${page === 1 ? 'active' : ''}`}>
+          1
+        </button>
+      );
+      if (start > 2) {
+        pages.push(<span key="dots-start" className="pagination-dots">...</span>);
+      }
+    }
+
+    for (let i = start; i <= end; i++) {
+      pages.push(
+        <button 
+          key={i} 
+          onClick={() => handlePageChange(i)} 
+          className={`btn-pagination ${page === i ? 'active' : ''}`}
+        >
+          {i}
+        </button>
+      );
+    }
+
+    if (end < totalPages) {
+      if (end < totalPages - 1) {
+        pages.push(<span key="dots-end" className="pagination-dots">...</span>);
+      }
+      pages.push(
+        <button 
+          key={totalPages} 
+          onClick={() => handlePageChange(totalPages)} 
+          className={`btn-pagination ${page === totalPages ? 'active' : ''}`}
+        >
+          {totalPages}
+        </button>
+      );
+    }
+
+    return pages;
   };
 
   const getStatusBadgeClass = (status) => {
@@ -317,6 +378,32 @@ function AbandonedCarts({ admin }) {
               ))}
             </tbody>
           </table>
+        )}
+        
+        {/* Pagination Controls */}
+        {!loading && !error && totalPages > 1 && (
+          <div className="pagination-bar">
+            <div className="pagination-info">
+              Showing Page <strong>{page}</strong> of <strong>{totalPages}</strong> ({totalCount} total carts)
+            </div>
+            <div className="pagination-buttons">
+              <button 
+                onClick={() => handlePageChange(page - 1)} 
+                disabled={page === 1}
+                className="btn-pagination"
+              >
+                Prev
+              </button>
+              {renderPageNumbers()}
+              <button 
+                onClick={() => handlePageChange(page + 1)} 
+                disabled={page === totalPages}
+                className="btn-pagination"
+              >
+                Next
+              </button>
+            </div>
+          </div>
         )}
       </div>
     </div>

@@ -21,7 +21,7 @@ exports.getIntegrations = async (req, res) => {
     // Add webhook URLs to response
     const integrationsWithUrls = integrations.map(integration => ({
       ...integration.toObject(),
-      webhookUrl: integration.getWebhookUrl()
+      webhookUrl: integration.getWebhookUrl(req)
     }));
 
     res.json({
@@ -179,7 +179,7 @@ exports.createIntegration = async (req, res) => {
       message: 'Integration created successfully',
       data: {
         ...integration.toObject(),
-        webhookUrl: integration.getWebhookUrl(),
+        webhookUrl: integration.getWebhookUrl(req),
         syncSummary
       }
     });
@@ -255,7 +255,7 @@ exports.updateIntegration = async (req, res) => {
       message: 'Integration updated successfully',
       data: {
         ...integration.toObject(),
-        webhookUrl: integration.getWebhookUrl(),
+        webhookUrl: integration.getWebhookUrl(req),
         syncSummary
       }
     });
@@ -324,7 +324,7 @@ exports.regenerateWebhookSecret = async (req, res) => {
       message: 'Webhook secret regenerated successfully',
       data: {
         ...integration.toObject(),
-        webhookUrl: integration.getWebhookUrl()
+        webhookUrl: integration.getWebhookUrl(req)
       }
     });
   } catch (error) {

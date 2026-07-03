@@ -50,8 +50,15 @@ integrationSchema.index({ adminId: 1, platform: 1 });
 integrationSchema.index({ webhookSecret: 1 });
 
 // Generate webhook URL
-integrationSchema.methods.getWebhookUrl = function() {
-  const baseUrl = process.env.BACKEND_URL || 'http://localhost:5001';
+integrationSchema.methods.getWebhookUrl = function(req) {
+  let baseUrl = process.env.BACKEND_URL;
+  if (!baseUrl && req && req.headers && req.headers.host) {
+    const protocol = req.headers['x-forwarded-proto'] || req.protocol || 'http';
+    baseUrl = `${protocol}://${req.headers.host}`;
+  }
+  if (!baseUrl) {
+    baseUrl = 'http://localhost:5001';
+  }
   return `${baseUrl}/api/webhooks/${this.platform}/${this.webhookSecret}`;
 };
 

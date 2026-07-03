@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import api from '../services/api';
+import { getAbandonedCarts, getOrders } from '../services/api';
 import { FaBroadcastTower, FaUpload, FaCalendarAlt, FaPaperPlane, FaTrash, FaClock, FaCheckCircle, FaTimesCircle } from 'react-icons/fa';
 
 function Broadcast() {
@@ -8,11 +9,45 @@ function Broadcast() {
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(null);
   const [recipientSource, setRecipientSource] = useState('csv');
+  const [importPreview, setImportPreview] = useState(null);  // { count, loading, error }
 
   const plan = (JSON.parse(localStorage.getItem('admin') || '{}')?.subscriptionPlan || 'starter').toLowerCase();
 
+  // Fetch live preview count when source changes
+  const fetchImportPreview = useCallback(async (source) => {
+    if (source === 'csv') {
+      setImportPreview(null);
+      return;
+    }
+    setImportPreview({ loading: true, count: null, error: null });
+    try {
+      if (source === 'crm') {
+        const res = await getOrders({ limit: 10000 });
+        const orders = res.data?.orders || res.data?.data || [];
+        const uniquePhones = new Set();
+        orders.forEach(o => {
+          const p = (o.customerPhone || '').toString().trim().replace(/\s+/g, '');
+          if (p && p.length > 5 && !p.includes('undefined') && !p.includes('null')) uniquePhones.add(p);
+        });
+        setImportPreview({ loading: false, count: uniquePhones.size, error: null, source: 'Orders' });
+      } else if (source === 'abandoned_carts') {
+        const res = await getAbandonedCarts({ limit: 10000 });
+        const carts = res.data?.carts || [];
+        const uniquePhones = new Set();
+        carts.forEach(c => {
+          const p = (c.customerPhone || '').toString().trim().replace(/\s+/g, '');
+          if (p && p.length > 5 && !p.includes('undefined') && !p.includes('null')) uniquePhones.add(p);
+        });
+        setImportPreview({ loading: false, count: uniquePhones.size, error: null, source: 'Abandoned Carts' });
+      }
+    } catch (err) {
+      setImportPreview({ loading: false, count: null, error: 'Failed to load preview' });
+    }
+  }, []);
+
   useEffect(() => {
     fetchBroadcasts();
+
   }, []);
 
   const fetchBroadcasts = async () => {
@@ -26,6 +61,12 @@ function Broadcast() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleSourceChange = (e) => {
+    const val = e.target.value;
+    setRecipientSource(val);
+    fetchImportPreview(val);
   };
 
   const handleCreateBroadcast = async (e) => {
@@ -221,7 +262,7 @@ function Broadcast() {
                 <select
                   name="recipientSource"
                   value={recipientSource}
-                  onChange={(e) => setRecipientSource(e.target.value)}
+                  onChange={handleSourceChange}
                   style={{
                     width: '100%',
                     padding: '14px',
@@ -284,35 +325,56 @@ function Broadcast() {
                 </div>
               ) : recipientSource === 'crm' ? (
                 <div className="filter-group" style={{ gridColumn: 'span 2' }}>
-                  <label>Import Configuration</label>
-                  <div style={{
-                    padding: '16px',
-                    background: 'rgba(16, 185, 129, 0.1)',
-                    border: '1px solid rgba(16, 185, 129, 0.3)',
-                    borderRadius: '12px',
-                    color: '#10b981',
-                    fontSize: '14px',
-                    fontWeight: '600',
-                    lineHeight: '1.5'
-                  }}>
-                    📦 Import from Orders Enabled! We will automatically fetch unique customer names and phone numbers from your Shopify orders. No duplicates or empty contacts will be imported.
-                  </div>
+                  <label>Import Preview</label>
+                  {importPreview?.loading ? (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '16px', background: 'rgba(99,102,241,0.08)', border: '1px solid rgba(99,102,241,0.2)', borderRadius: '12px', color: '#a5b4fc', fontSize: '14px' }}>
+                      <div className="spinner" style={{ width: '18px', height: '18px', margin: 0 }} />
+                      Loading contact preview...
+                    </div>
+                  ) : importPreview?.error ? (
+                    <div style={{ padding: '16px', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: '12px', color: '#ef4444', fontSize: '14px' }}>
+                      ⚠️ {importPreview.error}
+                    </div>
+                  ) : importPreview ? (
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                      <div style={{ padding: '18px 20px', background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.25)', borderRadius: '12px', textAlign: 'center' }}>
+                        <div style={{ fontSize: '32px', fontWeight: '800', color: '#10b981', lineHeight: 1 }}>{importPreview.count}</div>
+                        <div style={{ fontSize: '12px', color: '#a1a1aa', marginTop: '6px', fontWeight: '500' }}>Unique Contacts Ready</div>
+                      </div>
+                      <div style={{ padding: '18px 20px', background: 'rgba(99,102,241,0.08)', border: '1px solid rgba(99,102,241,0.2)', borderRadius: '12px', display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: '6px' }}>
+                        <div style={{ fontSize: '13px', color: '#a5b4fc', fontWeight: '600' }}>✅ Ready to Import</div>
+                        <div style={{ fontSize: '12px', color: '#71717a' }}>From: {importPreview.source}</div>
+                        <div style={{ fontSize: '12px', color: '#71717a' }}>Duplicates removed automatically</div>
+                      </div>
+                    </div>
+                  ) : null}
                 </div>
               ) : (
+
                 <div className="filter-group" style={{ gridColumn: 'span 2' }}>
-                  <label>Import Configuration</label>
-                  <div style={{
-                    padding: '16px',
-                    background: 'rgba(245, 158, 11, 0.1)',
-                    border: '1px solid rgba(245, 158, 11, 0.3)',
-                    borderRadius: '12px',
-                    color: '#f59e0b',
-                    fontSize: '14px',
-                    fontWeight: '600',
-                    lineHeight: '1.5'
-                  }}>
-                    🛒 Import from Abandoned Carts Enabled! We will fetch unique customer names and phone numbers from your abandoned checkouts. Duplicate phone numbers are automatically removed.
-                  </div>
+                  <label>Import Preview</label>
+                  {importPreview?.loading ? (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '16px', background: 'rgba(99,102,241,0.08)', border: '1px solid rgba(99,102,241,0.2)', borderRadius: '12px', color: '#a5b4fc', fontSize: '14px' }}>
+                      <div className="spinner" style={{ width: '18px', height: '18px', margin: 0 }} />
+                      Loading contact preview...
+                    </div>
+                  ) : importPreview?.error ? (
+                    <div style={{ padding: '16px', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: '12px', color: '#ef4444', fontSize: '14px' }}>
+                      ⚠️ {importPreview.error}
+                    </div>
+                  ) : importPreview ? (
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                      <div style={{ padding: '18px 20px', background: recipientSource === 'crm' ? 'rgba(16,185,129,0.08)' : 'rgba(245,158,11,0.08)', border: `1px solid ${recipientSource === 'crm' ? 'rgba(16,185,129,0.25)' : 'rgba(245,158,11,0.25)'}`, borderRadius: '12px', textAlign: 'center' }}>
+                        <div style={{ fontSize: '32px', fontWeight: '800', color: recipientSource === 'crm' ? '#10b981' : '#f59e0b', lineHeight: 1 }}>{importPreview.count}</div>
+                        <div style={{ fontSize: '12px', color: '#a1a1aa', marginTop: '6px', fontWeight: '500' }}>Unique Contacts Ready</div>
+                      </div>
+                      <div style={{ padding: '18px 20px', background: 'rgba(99,102,241,0.08)', border: '1px solid rgba(99,102,241,0.2)', borderRadius: '12px', display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: '6px' }}>
+                        <div style={{ fontSize: '13px', color: '#a5b4fc', fontWeight: '600' }}>✅ Ready to Import</div>
+                        <div style={{ fontSize: '12px', color: '#71717a' }}>From: {importPreview.source}</div>
+                        <div style={{ fontSize: '12px', color: '#71717a' }}>Duplicates removed automatically</div>
+                      </div>
+                    </div>
+                  ) : null}
                 </div>
               )}
             </div>

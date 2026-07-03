@@ -234,7 +234,10 @@ function Broadcast() {
                 >
                   <option value="csv">📁 Upload CSV File</option>
                   <option value="crm" disabled={plan === 'starter'}>
-                    👥 Import from CRM/Orders {plan === 'starter' ? '🔒 (Upgrade Plan)' : ''}
+                    📦 Import from Orders {plan === 'starter' ? '🔒 (Upgrade Plan)' : ''}
+                  </option>
+                  <option value="abandoned_carts" disabled={plan === 'starter'}>
+                    🛒 Import from Abandoned Carts {plan === 'starter' ? '🔒 (Upgrade Plan)' : ''}
                   </option>
                 </select>
               </div>
@@ -279,7 +282,7 @@ function Broadcast() {
                     }}
                   />
                 </div>
-              ) : (
+              ) : recipientSource === 'crm' ? (
                 <div className="filter-group" style={{ gridColumn: 'span 2' }}>
                   <label>Import Configuration</label>
                   <div style={{
@@ -292,7 +295,23 @@ function Broadcast() {
                     fontWeight: '600',
                     lineHeight: '1.5'
                   }}>
-                    ✨ Direct CRM Import Enabled! We will automatically fetch unique customer names and phone numbers from your orders database. No duplicates or empty contacts will be imported.
+                    📦 Import from Orders Enabled! We will automatically fetch unique customer names and phone numbers from your Shopify orders. No duplicates or empty contacts will be imported.
+                  </div>
+                </div>
+              ) : (
+                <div className="filter-group" style={{ gridColumn: 'span 2' }}>
+                  <label>Import Configuration</label>
+                  <div style={{
+                    padding: '16px',
+                    background: 'rgba(245, 158, 11, 0.1)',
+                    border: '1px solid rgba(245, 158, 11, 0.3)',
+                    borderRadius: '12px',
+                    color: '#f59e0b',
+                    fontSize: '14px',
+                    fontWeight: '600',
+                    lineHeight: '1.5'
+                  }}>
+                    🛒 Import from Abandoned Carts Enabled! We will fetch unique customer names and phone numbers from your abandoned checkouts. Duplicate phone numbers are automatically removed.
                   </div>
                 </div>
               )}

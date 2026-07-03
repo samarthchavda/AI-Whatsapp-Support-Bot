@@ -31,7 +31,7 @@ exports.createBroadcast = async (req, res) => {
       if (req.admin.subscriptionPlan === 'starter') {
         return res.status(403).json({
           success: false,
-          error: 'Direct import from CRM/Orders is not available on the Starter plan. Please upgrade to a higher plan.'
+          error: 'Direct import from Orders is not available on the Starter plan. Please upgrade to a higher plan.'
         });
       }
 
@@ -58,9 +58,55 @@ exports.createBroadcast = async (req, res) => {
         });
       }
 
+      csvFileName = 'Imported from Orders';
       contactsMap.forEach((name, phone) => {
         recipients.push({ phone, name });
       });
+
+    } else if (recipientSource === 'abandoned_carts') {
+      // Delete uploaded file if it was sent by mistake
+      if (req.file) {
+        await fs.unlink(req.file.path).catch(() => {});
+      }
+
+      // Check plan restriction
+      if (req.admin.subscriptionPlan === 'starter') {
+        return res.status(403).json({
+          success: false,
+          error: 'Direct import from Abandoned Carts is not available on the Starter plan. Please upgrade to a higher plan.'
+        });
+      }
+
+      // Fetch from abandoned carts
+      const AbandonedCart = require('../models/AbandonedCart');
+      const carts = await AbandonedCart.find({ admin: req.admin._id });
+
+      const contactsMap = new Map();
+      carts.forEach(cart => {
+        if (cart.customerPhone) {
+          const phone = cart.customerPhone.toString().trim().replace(/\s+/g, '');
+          if (phone && phone.length > 5 && !phone.includes('undefined') && !phone.includes('null')) {
+            const name = cart.customerName || 'Customer';
+            // Only set if not already present (deduplication — first entry wins)
+            if (!contactsMap.has(phone)) {
+              contactsMap.set(phone, name);
+            }
+          }
+        }
+      });
+
+      if (contactsMap.size === 0) {
+        return res.status(400).json({
+          success: false,
+          error: 'No customer contacts with valid phone numbers found in your abandoned carts.'
+        });
+      }
+
+      csvFileName = 'Imported from Abandoned Carts';
+      contactsMap.forEach((name, phone) => {
+        recipients.push({ phone, name });
+      });
+
     } else {
       // Parse CSV file if uploaded
       if (req.file) {

@@ -85,8 +85,15 @@ function Analytics({ admin }) {
     { name: 'Human Escalated', value: resolutionData.humanEscalated, percentage: resolutionData.humanEscalatedPercentage }
   ] : [];
 
-  // Prepare pie chart data for sentiment breakdown
+  // Prepare pie chart data for sentiment breakdown — filter out 0% slices to avoid label overlap
   const sentimentPieData = sentimentData?.breakdown ? [
+    { name: 'Happy', value: sentimentData.breakdown.happy },
+    { name: 'Neutral', value: sentimentData.breakdown.neutral },
+    { name: 'Frustrated', value: sentimentData.breakdown.frustrated }
+  ].filter(d => d.value > 0) : [];
+
+  // Full list for legend (including zeros)
+  const sentimentLegendData = sentimentData?.breakdown ? [
     { name: 'Happy', value: sentimentData.breakdown.happy },
     { name: 'Neutral', value: sentimentData.breakdown.neutral },
     { name: 'Frustrated', value: sentimentData.breakdown.frustrated }
@@ -351,36 +358,53 @@ function Analytics({ admin }) {
             <div className="chart-header">
               <h3><FaChartPie /> Sentiment Distribution</h3>
             </div>
-            <ResponsiveContainer width="100%" height={300}>
-              <PieChart>
-                <Pie
-                  data={sentimentPieData}
-                  cx="50%"
-                  cy="50%"
-                  labelLine={false}
-                  label={({ name, value }) => `${name}: ${value.toFixed(0)}%`}
-                  outerRadius={80}
-                  fill="#8884d8"
-                  dataKey="value"
-                >
-                  {sentimentPieData.map((entry, index) => (
-                    <Cell 
-                      key={`cell-${index}`} 
-                      fill={COLORS[entry.name.toLowerCase()]} 
+            {sentimentPieData.length === 0 ? (
+              <div style={{ padding: '40px', textAlign: 'center', color: '#71717a', fontSize: '14px' }}>
+                No sentiment data available yet.
+              </div>
+            ) : (
+              <>
+                <ResponsiveContainer width="100%" height={260}>
+                  <PieChart>
+                    <Pie
+                      data={sentimentPieData}
+                      cx="50%"
+                      cy="50%"
+                      labelLine={false}
+                      label={false}
+                      outerRadius={100}
+                      fill="#8884d8"
+                      dataKey="value"
+                    >
+                      {sentimentPieData.map((entry, index) => (
+                        <Cell
+                          key={`cell-${index}`}
+                          fill={COLORS[entry.name.toLowerCase()]}
+                        />
+                      ))}
+                    </Pie>
+                    <Tooltip
+                      contentStyle={{
+                        background: 'rgba(39, 39, 42, 0.95)',
+                        border: '1px solid rgba(63, 63, 70, 0.5)',
+                        borderRadius: '8px',
+                        color: '#fafafa'
+                      }}
+                      formatter={(value) => `${value.toFixed(1)}%`}
                     />
+                  </PieChart>
+                </ResponsiveContainer>
+                {/* Clean legend below the chart */}
+                <div style={{ display: 'flex', justifyContent: 'center', gap: '24px', paddingBottom: '16px', flexWrap: 'wrap' }}>
+                  {sentimentLegendData.map((item) => (
+                    <div key={item.name} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', color: 'var(--text-secondary)' }}>
+                      <span style={{ width: '12px', height: '12px', borderRadius: '3px', background: COLORS[item.name.toLowerCase()], display: 'inline-block', flexShrink: 0 }} />
+                      <span>{item.name}: <strong style={{ color: 'var(--text-primary)' }}>{item.value.toFixed(1)}%</strong></span>
+                    </div>
                   ))}
-                </Pie>
-                <Tooltip 
-                  contentStyle={{
-                    background: 'rgba(39, 39, 42, 0.95)',
-                    border: '1px solid rgba(63, 63, 70, 0.5)',
-                    borderRadius: '8px',
-                    color: '#fafafa'
-                  }}
-                  formatter={(value) => `${value.toFixed(1)}%`}
-                />
-              </PieChart>
-            </ResponsiveContainer>
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}

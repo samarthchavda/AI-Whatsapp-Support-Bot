@@ -7,8 +7,6 @@ import {
   FaRupeeSign,
   FaRobot,
   FaComments,
-  FaToggleOn,
-  FaToggleOff,
   FaCrown,
   FaSearch,
   FaUserPlus,
@@ -51,8 +49,7 @@ function SuperAdmin() {
     geminiTokensLimit: 50000,
     webBotEnabled: false,
   });
-  const [globalSettings, setGlobalSettings] = useState({ webBotEnabled: false });
-  const [settingsLoading, setSettingsLoading] = useState(false);
+
   const [activeTab, setActiveTab] = useState('merchants');
   const [auditLogs, setAuditLogs] = useState([]);
   const [dbFile, setDbFile] = useState(null);
@@ -132,18 +129,7 @@ function SuperAdmin() {
       setUsers(usersRes.data.data);
       setAnalytics(analyticsRes.data.data);
 
-      // Fetch global settings
-      try {
-        const token = localStorage.getItem('token') || localStorage.getItem('accessToken');
-        const settingsRes = await axios.get(`${API_BASE}/super-admin/settings`, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        if (settingsRes.data.success) {
-          setGlobalSettings(settingsRes.data.data);
-        }
-      } catch (err) {
-        console.error('Error fetching settings:', err);
-      }
+
 
       // Fetch audit logs
       try {
@@ -192,28 +178,7 @@ function SuperAdmin() {
   };
 
 
-  const handleToggleWebBot = async () => {
-    const token = localStorage.getItem('token') || localStorage.getItem('accessToken');
-    const newValue = !globalSettings.webBotEnabled;
 
-    try {
-      setSettingsLoading(true);
-      const res = await axios.post(
-        `${API_BASE}/super-admin/settings`,
-        { settings: { webBotEnabled: newValue } },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      if (res.data.success) {
-        setGlobalSettings({ ...globalSettings, webBotEnabled: newValue });
-        alert(`WhatsApp Web Bot (QR Code) has been ${newValue ? 'enabled' : 'disabled'} successfully!`);
-      }
-    } catch (err) {
-      alert('Failed to update platform settings');
-      console.error(err);
-    } finally {
-      setSettingsLoading(false);
-    }
-  };
 
 
 
@@ -674,49 +639,7 @@ function SuperAdmin() {
             </div>
           </div>
 
-          {/* Platform Settings */}
-          <div className="table-container-premium super-admin-table" style={{ marginTop: '24px' }}>
-            <div className="table-header-premium super-admin-table-header">
-              <h2>⚙️ Platform Configuration</h2>
-            </div>
-            <div style={{ padding: '24px' }}>
-              <div style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                padding: '16px 20px',
-                background: 'rgba(39, 39, 42, 0.4)',
-                border: '1px solid rgba(63, 63, 70, 0.3)',
-                borderRadius: '12px'
-              }}>
-                <div>
-                  <h4 style={{ margin: '0 0 4px 0', fontSize: '15px', fontWeight: '600', color: '#fafafa' }}>
-                    Enable WhatsApp Web Bot (QR Code Method)
-                  </h4>
-                  <p style={{ margin: 0, fontSize: '13px', color: '#a1a1aa' }}>
-                    Allow merchants/users to connect their mobile accounts by scanning a QR code using Puppeteer session emulation.
-                  </p>
-                </div>
-                <button
-                  onClick={handleToggleWebBot}
-                  disabled={settingsLoading}
-                  style={{
-                    background: 'none',
-                    border: 'none',
-                    cursor: 'pointer',
-                    fontSize: '32px',
-                    padding: 0,
-                    color: globalSettings.webBotEnabled ? '#10b981' : '#71717a',
-                    display: 'flex',
-                    alignItems: 'center',
-                    transition: 'color 0.2s ease'
-                  }}
-                >
-                  {globalSettings.webBotEnabled ? <FaToggleOn /> : <FaToggleOff />}
-                </button>
-              </div>
-            </div>
-          </div>
+
         </>
       )}
 
@@ -1154,23 +1077,7 @@ function SuperAdmin() {
                       </div>
                     </div>
 
-                    <div className="form-group" style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '12px' }}>
-                      <input
-                        type="checkbox"
-                        id="webBotEnabled"
-                        checked={newUser.webBotEnabled}
-                        onChange={(e) => setNewUser({ ...newUser, webBotEnabled: e.target.checked })}
-                        style={{
-                          width: '20px',
-                          height: '20px',
-                          accentColor: '#10b981',
-                          cursor: 'pointer'
-                        }}
-                      />
-                      <label htmlFor="webBotEnabled" style={{ cursor: 'pointer', fontSize: '14px', margin: 0, color: '#fafafa' }}>
-                        Enable WhatsApp Web Bot Scanner (QR Code Connection)
-                      </label>
-                    </div>
+
 
                     <div className="form-group" style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '12px' }}>
                       <input

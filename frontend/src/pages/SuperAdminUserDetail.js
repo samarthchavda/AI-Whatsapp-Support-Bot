@@ -95,14 +95,7 @@ function SuperAdminUserDetail() {
     }
   };
 
-  const handleToggleUserWebBot = async () => {
-    try {
-      await api.post(`/super-admin/users/${userId}/toggle-web-bot`);
-      fetchUserDetails();
-    } catch (error) {
-      alert('Failed to toggle user scanner access');
-    }
-  };
+
 
   const handleToggleUserShopify = async () => {
     try {
@@ -328,31 +321,7 @@ function SuperAdminUserDetail() {
                 <span>{user.businessPhone}</span>
               </div>
             )}
-            <div className="detail-row">
-              <span>Web Bot Scanner:</span>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <span className={user.webBotEnabled ? 'status-connected' : 'status-disconnected'}>
-                  {user.webBotEnabled ? 'Enabled' : 'Disabled'}
-                </span>
-                <button
-                  onClick={handleToggleUserWebBot}
-                  style={{
-                    background: 'none',
-                    border: 'none',
-                    cursor: 'pointer',
-                    fontSize: '18px',
-                    padding: 0,
-                    color: user.webBotEnabled ? '#10b981' : '#71717a',
-                    display: 'flex',
-                    alignItems: 'center',
-                    transition: 'color 0.2s ease'
-                  }}
-                  title={user.webBotEnabled ? 'Revoke Access' : 'Grant Access'}
-                >
-                  {user.webBotEnabled ? <FaToggleOn /> : <FaToggleOff />}
-                </button>
-              </div>
-            </div>
+
             <div className="detail-row">
               <span>Shopify Integration:</span>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>

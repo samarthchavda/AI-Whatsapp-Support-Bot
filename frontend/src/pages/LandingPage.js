@@ -10,14 +10,11 @@ import {
   FaTimes,
   FaChartLine,
   FaComments,
-  FaFileAlt,
   FaHeadset,
   FaLock,
   FaPlug,
   FaShieldAlt,
   FaWhatsapp,
-  FaCommentDots,
-  FaShoppingCart,
   FaEnvelope,
   FaPhoneAlt,
   FaLinkedin,
@@ -32,57 +29,7 @@ const metrics = [
   { value: '24/7', label: 'WhatsApp coverage' }
 ];
 
-const journeySteps = [
-  {
-    number: '01',
-    title: 'Meta WhatsApp API',
-    description: 'Direct integration with Meta Cloud API for official business phone number routing.',
-    badge: '✓ Connected',
-    badgeType: 'success'
-  },
-  {
-    number: '02',
-    title: 'Shopify & WooCommerce',
-    description: 'Real-time database sync for checking order statuses, tracking details, and processing cancellations.',
-    badge: '✓ Connected',
-    badgeType: 'success'
-  },
-  {
-    number: '03',
-    title: 'Knowledge Base (PDFs)',
-    description: 'Upload your store FAQs and policies. Information is digested instantly by the AI.',
-    badge: '✓ Knowledge Synced',
-    badgeType: 'info'
-  },
-  {
-    number: '04',
-    title: 'AI Processing',
-    description: 'Google Gemini engine analyzes user context, intent, store policies, and real-time order data.',
-    badge: '✓ AI Online',
-    badgeType: 'ai'
-  },
-  {
-    number: '05',
-    title: 'Customer Message',
-    description: 'Shopper asks a question or requests order updates on WhatsApp (e.g., tracking, returns, cancellations).',
-    badge: '✓ Active Chat',
-    badgeType: 'chat'
-  },
-  {
-    number: '06',
-    title: 'Instant AI Reply',
-    description: 'Automated policy-compliant bot reply sent back in under 1.5 seconds. Solves 82%+ of tickets.',
-    badge: '⚡ Auto-Reply',
-    badgeType: 'bolt'
-  },
-  {
-    number: '07',
-    title: 'Human Handoff (if needed)',
-    description: 'If high frustration is detected or a refund is requested, the AI pauses and routes to live agents.',
-    badge: '👥 Live Handoff Ready',
-    badgeType: 'human'
-  }
-];
+
 
 const workflows = [
   {
@@ -141,15 +88,8 @@ const faqs = [
 function LandingPage() {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('inbox');
-  const [activeJourneyStep, setActiveJourneyStep] = useState(0);
   const [openFaqIndex, setOpenFaqIndex] = useState(null);
 
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setActiveJourneyStep((prev) => (prev + 1) % 7);
-    }, 3200);
-    return () => clearInterval(interval);
-  }, []);
   const [isChatOpen, setIsChatOpen] = useState(false);
 
   const [chatMessages, setChatMessages] = useState([
@@ -556,143 +496,40 @@ function LandingPage() {
             <p>From Meta API connection to automatic resolution and human takeover control.</p>
           </div>
 
-          <div className="stepper-grid">
-            {/* Left side: Automated loop steps */}
-            <div className="stepper-nav journey-nav">
-              {journeySteps.map((step, idx) => (
-                <button
-                  key={idx}
-                  className={`stepper-nav-item journey-step-item ${activeJourneyStep === idx ? 'active' : ''}`}
-                  onClick={() => setActiveJourneyStep(idx)}
-                >
-                  <span className="step-number">{step.number}</span>
-                  <div className="step-content">
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px', flexWrap: 'wrap' }}>
-                      <h3 style={{ margin: 0, fontSize: '15px' }}>{step.title}</h3>
-                      <span className={`journey-status-badge badge-${step.badgeType}`}>
-                        {step.badge}
-                      </span>
-                    </div>
-                    <p>{step.description}</p>
-                  </div>
-                </button>
-              ))}
+          <div className="how-it-works-grid-v2">
+            <div className="how-it-works-card-v2">
+              <div className="step-badge-v2">Step 1</div>
+              <div className="step-icon-v2">🔌</div>
+              <h3 style={{ marginTop: '10px' }}>Connect Your Store</h3>
+              <p>Link your Shopify or WooCommerce store along with your WhatsApp Business Number in under 5 minutes.</p>
+              <div className="step-tags-v2">
+                <span>Shopify</span>
+                <span>WooCommerce</span>
+                <span>Meta API</span>
+              </div>
+            </div>
+            
+            <div className="how-it-works-card-v2">
+              <div className="step-badge-v2">Step 2</div>
+              <div className="step-icon-v2">🧠</div>
+              <h3 style={{ marginTop: '10px' }}>Train the AI Bot</h3>
+              <p>Upload your store FAQs, refund/shipping policies, or PDFs. The AI learns your business details instantly.</p>
+              <div className="step-tags-v2">
+                <span>PDF Upload</span>
+                <span>Store Policies</span>
+                <span>Custom FAQs</span>
+              </div>
             </div>
 
-            {/* Right side: Modern Animated Visualizer */}
-            <div className="stepper-visual journey-visualizer">
-              <div className="stepper-visual-inner">
-                <div className="visual-panel journey-panel">
-                  <h4 className="visual-panel-title">
-                    Your AI Support Bot Goes Live in Under 5 Minutes
-                  </h4>
-
-                  <div className="workflow-pipeline">
-                    {/* Meta node */}
-                    <div className={`pipeline-node-v2 meta-v2 ${activeJourneyStep === 0 ? 'active glow' : ''}`}>
-                      <div className="node-icon-wrapper">
-                        <SiMeta className="node-icon-v2" />
-                      </div>
-                      <div className="node-details">
-                        <strong>Meta WhatsApp API</strong>
-                        <span className="live-status-pill connected">✓ Connected</span>
-                      </div>
-                    </div>
-
-                    <div className={`pipeline-connector-v2 ${activeJourneyStep === 0 ? 'active-pulse' : ''}`}>
-                      <div className="pulse-dot"></div>
-                    </div>
-
-                    {/* Shopify/WooCommerce Node */}
-                    <div className={`pipeline-node-v2 store-v2 ${activeJourneyStep === 1 ? 'active glow' : ''}`}>
-                      <div className="node-icon-wrapper">
-                        <div style={{ display: 'flex', gap: '4px' }}>
-                          <SiShopify className="node-icon-v2 text-shopify" />
-                          <SiWoocommerce className="node-icon-v2 text-woo" />
-                        </div>
-                      </div>
-                      <div className="node-details">
-                        <strong>Shopify & WooCommerce</strong>
-                        <span className="live-status-pill connected">✓ Connected</span>
-                      </div>
-                    </div>
-
-                    <div className={`pipeline-connector-v2 ${activeJourneyStep === 1 ? 'active-pulse' : ''}`}>
-                      <div className="pulse-dot"></div>
-                    </div>
-
-                    {/* Knowledge Base Node */}
-                    <div className={`pipeline-node-v2 kb-v2 ${activeJourneyStep === 2 ? 'active glow' : ''}`}>
-                      <div className="node-icon-wrapper">
-                        <FaFileAlt className="node-icon-v2 text-kb" />
-                      </div>
-                      <div className="node-details">
-                        <strong>Knowledge Base (PDFs)</strong>
-                        <span className="live-status-pill synced">✓ Knowledge Synced</span>
-                      </div>
-                    </div>
-
-                    <div className={`pipeline-connector-v2 ${activeJourneyStep === 2 ? 'active-pulse' : ''}`}>
-                      <div className="pulse-dot"></div>
-                    </div>
-
-                    {/* AI Processing Node */}
-                    <div className={`pipeline-node-v2 ai-v2 ${activeJourneyStep === 3 ? 'active glow' : ''}`}>
-                      <div className="node-icon-wrapper">
-                        <FaBrain className="node-icon-v2 text-ai" />
-                      </div>
-                      <div className="node-details">
-                        <strong>AI Processing</strong>
-                        <span className="live-status-pill online">✓ AI Online</span>
-                      </div>
-                    </div>
-
-                    <div className={`pipeline-connector-v2 ${activeJourneyStep === 3 ? 'active-pulse' : ''}`}>
-                      <div className="pulse-dot"></div>
-                    </div>
-
-                    {/* Customer Message Node */}
-                    <div className={`pipeline-node-v2 chat-v2 ${activeJourneyStep === 4 ? 'active glow' : ''}`}>
-                      <div className="node-icon-wrapper">
-                        <FaComments className="node-icon-v2 text-chat" />
-                      </div>
-                      <div className="node-details">
-                        <strong>Customer Message</strong>
-                        <span className="live-status-pill chat-active">“Is my order arriving today?”</span>
-                      </div>
-                    </div>
-
-                    <div className={`pipeline-connector-v2 ${activeJourneyStep === 4 ? 'active-pulse' : ''}`}>
-                      <div className="pulse-dot"></div>
-                    </div>
-
-                    {/* Instant AI Reply Node */}
-                    <div className={`pipeline-node-v2 reply-v2 ${activeJourneyStep === 5 ? 'active glow' : ''}`}>
-                      <div className="node-icon-wrapper">
-                        <FaBolt className="node-icon-v2 text-reply" />
-                      </div>
-                      <div className="node-details">
-                        <strong>Instant AI Reply</strong>
-                        <span className="live-status-pill reply-sent">⚡ Reply sent in 1.3s</span>
-                      </div>
-                    </div>
-
-                    <div className={`pipeline-connector-v2 ${activeJourneyStep === 5 ? 'active-pulse' : ''}`}>
-                      <div className="pulse-dot"></div>
-                    </div>
-
-                    {/* Human Handoff Node */}
-                    <div className={`pipeline-node-v2 handoff-v2 ${activeJourneyStep === 6 ? 'active glow' : ''}`}>
-                      <div className="node-icon-wrapper">
-                        <FaHeadset className="node-icon-v2 text-handoff" />
-                      </div>
-                      <div className="node-details">
-                        <strong>Human Handoff (if needed)</strong>
-                        <span className="live-status-pill handoff-ready">👥 Live Agent Takeover Ready</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
+            <div className="how-it-works-card-v2">
+              <div className="step-badge-v2">Step 3</div>
+              <div className="step-icon-v2">⚡</div>
+              <h3 style={{ marginTop: '10px' }}>Automate Support</h3>
+              <p>Your AI Bot instantly replies to customers, tracks order statuses, and hands over complex chats to live agents.</p>
+              <div className="step-tags-v2">
+                <span>24/7 Auto-Reply</span>
+                <span>Order Tracking</span>
+                <span>Human Handoff</span>
               </div>
             </div>
           </div>

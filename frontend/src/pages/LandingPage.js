@@ -479,6 +479,8 @@ function LandingPage() {
               <div className="partner-logo-item openai">
                 <div className="partner-icon-wrap openai-bg">
                   <SiOpenai size={22} color="#ffffff" />
+                </div>
+                <div className="partner-label">
                   <span className="partner-name">OpenAI</span>
                   <span className="partner-sub">AI Powered</span>
                 </div>

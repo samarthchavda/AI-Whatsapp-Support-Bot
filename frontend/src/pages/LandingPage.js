@@ -151,8 +151,7 @@ function LandingPage() {
     return () => clearInterval(interval);
   }, []);
   const [isChatOpen, setIsChatOpen] = useState(false);
-  const [copied, setCopied] = useState(false);
-  const [showPromoBar, setShowPromoBar] = useState(true);
+
   const [chatMessages, setChatMessages] = useState([
     { role: 'assistant', content: 'Hi there! 👋 I am the Kwickbot Sales & Setup Assistant. Ask me about features, plans, extra charges, integration setup, or how to give access permissions!' }
   ]);
@@ -184,11 +183,7 @@ function LandingPage() {
     return () => clearTimeout(timer);
   }, [animState, activeTab]);
 
-  const handleCopyCode = () => {
-    navigator.clipboard.writeText('NEW15');
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
+
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -253,20 +248,7 @@ function LandingPage() {
 
   return (
     <div className="landing-page">
-      {showPromoBar && (
-        <div className="promo-banner-bar">
-          <div className="promo-content">
-            <span className="promo-badge">60% OFF</span>
-            <span className="promo-text">First-Time Offer: Get 60% off! Copy code <strong>NEW15</strong> and apply it inside your dashboard when upgrading.</span>
-            <button className="promo-copy-btn" onClick={handleCopyCode}>
-              {copied ? 'Copied! 🎉' : 'Copy Code'}
-            </button>
-          </div>
-          <button className="promo-close-btn" onClick={() => setShowPromoBar(false)} aria-label="Close offer banner">
-            <FaTimes />
-          </button>
-        </div>
-      )}
+
       <nav className="landing-nav">
         <div className="landing-nav-inner">
           <button className="landing-logo" onClick={() => scrollToSection('top')} aria-label="Kwickbot home">

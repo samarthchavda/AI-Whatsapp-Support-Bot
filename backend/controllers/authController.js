@@ -1004,6 +1004,23 @@ exports.verifyRazorpayPayment = async (req, res) => {
     });
     await invoice.save();
 
+    // Generate Invoice PDF
+    let pdfUrl = null;
+    try {
+      const invoicePdfService = require('../services/invoicePdfService');
+      await invoicePdfService.generateInvoicePDF(invoice, admin);
+      
+      const getBackendUrl = (req) => {
+        if (process.env.BACKEND_URL) return process.env.BACKEND_URL;
+        return `${req.protocol}://${req.get('host')}`;
+      };
+      
+      pdfUrl = `${getBackendUrl(req)}/uploads/invoices/${invoice.invoiceNumber}.pdf`;
+      console.log(`✅ Invoice PDF generated successfully: ${pdfUrl}`);
+    } catch (pdfError) {
+      console.error('❌ Error generating invoice PDF:', pdfError.message);
+    }
+
     // Send WhatsApp Invoice notification
     try {
       const whatsappCloudAPI = require('../services/whatsappCloudAPI');
@@ -1044,11 +1061,26 @@ If you need any assistance, feel free to reply to this message.
 Best regards,
 *Kwickbot Team*`;
 
+        // 1. Send the text notification
         const waResult = await whatsappCloudAPI.sendMessage(targetPhone, whatsappMessage);
         if (waResult.success) {
-          console.log(`✅ Invoice WhatsApp message sent to ${targetPhone}`);
+          console.log(`✅ Invoice WhatsApp text sent to ${targetPhone}`);
         } else {
-          console.error(`❌ Invoice WhatsApp message failed:`, waResult.error);
+          console.error(`❌ Invoice WhatsApp text failed:`, waResult.error);
+        }
+
+        // 2. Send the PDF Document invoice if successfully created
+        if (pdfUrl) {
+          const docResult = await whatsappCloudAPI.sendDocument(
+            targetPhone, 
+            pdfUrl, 
+            `Invoice-${invoice.invoiceNumber}.pdf`
+          );
+          if (docResult.success) {
+            console.log(`✅ Invoice PDF document sent to WhatsApp: ${targetPhone}`);
+          } else {
+            console.error(`❌ Invoice PDF document send failed:`, docResult.error);
+          }
         }
       }
     } catch (waError) {

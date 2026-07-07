@@ -554,6 +554,68 @@ class WhatsAppCloudAPI {
     ];
   }
 
+  // Send document via WhatsApp Cloud API
+  async sendDocument(phoneNumber, documentUrl, filename, customCredentials = null) {
+    let accessToken;
+    let phoneNumberId;
+    let isConfig;
+
+    if (customCredentials) {
+      accessToken = customCredentials.accessToken;
+      phoneNumberId = customCredentials.phoneNumberId;
+      isConfig = !!(accessToken && phoneNumberId);
+    } else {
+      const systemSettings = await this.getSystemSettings();
+      accessToken = systemSettings.accessToken;
+      phoneNumberId = systemSettings.phoneNumberId;
+      isConfig = (accessToken && accessToken !== 'YOUR_ACCESS_TOKEN') && (phoneNumberId && phoneNumberId !== 'YOUR_PHONE_NUMBER_ID');
+    }
+
+    if (!isConfig) {
+      console.error('❌ WhatsApp Cloud API not configured for sending document!');
+      return {
+        success: false,
+        error: 'WhatsApp API credentials not configured. Please update settings.'
+      };
+    }
+
+    try {
+      const url = `${this.baseUrl}/${phoneNumberId}/messages`;
+
+      const data = {
+        messaging_product: 'whatsapp',
+        recipient_type: 'individual',
+        to: phoneNumber.replace(/\D/g, ''),
+        type: 'document',
+        document: {
+          link: documentUrl,
+          filename: filename
+        }
+      };
+
+      const config = {
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'application/json'
+        }
+      };
+
+      const response = await axios.post(url, data, config);
+      console.log(`✅ Document ${filename} sent to ${phoneNumber}`);
+      return {
+        success: true,
+        messageId: response.data.messages[0].id
+      };
+
+    } catch (error) {
+      console.error('❌ Error sending document:', error.response?.data || error.message);
+      return {
+        success: false,
+        error: error.response?.data || error.message
+      };
+    }
+  }
+
   // Verify custom WhatsApp Cloud API credentials
   async verifyCredentials(customCredentials) {
     const accessToken = customCredentials?.accessToken || this.accessToken;

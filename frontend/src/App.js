@@ -36,6 +36,7 @@ import ResetPassword from './pages/ResetPassword';
 import PrivacyPolicy from './pages/PrivacyPolicy';
 import TermsOfService from './pages/TermsOfService';
 import RefundPolicy from './pages/RefundPolicy';
+import DataDeletion from './pages/DataDeletion';
 import Blog from './pages/Blog';
 import BlogPost from './pages/BlogPost';
 import SuperAdminBlog from './pages/SuperAdminBlog';
@@ -429,7 +430,7 @@ function ThemeHandler({ admin }) {
 
   useEffect(() => {
     const isPublicPath = [
-      '/', '/book-demo', '/login', '/about', '/services', '/forgot-password', '/privacy', '/blog'
+      '/', '/book-demo', '/login', '/about', '/services', '/forgot-password', '/privacy', '/blog', '/data-deletion'
     ].includes(location.pathname) || 
     location.pathname.startsWith('/reset-password') ||
     location.pathname.startsWith('/blog/');
@@ -660,6 +661,7 @@ function App() {
         <Route path="/privacy" element={<PrivacyPolicy />} />
         <Route path="/terms" element={<TermsOfService />} />
         <Route path="/refund-policy" element={<RefundPolicy />} />
+        <Route path="/data-deletion" element={<DataDeletion />} />
         <Route path="/blog" element={<Blog />} />
         <Route path="/blog/:slug" element={<BlogPost />} />
         

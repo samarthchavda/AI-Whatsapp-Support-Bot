@@ -417,6 +417,9 @@ exports.disconnectWhatsApp = async (req, res) => {
 
     admin.whatsappConnected = false;
     admin.whatsappConnectedAt = null;
+    admin.whatsappAccessToken = null;
+    admin.whatsappPhoneNumberId = null;
+    admin.whatsappBusinessAccountId = null;
     await admin.save();
 
     res.json({

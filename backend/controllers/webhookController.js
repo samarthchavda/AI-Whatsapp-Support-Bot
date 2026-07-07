@@ -90,7 +90,7 @@ exports.handleWebhook = async (req, res) => {
       // Handle messages
       if (webhookValue.messages) {
         for (const message of webhookValue.messages) {
-          handleIncomingMessage(message, contactName, matchedAdmin).catch(err => {
+          handleIncomingMessage(message, contactName, matchedAdmin, incomingPhoneNumberId).catch(err => {
             console.error('Error handling incoming message:', err);
           });
         }
@@ -117,7 +117,7 @@ exports.handleWebhook = async (req, res) => {
 };
 
 // Process incoming message
-async function handleIncomingMessage(message, contactName, matchedAdmin) {
+async function handleIncomingMessage(message, contactName, matchedAdmin, incomingPhoneNumberId = null) {
   try {
     const customerPhone = message.from;
     const messageId = message.id;
@@ -177,13 +177,26 @@ async function handleIncomingMessage(message, contactName, matchedAdmin) {
       console.error('Error in Super Admin Bot interception:', saErr.message);
     }
 
+    // Determine if it is a platform system number message (to bypass merchant disconnected status check)
+    let isSystemNumber = false;
+    try {
+      let systemPhoneId = process.env.WHATSAPP_PHONE_NUMBER_ID;
+      const GlobalSettings = require('../models/GlobalSettings');
+      const phoneIdSetting = await GlobalSettings.findOne({ key: 'whatsapp_phone_number_id' });
+      if (phoneIdSetting && phoneIdSetting.value) systemPhoneId = phoneIdSetting.value;
+      isSystemNumber = !!(incomingPhoneNumberId && incomingPhoneNumberId === systemPhoneId);
+    } catch (err) {
+      console.error('Error detecting system number flag:', err.message);
+    }
+
     // Process with AI service
     const aiResponse = await aiService.processMessage({
       customerPhone,
       customerName: contactName,
       message: messageContent,
       messageId,
-      adminId: matchedAdmin ? matchedAdmin._id : null
+      adminId: matchedAdmin ? matchedAdmin._id : null,
+      isSystemNumber
     });
 
     if (aiResponse.botPaused) {

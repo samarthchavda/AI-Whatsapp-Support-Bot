@@ -315,7 +315,7 @@ Smart Fallback Rules (when specific information is not available in the knowledg
     return { valid: errors.length === 0, errors };
   }
 
-  async processMessage({ customerPhone, customerName, message, messageId, adminId = null }) {
+  async processMessage({ customerPhone, customerName, message, messageId, adminId = null, isSystemNumber = false }) {
     const startTime = Date.now();
     let conversation = null;
     let aiLogDoc = null;
@@ -436,7 +436,7 @@ Smart Fallback Rules (when specific information is not available in the knowledg
       // Check subscription active, token limit checks, and WhatsApp connection status
       if (adminDoc) {
         // Check if WhatsApp channel is disconnected
-        const isWhatsappDisconnected = adminDoc.whatsappConnected === false;
+        const isWhatsappDisconnected = adminDoc.whatsappConnected === false && !isSystemNumber;
         if (isWhatsappDisconnected) {
           console.log(`🔕 WhatsApp channel disconnected for tenant: ${adminDoc.email}. Skipping AI response.`);
           

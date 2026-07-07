@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { FaPlug, FaSave, FaEye, FaEyeSlash, FaInfoCircle, FaTrash, FaCopy } from 'react-icons/fa';
 import api from '../services/api';
 import './SuperAdmin.css';
+import './SuperAdminSettings.css';
 
 function SuperAdminSettings() {
   const navigate = useNavigate();
@@ -217,131 +218,131 @@ function SuperAdminSettings() {
   }
 
   return (
-    <div className="container" style={{ display: 'flex', flexDirection: 'column', gap: '28px' }}>
+    <div className="super-admin-settings-container">
       <div className="page-header">
-        <h1 className="page-title" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+        <h1 className="page-title">
           <FaPlug style={{ color: '#6366f1' }} /> System Connection Settings
         </h1>
         <p className="page-subtitle">Configure the default platform WhatsApp Cloud API credentials and Razorpay payment gateway credentials.</p>
       </div>
 
       {successMsg && (
-        <div className="alert alert-success" style={{ padding: '12px 20px', background: 'rgba(16, 185, 129, 0.15)', border: '1px solid #10b981', color: '#fafafa', borderRadius: '8px' }}>
+        <div className="premium-alert premium-alert-success">
           {successMsg}
         </div>
       )}
 
       {errorMsg && (
-        <div className="alert alert-danger" style={{ padding: '12px 20px', background: 'rgba(239, 68, 68, 0.15)', border: '1px solid #ef4444', color: '#fafafa', borderRadius: '8px' }}>
+        <div className="premium-alert premium-alert-danger">
           {errorMsg}
         </div>
       )}
 
       {/* Meta WhatsApp Cloud API Credentials */}
-      <div className="super-admin-card" style={{ padding: '32px', background: 'rgba(24, 24, 27, 0.6)', border: '1px solid rgba(63, 63, 70, 0.3)', borderRadius: '16px' }}>
-        <h3 style={{ fontSize: '18px', fontWeight: '700', color: '#fafafa', marginBottom: '24px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+      <div className="glass-card">
+        <h3 className="section-title">
           Meta WhatsApp Cloud API Credentials
         </h3>
 
-        <form onSubmit={handleSaveWhatsApp} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-          <div className="settings-field" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            <label style={{ fontSize: '14px', fontWeight: '600', color: '#a1a1aa' }}>Phone Number ID</label>
+        <form onSubmit={handleSaveWhatsApp} className="settings-form">
+          <div className="settings-field">
+            <label className="settings-label">Phone Number ID</label>
             <input
               type="text"
               name="whatsapp_phone_number_id"
               value={formData.whatsapp_phone_number_id}
               onChange={handleChange}
               placeholder="e.g. 1140434719159859"
-              style={{ width: '100%', padding: '12px 16px', background: '#18181b', border: '1px solid #3f3f46', borderRadius: '8px', color: '#fafafa' }}
+              className="premium-input"
               required
             />
-            <span style={{ fontSize: '12px', color: '#71717a' }}>This is the 15-digit ID provided by Meta for the specific phone number.</span>
+            <span className="field-desc">This is the 15-digit ID provided by Meta for the specific phone number.</span>
           </div>
 
-          <div className="settings-field" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            <label style={{ fontSize: '14px', fontWeight: '600', color: '#a1a1aa' }}>WhatsApp Business Account ID</label>
+          <div className="settings-field">
+            <label className="settings-label">WhatsApp Business Account ID</label>
             <input
               type="text"
               name="whatsapp_business_account_id"
               value={formData.whatsapp_business_account_id}
               onChange={handleChange}
               placeholder="e.g. 856186027099439"
-              style={{ width: '100%', padding: '12px 16px', background: '#18181b', border: '1px solid #3f3f46', borderRadius: '8px', color: '#fafafa' }}
+              className="premium-input"
               required
             />
-            <span style={{ fontSize: '12px', color: '#71717a' }}>This is the Business Account ID under which your phone number and templates are registered.</span>
+            <span className="field-desc">This is the Business Account ID under which your phone number and templates are registered.</span>
           </div>
 
-          <div className="settings-field" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            <label style={{ fontSize: '14px', fontWeight: '600', color: '#a1a1aa' }}>Webhook Verification Token</label>
+          <div className="settings-field">
+            <label className="settings-label">Webhook Verification Token</label>
             <input
               type="text"
               name="whatsapp_webhook_verify_token"
               value={formData.whatsapp_webhook_verify_token}
               onChange={handleChange}
               placeholder="Enter your webhook verify token"
-              style={{ width: '100%', padding: '12px 16px', background: '#18181b', border: '1px solid #3f3f46', borderRadius: '8px', color: '#fafafa' }}
+              className="premium-input"
               required
             />
-            <span style={{ fontSize: '12px', color: '#71717a' }}>Matches the verification token configured in Meta's Webhook settings.</span>
+            <span className="field-desc">Matches the verification token configured in Meta's Webhook settings.</span>
           </div>
 
-          <div className="settings-field" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            <label style={{ fontSize: '14px', fontWeight: '600', color: '#a1a1aa' }}>WhatsApp Webhook Callback URL</label>
+          <div className="settings-field">
+            <label className="settings-label">WhatsApp Webhook Callback URL</label>
             <div style={{ display: 'flex', gap: '10px' }}>
               <input
                 type="text"
                 readOnly
                 value={getWebhookUrl()}
-                style={{ width: '100%', padding: '12px 16px', background: '#27272a', border: '1px solid #3f3f46', borderRadius: '8px', color: '#a1a1aa', cursor: 'default' }}
+                className="premium-input"
               />
               <button
                 type="button"
                 onClick={handleCopyWebhook}
-                style={{ padding: '12px 20px', background: '#3f3f46', border: 'none', borderRadius: '8px', color: '#fafafa', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', whiteSpace: 'nowrap' }}
+                className="copy-btn"
               >
                 <FaCopy /> {copied ? 'Copied!' : 'Copy URL'}
               </button>
             </div>
-            <span style={{ fontSize: '12px', color: '#71717a' }}>Copy this URL and configure it as the Callback URL in your Meta WhatsApp Developer console.</span>
+            <span className="field-desc">Copy this URL and configure it as the Callback URL in your Meta WhatsApp Developer console.</span>
           </div>
 
-          <div className="settings-field" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            <label style={{ fontSize: '14px', fontWeight: '600', color: '#a1a1aa' }}>Meta Access Token (System User Token)</label>
-            <div style={{ position: 'relative', width: '100%' }}>
+          <div className="settings-field">
+            <label className="settings-label">Meta Access Token (System User Token)</label>
+            <div className="input-relative">
               <input
                 type={showToken ? 'text' : 'password'}
                 name="whatsapp_access_token"
                 value={formData.whatsapp_access_token}
                 onChange={handleChange}
                 placeholder="EAABo4oSoqvkBR..."
-                style={{ width: '100%', padding: '12px 50px 12px 16px', background: '#18181b', border: '1px solid #3f3f46', borderRadius: '8px', color: '#fafafa' }}
+                className="premium-input"
+                style={{ paddingRight: '50px' }}
                 required
               />
               <button
                 type="button"
                 onClick={() => setShowToken(!showToken)}
-                style={{ position: 'absolute', right: '16px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: '#a1a1aa', cursor: 'pointer' }}
+                className="eye-btn"
               >
                 {showToken ? <FaEyeSlash /> : <FaEye />}
               </button>
             </div>
-            <span style={{ fontSize: '12px', color: '#71717a' }}>Generate a permanent system user token in your Business Manager settings with <code>whatsapp_business_messaging</code> permissions.</span>
+            <span className="field-desc">Generate a permanent system user token in your Business Manager settings with <code>whatsapp_business_messaging</code> permissions.</span>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '12px', background: 'rgba(99, 102, 241, 0.08)', borderRadius: '8px', border: '1px solid rgba(99, 102, 241, 0.2)' }}>
+          <div className="info-box">
             <FaInfoCircle style={{ color: '#6366f1', flexShrink: 0 }} />
-            <span style={{ fontSize: '12px', color: '#a1a1aa', lineHeight: '1.4' }}>Saving WhatsApp credentials will override the default WhatsApp settings in your server `.env` file dynamically.</span>
+            <span className="info-text">Saving WhatsApp credentials will override the default WhatsApp settings in your server `.env` file dynamically.</span>
           </div>
 
-          <div style={{ display: 'flex', gap: '14px', marginTop: '8px' }}>
+          <div className="btn-group">
             {hasWhatsAppKeys ? (
               <>
                 <button
                   type="submit"
                   disabled={savingWhatsApp}
-                  className="btn-primary"
-                  style={{ flex: 1, padding: '14px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', background: '#6366f1', border: 'none', color: 'white', fontWeight: '700', cursor: 'pointer' }}
+                  className="btn-premium-primary"
                 >
                   <FaSave /> {savingWhatsApp ? 'Updating WhatsApp...' : 'Update WhatsApp Settings'}
                 </button>
@@ -349,8 +350,7 @@ function SuperAdminSettings() {
                   type="button"
                   onClick={handleDeleteWhatsApp}
                   disabled={savingWhatsApp}
-                  className="btn-danger"
-                  style={{ padding: '14px 24px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', background: '#ef4444', border: 'none', color: 'white', fontWeight: '700', cursor: 'pointer' }}
+                  className="btn-premium-danger"
                 >
                   <FaTrash /> Delete Credentials
                 </button>
@@ -359,8 +359,8 @@ function SuperAdminSettings() {
               <button
                 type="submit"
                 disabled={savingWhatsApp}
-                className="btn-primary"
-                style={{ width: '100%', padding: '14px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', background: '#6366f1', border: 'none', color: 'white', fontWeight: '700', cursor: 'pointer' }}
+                className="btn-premium-primary"
+                style={{ width: '100%' }}
               >
                 <FaSave /> {savingWhatsApp ? 'Saving WhatsApp Settings...' : 'Save WhatsApp Settings'}
               </button>
@@ -370,71 +370,72 @@ function SuperAdminSettings() {
       </div>
 
       {/* Razorpay Payment Gateway Credentials */}
-      <div className="super-admin-card" style={{ padding: '32px', background: 'rgba(24, 24, 27, 0.6)', border: '1px solid rgba(63, 63, 70, 0.3)', borderRadius: '16px' }}>
-        <h3 style={{ fontSize: '18px', fontWeight: '700', color: '#fafafa', marginBottom: '24px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+      <div className="glass-card razorpay-card">
+        <h3 className="section-title">
           Razorpay Payment Gateway Credentials
         </h3>
 
-        <form onSubmit={handleSaveRazorpay} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-          <div className="settings-field" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            <label style={{ fontSize: '14px', fontWeight: '600', color: '#a1a1aa' }}>Razorpay Key ID</label>
-            <div style={{ position: 'relative', width: '100%' }}>
+        <form onSubmit={handleSaveRazorpay} className="settings-form">
+          <div className="settings-field">
+            <label className="settings-label">Razorpay Key ID</label>
+            <div className="input-relative">
               <input
                 type={showRazorpayKey ? 'text' : 'password'}
                 name="razorpay_key_id"
                 value={formData.razorpay_key_id}
                 onChange={handleChange}
                 placeholder="e.g. rzp_test_xxxxxxxxxxxxxx"
-                style={{ width: '100%', padding: '12px 50px 12px 16px', background: '#18181b', border: '1px solid #3f3f46', borderRadius: '8px', color: '#fafafa' }}
+                className="premium-input"
+                style={{ paddingRight: '50px' }}
                 required
               />
               <button
                 type="button"
                 onClick={() => setShowRazorpayKey(!showRazorpayKey)}
-                style={{ position: 'absolute', right: '16px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: '#a1a1aa', cursor: 'pointer' }}
+                className="eye-btn"
               >
                 {showRazorpayKey ? <FaEyeSlash /> : <FaEye />}
               </button>
             </div>
-            <span style={{ fontSize: '12px', color: '#71717a' }}>This is the public Key ID generated from your Razorpay Dashboard Settings.</span>
+            <span className="field-desc">This is the public Key ID generated from your Razorpay Dashboard Settings.</span>
           </div>
 
-          <div className="settings-field" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            <label style={{ fontSize: '14px', fontWeight: '600', color: '#a1a1aa' }}>Razorpay Key Secret</label>
-            <div style={{ position: 'relative', width: '100%' }}>
+          <div className="settings-field">
+            <label className="settings-label">Razorpay Key Secret</label>
+            <div className="input-relative">
               <input
                 type={showRazorpaySecret ? 'text' : 'password'}
                 name="razorpay_key_secret"
                 value={formData.razorpay_key_secret}
                 onChange={handleChange}
                 placeholder="Enter your Razorpay Key Secret"
-                style={{ width: '100%', padding: '12px 50px 12px 16px', background: '#18181b', border: '1px solid #3f3f46', borderRadius: '8px', color: '#fafafa' }}
+                className="premium-input"
+                style={{ paddingRight: '50px' }}
                 required
               />
               <button
                 type="button"
                 onClick={() => setShowRazorpaySecret(!showRazorpaySecret)}
-                style={{ position: 'absolute', right: '16px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: '#a1a1aa', cursor: 'pointer' }}
+                className="eye-btn"
               >
                 {showRazorpaySecret ? <FaEyeSlash /> : <FaEye />}
               </button>
             </div>
-            <span style={{ fontSize: '12px', color: '#71717a' }}>Keep this Key Secret secure. Never expose it to the frontend code.</span>
+            <span className="field-desc">Keep this Key Secret secure. Never expose it to the frontend code.</span>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '12px', background: 'rgba(16, 185, 129, 0.08)', borderRadius: '8px', border: '1px solid rgba(16, 185, 129, 0.2)' }}>
+          <div className="info-box rzp-info">
             <FaInfoCircle style={{ color: '#10b981', flexShrink: 0 }} />
-            <span style={{ fontSize: '12px', color: '#a1a1aa', lineHeight: '1.4' }}>Saving Razorpay credentials will override the default Razorpay settings in your server `.env` file dynamically.</span>
+            <span className="info-text">Saving Razorpay credentials will override the default Razorpay settings in your server `.env` file dynamically.</span>
           </div>
 
-          <div style={{ display: 'flex', gap: '14px', marginTop: '8px' }}>
+          <div className="btn-group">
             {hasRazorpayKeys ? (
               <>
                 <button
                   type="submit"
                   disabled={savingRazorpay}
-                  className="btn-primary"
-                  style={{ flex: 1, padding: '14px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', background: '#10b981', border: 'none', color: 'white', fontWeight: '700', cursor: 'pointer' }}
+                  className="btn-premium-primary"
                 >
                   <FaSave /> {savingRazorpay ? 'Updating Razorpay...' : 'Update Razorpay Settings'}
                 </button>
@@ -442,8 +443,7 @@ function SuperAdminSettings() {
                   type="button"
                   onClick={handleDeleteRazorpay}
                   disabled={savingRazorpay}
-                  className="btn-danger"
-                  style={{ padding: '14px 24px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', background: '#ef4444', border: 'none', color: 'white', fontWeight: '700', cursor: 'pointer' }}
+                  className="btn-premium-danger"
                 >
                   <FaTrash /> Delete Credentials
                 </button>
@@ -452,8 +452,8 @@ function SuperAdminSettings() {
               <button
                 type="submit"
                 disabled={savingRazorpay}
-                className="btn-primary"
-                style={{ width: '100%', padding: '14px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', background: '#10b981', border: 'none', color: 'white', fontWeight: '700', cursor: 'pointer' }}
+                className="btn-premium-primary"
+                style={{ width: '100%' }}
               >
                 <FaSave /> {savingRazorpay ? 'Saving Razorpay Settings...' : 'Save Razorpay Settings'}
               </button>

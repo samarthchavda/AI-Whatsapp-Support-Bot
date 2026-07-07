@@ -1,4 +1,4 @@
-/* Super Admin Settings Premium Styling */
+/* Super Admin Settings Premium Theme-Adaptive Styling */
 
 .super-admin-settings-container {
   display: flex;
@@ -17,7 +17,7 @@
   font-family: 'Outfit', 'Inter', sans-serif;
   font-size: 28px;
   font-weight: 800;
-  color: #fafafa;
+  color: var(--text-primary);
   display: flex;
   align-items: center;
   gap: 14px;
@@ -26,49 +26,52 @@
 
 .page-subtitle {
   font-size: 14.5px;
-  color: #94a3b8;
+  color: var(--text-secondary);
   margin-top: 6px;
   line-height: 1.5;
 }
 
-/* Glassmorphism Cards */
+/* Glassmorphism & Theme-Adaptive Cards */
 .glass-card {
   padding: 32px;
-  background: rgba(15, 23, 42, 0.45);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  border-radius: 20px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.04);
   transition: transform 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
   position: relative;
   overflow: hidden;
 }
 
+/* Add custom top border accents */
 .glass-card::before {
   content: '';
   position: absolute;
   top: 0;
   left: 0;
   right: 0;
-  height: 2px;
-  background: linear-gradient(90deg, transparent, rgba(99, 102, 241, 0.15), transparent);
+  height: 3px;
+  background: linear-gradient(90deg, transparent, #6366f1, transparent);
 }
 
 .glass-card.razorpay-card::before {
-  background: linear-gradient(90deg, transparent, rgba(16, 185, 129, 0.15), transparent);
+  background: linear-gradient(90deg, transparent, #10b981, transparent);
 }
 
 .glass-card:hover {
-  border-color: rgba(255, 255, 255, 0.1);
-  box-shadow: 0 15px 40px rgba(0, 0, 0, 0.35);
+  border-color: rgba(99, 102, 241, 0.2);
+  box-shadow: 0 15px 40px rgba(0, 0, 0, 0.08);
+}
+
+.glass-card.razorpay-card:hover {
+  border-color: rgba(16, 185, 129, 0.2);
 }
 
 .section-title {
   font-family: 'Outfit', 'Inter', sans-serif;
   font-size: 19px;
   font-weight: 700;
-  color: #fafafa;
+  color: var(--text-primary);
   margin-bottom: 28px;
   display: flex;
   align-items: center;
@@ -92,7 +95,7 @@
 .settings-label {
   font-size: 13.5px;
   font-weight: 600;
-  color: #94a3b8;
+  color: var(--text-secondary);
   letter-spacing: 0.2px;
   transition: color 0.2s ease;
 }
@@ -108,10 +111,10 @@
 .premium-input {
   width: 100%;
   padding: 13px 18px;
-  background: rgba(9, 9, 11, 0.7);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: var(--bg-input);
+  border: 1px solid var(--border-default);
   border-radius: 10px;
-  color: #fafafa;
+  color: var(--text-primary);
   font-size: 14.5px;
   font-family: 'Inter', sans-serif;
   transition: all 0.2s ease;
@@ -119,35 +122,39 @@
 }
 
 .premium-input::placeholder {
-  color: #52525b;
+  color: var(--text-muted);
 }
 
 .premium-input:hover {
+  border-color: rgba(0, 0, 0, 0.15);
+}
+
+.dark-theme .premium-input:hover {
   border-color: rgba(255, 255, 255, 0.18);
-  background: rgba(9, 9, 11, 0.9);
 }
 
 .premium-input:focus {
   border-color: #6366f1;
-  background: #09090b;
-  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
+  background: var(--bg-elevated);
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.12);
 }
 
 .glass-card.razorpay-card .premium-input:focus {
   border-color: #10b981;
-  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.15);
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.12);
 }
 
 .premium-input[readonly] {
-  background: rgba(24, 24, 27, 0.5);
-  border-color: rgba(255, 255, 255, 0.05);
-  color: #71717a;
+  background: var(--bg-input);
+  opacity: 0.7;
+  color: var(--text-secondary);
   cursor: default;
 }
 
 .field-desc {
   font-size: 12px;
-  color: #64748b;
+  color: var(--text-secondary);
+  opacity: 0.85;
   margin-top: 2px;
   line-height: 1.4;
 }
@@ -165,7 +172,7 @@
   transform: translateY(-50%);
   background: none;
   border: none;
-  color: #71717a;
+  color: var(--text-secondary);
   cursor: pointer;
   padding: 4px;
   display: flex;
@@ -175,16 +182,16 @@
 }
 
 .eye-btn:hover {
-  color: #fafafa;
+  color: var(--text-primary);
 }
 
 /* Copy button */
 .copy-btn {
   padding: 13px 22px;
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-default);
   border-radius: 10px;
-  color: #fafafa;
+  color: var(--text-primary);
   font-weight: 600;
   font-size: 14px;
   cursor: pointer;
@@ -193,11 +200,12 @@
   gap: 8px;
   white-space: nowrap;
   transition: all 0.2s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
 }
 
 .copy-btn:hover {
-  background: rgba(255, 255, 255, 0.12);
-  border-color: rgba(255, 255, 255, 0.18);
+  background: var(--bg-input);
+  border-color: rgba(0, 0, 0, 0.15);
   transform: translateY(-1px);
 }
 
@@ -211,20 +219,20 @@
   align-items: center;
   gap: 12px;
   padding: 14px 18px;
-  background: rgba(99, 102, 241, 0.06);
+  background: rgba(99, 102, 241, 0.04);
   border-radius: 12px;
-  border: 1px solid rgba(99, 102, 241, 0.12);
+  border: 1px solid rgba(99, 102, 241, 0.1);
   margin-top: 6px;
 }
 
 .info-box.rzp-info {
-  background: rgba(16, 185, 129, 0.05);
-  border-color: rgba(16, 185, 129, 0.12);
+  background: rgba(16, 185, 129, 0.03);
+  border-color: rgba(16, 185, 129, 0.1);
 }
 
 .info-text {
   font-size: 12.5px;
-  color: #94a3b8;
+  color: var(--text-secondary);
   line-height: 1.45;
 }
 
@@ -250,14 +258,14 @@
   font-size: 14.5px;
   font-family: 'Outfit', 'Inter', sans-serif;
   cursor: pointer;
-  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.25);
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.2);
   transition: all 0.2s ease;
 }
 
 .btn-premium-primary:hover {
   transform: translateY(-1px);
-  box-shadow: 0 6px 18px rgba(99, 102, 241, 0.35);
-  filter: brightness(1.1);
+  box-shadow: 0 6px 18px rgba(99, 102, 241, 0.3);
+  filter: brightness(1.05);
 }
 
 .btn-premium-primary:active {
@@ -266,11 +274,11 @@
 
 .glass-card.razorpay-card .btn-premium-primary {
   background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.25);
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.2);
 }
 
 .glass-card.razorpay-card .btn-premium-primary:hover {
-  box-shadow: 0 6px 18px rgba(16, 185, 129, 0.35);
+  box-shadow: 0 6px 18px rgba(16, 185, 129, 0.3);
 }
 
 .btn-premium-danger {
@@ -280,8 +288,8 @@
   align-items: center;
   justify-content: center;
   gap: 10px;
-  background: rgba(239, 68, 68, 0.1);
-  border: 1px solid rgba(239, 68, 68, 0.2);
+  background: rgba(239, 68, 68, 0.05);
+  border: 1px solid rgba(239, 68, 68, 0.15);
   color: #ef4444;
   font-weight: 700;
   font-size: 14.5px;
@@ -295,7 +303,7 @@
   color: white;
   border-color: #ef4444;
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.2);
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.15);
 }
 
 .btn-premium-danger:active {
@@ -314,13 +322,13 @@
 }
 
 .premium-alert-success {
-  background: rgba(16, 185, 129, 0.08);
-  border: 1px solid rgba(16, 185, 129, 0.2);
+  background: rgba(16, 185, 129, 0.05);
+  border: 1px solid rgba(16, 185, 129, 0.15);
   color: #10b981;
 }
 
 .premium-alert-danger {
-  background: rgba(239, 68, 68, 0.08);
-  border: 1px solid rgba(239, 68, 68, 0.2);
+  background: rgba(239, 68, 68, 0.05);
+  border: 1px solid rgba(239, 68, 68, 0.15);
   color: #ef4444;
 }

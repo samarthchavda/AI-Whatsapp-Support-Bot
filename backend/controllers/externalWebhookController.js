@@ -127,6 +127,18 @@ exports.handleExternalOrder = async (req, res) => {
       });
 
       await webhookLog.save();
+
+      // Notify super admins of webhook failure
+      try {
+        const superAdminBotService = require('../services/superAdminBotService');
+        await superAdminBotService.notifySystemError(
+          source,
+          error.message,
+          `Order ID: ${webhookLog.externalOrderId}`
+        );
+      } catch (botErr) {
+        console.error('Error notifying super admins of system error:', botErr.message);
+      }
     } catch (logError) {
       console.error('Failed to log webhook error:', logError.message);
     }

@@ -40,6 +40,14 @@ exports.createDemoRequest = async (req, res) => {
 
     await demoRequest.save();
 
+    // Notify super admins via WhatsApp
+    try {
+      const superAdminBotService = require('../services/superAdminBotService');
+      await superAdminBotService.notifyNewDemo(demoRequest);
+    } catch (waErr) {
+      console.error('Error notifying super admins of new demo request:', waErr.message);
+    }
+
     // Send email notifications
     try {
       // 1. Send confirmation email to Customer

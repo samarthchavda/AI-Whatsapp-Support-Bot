@@ -1004,6 +1004,14 @@ exports.verifyRazorpayPayment = async (req, res) => {
     });
     await invoice.save();
 
+    // Notify super admins via WhatsApp of subscription upgrade
+    try {
+      const superAdminBotService = require('../services/superAdminBotService');
+      await superAdminBotService.notifySubscriptionUpgrade(admin, planName, originalPrice);
+    } catch (waErr) {
+      console.error('Error notifying super admins of subscription upgrade:', waErr.message);
+    }
+
     // Generate Invoice PDF
     let pdfUrl = null;
     try {

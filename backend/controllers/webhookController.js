@@ -164,6 +164,19 @@ async function handleIncomingMessage(message, contactName, matchedAdmin) {
     // Mark message as read (using custom credentials if matched)
     await whatsappCloudAPI.markAsRead(messageId, customCredentials);
 
+    // Check if the sender is a Super Admin
+    try {
+      const superAdminBotService = require('../services/superAdminBotService');
+      const superAdmin = await superAdminBotService.getSuperAdmin(customerPhone);
+      if (superAdmin) {
+        console.log(`👑 Super Admin Message detected from ${customerPhone}. Intercepting for Super Admin Bot.`);
+        await superAdminBotService.handleSuperAdminQuery(customerPhone, messageContent);
+        return;
+      }
+    } catch (saErr) {
+      console.error('Error in Super Admin Bot interception:', saErr.message);
+    }
+
     // Process with AI service
     const aiResponse = await aiService.processMessage({
       customerPhone,

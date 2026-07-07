@@ -64,7 +64,21 @@ exports.handleWebhook = async (req, res) => {
         matchedAdmin = await Admin.findOne({ whatsappPhoneNumberId: incomingPhoneNumberId });
       }
 
-      // Fallback: If no match, search for a default admin configuration
+      // Fallback 1: If no direct phone number match, check if there is an active conversation history for this sender
+      const customerPhone = webhookValue.messages?.[0]?.from;
+      if (!matchedAdmin && customerPhone) {
+        try {
+          const Conversation = require('../models/Conversation');
+          const existingConvo = await Conversation.findOne({ customerPhone }).sort({ updatedAt: -1 });
+          if (existingConvo && existingConvo.admin) {
+            matchedAdmin = await Admin.findById(existingConvo.admin);
+          }
+        } catch (err) {
+          console.error('Error looking up existing conversation:', err.message);
+        }
+      }
+
+      // Fallback 2: If still no match, search for a default admin configuration
       if (!matchedAdmin) {
         // Fetch dynamic phone number ID from GlobalSettings
         let systemPhoneId = process.env.WHATSAPP_PHONE_NUMBER_ID;

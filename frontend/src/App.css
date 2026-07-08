@@ -635,6 +635,11 @@ body {
 .theme-toggle-btn:hover svg {
   transform: rotate(30deg) scale(1.15);
 }
+.theme-toggle-btn:hover {
+  border-color: #ffffff !important;
+  background: rgba(255, 255, 255, 0.08) !important;
+  color: #ffffff !important;
+}
 
 .notification-badge {
   position: absolute;

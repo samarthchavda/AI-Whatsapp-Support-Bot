@@ -453,13 +453,13 @@ function WhatsAppConnect() {
         }}>
           {/* Configuration Status */}
           <div style={{
-            backgroundColor: '#ffffff',
+            backgroundColor: 'var(--bg-card)',
             borderRadius: '16px',
             padding: '32px',
-            boxShadow: '0 4px 20px rgba(0,0,0,0.05)',
-            border: '1px solid #f4f4f5'
+            boxShadow: 'var(--shadow-sm)',
+            border: '1px solid var(--border)'
           }}>
-            <h3 style={{ fontSize: '18px', fontWeight: '700', marginBottom: '20px', color: '#18181b', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <h3 style={{ fontSize: '18px', fontWeight: '700', marginBottom: '20px', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '8px' }}>
               <FaServer style={{ color: '#6366f1' }} /> Cloud API Configuration State
             </h3>
 
@@ -722,17 +722,17 @@ function WhatsAppConnect() {
             <div style={{
               marginTop: '24px',
               padding: '20px',
-              backgroundColor: 'rgba(99, 102, 241, 0.05)',
+              backgroundColor: 'var(--bg-input)',
               borderRadius: '12px',
-              border: '1px solid rgba(99, 102, 241, 0.15)'
+              border: '1px solid var(--border)'
             }}>
-              <h4 style={{ fontSize: '15px', fontWeight: '700', color: '#1f2937', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px', textAlign: 'left' }}>
+              <h4 style={{ fontSize: '15px', fontWeight: '700', color: 'var(--text-primary)', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px', textAlign: 'left' }}>
                 <FaInfoCircle style={{ color: '#6366f1' }} /> Webhook Configuration Details
               </h4>
               
               <div style={{ display: 'grid', gap: '12px', textAlign: 'left' }}>
                 <div>
-                  <span style={{ fontSize: '12px', fontWeight: '600', color: '#4b5563', display: 'block', marginBottom: '4px' }}>Callback URL</span>
+                  <span style={{ fontSize: '12px', fontWeight: '600', color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>Callback URL</span>
                   <div style={{ display: 'flex', gap: '8px' }}>
                     <input
                       type="text"
@@ -741,12 +741,12 @@ function WhatsAppConnect() {
                       style={{
                         flex: 1,
                         padding: '8px 12px',
-                        backgroundColor: '#ffffff',
-                        border: '1px solid #d1d5db',
+                        backgroundColor: 'var(--bg-input)',
+                        border: '1px solid var(--border)',
                         borderRadius: '6px',
                         fontSize: '12px',
                         fontFamily: 'monospace',
-                        color: '#1f2937'
+                        color: 'var(--text-primary)'
                       }}
                     />
                     <button
@@ -774,7 +774,7 @@ function WhatsAppConnect() {
                 </div>
 
                 <div>
-                  <span style={{ fontSize: '12px', fontWeight: '600', color: '#4b5563', display: 'block', marginBottom: '4px' }}>Verification Token</span>
+                  <span style={{ fontSize: '12px', fontWeight: '600', color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>Verification Token</span>
                   <div style={{ display: 'flex', gap: '8px' }}>
                     <input
                       type="text"
@@ -783,12 +783,12 @@ function WhatsAppConnect() {
                       style={{
                         flex: 1,
                         padding: '8px 12px',
-                        backgroundColor: '#ffffff',
-                        border: '1px solid #d1d5db',
+                        backgroundColor: 'var(--bg-input)',
+                        border: '1px solid var(--border)',
                         borderRadius: '6px',
                         fontSize: '12px',
                         fontFamily: 'monospace',
-                        color: '#1f2937'
+                        color: 'var(--text-primary)'
                       }}
                     />
                     <button
@@ -820,13 +820,13 @@ function WhatsAppConnect() {
 
           {/* Setup Onboarding instructions */}
           <div style={{
-            backgroundColor: '#ffffff',
+            backgroundColor: 'var(--bg-card)',
             borderRadius: '16px',
             padding: '32px',
-            boxShadow: '0 4px 20px rgba(0,0,0,0.05)',
-            border: '1px solid #f4f4f5'
+            boxShadow: 'var(--shadow-sm)',
+            border: '1px solid var(--border)'
           }}>
-            <h3 style={{ fontSize: '18px', fontWeight: '700', marginBottom: '16px', color: '#18181b' }}>Meta Developer Portal Setup</h3>
+            <h3 style={{ fontSize: '18px', fontWeight: '700', marginBottom: '16px', color: 'var(--text-primary)' }}>Meta Developer Portal Setup</h3>
             
             <button
               onClick={() => {
@@ -963,19 +963,19 @@ function WhatsAppConnect() {
         }}>
           {/* Customizer Panel */}
           <div style={{
-            backgroundColor: '#ffffff',
+            backgroundColor: 'var(--bg-card)',
             borderRadius: '20px',
             padding: '32px',
-            boxShadow: '0 4px 20px rgba(0,0,0,0.05)',
-            border: '1px solid #f4f4f5',
+            boxShadow: 'var(--shadow-sm)',
+            border: '1px solid var(--border)',
             display: 'grid',
             gap: '24px'
           }}>
             <div>
-              <h3 style={{ fontSize: '20px', fontWeight: '700', color: '#18181b', margin: '0 0 6px 0', textAlign: 'left' }}>
+              <h3 style={{ fontSize: '20px', fontWeight: '700', color: 'var(--text-primary)', margin: '0 0 6px 0', textAlign: 'left' }}>
                 🎨 Customize Your Chat Widget
               </h3>
-              <p style={{ fontSize: '14px', color: '#71717a', margin: 0, textAlign: 'left' }}>
+              <p style={{ fontSize: '14px', color: 'var(--text-secondary)', margin: 0, textAlign: 'left' }}>
                 Design a floating WhatsApp button to display on your e-commerce store website.
               </p>
             </div>
@@ -1199,11 +1199,11 @@ function WhatsAppConnect() {
             
             {/* Live Preview Card */}
             <div style={{
-              backgroundColor: '#f8fafc',
+              backgroundColor: 'var(--bg-app)',
               borderRadius: '20px',
-              border: '1px solid #e2e8f0',
+              border: '1px solid var(--border)',
               padding: '24px',
-              boxShadow: '0 4px 20px rgba(0,0,0,0.02)',
+              boxShadow: 'var(--shadow-sm)',
               position: 'relative',
               height: '200px',
               overflow: 'hidden'
@@ -1215,11 +1215,11 @@ function WhatsAppConnect() {
                 left: '12px',
                 fontSize: '12px',
                 fontWeight: '700',
-                color: '#64748b',
+                color: 'var(--text-secondary)',
                 display: 'flex',
                 alignItems: 'center',
                 gap: '6px',
-                backgroundColor: '#ffffff',
+                backgroundColor: 'var(--bg-card)',
                 padding: '4px 10px',
                 borderRadius: '12px',
                 boxShadow: '0 1px 3px rgba(0,0,0,0.05)'
@@ -1305,16 +1305,16 @@ function WhatsAppConnect() {
 
             {/* Generated Code Snippet Card */}
             <div style={{
-              backgroundColor: '#ffffff',
+              backgroundColor: 'var(--bg-card)',
               borderRadius: '20px',
               padding: '24px',
-              boxShadow: '0 4px 20px rgba(0,0,0,0.05)',
-              border: '1px solid #f4f4f5',
+              boxShadow: 'var(--shadow-sm)',
+              border: '1px solid var(--border)',
               display: 'grid',
               gap: '12px'
             }}>
               <div style={{ display: 'flex', justifycontent: 'space-between', alignitems: 'center' }}>
-                <h4 style={{ fontSize: '15px', fontWeight: '700', color: '#18181b', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <h4 style={{ fontSize: '15px', fontWeight: '700', color: 'var(--text-primary)', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <FaCode style={{ color: '#6366f1' }} /> HTML / CSS Widget Code
                 </h4>
                 <button

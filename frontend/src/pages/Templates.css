@@ -161,13 +161,13 @@
   display: flex;
   flex-direction: column;
   gap: 8px;
-  border: 1px dashed #e4e4e7;
+  border: 1px dashed var(--border);
 }
 
 .mapping-label {
   font-size: 13px;
   font-weight: 600;
-  color: #4b5563;
+  color: var(--text-secondary);
   display: flex;
   align-items: center;
   gap: 6px;
@@ -175,16 +175,17 @@
 
 .mapping-select {
   padding: 8px 12px;
-  border: 1px solid #d1d5db;
+  border: 1px solid var(--border);
   border-radius: 6px;
   font-size: 13px;
-  background-color: white;
+  background-color: var(--bg-input);
+  color: var(--text-primary);
   cursor: pointer;
   outline: none;
 }
 
 .mapping-select:focus {
-  border-color: #25d366;
+  border-color: var(--brand);
 }
 
 .template-preview-box {
@@ -300,4 +301,27 @@
   margin: 0 0 16px;
   max-width: 400px;
   margin-inline: auto;
+}
+
+/* Dark theme overrides for preview bubble inside Templates */
+body.dark-theme .preview-bubble {
+  background-color: #0b141a !important;
+  color: #e9edef !important;
+  background-image: radial-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 0) !important;
+}
+body.dark-theme .template-preview-header {
+  color: #e9edef !important;
+  border-bottom-color: rgba(255, 255, 255, 0.08) !important;
+}
+body.dark-theme .template-preview-footer {
+  color: #8696a0 !important;
+  border-top-color: rgba(255, 255, 255, 0.08) !important;
+}
+body.dark-theme .template-card-footer {
+  border-top-color: var(--border) !important;
+  color: var(--text-secondary) !important;
+}
+body.dark-theme .template-lang-badge code {
+  background-color: var(--bg-input) !important;
+  color: var(--text-primary) !important;
 }

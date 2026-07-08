@@ -32,18 +32,18 @@ body.dark-theme {
   --text-primary:   #F3F4F6; /* Crisp off-white */
   --text-secondary: #9CA3AF; /* Light gray-blue */
   --text-muted:     #6B7280; /* Muted gray */
-  --accent:         #ffffff !important; /* White accent for selections & borders */
-  --accent-secondary: #f3f4f6 !important;
-  --success:        #25D366;
+  --accent:         #16A34A !important; /* Soft brand green */
+  --accent-secondary: #15803D !important;
+  --success:        #16A34A;
   --danger:         #EF4444;
   --warning:        #F59E0B;
-  --shadow-glow: 0 4px 20px rgba(255,255,255,0.05);
+  --shadow-glow: 0 4px 20px rgba(22, 163, 74, 0.15);
 
-  /* Overrides for Kwickbot brand colors in Dark Mode to be White */
-  --brand:        #ffffff !important;
-  --brand-dark:   #f3f4f6 !important;
-  --brand-light:  rgba(255, 255, 255, 0.08) !important;
-  --brand-glow:   rgba(255, 255, 255, 0.1) !important;
+  /* Overrides for Kwickbot brand colors in Dark Mode to be Soft Green */
+  --brand:        #16A34A !important;
+  --brand-dark:   #15803D !important;
+  --brand-light:  rgba(22, 163, 74, 0.08) !important;
+  --brand-glow:   rgba(22, 163, 74, 0.1) !important;
 }
 
 * {

@@ -1478,10 +1478,3 @@ body.dark-theme .nav-links li a.active::before {
   background: #ffffff !important;
 }
 
-body.dark-theme .btn-primary {
-  color: #0b0f19 !important;
-}
-body.dark-theme .btn-primary:hover {
-  color: #0b0f19 !important;
-}
-

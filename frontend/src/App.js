@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Link, useLocation, useNavigate, Navigate } from 'react-router-dom';
-import { FaHome, FaComments, FaBox, FaExclamationTriangle, FaPlug, FaRobot, FaSearch, FaBell, FaPlus, FaSignOutAlt, FaUser, FaBrain, FaCommentDots, FaBroadcastTower, FaChartLine, FaCog, FaCrown, FaFileAlt, FaShoppingCart, FaCoins, FaUserSecret, FaHeartbeat, FaBullhorn, FaBlog, FaBars } from 'react-icons/fa';
+import { FaHome, FaComments, FaBox, FaExclamationTriangle, FaPlug, FaRobot, FaSearch, FaBell, FaPlus, FaSignOutAlt, FaUser, FaBrain, FaCommentDots, FaBroadcastTower, FaChartLine, FaCog, FaCrown, FaFileAlt, FaShoppingCart, FaCoins, FaUserSecret, FaHeartbeat, FaBullhorn, FaBlog, FaBars, FaSun, FaMoon } from 'react-icons/fa';
 import api, { clearAuthState, refreshAuth } from './services/api';
 import Dashboard from './pages/Dashboard';
 import Profile from './pages/Profile';
@@ -339,7 +339,7 @@ function Sidebar({ admin, onLogout, isOpen, onToggle, pendingDemoRequestsCount }
   );
 }
 
-function TopBar({ admin, onUpdateAdmin, isImpersonated, onToggleSidebar }) {
+function TopBar({ admin, onUpdateAdmin, isImpersonated, onToggleSidebar, theme, onToggleTheme }) {
   const navigate = useNavigate();
   const greeting = () => {
     const hour = new Date().getHours();
@@ -375,6 +375,14 @@ function TopBar({ admin, onUpdateAdmin, isImpersonated, onToggleSidebar }) {
       </div>
 
       <div className="top-bar-actions">
+        <button 
+          className="icon-button theme-toggle-btn" 
+          onClick={onToggleTheme} 
+          title={theme === 'light' ? 'Switch to Dark Mode' : 'Switch to Light Mode'} 
+          aria-label="Toggle Theme"
+        >
+          {theme === 'light' ? <FaMoon /> : <FaSun />}
+        </button>
 
 
         <button className="icon-button" title="Notifications" aria-label="Notifications">
@@ -425,7 +433,7 @@ const isJwtExpired = (token) => {
   }
 };
 
-function ThemeHandler({ admin }) {
+function ThemeHandler({ admin, theme }) {
   const location = useLocation();
 
   useEffect(() => {
@@ -438,9 +446,13 @@ function ThemeHandler({ admin }) {
     if (isPublicPath) {
       document.body.classList.add('dark-theme');
     } else {
-      document.body.classList.remove('dark-theme');
+      if (theme === 'dark') {
+        document.body.classList.add('dark-theme');
+      } else {
+        document.body.classList.remove('dark-theme');
+      }
     }
-  }, [location.pathname]);
+  }, [location.pathname, theme]);
 
   return null;
 }
@@ -453,11 +465,22 @@ function App() {
   const [sidebarOpen, setSidebarOpen] = useState(() => {
     return localStorage.getItem('sidebarOpen') === 'true';
   });
+  const [theme, setTheme] = useState(() => {
+    return localStorage.getItem('dashboard-theme') || 'light';
+  });
 
   const handleToggleSidebar = () => {
     setSidebarOpen(prev => {
       const next = !prev;
       localStorage.setItem('sidebarOpen', String(next));
+      return next;
+    });
+  };
+
+  const handleToggleTheme = () => {
+    setTheme(prev => {
+      const next = prev === 'light' ? 'dark' : 'light';
+      localStorage.setItem('dashboard-theme', next);
       return next;
     });
   };
@@ -648,7 +671,7 @@ function App() {
 
   return (
     <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
-      <ThemeHandler admin={admin} />
+      <ThemeHandler admin={admin} theme={theme} />
       <TrafficTracker />
       <Routes>
         {/* Public Routes */}
@@ -721,7 +744,14 @@ function App() {
                       </div>
                     );
                   })}
-                  <TopBar admin={admin} onUpdateAdmin={handleUpdateAdmin} isImpersonated={isImpersonated} onToggleSidebar={handleToggleSidebar} />
+                  <TopBar 
+                    admin={admin} 
+                    onUpdateAdmin={handleUpdateAdmin} 
+                    isImpersonated={isImpersonated} 
+                    onToggleSidebar={handleToggleSidebar} 
+                    theme={theme}
+                    onToggleTheme={handleToggleTheme}
+                  />
 
 
                   <div className="page-content">

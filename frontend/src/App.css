@@ -45,16 +45,16 @@
 
 /* Dark theme override */
 body.dark-theme {
-  --bg-app:       #0F1C2E;
-  --bg-card:      #162030;
-  --bg-hover:     #1E2E42;
-  --text-primary:   #F1F5F9;
-  --text-secondary: #94A3B8;
-  --text-muted:     #64748B;
-  --border:         rgba(255,255,255,0.08);
-  --shadow-sm: 0 1px 4px rgba(0,0,0,0.3);
-  --shadow-md: 0 4px 16px rgba(0,0,0,0.35);
-  --shadow-lg: 0 8px 32px rgba(0,0,0,0.45);
+  --bg-app:         #0B0F19; /* Deep dark blue-black */
+  --bg-card:        #111827; /* Slightly lighter dark card */
+  --bg-hover:       #1F2937; /* Dark hover state */
+  --text-primary:   #F3F4F6; /* Crisp off-white */
+  --text-secondary: #9CA3AF; /* Light gray-blue */
+  --text-muted:     #6B7280; /* Muted gray */
+  --border:         #1F2937; /* Clean borders */
+  --shadow-sm: 0 1px 4px rgba(0,0,0,0.4);
+  --shadow-md: 0 4px 16px rgba(0,0,0,0.5);
+  --shadow-lg: 0 8px 32px rgba(0,0,0,0.6);
 }
 
 /* ============================================================
@@ -628,6 +628,13 @@ body {
 }
 
 .icon-button svg { font-size: 17px; }
+
+.theme-toggle-btn svg {
+  transition: transform 0.4s ease;
+}
+.theme-toggle-btn:hover svg {
+  transform: rotate(30deg) scale(1.15);
+}
 
 .notification-badge {
   position: absolute;

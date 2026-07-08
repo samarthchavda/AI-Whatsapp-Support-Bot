@@ -415,8 +415,8 @@ function WhatsAppConnect() {
             fontWeight: '600',
             border: 'none',
             background: 'none',
-            borderBottom: activeTab === 'cloudapi' ? '3px solid #25d366' : '3px solid transparent',
-            color: activeTab === 'cloudapi' ? '#25d366' : '#71717a',
+            borderBottom: activeTab === 'cloudapi' ? '3px solid var(--brand)' : '3px solid transparent',
+            color: activeTab === 'cloudapi' ? 'var(--brand)' : 'var(--text-secondary)',
             cursor: 'pointer',
             transition: 'all 0.2s ease'
           }}
@@ -431,8 +431,8 @@ function WhatsAppConnect() {
             fontWeight: '600',
             border: 'none',
             background: 'none',
-            borderBottom: activeTab === 'widget' ? '3px solid #25d366' : '3px solid transparent',
-            color: activeTab === 'widget' ? '#25d366' : '#71717a',
+            borderBottom: activeTab === 'widget' ? '3px solid var(--brand)' : '3px solid transparent',
+            color: activeTab === 'widget' ? 'var(--brand)' : 'var(--text-secondary)',
             cursor: 'pointer',
             transition: 'all 0.2s ease'
           }}

@@ -537,7 +537,7 @@ function PlanManager() {
                     <tr key={coupon._id}>
                       <td style={{ fontWeight: '700', color: 'var(--text-primary)' }}>{coupon.code}</td>
                       <td>
-                        <span className="plan-badge-pill starter" style={{ backgroundColor: 'rgba(37, 211, 102, 0.1)', color: '#25d366', fontWeight: 'bold' }}>
+                        <span className="plan-badge-pill starter" style={{ backgroundColor: 'rgba(22, 163, 74, 0.1)', color: 'var(--brand)', fontWeight: 'bold' }}>
                           {coupon.discountPercent}% OFF
                         </span>
                       </td>

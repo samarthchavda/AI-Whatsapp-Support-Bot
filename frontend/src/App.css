@@ -1454,3 +1454,22 @@ select:focus, textarea:focus {
   padding: 0 4px;
 }
 
+/* Custom Dark Theme overrides for active sidebar items & primary buttons */
+body.dark-theme .nav-links li a.active {
+  background: rgba(255, 255, 255, 0.08) !important;
+  color: #ffffff !important;
+}
+body.dark-theme .nav-links li a.active svg {
+  color: #ffffff !important;
+}
+body.dark-theme .nav-links li a.active::before {
+  background: #ffffff !important;
+}
+
+body.dark-theme .btn-primary {
+  color: #0b0f19 !important;
+}
+body.dark-theme .btn-primary:hover {
+  color: #0b0f19 !important;
+}
+

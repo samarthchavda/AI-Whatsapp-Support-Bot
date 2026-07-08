@@ -23,11 +23,11 @@ function SuperAdminSettings() {
   const getWebhookUrl = () => {
     const apiBase = process.env.REACT_APP_API_URL || (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' ? 'http://localhost:5001/api' : '/api');
     const baseUrl = apiBase.endsWith('/api') ? apiBase.slice(0, -4) : apiBase;
-    
+
     if (baseUrl.startsWith('http://') || baseUrl.startsWith('https://')) {
       return `${baseUrl}/api/webhook/whatsapp`;
     }
-    
+
     return `${window.location.origin}${baseUrl}/api/webhook/whatsapp`;
   };
 
@@ -37,7 +37,7 @@ function SuperAdminSettings() {
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
-  
+
   const [loading, setLoading] = useState(true);
   const [savingWhatsApp, setSavingWhatsApp] = useState(false);
   const [savingRazorpay, setSavingRazorpay] = useState(false);
@@ -262,6 +262,7 @@ function SuperAdminSettings() {
           <div className="settings-field">
             <label className="settings-label">WhatsApp Business Account ID</label>
             <input
+              autoComplete='off'
               type="text"
               name="whatsapp_business_account_id"
               value={formData.whatsapp_business_account_id}

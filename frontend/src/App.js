@@ -195,6 +195,12 @@ function Sidebar({ admin, onLogout, isOpen, onToggle, pendingDemoRequestsCount }
                     <span className="nav-label">System Connection</span>
                   </Link>
                 </li>
+                <li>
+                  <Link to="/dashboard/profile" className={isActive('/dashboard/profile')} title="Profile Settings">
+                    <FaUser />
+                    <span className="nav-label">Profile Settings</span>
+                  </Link>
+                </li>
               </ul>
             </div>
           )}

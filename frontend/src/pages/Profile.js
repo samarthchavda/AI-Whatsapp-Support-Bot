@@ -213,7 +213,7 @@ function Profile({ admin, onUpdateAdmin }) {
       </div>
 
       {/* Quota Limit Warning / Critical Banner */}
-      {isLimitBreached ? (
+      {profileData.role !== 'super_admin' && (isLimitBreached ? (
         <div className="profile-alert-message alert-error" style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px' }}>
           <FaTimesCircle style={{ fontSize: '20px', flexShrink: 0 }} />
           <div style={{ textAlign: 'left' }}>
@@ -235,7 +235,7 @@ function Profile({ admin, onUpdateAdmin }) {
             </span>
           </div>
         </div>
-      ) : null}
+      ) : null)}
 
       {/* Floating Toast Popup */}
       {toast.show && (
@@ -263,64 +263,70 @@ function Profile({ admin, onUpdateAdmin }) {
               <span className={`profile-badge role-badge role-${profileData.role}`}>
                 {profileData.role?.replace('_', ' ')}
               </span>
-              <span className={`profile-badge plan-badge plan-${profileData.subscriptionPlan}`}>
-                {profileData.subscriptionPlan?.toUpperCase()} PLAN
-              </span>
+              {profileData.role !== 'super_admin' && (
+                <span className={`profile-badge plan-badge plan-${profileData.subscriptionPlan}`}>
+                  {profileData.subscriptionPlan?.toUpperCase()} PLAN
+                </span>
+              )}
             </div>
 
             <div className="overview-stats">
-              <div className="stat-row">
-                <span>Store Currency:</span>
-                <strong style={{ textTransform: 'uppercase' }}>{profileData.currency || 'USD'} (Auto-synced)</strong>
-              </div>
+              {profileData.role !== 'super_admin' && (
+                <div className="stat-row">
+                  <span>Store Currency:</span>
+                  <strong style={{ textTransform: 'uppercase' }}>{profileData.currency || 'USD'} (Auto-synced)</strong>
+                </div>
+              )}
 
-              <div className="stat-usage-section" style={{ marginTop: '16px', borderTop: '1px solid var(--border-subtle)', paddingTop: '16px', width: '100%' }}>
-                <div className="stat-row" style={{ marginBottom: '6px' }}>
-                  <span>Gemini Token Usage:</span>
-                  <strong>{tokensUsed.toLocaleString()} / {tokenLimit === Infinity ? 'Unlimited' : tokenLimit.toLocaleString()}</strong>
-                </div>
-                <div className="usage-progress-bar-container" style={{ marginBottom: '14px' }}>
-                  <div 
-                    className="usage-progress-bar-fill"
-                    style={{ 
-                      width: `${tokenLimit === Infinity ? 0 : Math.min(100, (tokensUsed / tokenLimit) * 100)}%`,
-                      background: (tokensUsed / tokenLimit) >= 0.9 ? 'var(--danger)' : 'linear-gradient(90deg, var(--accent) 0%, var(--accent-secondary) 100%)'
-                    }}
-                  ></div>
-                </div>
+              {profileData.role !== 'super_admin' && (
+                <div className="stat-usage-section" style={{ marginTop: '16px', borderTop: '1px solid var(--border-subtle)', paddingTop: '16px', width: '100%' }}>
+                  <div className="stat-row" style={{ marginBottom: '6px' }}>
+                    <span>Gemini Token Usage:</span>
+                    <strong>{tokensUsed.toLocaleString()} / {tokenLimit === Infinity ? 'Unlimited' : tokenLimit.toLocaleString()}</strong>
+                  </div>
+                  <div className="usage-progress-bar-container" style={{ marginBottom: '14px' }}>
+                    <div 
+                      className="usage-progress-bar-fill"
+                      style={{ 
+                        width: `${tokenLimit === Infinity ? 0 : Math.min(100, (tokensUsed / tokenLimit) * 100)}%`,
+                        background: (tokensUsed / tokenLimit) >= 0.9 ? 'var(--danger)' : 'linear-gradient(90deg, var(--accent) 0%, var(--accent-secondary) 100%)'
+                      }}
+                    ></div>
+                  </div>
 
-                <div className="stat-row" style={{ marginBottom: '6px' }}>
-                  <span>Messages Processed:</span>
-                  <strong>{messagesProcessed.toLocaleString()} / {messageLimit === Infinity ? 'Unlimited' : messageLimit.toLocaleString()}</strong>
-                </div>
-                <div className="usage-progress-bar-container" style={{ marginBottom: '14px' }}>
-                  <div 
-                    className="usage-progress-bar-fill"
-                    style={{ 
-                      width: `${messageLimit === Infinity ? 0 : Math.min(100, (messagesProcessed / messageLimit) * 100)}%`,
-                      background: (messagesProcessed / messageLimit) >= 0.9 ? 'var(--danger)' : 'linear-gradient(90deg, #10b981 0%, #34d399 100%)'
-                    }}
-                  ></div>
-                </div>
+                  <div className="stat-row" style={{ marginBottom: '6px' }}>
+                    <span>Messages Processed:</span>
+                    <strong>{messagesProcessed.toLocaleString()} / {messageLimit === Infinity ? 'Unlimited' : messageLimit.toLocaleString()}</strong>
+                  </div>
+                  <div className="usage-progress-bar-container" style={{ marginBottom: '14px' }}>
+                    <div 
+                      className="usage-progress-bar-fill"
+                      style={{ 
+                        width: `${messageLimit === Infinity ? 0 : Math.min(100, (messagesProcessed / messageLimit) * 100)}%`,
+                        background: (messagesProcessed / messageLimit) >= 0.9 ? 'var(--danger)' : 'linear-gradient(90deg, #10b981 0%, #34d399 100%)'
+                      }}
+                    ></div>
+                  </div>
 
-                <div style={{ marginTop: '12px', textAlign: 'center' }}>
-                  <Link to="/dashboard/billing" className="btn-upgrade-sidebar" style={{ 
-                    display: 'inline-block', 
-                    fontSize: '11px', 
-                    fontWeight: 'bold', 
-                    color: 'var(--accent)', 
-                    textDecoration: 'none',
-                    padding: '6px 12px',
-                    borderRadius: '6px',
-                    border: '1px dashed var(--accent)',
-                    transition: 'all 0.2s ease',
-                    width: '100%',
-                    boxSizing: 'border-box'
-                  }}>
-                    Manage Subscriptions & Billing
-                  </Link>
+                  <div style={{ marginTop: '12px', textAlign: 'center' }}>
+                    <Link to="/dashboard/billing" className="btn-upgrade-sidebar" style={{ 
+                      display: 'inline-block', 
+                      fontSize: '11px', 
+                      fontWeight: 'bold', 
+                      color: 'var(--accent)', 
+                      textDecoration: 'none',
+                      padding: '6px 12px',
+                      borderRadius: '6px',
+                      border: '1px dashed var(--accent)',
+                      transition: 'all 0.2s ease',
+                      width: '100%',
+                      boxSizing: 'border-box'
+                    }}>
+                      Manage Subscriptions & Billing
+                    </Link>
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
           </div>
 
@@ -554,79 +560,81 @@ function Profile({ admin, onUpdateAdmin }) {
           </form>
 
           {/* Custom Branding Card */}
-          <div className="profile-card form-section-card branding-section-card" style={{ marginTop: '25px' }}>
-            <div className="section-title-wrapper">
-              <FaPalette className="section-icon text-accent" />
-              <h3>Custom Branding (White-Labeling)</h3>
-            </div>
-
-            {!(plan === 'enterprise' || plan === 'custom') ? (
-              <div className="branding-locked-overlay">
-                <div className="locked-content">
-                  <span className="lock-icon">🔒</span>
-                  <h4>Enterprise & Custom Feature Only</h4>
-                  <p>Upgrade your subscription to white-label this console and replace Kwickbot branding with your own brand name and logo.</p>
-                  <Link to="/dashboard/billing" className="btn-upgrade-branding">
-                    Upgrade Subscription Plan
-                  </Link>
-                </div>
+          {profileData.role !== 'super_admin' && (
+            <div className="profile-card form-section-card branding-section-card" style={{ marginTop: '25px' }}>
+              <div className="section-title-wrapper">
+                <FaPalette className="section-icon text-accent" />
+                <h3>Custom Branding (White-Labeling)</h3>
               </div>
-            ) : (
-              <div className="form-group-grid">
-                <div className="form-group">
-                  <label htmlFor="brandName">Custom Brand Name</label>
-                  <input
-                    type="text"
-                    id="brandName"
-                    value={brandName}
-                    onChange={(e) => setBrandName(e.target.value)}
-                    placeholder="e.g. Acme Support"
-                  />
-                </div>
 
-                <div className="form-group">
-                  <label htmlFor="logoUrl">Custom Logo URL</label>
-                  <input
-                    type="url"
-                    id="logoUrl"
-                    value={logoUrl}
-                    onChange={(e) => setLogoUrl(e.target.value)}
-                    placeholder="e.g. https://mystore.com/logo.png"
-                  />
-                </div>
-
-                <div className="form-group full-width" style={{ marginTop: '10px' }}>
-                  <label className="checkbox-switch-label">
-                    <input
-                      type="checkbox"
-                      checked={removeCredits}
-                      onChange={(e) => setRemoveCredits(e.target.checked)}
-                    />
-                    <span className="checkbox-slider"></span>
-                    <div className="checkbox-text-info">
-                      <strong>Remove Kwickbot Branding</strong>
-                      <p>Fully strip "Powered by Kwickbot" and other credit labels from this application dashboard.</p>
-                    </div>
-                  </label>
-                </div>
-
-                {(brandName !== (profileData.customBranding?.brandName || '') ||
-                  logoUrl !== (profileData.customBranding?.logoUrl || '') ||
-                  removeCredits !== (profileData.customBranding?.removeCredits || false)) && (
-                  <div className="branding-action-row" style={{ width: '100%', marginTop: '16px', display: 'flex', justifyContent: 'flex-end', gridColumn: '1 / -1' }}>
-                    <button 
-                      type="button" 
-                      className="btn-save-branding" 
-                      onClick={handleSaveBranding} 
-                      disabled={savingBranding}
-                    >
-                      <FaSave /> {savingBranding ? 'Saving...' : 'Save Branding'}
-                    </button>
+              {!(plan === 'enterprise' || plan === 'custom') ? (
+                <div className="branding-locked-overlay">
+                  <div className="locked-content">
+                    <span className="lock-icon">🔒</span>
+                    <h4>Enterprise & Custom Feature Only</h4>
+                    <p>Upgrade your subscription to white-label this console and replace Kwickbot branding with your own brand name and logo.</p>
+                    <Link to="/dashboard/billing" className="btn-upgrade-branding">
+                      Upgrade Subscription Plan
+                    </Link>
                   </div>
-                )}
-              </div>
-            )}
-          </div>
+                </div>
+              ) : (
+                <div className="form-group-grid">
+                  <div className="form-group">
+                    <label htmlFor="brandName">Custom Brand Name</label>
+                    <input
+                      type="text"
+                      id="brandName"
+                      value={brandName}
+                      onChange={(e) => setBrandName(e.target.value)}
+                      placeholder="e.g. Acme Support"
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label htmlFor="logoUrl">Custom Logo URL</label>
+                    <input
+                      type="url"
+                      id="logoUrl"
+                      value={logoUrl}
+                      onChange={(e) => setLogoUrl(e.target.value)}
+                      placeholder="e.g. https://mystore.com/logo.png"
+                    />
+                  </div>
+
+                  <div className="form-group full-width" style={{ marginTop: '10px' }}>
+                    <label className="checkbox-switch-label">
+                      <input
+                        type="checkbox"
+                        checked={removeCredits}
+                        onChange={(e) => setRemoveCredits(e.target.checked)}
+                      />
+                      <span className="checkbox-slider"></span>
+                      <div className="checkbox-text-info">
+                        <strong>Remove Kwickbot Branding</strong>
+                        <p>Fully strip "Powered by Kwickbot" and other credit labels from this application dashboard.</p>
+                      </div>
+                    </label>
+                  </div>
+
+                  {(brandName !== (profileData.customBranding?.brandName || '') ||
+                    logoUrl !== (profileData.customBranding?.logoUrl || '') ||
+                    removeCredits !== (profileData.customBranding?.removeCredits || false)) && (
+                    <div className="branding-action-row" style={{ width: '100%', marginTop: '16px', display: 'flex', justifyContent: 'flex-end', gridColumn: '1 / -1' }}>
+                      <button 
+                        type="button" 
+                        className="btn-save-branding" 
+                        onClick={handleSaveBranding} 
+                        disabled={savingBranding}
+                      >
+                        <FaSave /> {savingBranding ? 'Saving...' : 'Save Branding'}
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
     </div>

@@ -60,25 +60,18 @@ function Templates() {
   };
 
   const getStatusBadge = (status) => {
-    const badges = {
-      APPROVED: { bg: '#d1fae5', text: '#065f46', label: 'Approved' },
-      PENDING: { bg: '#fef3c7', text: '#92400e', label: 'Pending Meta Review' },
-      REJECTED: { bg: '#fee2e2', text: '#991b1b', label: 'Rejected' },
-      PAUSED: { bg: '#e5e7eb', text: '#374151', label: 'Paused' }
+    const statusMap = {
+      APPROVED: { className: 'badge-active', label: 'Approved' },
+      PENDING: { className: 'badge-pending', label: 'Pending Meta Review' },
+      REJECTED: { className: 'badge-escalated', label: 'Rejected' },
+      PAUSED: { className: 'badge-cancelled', label: 'Paused' }
     };
     
-    const badge = badges[status] || { bg: '#f3f4f6', text: '#374151', label: status };
+    const config = statusMap[status] || { className: 'badge-cancelled', label: status };
     
     return (
-      <span style={{
-        padding: '4px 10px',
-        borderRadius: '20px',
-        fontSize: '12px',
-        fontWeight: '600',
-        backgroundColor: badge.bg,
-        color: badge.text
-      }}>
-        {badge.label}
+      <span className={`badge ${config.className}`}>
+        {config.label}
       </span>
     );
   };
@@ -121,13 +114,13 @@ function Templates() {
   return (
     <div className="container">
       <div className="page-header">
-        <div>
-          <h1 className="page-title">WhatsApp Template Manager</h1>
-          <p className="page-subtitle">View your Meta-approved messaging templates and map them to transactional webhook triggers.</p>
+        <div className="page-header-info">
+          <h1 className="page-title">WhatsApp Templates</h1>
+          <p className="page-subtitle">Manage Meta-approved message templates and automation triggers.</p>
         </div>
         <button
           onClick={handleSync}
-          className="btn-primary sync-btn"
+          className="btn btn-primary sync-btn"
           disabled={syncing}
         >
           <FaSync className={syncing ? 'spinning' : ''} /> {syncing ? 'Syncing...' : 'Sync with Meta'}

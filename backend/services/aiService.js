@@ -650,6 +650,74 @@ Smart Fallback Rules (when specific information is not available in the knowledg
         }
       }
 
+      // Check if AI Auto Response is globally enabled by Super Admin
+      let aiEnabled = true;
+      try {
+        const GlobalSettings = require('../models/GlobalSettings');
+        const aiFlag = await GlobalSettings.findOne({ key: 'aiAutoResponseEnabled' });
+        if (aiFlag && aiFlag.value === false) {
+          aiEnabled = false;
+        }
+      } catch (dbErr) {
+        console.error('Error checking aiAutoResponseEnabled flag:', dbErr);
+      }
+
+      if (!aiEnabled) {
+        console.log(`🔕 AI Auto-Response is globally disabled by Super Admin. Skipping AI response generation for ${customerPhone}.`);
+        
+        const currentIntent = this.detectIntent(message);
+        
+        conversation.messages = conversation.messages || [];
+        conversation.messages.push({
+          role: 'user',
+          content: message,
+          timestamp: new Date(),
+          intent: currentIntent,
+          messageId,
+          detectedLanguage,
+          translation
+        });
+        
+        if (conversation.messages.length > 50) {
+          conversation.messages = conversation.messages.slice(-50);
+        }
+        
+        conversation.updatedAt = new Date();
+        await conversation.save();
+        
+        // Emit socket event so frontend updates in real-time
+        if (global.io) {
+          global.io.emit('new_message', {
+            customerPhone,
+            role: 'user',
+            content: message,
+            timestamp: new Date(),
+            intent: currentIntent,
+            detectedLanguage,
+            translation
+          });
+        }
+        
+        return {
+          botPaused: true,
+          message: null,
+          intent: currentIntent,
+          escalated: conversation.escalated || conversation.status === 'escalated',
+          escalationReason: conversation.escalationReason,
+          relatedOrderIds: conversation.relatedOrderIds || [],
+          structuredOutput: {
+            intent: currentIntent,
+            metadata: {
+              responseTime: Date.now() - startTime,
+              usedAI: false,
+              aiAutoResponseDisabled: true
+            }
+          },
+          responseParts: [],
+          typingDelayMs: 0
+        };
+      }
+
       // If the conversation is paused or escalated, skip AI generation and save the message
       // Exception: If we are in AI Draft Mode, we want to allow generating a suggested reply draft even if botPaused is true.
       // const isPausedInDraftMode = conversation.botPaused && adminDoc && adminDoc.aiDraftMode === true;

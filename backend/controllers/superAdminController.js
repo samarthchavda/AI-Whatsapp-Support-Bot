@@ -7,6 +7,10 @@ const Announcement = require('../models/Announcement');
 const emailService = require('../services/emailService');
 const { getFrontendUrl } = require('../services/urlHelper');
 const PageVisit = require('../models/PageVisit');
+const Integration = require('../models/Integration');
+const AuditLog = require('../models/AuditLog');
+const WebhookLog = require('../models/WebhookLog');
+const os = require('os');
 const whatsappCloudAPI = require('../services/whatsappCloudAPI');
 const crypto = require('crypto');
 
@@ -842,19 +846,36 @@ const GlobalSettings = require('../models/GlobalSettings');
 
 exports.getGlobalSettings = async (req, res) => {
   try {
-    const settings = await GlobalSettings.find({});
-    const settingsMap = {};
-    settings.forEach(s => {
-      settingsMap[s.key] = s.value;
-    });
+    const whitelistedKeys = [
+      'whatsapp_access_token',
+      'whatsapp_phone_number_id',
+      'whatsapp_business_account_id',
+      'whatsapp_webhook_verify_token',
+      'razorpay_key_id',
+      'razorpay_key_secret',
+      'geminiApiFundsAdded',
+      'webBotEnabled'
+    ];
 
-    // Default value if not set
-    if (settingsMap['webBotEnabled'] === undefined) {
-      settingsMap['webBotEnabled'] = false;
-    }
-    if (settingsMap['geminiApiFundsAdded'] === undefined) {
-      settingsMap['geminiApiFundsAdded'] = 0;
-    }
+    // Explicit security whitelist query: retrieve only whitelisted configuration keys
+    const settings = await GlobalSettings.find({ key: { $in: whitelistedKeys } });
+    const settingsMap = {};
+    
+    // Initialize defaults
+    settingsMap['webBotEnabled'] = false;
+    settingsMap['geminiApiFundsAdded'] = 0;
+
+    settings.forEach(s => {
+      const sensitiveWords = ['password', 'secret', 'token', 'key', 'credential'];
+      const isSensitive = sensitiveWords.some(word => s.key.toLowerCase().includes(word));
+      
+      if (isSensitive && s.value) {
+        // Expose a masked placeholder indicator so the UI knows a credential is set
+        settingsMap[s.key] = '******';
+      } else {
+        settingsMap[s.key] = s.value;
+      }
+    });
 
     res.json({
       success: true,
@@ -879,9 +900,30 @@ exports.updateGlobalSettings = async (req, res) => {
       });
     }
 
+    const whitelistedKeys = [
+      'whatsapp_access_token',
+      'whatsapp_phone_number_id',
+      'whatsapp_business_account_id',
+      'whatsapp_webhook_verify_token',
+      'razorpay_key_id',
+      'razorpay_key_secret',
+      'geminiApiFundsAdded',
+      'webBotEnabled'
+    ];
+
     const whatsappWebBot = require('../services/whatsappWebBot');
 
     for (const [key, value] of Object.entries(settings)) {
+      // Security Whitelist restriction on input setting keys
+      if (!whitelistedKeys.includes(key)) {
+        continue;
+      }
+
+      if (value === '******') {
+        // Skip updating masked values to avoid overwriting database secrets with placeholders
+        continue;
+      }
+
       if (value === '' || value === null || value === undefined) {
         await GlobalSettings.deleteOne({ key });
       } else {
@@ -997,27 +1039,6 @@ exports.impersonateUser = async (req, res) => {
     res.status(500).json({
       success: false,
       error: 'Failed to impersonate user'
-    });
-  }
-};
-
-// Get audit logs
-exports.getAuditLogs = async (req, res) => {
-  try {
-    const AuditLog = require('../models/AuditLog');
-    const logs = await AuditLog.find({})
-      .sort({ createdAt: -1 })
-      .limit(100); // Limit to top 100 logs for performance
-
-    res.json({
-      success: true,
-      data: logs
-    });
-  } catch (error) {
-    console.error('Error fetching audit logs:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Failed to fetch audit logs'
     });
   }
 };
@@ -1793,6 +1814,595 @@ exports.getConnectionHealthStatus = async (req, res) => {
   }
 };
 
+// Get WhatsApp operations monitoring stats
+exports.getWhatsAppMonitoringStatus = async (req, res) => {
+  try {
+    const merchants = await Admin.find({ role: 'admin' })
+      .select('name email businessPhone whatsappConnected whatsappConnectedAt whatsappBusinessAccountId totalMessagesProcessed updatedAt');
+
+    const totalAccounts = merchants.length;
+    const connectedAccounts = merchants.filter(m => m.whatsappConnected).length;
+    const disconnectedAccounts = totalAccounts - connectedAccounts;
+    const totalMessages = merchants.reduce((sum, m) => sum + (m.totalMessagesProcessed || 0), 0);
+
+    res.json({
+      success: true,
+      data: {
+        merchants: merchants.map(m => ({
+          _id: m._id,
+          name: m.name,
+          email: m.email,
+          businessPhone: m.businessPhone,
+          whatsappConnected: m.whatsappConnected,
+          whatsappConnectedAt: m.whatsappConnectedAt,
+          whatsappBusinessAccountId: m.whatsappBusinessAccountId,
+          totalMessagesProcessed: m.totalMessagesProcessed || 0,
+          updatedAt: m.updatedAt
+        })),
+        summary: {
+          totalAccounts,
+          connectedAccounts,
+          disconnectedAccounts,
+          totalMessages
+        }
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching WhatsApp monitoring data:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch WhatsApp monitoring data'
+    });
+  }
+};
+
+// Get Live Operations monitoring metrics
+exports.getLiveOperationsStatus = async (req, res) => {
+  try {
+    // 1. Get all merchants
+    const merchants = await Admin.find({ role: 'admin' }).select('name email updatedAt');
+
+    // 2. Aggregate conversation stats
+    const conversationStats = await Conversation.aggregate([
+      {
+        $group: {
+          _id: '$admin',
+          totalConversations: { $sum: 1 },
+          activeConversations: {
+            $sum: { $cond: [{ $eq: ['$status', 'active'] }, 1, 0] }
+          },
+          escalatedConversations: {
+            $sum: {
+              $cond: [
+                {
+                  $or: [
+                    { $eq: ['$status', 'escalated'] },
+                    { $eq: ['$escalated', true] }
+                  ]
+                },
+                1,
+                0
+              ]
+            }
+          },
+          totalMessages: { $sum: { $size: '$messages' } },
+          lastActivity: { $max: '$updatedAt' }
+        }
+      }
+    ]);
+
+    // Create a map for easy lookup
+    const statsMap = {};
+    conversationStats.forEach(stat => {
+      if (stat._id) {
+        statsMap[stat._id.toString()] = stat;
+      }
+    });
+
+    // 3. Assemble merchant data
+    const merchantRows = merchants.map(m => {
+      const stats = statsMap[m._id.toString()] || {
+        totalConversations: 0,
+        activeConversations: 0,
+        escalatedConversations: 0,
+        totalMessages: 0,
+        lastActivity: null
+      };
+
+      return {
+        _id: m._id,
+        name: m.name,
+        email: m.email,
+        conversationsCount: stats.totalConversations,
+        activeConversationsCount: stats.activeConversations,
+        escalatedConversationsCount: stats.escalatedConversations,
+        messagesCount: stats.totalMessages,
+        lastActivity: stats.lastActivity || m.updatedAt
+      };
+    });
+
+    // 4. Summarize global stats
+    const totalConversations = merchantRows.reduce((sum, m) => sum + m.conversationsCount, 0);
+    const totalMessages = merchantRows.reduce((sum, m) => sum + m.messagesCount, 0);
+    const activeConversations = merchantRows.reduce((sum, m) => sum + m.activeConversationsCount, 0);
+    const escalatedConversations = merchantRows.reduce((sum, m) => sum + m.escalatedConversationsCount, 0);
+
+    res.json({
+      success: true,
+      data: {
+        merchants: merchantRows,
+        summary: {
+          totalConversations,
+          totalMessages,
+          activeConversations,
+          escalatedConversations
+        }
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching Live Operations data:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch live operations data'
+    });
+  }
+};
+
+// Get Integration Health monitoring metrics
+exports.getIntegrationHealthStatus = async (req, res) => {
+  try {
+    // 1. Get all merchants
+    const merchants = await Admin.find({ role: 'admin' }).select('name email shopifyEnabled woocommerceEnabled updatedAt');
+
+    // 2. Get all integrations
+    const integrations = await Integration.find({}).select('adminId platform isActive lastSyncedAt storeUrl');
+
+    // Group integrations by merchant adminId
+    const integrationsMap = {};
+    integrations.forEach(integration => {
+      const adminIdStr = integration.adminId.toString();
+      if (!integrationsMap[adminIdStr]) {
+        integrationsMap[adminIdStr] = [];
+      }
+      integrationsMap[adminIdStr].push(integration);
+    });
+
+    // 3. Assemble merchant rows
+    const merchantRows = merchants.map(m => {
+      const merchantIntegrations = integrationsMap[m._id.toString()] || [];
+      
+      const shopifyInt = merchantIntegrations.find(i => i.platform === 'shopify');
+      const wooInt = merchantIntegrations.find(i => i.platform === 'woocommerce');
+
+      let shopifyStatus = 'Not Connected';
+      if (shopifyInt) {
+        shopifyStatus = shopifyInt.isActive ? 'Active' : 'Inactive';
+      }
+
+      let wooStatus = 'Not Connected';
+      if (wooInt) {
+        wooStatus = wooInt.isActive ? 'Active' : 'Inactive';
+      }
+
+      // Calculate last sync
+      const syncTimes = [shopifyInt?.lastSyncedAt, wooInt?.lastSyncedAt].filter(Boolean);
+      const lastSync = syncTimes.length > 0 ? new Date(Math.max(...syncTimes.map(t => new Date(t)))) : null;
+
+      // Determine merchant status
+      let overallStatus = 'No Integrations';
+      const hasIntegrations = shopifyInt || wooInt;
+      if (hasIntegrations) {
+        const hasActive = (shopifyInt?.isActive) || (wooInt?.isActive);
+        const hasInactive = (shopifyInt && !shopifyInt.isActive) || (wooInt && !wooInt.isActive);
+        
+        if (hasActive && !hasInactive) {
+          overallStatus = 'Healthy';
+        } else if (hasInactive) {
+          overallStatus = 'Issues';
+        }
+      }
+
+      return {
+        _id: m._id,
+        name: m.name,
+        email: m.email,
+        shopifyStatus,
+        wooStatus,
+        lastSync,
+        status: overallStatus
+      };
+    });
+
+    // 4. Summarize global stats
+    const totalShopify = integrations.filter(i => i.platform === 'shopify').length;
+    const totalWoo = integrations.filter(i => i.platform === 'woocommerce').length;
+    const activeIntegrations = integrations.filter(i => i.isActive).length;
+    const failedIntegrations = integrations.length - activeIntegrations;
+
+    res.json({
+      success: true,
+      data: {
+        merchants: merchantRows,
+        summary: {
+          totalShopify,
+          totalWoo,
+          activeIntegrations,
+          failedIntegrations
+        }
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching Integration Health data:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch integration health data'
+    });
+  }
+};
+
+// Get AI Usage platform-wide monitoring metrics
+exports.getAIUsageStatus = async (req, res) => {
+  try {
+    const merchants = await Admin.find({ role: 'admin' })
+      .select('name email geminiTokensUsed geminiTokensLimit updatedAt');
+
+    const totalUsed = merchants.reduce((sum, m) => sum + (m.geminiTokensUsed || 0), 0);
+    
+    // Ignore unlimited limits (-1 or Infinity) when calculating total limit
+    const totalLimit = merchants.reduce((sum, m) => {
+      const limit = m.geminiTokensLimit;
+      if (limit === -1 || limit === Infinity) return sum;
+      return sum + limit;
+    }, 0);
+
+    // Calculate usage percentage for each merchant
+    const merchantRows = merchants.map(m => {
+      const used = m.geminiTokensUsed || 0;
+      const limit = m.geminiTokensLimit;
+      
+      let usagePct = 0;
+      let isUnlimited = false;
+      let remaining = 'Unlimited';
+      
+      if (limit === -1 || limit === Infinity) {
+        isUnlimited = true;
+      } else if (limit > 0) {
+        usagePct = parseFloat(((used / limit) * 100).toFixed(1));
+        remaining = Math.max(0, limit - used);
+      }
+
+      let status = 'Normal';
+      if (!isUnlimited) {
+        if (usagePct >= 95) {
+          status = 'Critical';
+        } else if (usagePct >= 80) {
+          status = 'Warning';
+        }
+      }
+
+      return {
+        _id: m._id,
+        name: m.name,
+        email: m.email,
+        geminiTokensUsed: used,
+        geminiTokensLimit: limit,
+        remaining,
+        usagePct,
+        status,
+        updatedAt: m.updatedAt
+      };
+    });
+
+    // Count near limit merchants (usage >= 80%)
+    const nearLimitCount = merchantRows.filter(m => m.status === 'Warning' || m.status === 'Critical').length;
+
+    // Calculate average usage % for merchants with limits
+    const limitedMerchants = merchantRows.filter(m => m.geminiTokensLimit > 0);
+    const avgUsagePct = limitedMerchants.length > 0
+      ? parseFloat((limitedMerchants.reduce((sum, m) => sum + m.usagePct, 0) / limitedMerchants.length).toFixed(1))
+      : 0;
+
+    res.json({
+      success: true,
+      data: {
+        merchants: merchantRows,
+        summary: {
+          totalUsed,
+          totalLimit,
+          avgUsagePct,
+          nearLimitCount
+        }
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching AI Usage data:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch AI usage data'
+    });
+  }
+};
+
+// Get Billing & Revenue platform-wide monitoring metrics
+exports.getBillingRevenueStatus = async (req, res) => {
+  try {
+    const Invoice = require('../models/Invoice');
+    
+    // 1. Fetch all merchants
+    const merchants = await Admin.find({ role: 'admin' })
+      .select('name email subscriptionPlan subscriptionStatus monthlyPrice customDiscount trialStartedAt subscriptionEndDate createdAt');
+
+    // 2. Fetch completed invoices for revenue
+    const merchantIds = merchants.map(m => m._id);
+    const paidInvoices = await Invoice.find({
+      customerId: { $in: merchantIds },
+      $or: [
+        { paymentStatus: 'completed' },
+        { status: 'paid' }
+      ]
+    });
+
+    const totalRevenue = paidInvoices.reduce((sum, invoice) => sum + (invoice.totalAmount || 0), 0);
+
+    // 3. Assemble merchant rows
+    const merchantRows = merchants.map(m => {
+      const discount = m.customDiscount || 0;
+      const basePrice = m.monthlyPrice || 0;
+      const finalPrice = parseFloat((basePrice - (basePrice * discount / 100)).toFixed(2));
+
+      // Calculate trial / expiry context
+      let expiryDate = null;
+      if (m.subscriptionStatus === 'trial') {
+        // trial period typically lasts 14 days from trialStartedAt or createdAt
+        const start = m.trialStartedAt || m.createdAt;
+        const end = new Date(start);
+        end.setDate(end.getDate() + 14);
+        expiryDate = end;
+      } else if (m.subscriptionEndDate) {
+        expiryDate = m.subscriptionEndDate;
+      }
+
+      // Determine billing status
+      let billingStatus = 'Inactive';
+      if (m.subscriptionStatus === 'active') {
+        billingStatus = 'Active';
+      } else if (m.subscriptionStatus === 'trial') {
+        billingStatus = 'Trial';
+      } else if (m.subscriptionStatus === 'cancelled') {
+        billingStatus = 'Cancelled';
+      } else if (m.subscriptionStatus === 'inactive') {
+        billingStatus = 'Expired';
+      }
+
+      return {
+        _id: m._id,
+        name: m.name,
+        email: m.email,
+        plan: m.subscriptionPlan || 'free',
+        subscriptionStatus: m.subscriptionStatus || 'inactive',
+        monthlyAmount: finalPrice,
+        expiryDate,
+        billingStatus
+      };
+    });
+
+    // 4. Summarize global stats
+    const activeSubs = merchants.filter(m => m.subscriptionStatus === 'active').length;
+    const trialMerchants = merchants.filter(m => m.subscriptionStatus === 'trial').length;
+    const expiredInactive = merchants.filter(m => m.subscriptionStatus === 'inactive' || m.subscriptionStatus === 'cancelled').length;
+
+    res.json({
+      success: true,
+      data: {
+        merchants: merchantRows,
+        summary: {
+          totalRevenue,
+          activeSubs,
+          trialMerchants,
+          expiredInactive
+        }
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching Billing & Revenue data:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch billing & revenue data'
+    });
+  }
+};
+
+// Get Audit Logs platform security monitoring metrics
+exports.getAuditLogs = async (req, res) => {
+  try {
+    // 1. Fetch all audit log records sorted by newest first
+    const logs = await AuditLog.find({})
+      .populate({ path: 'actor', select: 'name email role' })
+      .sort({ createdAt: -1 })
+      .limit(500);
+
+    // 2. Fetch all administrators to build a lookup mapping in case populated actor is missing
+    const admins = await Admin.find({}).select('name email role');
+    const adminMap = {};
+    admins.forEach(a => {
+      adminMap[a.email.toLowerCase()] = {
+        name: a.name,
+        role: a.role
+      };
+    });
+
+    // 3. Process logs list and filter details
+    const sanitizedLogs = logs.map(log => {
+      const email = log.actorEmail ? log.actorEmail.toLowerCase() : '';
+      const fallbackActor = adminMap[email] || { name: 'System / Guest', role: 'guest' };
+
+      const actorName = log.actor?.name || fallbackActor.name;
+      const actorRole = log.actor?.role || fallbackActor.role;
+
+      // Filter out any sensitive information from details
+      const cleanDetails = {};
+      if (log.details && typeof log.details === 'object') {
+        const sensitiveKeys = ['password', 'token', 'secret', 'key', 'apiKey', 'webhookSecret', 'credentials', 'auth'];
+        Object.keys(log.details).forEach(key => {
+          const isSensitive = sensitiveKeys.some(sk => key.toLowerCase().includes(sk));
+          if (!isSensitive) {
+            cleanDetails[key] = log.details[key];
+          } else {
+            cleanDetails[key] = '[REDACTED]';
+          }
+        });
+      }
+
+      return {
+        _id: log._id,
+        action: log.action,
+        actorEmail: log.actorEmail,
+        actorName,
+        actorRole,
+        target: log.target || 'N/A',
+        ipAddress: log.ipAddress || 'Not available',
+        userAgent: log.userAgent || 'Not available',
+        details: cleanDetails,
+        createdAt: log.createdAt
+      };
+    });
+
+    // 4. Summarize stats
+    const totalActivities = sanitizedLogs.length;
+    
+    // Admin actions are those made by super admins or guests/system logs acting on behalf of system
+    const adminActions = sanitizedLogs.filter(log => log.actorRole === 'super_admin').length;
+    
+    // Merchant actions are those made by admins
+    const merchantActions = sanitizedLogs.filter(log => log.actorRole === 'admin').length;
+
+    // Recent activities (last 24 hours)
+    const oneDayAgo = new Date();
+    oneDayAgo.setHours(oneDayAgo.getHours() - 24);
+    const recentActivities = sanitizedLogs.filter(log => new Date(log.createdAt) >= oneDayAgo).length;
+
+    res.json({
+      success: true,
+      data: {
+        logs: sanitizedLogs,
+        summary: {
+          totalActivities,
+          adminActions,
+          merchantActions,
+          recentActivities
+        }
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching Audit Logs data:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch audit logs data'
+    });
+  }
+};
+
+// Get System Health status, hardware utilization, service checks and recent error logs
+exports.getSystemHealthStatus = async (req, res) => {
+  try {
+    const mongoose = require('mongoose');
+
+    // 1. Hardware utilization metrics
+    const processMemory = process.memoryUsage().heapUsed; // bytes
+    const processMemoryMB = Math.round(processMemory / 1024 / 1024);
+
+    const totalSystemMemory = os.totalmem();
+    const freeSystemMemory = os.freemem();
+    const usedSystemMemory = totalSystemMemory - freeSystemMemory;
+    const systemMemoryUsagePct = parseFloat(((usedSystemMemory / totalSystemMemory) * 100).toFixed(1));
+
+    // Formatted uptime
+    const uptimeSeconds = process.uptime();
+    const uptimeHours = Math.floor(uptimeSeconds / 3600);
+    const uptimeMinutes = Math.floor((uptimeSeconds % 3600) / 60);
+    const uptimeSecs = Math.floor(uptimeSeconds % 60);
+    const formattedUptime = `${uptimeHours}h ${uptimeMinutes}m ${uptimeSecs}s`;
+
+    // CPU load average (1 minute)
+    const loadAvg = os.loadavg()[0];
+    const cpuCoresCount = os.cpus().length;
+    const cpuUsagePct = parseFloat(((loadAvg / cpuCoresCount) * 100).toFixed(1));
+
+    // 2. Database & Service status checks
+    const dbState = mongoose.connection.readyState;
+    const dbStatus = dbState === 1 ? 'Operational' : 'Down';
+
+    // WhatsApp / Meta API state check based on merchant accounts
+    const merchants = await Admin.find({ role: 'admin' }).select('whatsappConnected');
+    const offlineMerchants = merchants.filter(m => m.whatsappConnected === false).length;
+    const whatsAppStatus = offlineMerchants > 0 ? 'Degraded' : 'Operational';
+
+    // Gemini API configuration check
+    const geminiStatus = process.env.GEMINI_API_KEY ? 'Operational' : 'Not Available';
+
+    // Shopify & WooCommerce checking based on active integrations
+    const integrations = await Integration.find({}).select('platform isActive');
+    const shopifyInts = integrations.filter(i => i.platform === 'shopify');
+    const wooInts = integrations.filter(i => i.platform === 'woocommerce');
+
+    const hasShopifyIssues = shopifyInts.some(i => !i.isActive);
+    const shopifyStatus = shopifyInts.length === 0 ? 'Operational' : (hasShopifyIssues ? 'Degraded' : 'Operational');
+
+    const hasWooIssues = wooInts.some(i => !i.isActive);
+    const wooStatus = wooInts.length === 0 ? 'Operational' : (hasWooIssues ? 'Degraded' : 'Operational');
+
+    // 3. Query Recent System Errors (failed webhook responses / WhatsApp delivery errors)
+    const errorLogs = await WebhookLog.find({
+      $or: [
+        { status: 'failed' },
+        { whatsappError: { $ne: null } }
+      ]
+    })
+    .sort({ createdAt: -1 })
+    .limit(10)
+    .select('source eventType status errorMessage whatsappError externalOrderId createdAt');
+
+    const recentErrors = errorLogs.map(log => ({
+      _id: log._id,
+      source: log.source,
+      eventType: log.eventType,
+      error: log.errorMessage || log.whatsappError || 'Unknown integration error',
+      externalOrderId: log.externalOrderId || 'N/A',
+      createdAt: log.createdAt
+    }));
+
+    res.json({
+      success: true,
+      data: {
+        system: {
+          backendStatus: 'Operational',
+          databaseStatus: dbStatus,
+          serverStatus: 'Operational',
+          memoryUsage: `${processMemoryMB} MB`,
+          systemMemory: `${(usedSystemMemory / 1024 / 1024 / 1024).toFixed(2)} GB / ${(totalSystemMemory / 1024 / 1024 / 1024).toFixed(2)} GB (${systemMemoryUsagePct}%)`,
+          cpuUsage: `${cpuUsagePct}%`,
+          uptime: formattedUptime,
+          pid: process.pid
+        },
+        services: {
+          mongodb: dbStatus,
+          whatsapp: whatsAppStatus,
+          gemini: geminiStatus,
+          shopify: shopifyStatus,
+          woocommerce: wooStatus
+        },
+        recentErrors
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching System Health data:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch system health data'
+    });
+  }
+};
+
 // Create a new system announcement
 exports.createAnnouncement = async (req, res) => {
   try {
@@ -1878,5 +2488,141 @@ exports.deleteAnnouncement = async (req, res) => {
   } catch (error) {
     console.error('Error deleting announcement:', error);
     res.status(500).json({ success: false, error: 'Failed to delete announcement' });
+  }
+};
+
+// Get Feature Flags using GlobalSettings
+exports.getFeatureFlags = async (req, res) => {
+  try {
+    const predefinedFlags = ['webBotEnabled', 'shopifySyncEnabled', 'wooSyncEnabled', 'aiAutoResponseEnabled'];
+    
+    // Explicit security whitelist: fetch only the predefined flags to protect other sensitive settings/secrets
+    const settings = await GlobalSettings.find({ key: { $in: predefinedFlags } });
+    const settingsMap = {};
+    settings.forEach(s => {
+      settingsMap[s.key] = s;
+    });
+
+    const defaultFlags = [
+      {
+        key: 'webBotEnabled',
+        name: 'Web Chatbot Widget',
+        description: 'Controls whether the web chat client widget and socket listeners are active.',
+        scope: 'Global'
+      },
+      {
+        key: 'shopifySyncEnabled',
+        name: 'Shopify Realtime Sync',
+        description: 'Controls Shopify connection cron job triggers and customer data syncing.',
+        scope: 'Global'
+      },
+      {
+        key: 'wooSyncEnabled',
+        name: 'WooCommerce Webhook Listeners',
+        description: 'Controls WooCommerce real-time webhook routing for automated orders updates.',
+        scope: 'Global'
+      },
+      {
+        key: 'aiAutoResponseEnabled',
+        name: 'AI Auto-Response Engine',
+        description: 'Controls whether Gemini AI answers incoming messages without human agent escalation.',
+        scope: 'Global'
+      }
+    ];
+
+    const flagsList = defaultFlags.map(df => {
+      const dbSetting = settingsMap[df.key];
+      const isEnabled = dbSetting ? dbSetting.value === true : false;
+      return {
+        key: df.key,
+        name: df.name,
+        description: df.description,
+        scope: df.scope,
+        isEnabled,
+        updatedAt: dbSetting ? dbSetting.updatedAt : null
+      };
+    });
+
+    const totalFeatures = flagsList.length;
+    const enabledCount = flagsList.filter(f => f.isEnabled).length;
+    const disabledCount = totalFeatures - enabledCount;
+
+    res.json({
+      success: true,
+      data: {
+        flags: flagsList,
+        summary: {
+          totalFeatures,
+          enabledCount,
+          disabledCount
+        }
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching feature flags:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch feature flags'
+    });
+  }
+};
+
+// Toggle a Feature Flag value in GlobalSettings
+exports.toggleFeatureFlag = async (req, res) => {
+  try {
+    const predefinedFlags = ['webBotEnabled', 'shopifySyncEnabled', 'wooSyncEnabled', 'aiAutoResponseEnabled'];
+    const { key, isEnabled } = req.body;
+
+    if (!key) {
+      return res.status(400).json({ success: false, error: 'Feature key is required' });
+    }
+
+    // Security check: Only predefined whitelisted flags can be modified
+    if (!predefinedFlags.includes(key)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Unauthorized key modification. Only predefined feature flags can be toggled.'
+      });
+    }
+
+    // Retrieve old state to log old/new values in AuditLog
+    const oldSetting = await GlobalSettings.findOne({ key });
+    const oldValue = oldSetting ? oldSetting.value === true : false;
+    const newValue = isEnabled === true;
+
+    const updatedSetting = await GlobalSettings.findOneAndUpdate(
+      { key },
+      { value: newValue },
+      { new: true, upsert: true }
+    );
+
+    // Save AuditLog log entry with actor details and state transitions
+    try {
+      const { logAction } = require('../services/auditLogService');
+      await logAction({
+        action: 'feature_flag_toggled',
+        actor: req.admin,
+        target: key,
+        details: {
+          flag: key,
+          oldValue,
+          newValue
+        },
+        req
+      });
+    } catch (auditErr) {
+      console.error('Failed to log feature flag toggle to AuditLog:', auditErr.message);
+    }
+
+    res.json({
+      success: true,
+      data: updatedSetting
+    });
+  } catch (error) {
+    console.error('Error toggling feature flag:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to toggle feature flag'
+    });
   }
 };

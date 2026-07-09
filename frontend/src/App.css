@@ -63,10 +63,10 @@ body.dark-theme {
   --sidebar-text:   rgba(255,255,255,0.55);
   --sidebar-text-active: #ffffff;
 
-  --brand:          #ffffff !important;
-  --brand-dark:     #f3f4f6 !important;
-  --brand-light:    rgba(255, 255, 255, 0.08) !important;
-  --brand-glow:     rgba(255, 255, 255, 0.1) !important;
+  --brand:          #16A34A !important;
+  --brand-dark:     #15803D !important;
+  --brand-light:    rgba(22, 163, 74, 0.08) !important;
+  --brand-glow:     rgba(22, 163, 74, 0.1) !important;
 }
 
 /* ============================================================
@@ -1039,6 +1039,8 @@ tbody td, .table-row-premium td {
 .badge-medium    { background: rgba(234,179,8,0.10);  color: #CA8A04; border-color: rgba(234,179,8,0.25); }
 .badge-low       { background: rgba(99,102,241,0.10); color: #4F46E5; border-color: rgba(99,102,241,0.25); }
 .badge-cancelled { background: rgba(100,116,139,0.10); color: #64748B; border-color: rgba(100,116,139,0.25); }
+.badge-in_progress { background: rgba(245,158,11,0.10); color: #D97706; border-color: rgba(245,158,11,0.25); }
+.badge-closed    { background: rgba(100,116,139,0.10); color: #64748B; border-color: rgba(100,116,139,0.25); }
 .badge-return_processing { background: rgba(249,115,22,0.10); color: #EA580C; border-color: rgba(249,115,22,0.25); }
 
 /* ============================================================

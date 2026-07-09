@@ -388,8 +388,8 @@ function WhatsAppConnect() {
   }, [fetchCloudStatus]);
 
   return (
-    <div className="container" style={{ padding: '24px', maxWidth: '1000px', margin: '0 auto' }}>
-      <div className="page-header" style={{ marginBottom: '24px' }}>
+    <div className="container">
+      <div className="page-header">
         <h1 className="page-title" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
           <FaWhatsapp style={{ color: '#25d366' }} /> WhatsApp Connection
         </h1>
@@ -399,7 +399,7 @@ function WhatsAppConnect() {
       {/* Tabs */}
       <div style={{
         display: 'flex',
-        borderBottom: '2px solid #e4e4e7',
+        borderBottom: '1px solid var(--border)',
         marginBottom: '24px',
         gap: '16px'
       }}>
@@ -488,8 +488,9 @@ function WhatsAppConnect() {
                   <form onSubmit={handleSaveCredentials} autoComplete="off" style={{ display: 'grid', gap: '16px' }}>
                     <div style={{
                       padding: '12px 16px',
-                      backgroundColor: '#e0e7ff',
-                      color: '#4f46e5',
+                      backgroundColor: 'var(--brand-light)',
+                      color: 'var(--brand)',
+                      border: '1px solid var(--border)',
                       borderRadius: '8px',
                       fontSize: '13px',
                       fontWeight: '500',
@@ -499,7 +500,7 @@ function WhatsAppConnect() {
                     </div>
                     
                     <div style={{ display: 'grid', gap: '6px' }}>
-                      <label style={{ fontSize: '14px', fontWeight: '600', color: '#374151', textAlign: 'left' }}>Meta Access Token</label>
+                      <label style={{ fontSize: '14px', fontWeight: '600', color: 'var(--text-primary)', textAlign: 'left' }}>Meta Access Token</label>
                       <input
                         type="password"
                         placeholder="EAAG..."
@@ -510,7 +511,9 @@ function WhatsAppConnect() {
                         style={{
                           padding: '10px 12px',
                           borderRadius: '8px',
-                          border: '1px solid #d1d5db',
+                          border: '1px solid var(--border)',
+                          backgroundColor: 'var(--bg-input)',
+                          color: 'var(--text-primary)',
                           fontSize: '14px',
                           outline: 'none',
                           transition: 'border-color 0.2s'
@@ -519,7 +522,7 @@ function WhatsAppConnect() {
                     </div>
 
                     <div style={{ display: 'grid', gap: '6px' }}>
-                      <label style={{ fontSize: '14px', fontWeight: '600', color: '#374151', textAlign: 'left' }}>Phone Number ID</label>
+                      <label style={{ fontSize: '14px', fontWeight: '600', color: 'var(--text-primary)', textAlign: 'left' }}>Phone Number ID</label>
                       <input
                         type="text"
                         placeholder="e.g. 10654897258"
@@ -530,7 +533,9 @@ function WhatsAppConnect() {
                         style={{
                           padding: '10px 12px',
                           borderRadius: '8px',
-                          border: '1px solid #d1d5db',
+                          border: '1px solid var(--border)',
+                          backgroundColor: 'var(--bg-input)',
+                          color: 'var(--text-primary)',
                           fontSize: '14px',
                           outline: 'none',
                           transition: 'border-color 0.2s'
@@ -539,7 +544,7 @@ function WhatsAppConnect() {
                     </div>
 
                     <div style={{ display: 'grid', gap: '6px' }}>
-                      <label style={{ fontSize: '14px', fontWeight: '600', color: '#374151', textAlign: 'left' }}>WhatsApp Business Account ID</label>
+                      <label style={{ fontSize: '14px', fontWeight: '600', color: 'var(--text-primary)', textAlign: 'left' }}>WhatsApp Business Account ID</label>
                       <input
                         type="text"
                         placeholder="e.g. 20958473925"
@@ -550,7 +555,9 @@ function WhatsAppConnect() {
                         style={{
                           padding: '10px 12px',
                           borderRadius: '8px',
-                          border: '1px solid #d1d5db',
+                          border: '1px solid var(--border)',
+                          backgroundColor: 'var(--bg-input)',
+                          color: 'var(--text-primary)',
                           fontSize: '14px',
                           outline: 'none',
                           transition: 'border-color 0.2s'
@@ -562,17 +569,8 @@ function WhatsAppConnect() {
                       <button
                         type="submit"
                         disabled={saveLoading}
-                        style={{
-                          flex: 1,
-                          padding: '12px',
-                          backgroundColor: '#25d366',
-                          color: '#ffffff',
-                          border: 'none',
-                          borderRadius: '8px',
-                          fontWeight: '600',
-                          cursor: 'pointer',
-                          transition: 'background-color 0.2s'
-                        }}
+                        className="btn btn-primary"
+                        style={{ flex: 1, padding: '12px' }}
                       >
                         {saveLoading ? 'Saving...' : 'Save & Connect'}
                       </button>
@@ -581,15 +579,8 @@ function WhatsAppConnect() {
                         <button
                           type="button"
                           onClick={() => setShowCredentialsForm(false)}
-                          style={{
-                            padding: '12px 20px',
-                            backgroundColor: '#f3f4f6',
-                            color: '#374151',
-                            border: 'none',
-                            borderRadius: '8px',
-                            fontWeight: '600',
-                            cursor: 'pointer'
-                          }}
+                          className="btn btn-secondary"
+                          style={{ padding: '12px 20px' }}
                         >
                           Cancel
                         </button>
@@ -603,20 +594,22 @@ function WhatsAppConnect() {
                       alignItems: 'center',
                       gap: '12px',
                       padding: '16px',
-                      backgroundColor: (cloudStatus.isConfigured && cloudStatus.isConnected) ? '#e6f4ea' : '#fef3c7',
+                      backgroundColor: (cloudStatus.isConfigured && cloudStatus.isConnected) ? 'rgba(22, 163, 74, 0.1)' : 'rgba(245, 158, 11, 0.1)',
+                      border: '1px solid ' + ((cloudStatus.isConfigured && cloudStatus.isConnected) ? 'rgba(22, 163, 74, 0.2)' : 'rgba(245, 158, 11, 0.2)'),
+                      color: (cloudStatus.isConfigured && cloudStatus.isConnected) ? 'var(--success)' : 'var(--warning)',
                       borderRadius: '12px',
                       marginBottom: '20px'
                     }}>
                       {(cloudStatus.isConfigured && cloudStatus.isConnected) ? (
-                        <FaCheckCircle style={{ color: '#10b981', fontSize: '24px' }} />
+                        <FaCheckCircle style={{ color: 'var(--success)', fontSize: '24px' }} />
                       ) : (
-                        <FaExclamationTriangle style={{ color: '#f59e0b', fontSize: '24px' }} />
+                        <FaExclamationTriangle style={{ color: 'var(--warning)', fontSize: '24px' }} />
                       )}
                       <div>
-                        <h4 style={{ fontSize: '15px', fontWeight: '700', color: '#18181b', margin: '0 0 2px 0', textAlign: 'left' }}>
+                        <h4 style={{ fontSize: '15px', fontWeight: '700', color: 'var(--text-primary)', margin: '0 0 2px 0', textAlign: 'left' }}>
                           {(cloudStatus.isConfigured && cloudStatus.isConnected) ? 'WhatsApp Connected & Active' : 'WhatsApp Disconnected'}
                         </h4>
-                        <p style={{ fontSize: '12px', color: '#71717a', margin: 0, textAlign: 'left' }}>
+                        <p style={{ fontSize: '12.5px', color: 'var(--text-secondary)', margin: 0, textAlign: 'left' }}>
                           {(cloudStatus.isConfigured && cloudStatus.isConnected) 
                             ? 'Your server is connected and responding to customer messages.' 
                             : cloudStatus.isConfigured 
@@ -627,47 +620,37 @@ function WhatsAppConnect() {
                     </div>
 
                     <div style={{ display: 'grid', gap: '12px', marginBottom: '20px' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #f4f4f5', paddingBottom: '8px' }}>
-                        <span style={{ fontSize: '14px', color: '#71717a', display: 'flex', alignItems: 'center', gap: '8px' }}><FaKey style={{ fontSize: '12px' }} /> API Configuration:</span>
-                        <span style={{ fontSize: '14px', fontWeight: '600', color: cloudStatus.isConfigured ? '#10b981' : '#f59e0b' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid var(--border)', paddingBottom: '8px' }}>
+                        <span style={{ fontSize: '14px', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '8px' }}><FaKey style={{ fontSize: '12px' }} /> API Configuration:</span>
+                        <span style={{ fontSize: '14px', fontWeight: '600', color: cloudStatus.isConfigured ? 'var(--success)' : 'var(--warning)' }}>
                           {cloudStatus.isConfigured ? 'Configured' : 'Pending'}
                         </span>
                       </div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #f4f4f5', paddingBottom: '8px' }}>
-                        <span style={{ fontSize: '14px', color: '#71717a', display: 'flex', alignItems: 'center', gap: '8px' }}><FaServer style={{ fontSize: '12px' }} /> Channel Status:</span>
-                        <span style={{ fontSize: '14px', fontWeight: '600', color: cloudStatus.isConnected ? '#10b981' : '#ef4444' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid var(--border)', paddingBottom: '8px' }}>
+                        <span style={{ fontSize: '14px', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '8px' }}><FaServer style={{ fontSize: '12px' }} /> Channel Status:</span>
+                        <span style={{ fontSize: '14px', fontWeight: '600', color: cloudStatus.isConnected ? 'var(--success)' : 'var(--danger)' }}>
                           {cloudStatus.isConnected ? 'Connected' : 'Disconnected'}
                         </span>
                       </div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #f4f4f5', paddingBottom: '8px' }}>
-                        <span style={{ fontSize: '14px', color: '#71717a', display: 'flex', alignItems: 'center', gap: '8px' }}><FaBuilding style={{ fontSize: '12px' }} /> Display Name:</span>
-                        <span style={{ fontSize: '14px', fontWeight: '600', color: '#18181b' }}>{cloudStatus.displayName}</span>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid var(--border)', paddingBottom: '8px' }}>
+                        <span style={{ fontSize: '14px', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '8px' }}><FaBuilding style={{ fontSize: '12px' }} /> Display Name:</span>
+                        <span style={{ fontSize: '14px', fontWeight: '600', color: 'var(--text-primary)' }}>{cloudStatus.displayName}</span>
                       </div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #f4f4f5', paddingBottom: '8px' }}>
-                        <span style={{ fontSize: '14px', color: '#71717a', display: 'flex', alignItems: 'center', gap: '8px' }}><FaWhatsapp style={{ fontSize: '12px' }} /> Phone Details:</span>
-                        <span style={{ fontSize: '14px', fontWeight: '600', color: '#18181b' }}>{cloudStatus.phoneNumber}</span>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid var(--border)', paddingBottom: '8px' }}>
+                        <span style={{ fontSize: '14px', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '8px' }}><FaWhatsapp style={{ fontSize: '12px' }} /> Phone Details:</span>
+                        <span style={{ fontSize: '14px', fontWeight: '600', color: 'var(--text-primary)' }}>{cloudStatus.phoneNumber}</span>
                       </div>
                       <div style={{ display: 'flex', justifyContent: 'space-between', paddingBottom: '8px' }}>
-                        <span style={{ fontSize: '14px', color: '#71717a', display: 'flex', alignItems: 'center', gap: '8px' }}><FaUserCheck style={{ fontSize: '12px' }} /> Verified Name:</span>
-                        <span style={{ fontSize: '14px', fontWeight: '600', color: '#18181b' }}>{cloudStatus.verified}</span>
+                        <span style={{ fontSize: '14px', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '8px' }}><FaUserCheck style={{ fontSize: '12px' }} /> Verified Name:</span>
+                        <span style={{ fontSize: '14px', fontWeight: '600', color: 'var(--text-primary)' }}>{cloudStatus.verified}</span>
                       </div>
                     </div>
 
                     <div style={{ display: 'flex', gap: '12px' }}>
                       <button
                         onClick={() => setShowCredentialsForm(true)}
-                        style={{
-                          flex: 1,
-                          padding: '12px 16px',
-                          backgroundColor: '#ffffff',
-                          color: '#374151',
-                          border: '1px solid #d1d5db',
-                          borderRadius: '8px',
-                          fontSize: '14px',
-                          fontWeight: '600',
-                          cursor: 'pointer',
-                          transition: 'all 0.2s ease'
-                        }}
+                        className="btn btn-secondary"
+                        style={{ flex: 1, padding: '12px 16px' }}
                       >
                         ⚙️ Update Meta Credentials
                       </button>
@@ -677,18 +660,8 @@ function WhatsAppConnect() {
                           <button
                             onClick={handleDisconnectCloud}
                             disabled={actionLoading}
-                            style={{
-                              flex: 1,
-                              padding: '12px 16px',
-                              backgroundColor: '#fee2e2',
-                              color: '#b91c1c',
-                              border: '1px solid #fca5a5',
-                              borderRadius: '8px',
-                              fontSize: '14px',
-                              fontWeight: '600',
-                              cursor: 'pointer',
-                              transition: 'all 0.2s ease'
-                            }}
+                            className="btn btn-danger"
+                            style={{ flex: 1, padding: '12px 16px' }}
                           >
                             {actionLoading ? 'Disconnecting...' : 'Disconnect WhatsApp'}
                           </button>
@@ -696,18 +669,8 @@ function WhatsAppConnect() {
                           <button
                             onClick={handleConnectCloud}
                             disabled={actionLoading}
-                            style={{
-                              flex: 1,
-                              padding: '12px 16px',
-                              backgroundColor: '#e6f4ea',
-                              color: '#137333',
-                              border: '1px solid #a3cfbb',
-                              borderRadius: '8px',
-                              fontSize: '14px',
-                              fontWeight: '600',
-                              cursor: 'pointer',
-                              transition: 'all 0.2s ease'
-                            }}
+                            className="btn btn-primary"
+                            style={{ flex: 1, padding: '12px 16px' }}
                           >
                             {actionLoading ? 'Connecting...' : 'Connect / Login WhatsApp'}
                           </button>
@@ -833,39 +796,29 @@ function WhatsAppConnect() {
                 setIsGuideOpen(true);
                 setCurrentGuideStep(0);
               }}
+              className="btn btn-primary"
               style={{
                 width: '100%',
                 padding: '12px',
-                backgroundColor: '#6366f1',
-                color: '#ffffff',
-                border: 'none',
-                borderRadius: '8px',
-                fontWeight: '600',
-                fontSize: '14px',
-                cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 gap: '8px',
-                marginBottom: '20px',
-                boxShadow: '0 2px 10px rgba(99, 102, 241, 0.2)',
-                transition: 'all 0.2s ease'
+                marginBottom: '20px'
               }}
-              onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#4f46e5'}
-              onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#6366f1'}
             >
               📖 View Step-by-Step Screenshot Guide
             </button>
 
-            <p style={{ fontSize: '14px', color: '#52525b', marginBottom: '20px', lineHeight: '1.5' }}>
+            <p style={{ fontSize: '14.5px', color: 'var(--text-secondary)', marginBottom: '20px', lineHeight: '1.5' }}>
               Follow these simple instructions to link your official WhatsApp Business number to the AI agent:
             </p>
 
             <div style={{ display: 'grid', gap: '16px' }}>
               <div style={{ display: 'flex', gap: '12px', alignItems: 'start' }}>
                 <div style={{
-                  backgroundColor: '#e0e7ff',
-                  color: '#4f46e5',
+                  backgroundColor: 'var(--brand-light)',
+                  color: 'var(--brand)',
                   width: '24px',
                   height: '24px',
                   borderRadius: '50%',
@@ -877,17 +830,17 @@ function WhatsAppConnect() {
                   flexShrink: 0
                 }}>1</div>
                 <div>
-                  <h4 style={{ fontSize: '14px', fontWeight: '700', color: '#18181b', margin: '0 0 4px 0' }}>Create Meta Developer Account</h4>
-                  <p style={{ fontSize: '13px', color: '#52525b', margin: 0, lineHeight: '1.4' }}>
-                    Go to <a href="https://developers.facebook.com" target="_blank" rel="noreferrer" style={{ color: '#25d366', textDecoration: 'underline' }}>developers.facebook.com</a> and sign up for a developer account.
+                  <h4 style={{ fontSize: '14px', fontWeight: '700', color: 'var(--text-primary)', margin: '0 0 4px 0' }}>Create Meta Developer Account</h4>
+                  <p style={{ fontSize: '13px', color: 'var(--text-secondary)', margin: 0, lineHeight: '1.4' }}>
+                    Go to <a href="https://developers.facebook.com" target="_blank" rel="noreferrer" style={{ color: 'var(--brand)', textDecoration: 'underline' }}>developers.facebook.com</a> and sign up for a developer account.
                   </p>
                 </div>
               </div>
 
               <div style={{ display: 'flex', gap: '12px', alignItems: 'start' }}>
                 <div style={{
-                  backgroundColor: '#e0e7ff',
-                  color: '#4f46e5',
+                  backgroundColor: 'var(--brand-light)',
+                  color: 'var(--brand)',
                   width: '24px',
                   height: '24px',
                   borderRadius: '50%',
@@ -899,8 +852,8 @@ function WhatsAppConnect() {
                   flexShrink: 0
                 }}>2</div>
                 <div>
-                  <h4 style={{ fontSize: '14px', fontWeight: '700', color: '#18181b', margin: '0 0 4px 0' }}>Create a WhatsApp App</h4>
-                  <p style={{ fontSize: '13px', color: '#52525b', margin: 0, lineHeight: '1.4' }}>
+                  <h4 style={{ fontSize: '14px', fontWeight: '700', color: 'var(--text-primary)', margin: '0 0 4px 0' }}>Create a WhatsApp App</h4>
+                  <p style={{ fontSize: '13px', color: 'var(--text-secondary)', margin: 0, lineHeight: '1.4' }}>
                     Click <strong>Create App</strong>, choose <strong>Other</strong>, and select the <strong>Business</strong> type. Add the <strong>WhatsApp</strong> product to your app.
                   </p>
                 </div>
@@ -908,8 +861,8 @@ function WhatsAppConnect() {
 
               <div style={{ display: 'flex', gap: '12px', alignItems: 'start' }}>
                 <div style={{
-                  backgroundColor: '#e0e7ff',
-                  color: '#4f46e5',
+                  backgroundColor: 'var(--brand-light)',
+                  color: 'var(--brand)',
                   width: '24px',
                   height: '24px',
                   borderRadius: '50%',
@@ -921,8 +874,8 @@ function WhatsAppConnect() {
                   flexShrink: 0
                 }}>3</div>
                 <div>
-                  <h4 style={{ fontSize: '14px', fontWeight: '700', color: '#18181b', margin: '0 0 4px 0' }}>Enter Meta Credentials</h4>
-                  <p style={{ fontSize: '13px', color: '#52525b', margin: 0, lineHeight: '1.4' }}>
+                  <h4 style={{ fontSize: '14px', fontWeight: '700', color: 'var(--text-primary)', margin: '0 0 4px 0' }}>Enter Meta Credentials</h4>
+                  <p style={{ fontSize: '13px', color: 'var(--text-secondary)', margin: 0, lineHeight: '1.4' }}>
                     Copy the <strong>Access Token</strong>, <strong>Phone Number ID</strong>, and <strong>Business Account ID</strong> from the WhatsApp Getting Started page and paste them into the credentials form on this page.
                   </p>
                 </div>
@@ -930,8 +883,8 @@ function WhatsAppConnect() {
 
               <div style={{ display: 'flex', gap: '12px', alignItems: 'start' }}>
                 <div style={{
-                  backgroundColor: '#e0e7ff',
-                  color: '#4f46e5',
+                  backgroundColor: 'var(--brand-light)',
+                  color: 'var(--brand)',
                   width: '24px',
                   height: '24px',
                   borderRadius: '50%',
@@ -943,8 +896,8 @@ function WhatsAppConnect() {
                   flexShrink: 0
                 }}>4</div>
                 <div>
-                  <h4 style={{ fontSize: '14px', fontWeight: '700', color: '#18181b', margin: '0 0 4px 0' }}>Configure Webhook</h4>
-                  <p style={{ fontSize: '13px', color: '#52525b', margin: 0, lineHeight: '1.4' }}>
+                  <h4 style={{ fontSize: '14px', fontWeight: '700', color: 'var(--text-primary)', margin: '0 0 4px 0' }}>Configure Webhook</h4>
+                  <p style={{ fontSize: '13px', color: 'var(--text-secondary)', margin: 0, lineHeight: '1.4' }}>
                     Set up the Webhook configuration under WhatsApp setup in Meta. Paste the **Callback URL** and **Verification Token** shown on the left, then subscribe to the <code>messages</code> webhook topic.
                   </p>
                 </div>
@@ -985,7 +938,7 @@ function WhatsAppConnect() {
               
               {/* Phone number */}
               <div style={{ display: 'grid', gap: '6px' }}>
-                <label style={{ fontSize: '14px', fontWeight: '600', color: '#374151' }}>
+                <label style={{ fontSize: '14px', fontWeight: '600', color: 'var(--text-primary)' }}>
                   WhatsApp Phone Number
                 </label>
                 <div style={{ position: 'relative' }}>
@@ -1370,15 +1323,15 @@ function WhatsAppConnect() {
 
             {/* Platform Integration Instructions */}
             <div style={{
-              backgroundColor: '#ffffff',
+              backgroundColor: 'var(--bg-card)',
               borderRadius: '20px',
               padding: '24px',
-              boxShadow: '0 4px 20px rgba(0,0,0,0.05)',
-              border: '1px solid #f4f4f5',
+              boxShadow: 'var(--shadow-sm)',
+              border: '1px solid var(--border)',
               display: 'grid',
               gap: '16px'
             }}>
-              <h4 style={{ fontSize: '15px', fontWeight: '700', color: '#18181b', margin: '0 0 4px 0', textAlign: 'left' }}>
+              <h4 style={{ fontSize: '15px', fontWeight: '700', color: 'var(--text-primary)', margin: '0 0 4px 0', textAlign: 'left' }}>
                 🚀 Platform Integration Guide
               </h4>
               <div style={{ display: 'flex', gap: '10px', width: '100%', boxSizing: 'border-box' }}>
@@ -1567,30 +1520,31 @@ function WhatsAppConnect() {
           padding: '20px'
         }}>
           <div style={{
-            backgroundColor: '#ffffff',
+            backgroundColor: 'var(--bg-card)',
+            border: '1px solid var(--border)',
             borderRadius: '20px',
             width: '100%',
             maxWidth: '1100px',
             height: '85vh',
             display: 'flex',
             flexDirection: 'column',
-            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+            boxShadow: 'var(--shadow-lg)',
             overflow: 'hidden'
           }}>
             {/* Header */}
             <div style={{
               padding: '20px 24px',
-              borderBottom: '1px solid #e4e4e7',
+              borderBottom: '1px solid var(--border)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between',
-              backgroundColor: '#f8fafc'
+              backgroundColor: 'var(--bg-input)'
             }}>
               <div>
-                <h2 style={{ fontSize: '18px', fontWeight: '800', color: '#0f172a', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <h2 style={{ fontSize: '18px', fontWeight: '800', color: 'var(--text-primary)', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <FaWhatsapp style={{ color: '#25d366' }} /> Meta Developer Console Onboarding Guide
                 </h2>
-                <p style={{ fontSize: '13px', color: '#64748b', margin: '4px 0 0 0' }}>
+                <p style={{ fontSize: '13px', color: 'var(--text-secondary)', margin: '4px 0 0 0' }}>
                   Step {currentGuideStep + 1} of {GUIDE_STEPS.length}: {GUIDE_STEPS[currentGuideStep].title}
                 </p>
               </div>
@@ -1647,13 +1601,13 @@ function WhatsAppConnect() {
             }}>
               {/* Left Pane: Screenshot */}
               <div style={{
-                backgroundColor: '#f1f5f9',
+                backgroundColor: 'var(--bg-input)',
                 padding: '24px',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 overflow: 'auto',
-                borderRight: '1px solid #e2e8f0',
+                borderRight: '1px solid var(--border)',
                 position: 'relative'
               }}>
                 <img
@@ -1664,8 +1618,8 @@ function WhatsAppConnect() {
                     maxHeight: '100%',
                     objectFit: 'contain',
                     borderRadius: '8px',
-                    boxShadow: '0 10px 25px -5px rgba(0,0,0,0.1), 0 8px 10px -6px rgba(0,0,0,0.1)',
-                    backgroundColor: '#ffffff'
+                    boxShadow: 'var(--shadow-md)',
+                    backgroundColor: 'var(--bg-card)'
                   }}
                 />
               </div>
@@ -1677,15 +1631,15 @@ function WhatsAppConnect() {
                 flexDirection: 'column',
                 justifyContent: 'space-between',
                 overflowY: 'auto',
-                backgroundColor: '#ffffff'
+                backgroundColor: 'var(--bg-card)'
               }}>
                 <div>
                   <div style={{
                     display: 'inline-flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    backgroundColor: '#e0e7ff',
-                    color: '#4f46e5',
+                    backgroundColor: 'var(--brand-light)',
+                    color: 'var(--brand)',
                     padding: '6px 12px',
                     borderRadius: '20px',
                     fontSize: '12px',
@@ -1695,13 +1649,13 @@ function WhatsAppConnect() {
                     STEP {currentGuideStep + 1}
                   </div>
 
-                  <h3 style={{ fontSize: '20px', fontWeight: '700', color: '#0f172a', marginBottom: '16px', lineHeight: '1.3' }}>
+                  <h3 style={{ fontSize: '20px', fontWeight: '700', color: 'var(--text-primary)', marginBottom: '16px', lineHeight: '1.3' }}>
                     {GUIDE_STEPS[currentGuideStep].title}
                   </h3>
 
                   <div style={{
                     fontSize: '14px',
-                    color: '#334155',
+                    color: 'var(--text-secondary)',
                     lineHeight: '1.6',
                     whiteSpace: 'pre-line'
                   }}>
@@ -1713,11 +1667,11 @@ function WhatsAppConnect() {
                 <div style={{
                   marginTop: '24px',
                   padding: '12px 16px',
-                  backgroundColor: '#f8fafc',
+                  backgroundColor: 'var(--bg-input)',
                   borderRadius: '8px',
-                  borderLeft: '4px solid #6366f1',
+                  borderLeft: '4px solid var(--brand)',
                   fontSize: '13px',
-                  color: '#475569'
+                  color: 'var(--text-secondary)'
                 }}>
                   <strong>💡 Pro-Tip:</strong> Use Left & Right Arrow keys on your keyboard to navigate between steps.
                 </div>
@@ -1727,25 +1681,20 @@ function WhatsAppConnect() {
             {/* Footer */}
             <div style={{
               padding: '16px 24px',
-              borderTop: '1px solid #e4e4e7',
+              borderTop: '1px solid var(--border)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between',
-              backgroundColor: '#f8fafc'
+              backgroundColor: 'var(--bg-input)'
             }}>
               <button
                 onClick={() => setCurrentGuideStep((prev) => Math.max(prev - 1, 0))}
                 disabled={currentGuideStep === 0}
+                className="btn btn-secondary"
                 style={{
                   padding: '10px 16px',
-                  backgroundColor: '#ffffff',
-                  color: currentGuideStep === 0 ? '#cbd5e1' : '#334155',
-                  border: '1px solid #e2e8f0',
-                  borderRadius: '8px',
                   fontWeight: '600',
-                  fontSize: '14px',
-                  cursor: currentGuideStep === 0 ? 'not-allowed' : 'pointer',
-                  transition: 'all 0.2s'
+                  fontSize: '14px'
                 }}
               >
                 Previous Step
@@ -1767,7 +1716,7 @@ function WhatsAppConnect() {
                       width: '10px',
                       height: '10px',
                       borderRadius: '50%',
-                      backgroundColor: currentGuideStep === idx ? '#6366f1' : '#cbd5e1',
+                      backgroundColor: currentGuideStep === idx ? 'var(--brand)' : 'var(--border)',
                       border: 'none',
                       padding: 0,
                       cursor: 'pointer',
@@ -1786,16 +1735,11 @@ function WhatsAppConnect() {
                     setCurrentGuideStep((prev) => Math.min(prev + 1, GUIDE_STEPS.length - 1));
                   }
                 }}
+                className="btn btn-primary"
                 style={{
                   padding: '10px 20px',
-                  backgroundColor: '#25d366',
-                  color: '#ffffff',
-                  border: 'none',
-                  borderRadius: '8px',
                   fontWeight: '600',
-                  fontSize: '14px',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s'
+                  fontSize: '14px'
                 }}
               >
                 {currentGuideStep === GUIDE_STEPS.length - 1 ? 'Finish Setup' : 'Next Step'}
@@ -1822,30 +1766,31 @@ function WhatsAppConnect() {
           padding: '20px'
         }}>
           <div style={{
-            backgroundColor: '#ffffff',
+            backgroundColor: 'var(--bg-card)',
+            border: '1px solid var(--border)',
             borderRadius: '20px',
             width: '100%',
             maxWidth: '1100px',
             height: '85vh',
             display: 'flex',
             flexDirection: 'column',
-            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+            boxShadow: 'var(--shadow-lg)',
             overflow: 'hidden'
           }}>
             {/* Header */}
             <div style={{
               padding: '20px 24px',
-              borderBottom: '1px solid #e4e4e7',
+              borderBottom: '1px solid var(--border)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between',
-              backgroundColor: '#f8fafc'
+              backgroundColor: 'var(--bg-input)'
             }}>
               <div>
-                <h2 style={{ fontSize: '18px', fontWeight: '800', color: '#0f172a', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <h2 style={{ fontSize: '18px', fontWeight: '800', color: 'var(--text-primary)', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <FaWhatsapp style={{ color: '#25d366' }} /> Website Chat Widget Integration Guide
                 </h2>
-                <p style={{ fontSize: '13px', color: '#64748b', margin: '4px 0 0 0' }}>
+                <p style={{ fontSize: '13px', color: 'var(--text-secondary)', margin: '4px 0 0 0' }}>
                   Step {currentWidgetGuideStep + 1} of {WIDGET_GUIDE_STEPS.length}: {WIDGET_GUIDE_STEPS[currentWidgetGuideStep].title}
                 </p>
               </div>
@@ -1902,13 +1847,13 @@ function WhatsAppConnect() {
             }}>
               {/* Left Pane: Screenshot */}
               <div style={{
-                backgroundColor: '#f1f5f9',
+                backgroundColor: 'var(--bg-input)',
                 padding: '24px',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 overflow: 'auto',
-                borderRight: '1px solid #e2e8f0',
+                borderRight: '1px solid var(--border)',
                 position: 'relative'
               }}>
                 <img
@@ -1919,8 +1864,8 @@ function WhatsAppConnect() {
                     maxHeight: '100%',
                     objectFit: 'contain',
                     borderRadius: '8px',
-                    boxShadow: '0 10px 25px -5px rgba(0,0,0,0.1), 0 8px 10px -6px rgba(0,0,0,0.1)',
-                    backgroundColor: '#ffffff'
+                    boxShadow: 'var(--shadow-md)',
+                    backgroundColor: 'var(--bg-card)'
                   }}
                 />
               </div>
@@ -1932,15 +1877,15 @@ function WhatsAppConnect() {
                 flexDirection: 'column',
                 justifyContent: 'space-between',
                 overflowY: 'auto',
-                backgroundColor: '#ffffff'
+                backgroundColor: 'var(--bg-card)'
               }}>
                 <div>
                   <div style={{
                     display: 'inline-flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    backgroundColor: '#e0e7ff',
-                    color: '#4f46e5',
+                    backgroundColor: 'var(--brand-light)',
+                    color: 'var(--brand)',
                     padding: '6px 12px',
                     borderRadius: '20px',
                     fontSize: '12px',
@@ -1950,13 +1895,13 @@ function WhatsAppConnect() {
                     STEP {currentWidgetGuideStep + 1}
                   </div>
 
-                  <h3 style={{ fontSize: '20px', fontWeight: '700', color: '#0f172a', marginBottom: '16px', lineHeight: '1.3' }}>
+                  <h3 style={{ fontSize: '20px', fontWeight: '700', color: 'var(--text-primary)', marginBottom: '16px', lineHeight: '1.3' }}>
                     {WIDGET_GUIDE_STEPS[currentWidgetGuideStep].title}
                   </h3>
 
                   <div style={{
                     fontSize: '14px',
-                    color: '#334155',
+                    color: 'var(--text-secondary)',
                     lineHeight: '1.6',
                     whiteSpace: 'pre-line'
                   }}>
@@ -1968,11 +1913,11 @@ function WhatsAppConnect() {
                 <div style={{
                   marginTop: '24px',
                   padding: '12px 16px',
-                  backgroundColor: '#f8fafc',
+                  backgroundColor: 'var(--bg-input)',
                   borderRadius: '8px',
-                  borderLeft: '4px solid #6366f1',
+                  borderLeft: '4px solid var(--brand)',
                   fontSize: '13px',
-                  color: '#475569'
+                  color: 'var(--text-secondary)'
                 }}>
                   <strong>💡 Pro-Tip:</strong> Use Left & Right Arrow keys on your keyboard to navigate between steps.
                 </div>
@@ -1982,25 +1927,20 @@ function WhatsAppConnect() {
             {/* Footer */}
             <div style={{
               padding: '16px 24px',
-              borderTop: '1px solid #e4e4e7',
+              borderTop: '1px solid var(--border)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between',
-              backgroundColor: '#f8fafc'
+              backgroundColor: 'var(--bg-input)'
             }}>
               <button
                 onClick={() => setCurrentWidgetGuideStep((prev) => Math.max(prev - 1, 0))}
                 disabled={currentWidgetGuideStep === 0}
+                className="btn btn-secondary"
                 style={{
                   padding: '10px 16px',
-                  backgroundColor: '#ffffff',
-                  color: currentWidgetGuideStep === 0 ? '#cbd5e1' : '#334155',
-                  border: '1px solid #e2e8f0',
-                  borderRadius: '8px',
                   fontWeight: '600',
-                  fontSize: '14px',
-                  cursor: currentWidgetGuideStep === 0 ? 'not-allowed' : 'pointer',
-                  transition: 'all 0.2s'
+                  fontSize: '14px'
                 }}
               >
                 Previous Step
@@ -2022,7 +1962,7 @@ function WhatsAppConnect() {
                       width: '10px',
                       height: '10px',
                       borderRadius: '50%',
-                      backgroundColor: currentWidgetGuideStep === idx ? '#6366f1' : '#cbd5e1',
+                      backgroundColor: currentWidgetGuideStep === idx ? 'var(--brand)' : 'var(--border)',
                       border: 'none',
                       padding: 0,
                       cursor: 'pointer',
@@ -2041,16 +1981,11 @@ function WhatsAppConnect() {
                     setCurrentWidgetGuideStep((prev) => Math.min(prev + 1, WIDGET_GUIDE_STEPS.length - 1));
                   }
                 }}
+                className="btn btn-primary"
                 style={{
                   padding: '10px 20px',
-                  backgroundColor: '#25d366',
-                  color: '#ffffff',
-                  border: 'none',
-                  borderRadius: '8px',
                   fontWeight: '600',
-                  fontSize: '14px',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s'
+                  fontSize: '14px'
                 }}
               >
                 {currentWidgetGuideStep === WIDGET_GUIDE_STEPS.length - 1 ? 'Finish Setup' : 'Next Step'}

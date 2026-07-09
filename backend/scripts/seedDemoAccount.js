@@ -37,8 +37,8 @@ async function seedDemoAccount() {
         geminiTokensLimit: 50000,
         geminiTokensUsed: 12450,
         totalMessagesProcessed: 342,
-        whatsappConnected: true,
-        whatsappConnectedAt: daysAgo(14)
+        whatsappConnected: false,
+        whatsappConnectedAt: null
       });
       await admin.save();
       console.log(`✅ Created admin: ${DEMO_EMAIL}`);

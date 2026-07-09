@@ -161,6 +161,12 @@ mongoose.connect(process.env.MONGODB_URI, {
     const shopifySyncSchedule = process.env.SHOPIFY_SYNC_CRON || '*/15 * * * *';
     cron.schedule(shopifySyncSchedule, async () => {
       try {
+        const GlobalSettings = require('./models/GlobalSettings');
+        const flag = await GlobalSettings.findOne({ key: 'shopifySyncEnabled' });
+        if (flag && flag.value === false) {
+          console.log('🛍️ Shopify cron sync skipped (shopifySyncEnabled flag is false)');
+          return;
+        }
         const results = await shopifyOrderSyncService.syncAllShopifyIntegrations();
         const totalFetched = results.reduce((sum, item) => sum + (item.fetched || 0), 0);
         const totalCreated = results.reduce((sum, item) => sum + (item.created || 0), 0);

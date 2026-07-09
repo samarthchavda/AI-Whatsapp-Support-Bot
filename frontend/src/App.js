@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Link, useLocation, useNavigate, Navigate } from 'react-router-dom';
-import { FaHome, FaComments, FaBox, FaExclamationTriangle, FaPlug, FaRobot, FaSearch, FaBell, FaPlus, FaSignOutAlt, FaUser, FaBrain, FaCommentDots, FaBroadcastTower, FaChartLine, FaCog, FaCrown, FaFileAlt, FaShoppingCart, FaCoins, FaUserSecret, FaHeartbeat, FaBullhorn, FaBlog, FaBars, FaSun, FaMoon } from 'react-icons/fa';
+import { FaHome, FaComments, FaBox, FaExclamationTriangle, FaPlug, FaRobot, FaSearch, FaBell, FaPlus, FaSignOutAlt, FaUser, FaBrain, FaCommentDots, FaBroadcastTower, FaChartLine, FaCog, FaCrown, FaFileAlt, FaShoppingCart, FaCoins, FaUserSecret, FaHeartbeat, FaBullhorn, FaBlog, FaBars, FaSun, FaMoon, FaWhatsapp, FaShieldAlt, FaToggleOn } from 'react-icons/fa';
 import api, { clearAuthState, refreshAuth } from './services/api';
 import Dashboard from './pages/Dashboard';
 import Profile from './pages/Profile';
@@ -22,6 +22,13 @@ import LeadsCRM from './pages/LeadsCRM';
 import SuperAdminHealth from './pages/SuperAdminHealth';
 import SuperAdminAnnouncements from './pages/SuperAdminAnnouncements';
 import SuperAdminUserDetail from './pages/SuperAdminUserDetail';
+import SuperAdminWhatsAppOps from './pages/SuperAdminWhatsAppOps';
+import SuperAdminLiveOps from './pages/SuperAdminLiveOps';
+import SuperAdminIntegrationHealth from './pages/SuperAdminIntegrationHealth';
+import SuperAdminAIUsage from './pages/SuperAdminAIUsage';
+import SuperAdminBillingRevenue from './pages/SuperAdminBillingRevenue';
+import SuperAdminAuditLogs from './pages/SuperAdminAuditLogs';
+import SuperAdminFeatureFlags from './pages/SuperAdminFeatureFlags';
 import PlanManager from './pages/PlanManager';
 import DemoRequests from './pages/DemoRequests';
 import SuperAdminBudget from './pages/SuperAdminBudget';
@@ -116,9 +123,9 @@ function Sidebar({ admin, onLogout, isOpen, onToggle, pendingDemoRequestsCount }
               {isOpen && <div className="nav-section-title">Super Admin</div>}
               <ul className="nav-links">
                 <li>
-                  <Link to="/dashboard/super-admin" className={isActive('/dashboard/super-admin')} title="User Management">
+                  <Link to="/dashboard/super-admin" className={isActive('/dashboard/super-admin')} title="Merchant Management">
                     <FaCrown />
-                    <span className="nav-label">Users</span>
+                    <span className="nav-label">Merchants</span>
                   </Link>
                 </li>
                 <li>
@@ -165,9 +172,9 @@ function Sidebar({ admin, onLogout, isOpen, onToggle, pendingDemoRequestsCount }
                   </Link>
                 </li>
                 <li>
-                  <Link to="/dashboard/super-admin/health" className={isActive('/dashboard/super-admin/health')} title="Connection Health">
+                  <Link to="/dashboard/super-admin/system-health" className={isActive('/dashboard/super-admin/system-health')} title="System Health">
                     <FaHeartbeat />
-                    <span className="nav-label">Health</span>
+                    <span className="nav-label">System Health</span>
                   </Link>
                 </li>
                 <li>
@@ -186,6 +193,93 @@ function Sidebar({ admin, onLogout, isOpen, onToggle, pendingDemoRequestsCount }
                   <Link to="/dashboard/super-admin/settings" className={isActive('/dashboard/super-admin/settings')} title="System Connection">
                     <FaPlug />
                     <span className="nav-label">System Connection</span>
+                  </Link>
+                </li>
+              </ul>
+            </div>
+          )}
+
+          {/* Operations Section */}
+          {admin && admin.role === 'super_admin' && (
+            <div className="nav-section">
+              {isOpen && <div className="nav-section-title">Operations</div>}
+              <ul className="nav-links">
+                <li>
+                  <Link to="/dashboard/super-admin/whatsapp-ops" className={isActive('/dashboard/super-admin/whatsapp-ops')} title="WhatsApp Operations">
+                    <FaWhatsapp />
+                    <span className="nav-label">WhatsApp Operations</span>
+                  </Link>
+                </li>
+                <li>
+                  <Link to="/dashboard/super-admin/live-ops" className={isActive('/dashboard/super-admin/live-ops')} title="Live Operations">
+                    <FaComments />
+                    <span className="nav-label">Live Operations</span>
+                  </Link>
+                </li>
+                <li>
+                  <Link to="/dashboard/super-admin/integration-health" className={isActive('/dashboard/super-admin/integration-health')} title="Integration Health">
+                    <FaPlug />
+                    <span className="nav-label">Integration Health</span>
+                  </Link>
+                </li>
+              </ul>
+            </div>
+          )}
+
+          {/* AI Section */}
+          {admin && admin.role === 'super_admin' && (
+            <div className="nav-section">
+              {isOpen && <div className="nav-section-title">AI</div>}
+              <ul className="nav-links">
+                <li>
+                  <Link to="/dashboard/super-admin/ai-usage" className={isActive('/dashboard/super-admin/ai-usage')} title="AI Usage">
+                    <FaBrain />
+                    <span className="nav-label">AI Usage</span>
+                  </Link>
+                </li>
+              </ul>
+            </div>
+          )}
+
+          {/* Finance Section */}
+          {admin && admin.role === 'super_admin' && (
+            <div className="nav-section">
+              {isOpen && <div className="nav-section-title">Finance</div>}
+              <ul className="nav-links">
+                <li>
+                  <Link to="/dashboard/super-admin/billing-revenue" className={isActive('/dashboard/super-admin/billing-revenue')} title="Billing & Revenue">
+                    <FaCoins />
+                    <span className="nav-label">Billing & Revenue</span>
+                  </Link>
+                </li>
+              </ul>
+            </div>
+          )}
+
+          {/* Security Section */}
+          {admin && admin.role === 'super_admin' && (
+            <div className="nav-section">
+              {isOpen && <div className="nav-section-title">Security</div>}
+              <ul className="nav-links">
+                <li>
+                  <Link to="/dashboard/super-admin/audit-logs" className={isActive('/dashboard/super-admin/audit-logs')} title="Audit Logs">
+                    <FaShieldAlt />
+                    <span className="nav-label">Audit Logs</span>
+                  </Link>
+                </li>
+              </ul>
+            </div>
+          )}
+
+          {/* Platform Section */}
+          {admin && admin.role === 'super_admin' && (
+            <div className="nav-section">
+              {isOpen && <div className="nav-section-title">Platform</div>}
+              <ul className="nav-links">
+                <li>
+                  <Link to="/dashboard/super-admin/feature-flags" className={isActive('/dashboard/super-admin/feature-flags')} title="Feature Flags">
+                    <FaToggleOn />
+                    <span className="nav-label">Feature Flags</span>
                   </Link>
                 </li>
               </ul>
@@ -388,15 +482,6 @@ function TopBar({ admin, onUpdateAdmin, isImpersonated, onToggleSidebar, theme, 
         <button className="icon-button" title="Notifications" aria-label="Notifications">
           <FaBell />
         </button>
-
-        {admin?.role !== 'super_admin' && (
-          <button
-            className="btn-primary"
-            onClick={() => navigate('/dashboard/broadcast')}
-          >
-            <FaPlus /> New Broadcast
-          </button>
-        )}
       </div>
     </div>
   );
@@ -785,7 +870,14 @@ function App() {
                       <>
                         <Route path="/super-admin" element={<SuperAdmin />} />
                         <Route path="/super-admin/leads" element={<LeadsCRM />} />
-                        <Route path="/super-admin/health" element={<SuperAdminHealth />} />
+                        <Route path="/super-admin/system-health" element={<SuperAdminHealth />} />
+                        <Route path="/super-admin/whatsapp-ops" element={<SuperAdminWhatsAppOps />} />
+                        <Route path="/super-admin/live-ops" element={<SuperAdminLiveOps />} />
+                        <Route path="/super-admin/integration-health" element={<SuperAdminIntegrationHealth />} />
+                        <Route path="/super-admin/ai-usage" element={<SuperAdminAIUsage />} />
+                        <Route path="/super-admin/billing-revenue" element={<SuperAdminBillingRevenue />} />
+                        <Route path="/super-admin/audit-logs" element={<SuperAdminAuditLogs />} />
+                        <Route path="/super-admin/feature-flags" element={<SuperAdminFeatureFlags />} />
                         <Route path="/super-admin/announcements" element={<SuperAdminAnnouncements />} />
                         <Route path="/demo-requests" element={<DemoRequests />} />
                         <Route path="/super-admin/user/:userId" element={<SuperAdminUserDetail />} />

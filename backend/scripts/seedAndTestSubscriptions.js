@@ -60,7 +60,7 @@ async function seedAndTest() {
         subscriptionStatus: 'active',
         monthlyPrice: u.plan === 'starter' ? 29 : u.plan === 'professional' ? 79 : 199,
         isActive: true,
-        whatsappConnected: true,
+        whatsappConnected: false,
         geminiTokensUsed: 0,
         totalMessagesProcessed: 0,
         limitNotificationSent: false

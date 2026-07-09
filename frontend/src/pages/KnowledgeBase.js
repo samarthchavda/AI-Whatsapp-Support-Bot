@@ -110,34 +110,32 @@ function KnowledgeBase() {
   return (
     <div className="container">
       <div className="page-header">
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <div>
-            <h1 className="page-title">AI Knowledge Base</h1>
-            <p className="page-subtitle">Upload FAQs and documents for AI-powered responses</p>
-          </div>
-          <div style={{ display: 'flex', gap: '12px' }}>
-            <button 
-              className="btn-secondary" 
-              onClick={() => setShowTestQuery(!showTestQuery)}
-              style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
-            >
-              <FaRobot /> Test Query
-            </button>
-            <button 
-              className="btn-primary" 
-              onClick={() => setShowUploadForm(!showUploadForm)}
-              style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
-            >
-              <FaUpload /> Upload Document
-            </button>
-          </div>
+        <div className="page-header-info">
+          <h1 className="page-title">AI Knowledge Base</h1>
+          <p className="page-subtitle">Upload FAQs and documents for AI-powered responses</p>
+        </div>
+        <div className="page-header-actions">
+          <button 
+            className="btn btn-secondary" 
+            onClick={() => setShowTestQuery(!showTestQuery)}
+            style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
+          >
+            <FaRobot /> Test Knowledge
+          </button>
+          <button 
+            className="btn btn-primary" 
+            onClick={() => setShowUploadForm(!showUploadForm)}
+            style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
+          >
+            <FaUpload /> Upload Document
+          </button>
         </div>
       </div>
 
       {/* Premium Onboarding FAQ Template Banner */}
       <div style={{
-        background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.08) 0%, rgba(5, 150, 105, 0.08) 100%)',
-        border: '1px solid rgba(16, 185, 129, 0.2)',
+        background: 'rgba(22, 163, 74, 0.06)',
+        border: '1px solid rgba(22, 163, 74, 0.15)',
         borderRadius: '16px',
         padding: '20px 24px',
         marginBottom: '28px',
@@ -146,37 +144,29 @@ function KnowledgeBase() {
         justifyContent: 'space-between',
         gap: '20px',
         flexWrap: 'wrap',
-        boxShadow: '0 4px 20px rgba(0, 0, 0, 0.02)'
+        boxShadow: 'var(--shadow-sm)'
       }}>
         <div style={{ flex: 1, minWidth: '280px', textAlign: 'left' }}>
-          <h3 style={{ fontSize: '15px', fontWeight: '700', color: '#064e3b', margin: '0 0 6px 0', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <h3 style={{ fontSize: '15px', fontWeight: '700', color: 'var(--text-primary)', margin: '0 0 6px 0', display: 'flex', alignItems: 'center', gap: '8px' }}>
             📝 Ready-Made Sample Store FAQ PDF Template
           </h3>
-          <p style={{ fontSize: '13px', color: '#4b5563', margin: 0, lineHeight: '1.5' }}>
+          <p style={{ fontSize: '13.5px', color: 'var(--text-secondary)', margin: 0, lineHeight: '1.5' }}>
             We have pre-loaded a professional <strong>Sample Store FAQ Template</strong> PDF into your Knowledge Base. This shows the correct formatting of return windows, shipping rates, and support details to ensure high-accuracy responses from the AI. Download it below to use as a template.
           </p>
         </div>
         <a 
           href="/docs/sample_store_faq_template.pdf" 
           download="Sample_Store_FAQ_Template.pdf"
+          className="btn btn-primary"
           style={{
             padding: '10px 18px',
-            backgroundColor: '#10b981',
-            color: '#ffffff',
-            borderRadius: '10px',
-            fontSize: '13.5px',
-            fontWeight: '600',
             textDecoration: 'none',
             display: 'inline-flex',
             alignItems: 'center',
             justifyContent: 'center',
             gap: '8px',
-            boxShadow: '0 4px 12px rgba(16, 185, 129, 0.15)',
-            transition: 'all 0.2s ease',
             whiteSpace: 'nowrap'
           }}
-          onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#059669'}
-          onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#10b981'}
         >
           <FaFilePdf /> Download FAQ Template
         </a>
@@ -363,24 +353,30 @@ function KnowledgeBase() {
         </div>
         
         {loading ? (
-          <div style={{ padding: '40px', textAlign: 'center', color: '#71717a' }}>
+          <div style={{ padding: '40px', textAlign: 'center', color: 'var(--text-muted)' }}>
             <div className="spinner" style={{ margin: '0 auto 16px' }}></div>
             Loading knowledge bases...
           </div>
         ) : knowledgeBases.length === 0 ? (
-          <div style={{ padding: '40px', textAlign: 'center', color: '#71717a' }}>
+          <div style={{ padding: '60px 20px', textAlign: 'center', color: 'var(--text-secondary)' }}>
             <div style={{ fontSize: '48px', marginBottom: '16px' }}>📚</div>
-            <p>No knowledge base documents uploaded yet.</p>
-            <p style={{ fontSize: '14px' }}>Upload your first document to get started!</p>
+            <h3 style={{ fontSize: '18px', fontWeight: '700', color: 'var(--text-primary)', marginBottom: '8px' }}>No Knowledge Base</h3>
+            <p style={{ fontSize: '14px', marginBottom: '20px' }}>Upload FAQs or documentation to train your WhatsApp AI assistant.</p>
+            <button 
+              className="btn btn-primary"
+              onClick={() => setShowUploadForm(true)}
+            >
+              Upload Document
+            </button>
           </div>
         ) : (
           <table>
             <thead>
               <tr>
-                <th>Title</th>
+                <th>Document / Title</th>
                 <th>Type</th>
                 <th>Size</th>
-                <th>Text Length</th>
+                <th>Character Count</th>
                 <th>Status</th>
                 <th>Uploaded By</th>
                 <th>Date</th>
@@ -395,16 +391,16 @@ function KnowledgeBase() {
                       {kb.fileType === 'pdf' ? (
                         <FaFilePdf color="#ef4444" />
                       ) : kb.fileType === 'csv' ? (
-                        <FaFileCsv color="#10b981" />
+                        <FaFileCsv color="var(--brand)" />
                       ) : kb.fileType === 'url' ? (
                         <FaGlobe color="#3b82f6" />
                       ) : (
-                        <FaFileAlt color="#a1a1aa" />
+                        <FaFileAlt color="var(--text-muted)" />
                       )}
                       <div>
                         <strong>{kb.title}</strong>
                         {kb.description && (
-                          <div style={{ fontSize: '12px', color: '#71717a', marginTop: '4px' }}>
+                          <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '4px' }}>
                             {kb.description}
                           </div>
                         )}
@@ -412,22 +408,14 @@ function KnowledgeBase() {
                     </div>
                   </td>
                   <td>
-                    <span className="badge" style={{ 
-                      background: kb.fileType === 'pdf' 
-                        ? 'rgba(239, 68, 68, 0.2)' 
-                        : kb.fileType === 'csv' 
-                        ? 'rgba(16, 185, 129, 0.2)' 
-                        : kb.fileType === 'url' 
-                        ? 'rgba(59, 130, 246, 0.2)' 
-                        : 'rgba(161, 161, 170, 0.2)' 
-                    }}>
+                    <span className={`badge badge-${kb.fileType === 'pdf' ? 'urgent' : kb.fileType === 'csv' ? 'active' : kb.fileType === 'url' ? 'low' : 'cancelled'}`}>
                       {kb.fileType.toUpperCase()}
                     </span>
                   </td>
                   <td>{formatFileSize(kb.fileSize)}</td>
                   <td>{kb.textLength.toLocaleString()} chars</td>
                   <td>
-                    <span className={`badge ${kb.isActive ? 'badge-delivered' : 'badge-cancelled'}`}>
+                    <span className={`badge ${kb.isActive ? 'badge-active' : 'badge-cancelled'}`}>
                       {kb.isActive ? 'Active' : 'Inactive'}
                     </span>
                   </td>
@@ -442,23 +430,22 @@ function KnowledgeBase() {
                           rel="noopener noreferrer"
                           className="btn btn-secondary"
                           style={{ 
-                            fontSize: '12px', 
+                            fontSize: '12.5px', 
                             padding: '6px 12px', 
                             display: 'inline-flex', 
                             alignItems: 'center', 
                             justifyContent: 'center',
-                            textDecoration: 'none',
-                            color: 'inherit'
+                            textDecoration: 'none'
                           }}
                           title="View PDF"
                         >
-                          <FaEye />
+                          <FaEye style={{ marginRight: '4px' }} /> View
                         </a>
                       )}
                       <button
                         onClick={() => handleToggleActive(kb._id, kb.isActive)}
                         className="btn btn-secondary"
-                        style={{ fontSize: '12px', padding: '6px 12px', display: 'inline-flex', alignItems: 'center' }}
+                        style={{ fontSize: '12.5px', padding: '6px 12px', display: 'inline-flex', alignItems: 'center' }}
                         title={kb.isActive ? 'Deactivate' : 'Activate'}
                       >
                         {kb.isActive ? <FaToggleOn /> : <FaToggleOff />}
@@ -466,7 +453,7 @@ function KnowledgeBase() {
                       <button
                         onClick={() => handleDelete(kb._id)}
                         className="btn btn-danger"
-                        style={{ fontSize: '12px', padding: '6px 12px', display: 'inline-flex', alignItems: 'center' }}
+                        style={{ fontSize: '12.5px', padding: '6px 12px', display: 'inline-flex', alignItems: 'center' }}
                       >
                         <FaTrash />
                       </button>

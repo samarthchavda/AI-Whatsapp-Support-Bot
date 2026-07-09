@@ -326,9 +326,9 @@ function Integrations({ admin, onUpdateAdmin }) {
   return (
     <div className="container">
       <div className="page-header">
-        <div>
+        <div className="page-header-info">
           <h1 className="page-title">Integrations</h1>
-          <p className="page-subtitle">Connect your e-commerce platforms</p>
+          <p className="page-subtitle">Connect and manage your e-commerce platform integrations.</p>
         </div>
       </div>
 
@@ -473,45 +473,57 @@ function Integrations({ admin, onUpdateAdmin }) {
                       </small>
                     </div>
 
-                    <div className="integration-actions">
+                    <div className="integration-actions" style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                       {platform.id === 'shopify' && (
                         <button
                           onClick={() => handleSyncShopifyOrders(integration._id)}
-                          className="btn-secondary"
+                          className="btn btn-secondary"
                           disabled={syncingIntegrationId === integration._id}
                         >
-                          <FaSync /> {syncingIntegrationId === integration._id ? 'Syncing...' : 'Sync Orders'}
+                          <FaSync className={syncingIntegrationId === integration._id ? 'spinning' : ''} /> {syncingIntegrationId === integration._id ? 'Syncing...' : 'Sync Orders'}
                         </button>
                       )}
                       {platform.id === 'woocommerce' && (
                         <button
                           onClick={() => handleSyncWooCommerceOrders(integration._id)}
-                          className="btn-secondary"
+                          className="btn btn-secondary"
                           disabled={syncingIntegrationId === integration._id}
                         >
-                          <FaSync /> {syncingIntegrationId === integration._id ? 'Syncing...' : 'Sync Orders'}
+                          <FaSync className={syncingIntegrationId === integration._id ? 'spinning' : ''} /> {syncingIntegrationId === integration._id ? 'Syncing...' : 'Sync Orders'}
                         </button>
                       )}
                       <button
-                        onClick={() => handleRegenerateSecret(integration._id)}
-                        className="btn-secondary"
-                      >
-                        <FaSync /> Regenerate Secret
-                      </button>
-                      <button
                         onClick={() => handleDisconnect(integration._id)}
-                        className="btn-danger"
+                        className="btn btn-danger"
                       >
                         <FaTimes /> Disconnect
                       </button>
                     </div>
+
+                    <details style={{ marginTop: '12px', cursor: 'pointer' }}>
+                      <summary style={{ fontSize: '13px', color: 'var(--text-secondary)', fontWeight: '600', userSelect: 'none' }}>
+                        ⚙️ Advanced Options
+                      </summary>
+                      <div style={{ padding: '12px 0 0 0' }}>
+                        <button
+                          onClick={() => handleRegenerateSecret(integration._id)}
+                          className="btn btn-secondary"
+                          style={{ fontSize: '12.5px', padding: '6px 12px', width: '100%' }}
+                        >
+                          <FaSync /> Regenerate Secret Key
+                        </button>
+                      </div>
+                    </details>
                   </div>
                 ) : (
                   <div className="integration-disconnected">
+                    <p style={{ fontSize: '13.5px', color: 'var(--text-secondary)', marginBottom: '16px', flexGrow: 1 }}>
+                      {platform.description}
+                    </p>
                     {!isProfileComplete ? (
                       <button
-                        className="btn-primary"
-                        style={{ width: '100%', opacity: 0.6, cursor: 'not-allowed', background: '#3f3f46', color: '#a1a1aa' }}
+                        className="btn btn-primary"
+                        style={{ width: '100%', opacity: 0.6, cursor: 'not-allowed' }}
                         disabled
                         title="Please complete your Profile & Store settings first"
                       >
@@ -520,7 +532,7 @@ function Integrations({ admin, onUpdateAdmin }) {
                     ) : (
                       <button
                         onClick={() => handleConnect(platform)}
-                        className="btn-primary"
+                        className="btn btn-primary"
                         style={{ width: '100%' }}
                       >
                         <FaPlug /> Connect {platform.name}
@@ -536,7 +548,7 @@ function Integrations({ admin, onUpdateAdmin }) {
                         style={{
                           background: 'none',
                           border: 'none',
-                          color: '#a1a1aa',
+                          color: 'var(--text-secondary)',
                           fontSize: '14px',
                           display: 'inline-flex',
                           alignItems: 'center',

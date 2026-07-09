@@ -163,33 +163,23 @@ function Broadcast() {
   return (
     <div className="container">
       <div className="page-header">
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <div>
-            <h1 className="page-title">Marketing Broadcasts</h1>
-            <p className="page-subtitle">
-              Send bulk WhatsApp messages to your customers.
-              <a 
-                href="/docs/broadcast_guide.pdf" 
-                target="_blank" 
-                rel="noopener noreferrer"
-                style={{ 
-                  marginLeft: '12px', 
-                  color: '#6366f1', 
-                  fontWeight: '600', 
-                  textDecoration: 'underline',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '4px'
-                }}
-              >
-                📖 Shopify Basic Plan PDF Guide
-              </a>
-            </p>
-          </div>
+        <div className="page-header-info">
+          <h1 className="page-title">Marketing Broadcasts</h1>
+          <p className="page-subtitle">Create, schedule, and monitor WhatsApp marketing campaigns.</p>
+        </div>
+        <div className="page-header-actions">
+          <a 
+            href="/docs/broadcast_guide.pdf" 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="btn btn-secondary"
+            style={{ textDecoration: 'none' }}
+          >
+            📖 View Guide
+          </a>
           <button 
-            className="btn-primary" 
+            className="btn btn-primary" 
             onClick={() => setShowCreateForm(!showCreateForm)}
-            style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
           >
             <FaBroadcastTower /> {showCreateForm ? 'Cancel' : 'New Broadcast'}
           </button>
@@ -412,26 +402,32 @@ function Broadcast() {
         </div>
         
         {loading ? (
-          <div style={{ padding: '40px', textAlign: 'center', color: '#71717a' }}>
+          <div style={{ padding: '40px', textAlign: 'center', color: 'var(--text-muted)' }}>
             <div className="spinner" style={{ margin: '0 auto 16px' }}></div>
             Loading broadcasts...
           </div>
         ) : broadcasts.length === 0 ? (
-          <div style={{ padding: '40px', textAlign: 'center', color: '#71717a' }}>
+          <div style={{ padding: '60px 20px', textAlign: 'center', color: 'var(--text-secondary)' }}>
             <div style={{ fontSize: '48px', marginBottom: '16px' }}>📢</div>
-            <p>No broadcasts created yet.</p>
-            <p style={{ fontSize: '14px' }}>Create your first broadcast to reach your customers!</p>
+            <h3 style={{ fontSize: '18px', fontWeight: '700', color: 'var(--text-primary)', marginBottom: '8px' }}>No Broadcasts</h3>
+            <p style={{ fontSize: '14px', marginBottom: '20px' }}>Create your first WhatsApp campaign to engage your customers.</p>
+            <button 
+              className="btn btn-primary"
+              onClick={() => setShowCreateForm(true)}
+            >
+              Create Broadcast
+            </button>
           </div>
         ) : (
           <table>
             <thead>
               <tr>
-                <th>Title</th>
+                <th>Campaign</th>
                 <th>Message Preview</th>
-                <th>Recipients</th>
+                <th>Audience</th>
                 <th>Status</th>
-                <th>Progress</th>
-                <th>Scheduled For</th>
+                <th>Delivery</th>
+                <th>Scheduled</th>
                 <th>Created</th>
                 <th>Actions</th>
               </tr>
@@ -443,7 +439,7 @@ function Broadcast() {
                     <strong>{broadcast.title}</strong>
                   </td>
                   <td>
-                    <div style={{ maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: '#a1a1aa' }}>
+                    <div style={{ maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: 'var(--text-secondary)' }}>
                       {broadcast.message}
                     </div>
                   </td>
@@ -451,8 +447,27 @@ function Broadcast() {
                   <td>{getStatusBadge(broadcast.status)}</td>
                   <td>
                     <div style={{ fontSize: '12px' }}>
-                      <div style={{ color: '#10b981' }}>✓ {broadcast.sentCount} sent</div>
-                      <div style={{ color: '#ef4444' }}>✗ {broadcast.failedCount} failed</div>
+                      <div style={{ color: 'var(--success)', fontWeight: '600' }}>Sent: {broadcast.sentCount}</div>
+                      <div style={{ color: 'var(--danger)', display: 'flex', alignItems: 'center', gap: '4px', fontWeight: '600' }}>
+                        Failed: {broadcast.failedCount}
+                        {broadcast.failedCount > 0 && (
+                          <button
+                            onClick={() => alert(`Campaign failures:\n\n${broadcast.failedCount} message(s) failed delivery. This is typically due to invalid phone numbers or missing Meta templates.`)}
+                            style={{
+                              background: 'none',
+                              border: 'none',
+                              color: 'var(--danger)',
+                              cursor: 'pointer',
+                              padding: 0,
+                              textDecoration: 'underline',
+                              fontSize: '11px',
+                              fontWeight: '600'
+                            }}
+                          >
+                            (details)
+                          </button>
+                        )}
+                      </div>
                     </div>
                   </td>
                   <td>
@@ -462,7 +477,7 @@ function Broadcast() {
                         {new Date(broadcast.scheduledFor).toLocaleString()}
                       </div>
                     ) : (
-                      <span style={{ color: '#71717a' }}>-</span>
+                      <span style={{ color: 'var(--text-muted)' }}>-</span>
                     )}
                   </td>
                   <td>{new Date(broadcast.createdAt).toLocaleDateString()}</td>

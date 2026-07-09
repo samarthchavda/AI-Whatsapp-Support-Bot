@@ -126,17 +126,23 @@ function Escalations({ admin }) {
 
   return (
     <div className="container">
-      <h1>Escalations</h1>
+      <div className="page-header">
+        <div className="page-header-info">
+          <h1 className="page-title">Escalations</h1>
+          <p className="page-subtitle">Review and manage conversations transferred to human support.</p>
+        </div>
+      </div>
 
-      {/* Filters */}
-      <div className="filters">
-        <div className="filter-group">
-          <label>Status</label>
+      {/* Filters Toolbar */}
+      <div className="filters-toolbar" style={{ display: 'flex', gap: '16px', marginBottom: '24px', flexWrap: 'wrap' }}>
+        <div className="filter-group" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <label style={{ fontSize: '13px', fontWeight: '600', color: 'var(--text-secondary)' }}>Status</label>
           <select 
             value={filters.status} 
             onChange={(e) => setFilters({ ...filters, status: e.target.value })}
+            style={{ padding: '6px 12px', borderRadius: '8px', border: '1px solid var(--border)', backgroundColor: 'var(--bg-input)', color: 'var(--text-primary)', fontSize: '13px', minWidth: '130px' }}
           >
-            <option value="">All</option>
+            <option value="">All Statuses</option>
             <option value="pending">Pending</option>
             <option value="in_progress">In Progress</option>
             <option value="resolved">Resolved</option>
@@ -144,13 +150,14 @@ function Escalations({ admin }) {
           </select>
         </div>
 
-        <div className="filter-group">
-          <label>Priority</label>
+        <div className="filter-group" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <label style={{ fontSize: '13px', fontWeight: '600', color: 'var(--text-secondary)' }}>Priority</label>
           <select 
             value={filters.priority} 
             onChange={(e) => setFilters({ ...filters, priority: e.target.value })}
+            style={{ padding: '6px 12px', borderRadius: '8px', border: '1px solid var(--border)', backgroundColor: 'var(--bg-input)', color: 'var(--text-primary)', fontSize: '13px', minWidth: '130px' }}
           >
-            <option value="">All</option>
+            <option value="">All Priorities</option>
             <option value="urgent">Urgent</option>
             <option value="high">High</option>
             <option value="medium">Medium</option>
@@ -187,28 +194,28 @@ function Escalations({ admin }) {
                   <td>{esc.reason.replace(/_/g, ' ')}</td>
                   <td>
                     <span className={`badge badge-${esc.priority}`}>
-                      {esc.priority}
+                      {esc.priority.toUpperCase()}
                     </span>
                   </td>
                   <td>
                     <span className={`badge badge-${esc.status}`}>
-                      {esc.status}
+                      {esc.status.replace('_', ' ').toUpperCase()}
                     </span>
                   </td>
                   <td>{new Date(esc.createdAt).toLocaleString()}</td>
                   <td>
                     <button 
-                      className="btn btn-primary" 
+                      className="btn btn-secondary" 
                       onClick={() => viewDetails(esc)}
-                      style={{ fontSize: '12px', padding: '5px 10px', marginRight: '5px' }}
+                      style={{ fontSize: '12.5px', padding: '6px 12px', marginRight: '6px' }}
                     >
                       View
                     </button>
                     {esc.status === 'pending' && (
                       <button 
-                        className="btn btn-secondary" 
+                        className="btn btn-primary" 
                         onClick={() => handleStatusUpdate(esc._id, 'in_progress')}
-                        style={{ fontSize: '12px', padding: '5px 10px' }}
+                        style={{ fontSize: '12.5px', padding: '6px 12px' }}
                       >
                         Start
                       </button>
@@ -242,48 +249,52 @@ function Escalations({ admin }) {
           zIndex: 1000
         }}>
           <div style={{
-            backgroundColor: 'white',
+            backgroundColor: 'var(--bg-card)',
+            border: '1px solid var(--border)',
             borderRadius: '10px',
             padding: '30px',
             maxWidth: '600px',
             maxHeight: '80vh',
             overflow: 'auto',
-            width: '90%'
+            width: '90%',
+            color: 'var(--text-primary)'
           }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-              <h2>Escalation Details</h2>
+              <h2 style={{ color: 'var(--text-primary)' }}>Escalation Details</h2>
               <button className="btn btn-secondary" onClick={closeDetails}>Close</button>
             </div>
 
-            <div style={{ marginBottom: '20px' }}>
-              <p><strong>Customer:</strong> {selectedEsc.customerName}</p>
-              <p><strong>Phone:</strong> {selectedEsc.customerPhone}</p>
-              <p><strong>Reason:</strong> {selectedEsc.reason.replace(/_/g, ' ')}</p>
+            <div style={{ marginBottom: '20px', color: 'var(--text-secondary)' }}>
+              <p><strong style={{ color: 'var(--text-primary)' }}>Customer:</strong> {selectedEsc.customerName}</p>
+              <p><strong style={{ color: 'var(--text-primary)' }}>Phone:</strong> {selectedEsc.customerPhone}</p>
+              <p><strong style={{ color: 'var(--text-primary)' }}>Reason:</strong> {selectedEsc.reason.replace(/_/g, ' ')}</p>
               <p>
-                <strong>Priority:</strong>{' '}
+                <strong style={{ color: 'var(--text-primary)' }}>Priority:</strong>{' '}
                 <span className={`badge badge-${selectedEsc.priority}`}>
-                  {selectedEsc.priority}
+                  {selectedEsc.priority.toUpperCase()}
                 </span>
               </p>
               <p>
-                <strong>Status:</strong>{' '}
+                <strong style={{ color: 'var(--text-primary)' }}>Status:</strong>{' '}
                 <span className={`badge badge-${selectedEsc.status}`}>
-                  {selectedEsc.status}
+                  {selectedEsc.status.replace('_', ' ').toUpperCase()}
                 </span>
               </p>
-              <p><strong>Created:</strong> {new Date(selectedEsc.createdAt).toLocaleString()}</p>
+              <p><strong style={{ color: 'var(--text-primary)' }}>Created:</strong> {new Date(selectedEsc.createdAt).toLocaleString()}</p>
               {selectedEsc.resolvedAt && (
-                <p><strong>Resolved:</strong> {new Date(selectedEsc.resolvedAt).toLocaleString()}</p>
+                <p><strong style={{ color: 'var(--text-primary)' }}>Resolved:</strong> {new Date(selectedEsc.resolvedAt).toLocaleString()}</p>
               )}
             </div>
 
             <div style={{ marginBottom: '20px' }}>
-              <h3>Description</h3>
+              <h3 style={{ fontSize: '16px', fontWeight: '700', marginBottom: '10px', color: 'var(--text-primary)' }}>Description</h3>
               <p style={{ 
-                backgroundColor: '#f5f5f5', 
+                backgroundColor: 'var(--bg-input)', 
+                color: 'var(--text-primary)',
                 padding: '15px', 
-                borderRadius: '5px',
-                whiteSpace: 'pre-wrap'
+                borderRadius: '8px',
+                whiteSpace: 'pre-wrap',
+                border: '1px solid var(--border)'
               }}>
                 {selectedEsc.description}
               </p>
@@ -291,12 +302,14 @@ function Escalations({ admin }) {
 
             {selectedEsc.resolution && (
               <div style={{ marginBottom: '20px' }}>
-                <h3>Resolution</h3>
+                <h3 style={{ fontSize: '16px', fontWeight: '700', marginBottom: '10px', color: 'var(--text-primary)' }}>Resolution</h3>
                 <p style={{ 
-                  backgroundColor: '#d4edda', 
+                  backgroundColor: 'rgba(22, 163, 74, 0.08)', 
+                  color: 'var(--success)',
                   padding: '15px', 
-                  borderRadius: '5px',
-                  whiteSpace: 'pre-wrap'
+                  borderRadius: '8px',
+                  whiteSpace: 'pre-wrap',
+                  border: '1px solid rgba(22, 163, 74, 0.2)'
                 }}>
                   {selectedEsc.resolution}
                 </p>
@@ -305,8 +318,8 @@ function Escalations({ admin }) {
 
             {(selectedEsc.status === 'pending' || selectedEsc.status === 'in_progress') && (
               <form onSubmit={handleResolve}>
-                <div className="filter-group">
-                  <label>Resolution Notes *</label>
+                <div className="filter-group" style={{ marginBottom: '16px' }}>
+                  <label style={{ fontSize: '13px', fontWeight: '600', color: 'var(--text-secondary)', display: 'block', marginBottom: '8px' }}>Resolution Notes *</label>
                   <textarea 
                     name="resolution" 
                     required 
@@ -314,14 +327,17 @@ function Escalations({ admin }) {
                     placeholder="Enter resolution details..."
                     style={{ 
                       width: '100%', 
-                      padding: '10px', 
-                      borderRadius: '5px',
-                      border: '1px solid #ddd',
-                      fontSize: '14px'
+                      padding: '12px 16px', 
+                      borderRadius: '8px',
+                      border: '1px solid var(--border)',
+                      backgroundColor: 'var(--bg-input)',
+                      color: 'var(--text-primary)',
+                      fontSize: '14px',
+                      outline: 'none'
                     }}
                   />
                 </div>
-                <button type="submit" className="btn btn-success" style={{ marginTop: '10px' }}>
+                <button type="submit" className="btn btn-success">
                   Mark as Resolved
                 </button>
               </form>

@@ -3,7 +3,14 @@ import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import { 
   FaHeartbeat, 
-  FaArrowLeft 
+  FaArrowLeft,
+  FaDatabase,
+  FaServer,
+  FaWhatsapp,
+  FaBrain,
+  FaShoppingBag,
+  FaTimesCircle,
+  FaInfoCircle
 } from 'react-icons/fa';
 import './SuperAdmin.css'; // Reuse existing glassmorphic SuperAdmin styles
 
@@ -21,36 +28,26 @@ function SuperAdminHealth() {
     }
   }, [admin?.role, navigate]);
 
-  // Connection Health states
-  const getHealthStatusBadgeStyle = (status) => {
-    if (status === 'connected') {
-      return { background: 'rgba(16, 185, 129, 0.1)', color: '#059669' };
-    }
-    if (status === 'disconnected') {
-      return { background: 'rgba(239, 68, 68, 0.1)', color: '#dc2626' };
-    }
-    return { background: 'rgba(113, 113, 122, 0.1)', color: '#71717a' };
-  };
-
   const [healthData, setHealthData] = useState(null);
-  const [healthLoading, setHealthLoading] = useState(true);
-  const [verifyingHealthId, setVerifyingHealthId] = useState(null);
-  const [alertingHealthId, setAlertingHealthId] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   const fetchHealthData = async () => {
     const token = localStorage.getItem('token') || localStorage.getItem('accessToken');
     try {
-      setHealthLoading(true);
-      const res = await axios.get(`${API_BASE}/super-admin/health/connections`, {
+      setLoading(true);
+      setError(null);
+      const res = await axios.get(`${API_BASE}/super-admin/system-health`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       if (res.data.success) {
         setHealthData(res.data.data);
       }
     } catch (err) {
-      console.error('Error fetching health connections:', err);
+      console.error('Error fetching system health:', err);
+      setError(err.response?.data?.error || 'Failed to load system health metrics');
     } finally {
-      setHealthLoading(false);
+      setLoading(false);
     }
   };
 
@@ -58,50 +55,49 @@ function SuperAdminHealth() {
     fetchHealthData();
   }, []);
 
-  const handleVerifyConnection = async (userId) => {
-    const token = localStorage.getItem('token') || localStorage.getItem('accessToken');
-    try {
-      setVerifyingHealthId(userId);
-      const res = await axios.post(`${API_BASE}/super-admin/users/${userId}/verify-whatsapp`, {}, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      alert(res.data.message);
-      fetchHealthData();
-    } catch (err) {
-      alert(err.response?.data?.error || 'Failed to verify connection');
-    } finally {
-      setVerifyingHealthId(null);
+  const getStatusBadgeStyle = (status) => {
+    const s = status ? status.toLowerCase() : '';
+    if (s === 'operational') {
+      return { background: 'rgba(16, 185, 129, 0.15)', color: '#10b981' };
     }
+    if (s === 'degraded') {
+      return { background: 'rgba(245, 158, 11, 0.15)', color: '#f59e0b' };
+    }
+    if (s === 'down') {
+      return { background: 'rgba(239, 68, 68, 0.15)', color: '#ef4444' };
+    }
+    return { background: 'var(--border-subtle)', color: 'var(--text-secondary)' };
   };
 
-  const handleAlertOffline = async (userId) => {
-    const token = localStorage.getItem('token') || localStorage.getItem('accessToken');
-    try {
-      setAlertingHealthId(userId);
-      const res = await axios.post(`${API_BASE}/super-admin/users/${userId}/alert-health-offline`, {}, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      alert(res.data.message);
-    } catch (err) {
-      alert(err.response?.data?.error || 'Failed to send alert notification');
-    } finally {
-      setAlertingHealthId(null);
-    }
-  };
-
-  if (healthLoading && !healthData) {
+  if (loading && !healthData) {
     return (
-      <div style={{
-        minHeight: '80vh',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        color: '#fafafa'
-      }}>
-        <div className="spinner"></div>
+      <div className="container">
+        <div style={{ padding: '60px', textAlign: 'center', color: 'var(--text-secondary)' }}>
+          <div className="spinner" style={{ margin: '0 auto 16px' }}></div>
+          Loading System Health metrics...
+        </div>
       </div>
     );
   }
+
+  if (error) {
+    return (
+      <div className="container">
+        <div className="detail-card" style={{ padding: '30px', textAlign: 'center', border: '1px solid rgba(239, 68, 68, 0.2)' }}>
+          <FaTimesCircle style={{ fontSize: '40px', color: '#ef4444', marginBottom: '12px' }} />
+          <h3 style={{ margin: '0 0 8px 0', color: 'var(--text-primary)' }}>Error Loading Dashboard</h3>
+          <p style={{ margin: '0 0 20px 0', color: 'var(--text-secondary)', fontSize: '14px' }}>{error}</p>
+          <button onClick={fetchHealthData} className="btn-primary">
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  const { system, services, recentErrors } = healthData || {
+    system: {}, services: {}, recentErrors: []
+  };
 
   return (
     <div className="container super-admin-page">
@@ -127,117 +123,180 @@ function SuperAdminHealth() {
             <FaArrowLeft /> Back to Super Admin
           </button>
           <h1 className="page-title super-admin-title" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <FaHeartbeat className="heartbeat-icon" style={{ color: '#10b981' }} />
-            Connection Health Monitor
+            <FaHeartbeat className="heartbeat-icon" style={{ color: '#ef4444' }} />
+            System Health
           </h1>
-          <p className="page-subtitle">Real-time status check for active merchant integrations</p>
+          <p className="page-subtitle">Real-time monitoring of backend API performance, resources, database state, and linked external services</p>
         </div>
       </div>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-        {/* Health summary stats */}
-        {healthData && healthData.summary && (
-          <div className="analytics-cards">
-            <div className="stat-card bots">
-              <div className="stat-icon"><FaHeartbeat style={{ color: '#10b981' }} /></div>
-              <div className="stat-info">
-                <h3>Healthy Connections</h3>
-                <p className="stat-value">{healthData.summary.healthy}</p>
-                <small>Active & responding</small>
-              </div>
+        {/* KPI Cards */}
+        <div className="analytics-cards" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '20px' }}>
+          <div className="stat-card" style={{ background: 'var(--bg-card)', border: '1px solid var(--border-subtle)', borderRadius: '16px', padding: '20px', display: 'flex', alignItems: 'center', gap: '16px' }}>
+            <div className="stat-icon" style={{ background: 'rgba(16, 185, 129, 0.1)', color: '#10b981', padding: '16px', borderRadius: '12px', fontSize: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <FaHeartbeat />
             </div>
-            <div className="stat-card messages">
-              <div className="stat-icon"><FaHeartbeat style={{ color: '#ef4444' }} /></div>
-              <div className="stat-info">
-                <h3>Offline Connections</h3>
-                <p className="stat-value">{healthData.summary.offline}</p>
-                <small>Need attention</small>
-              </div>
+            <div className="stat-info">
+              <h3 style={{ margin: 0, fontSize: '13px', color: 'var(--text-secondary)' }}>API Status</h3>
+              <p className="stat-value" style={{ margin: '4px 0 0 0', fontSize: '24px', fontWeight: '700', color: '#10b981' }}>{system.backendStatus}</p>
+              <small style={{ color: 'var(--text-secondary)' }}>Express instance</small>
             </div>
-            <div className="stat-card users">
-              <div className="stat-icon"><FaHeartbeat style={{ color: '#71717a' }} /></div>
-              <div className="stat-info">
-                <h3>Unconfigured</h3>
-                <p className="stat-value">{healthData.summary.unconfigured}</p>
-                <small>No credentials linked</small>
+          </div>
+
+          <div className="stat-card" style={{ background: 'var(--bg-card)', border: '1px solid var(--border-subtle)', borderRadius: '16px', padding: '20px', display: 'flex', alignItems: 'center', gap: '16px' }}>
+            <div className="stat-icon" style={{ background: 'rgba(56, 189, 248, 0.1)', color: '#38bdf8', padding: '16px', borderRadius: '12px', fontSize: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <FaDatabase />
+            </div>
+            <div className="stat-info">
+              <h3 style={{ margin: 0, fontSize: '13px', color: 'var(--text-secondary)' }}>Database Status</h3>
+              <p className="stat-value" style={{ margin: '4px 0 0 0', fontSize: '24px', fontWeight: '700', color: system.databaseStatus === 'Operational' ? '#10b981' : '#ef4444' }}>{system.databaseStatus}</p>
+              <small style={{ color: 'var(--text-secondary)' }}>MongoDB cluster</small>
+            </div>
+          </div>
+
+          <div className="stat-card" style={{ background: 'var(--bg-card)', border: '1px solid var(--border-subtle)', borderRadius: '16px', padding: '20px', display: 'flex', alignItems: 'center', gap: '16px' }}>
+            <div className="stat-icon" style={{ background: 'rgba(167, 139, 250, 0.1)', color: '#a78bfa', padding: '16px', borderRadius: '12px', fontSize: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <FaServer />
+            </div>
+            <div className="stat-info">
+              <h3 style={{ margin: 0, fontSize: '13px', color: 'var(--text-secondary)' }}>Memory Usage</h3>
+              <p className="stat-value" style={{ margin: '4px 0 0 0', fontSize: '24px', fontWeight: '700', color: 'var(--text-primary)' }}>{system.memoryUsage}</p>
+              <small style={{ color: 'var(--text-secondary)' }}>Node heap allocation</small>
+            </div>
+          </div>
+
+          <div className="stat-card" style={{ background: 'var(--bg-card)', border: '1px solid var(--border-subtle)', borderRadius: '16px', padding: '20px', display: 'flex', alignItems: 'center', gap: '16px' }}>
+            <div className="stat-icon" style={{ background: 'rgba(251, 191, 36, 0.1)', color: '#fbbf24', padding: '16px', borderRadius: '12px', fontSize: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <FaInfoCircle />
+            </div>
+            <div className="stat-info">
+              <h3 style={{ margin: 0, fontSize: '13px', color: 'var(--text-secondary)' }}>Process Uptime</h3>
+              <p className="stat-value" style={{ margin: '4px 0 0 0', fontSize: '18px', fontWeight: '700', color: 'var(--text-primary)' }}>{system.uptime}</p>
+              <small style={{ color: 'var(--text-secondary)' }}>Continuous runtime</small>
+            </div>
+          </div>
+        </div>
+
+        {/* Detailed Status Tables */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '24px' }}>
+          
+          {/* Server Resources */}
+          <div className="table-container-premium super-admin-table" style={{ margin: 0 }}>
+            <div className="table-header-premium super-admin-table-header">
+              <h2><FaServer /> Host Resources</h2>
+            </div>
+            <div style={{ padding: '20px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid var(--border-subtle)', paddingBottom: '8px' }}>
+                  <span style={{ color: 'var(--text-secondary)' }}>Server Status</span>
+                  <span style={{ fontWeight: '600', color: '#10b981' }}>{system.serverStatus}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid var(--border-subtle)', paddingBottom: '8px' }}>
+                  <span style={{ color: 'var(--text-secondary)' }}>Load (Average / CPU)</span>
+                  <span style={{ fontWeight: '600', color: 'var(--text-primary)' }}>{system.cpuUsage}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid var(--border-subtle)', paddingBottom: '8px' }}>
+                  <span style={{ color: 'var(--text-secondary)' }}>Physical Memory</span>
+                  <span style={{ fontWeight: '600', color: 'var(--text-primary)', fontSize: '13px' }}>{system.systemMemory}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', paddingBottom: '4px' }}>
+                  <span style={{ color: 'var(--text-secondary)' }}>Engine Process ID</span>
+                  <span style={{ fontFamily: 'monospace', color: 'var(--text-secondary)' }}>{system.pid || 'N/A'}</span>
+                </div>
               </div>
             </div>
           </div>
-        )}
 
-        {/* Health details table */}
+          {/* External Services */}
+          <div className="table-container-premium super-admin-table" style={{ margin: 0 }}>
+            <div className="table-header-premium super-admin-table-header">
+              <h2><FaHeartbeat /> Service Integrations</h2>
+            </div>
+            <div style={{ padding: '20px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-subtle)', paddingBottom: '8px' }}>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-primary)' }}>
+                    <FaDatabase style={{ color: '#10b981', fontSize: '14px' }} /> MongoDB Database
+                  </span>
+                  <span className="badge" style={getStatusBadgeStyle(services.mongodb)}>{services.mongodb}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-subtle)', paddingBottom: '8px' }}>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-primary)' }}>
+                    <FaWhatsapp style={{ color: '#25d366', fontSize: '14px' }} /> WhatsApp/Meta API
+                  </span>
+                  <span className="badge" style={getStatusBadgeStyle(services.whatsapp)}>{services.whatsapp}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-subtle)', paddingBottom: '8px' }}>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-primary)' }}>
+                    <FaBrain style={{ color: '#a78bfa', fontSize: '14px' }} /> AI/Gemini Service
+                  </span>
+                  <span className="badge" style={getStatusBadgeStyle(services.gemini)}>{services.gemini}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-subtle)', paddingBottom: '8px' }}>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-primary)' }}>
+                    <FaShoppingBag style={{ color: '#38bdf8', fontSize: '14px' }} /> Shopify Sync
+                  </span>
+                  <span className="badge" style={getStatusBadgeStyle(services.shopify)}>{services.shopify}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingBottom: '4px' }}>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-primary)' }}>
+                    <FaShoppingBag style={{ color: '#6366f1', fontSize: '14px' }} /> WooCommerce Sync
+                  </span>
+                  <span className="badge" style={getStatusBadgeStyle(services.woocommerce)}>{services.woocommerce}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Recent Integration Errors section */}
         <div className="table-container-premium super-admin-table" style={{ margin: 0 }}>
           <div className="table-header-premium super-admin-table-header">
-            <h2>⚕️ Merchant Integration Monitor</h2>
+            <h2>⚠️ Recent System & Webhook Errors</h2>
           </div>
           <div style={{ padding: '24px' }}>
-            {healthLoading ? (
-              <div style={{ color: '#71717a', textAlign: 'center', padding: '20px' }}>Refreshing health data...</div>
-            ) : !healthData || healthData.merchants.length === 0 ? (
-              <div style={{ color: '#71717a', textAlign: 'center', padding: '20px' }}>No merchants registered yet.</div>
+            {recentErrors.length === 0 ? (
+              <div style={{ color: 'var(--text-secondary)', textAlign: 'center', padding: '20px' }}>
+                No active integration or system delivery errors detected. Everything is healthy!
+              </div>
             ) : (
               <div className="table-wrapper">
                 <table className="premium-table">
                   <thead>
                     <tr>
-                      <th>Merchant</th>
-                      <th>Phone ID</th>
-                      <th>Business Account ID</th>
-                      <th>Status</th>
-                      <th>Last Verified</th>
-                      <th>Actions</th>
+                      <th>Integration Source</th>
+                      <th>Event Triggered</th>
+                      <th>Linked Order ID</th>
+                      <th>Reported Failure Reason</th>
+                      <th>Logged At</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {healthData.merchants.map(merchant => (
-                      <tr key={merchant._id}>
+                    {recentErrors.map(err => (
+                      <tr key={err._id}>
                         <td>
-                          <div className="user-info-cell">
-                            <span className="user-info-name">{merchant.name}</span>
-                            <span className="user-info-email">{merchant.email}</span>
-                          </div>
-                        </td>
-                        <td><span style={{ fontSize: '13px', color: 'var(--text-primary)', fontFamily: 'monospace' }}>{merchant.whatsappPhoneNumberId || 'N/A'}</span></td>
-                        <td><span style={{ fontSize: '13px', color: 'var(--text-primary)', fontFamily: 'monospace' }}>{merchant.whatsappBusinessAccountId || 'N/A'}</span></td>
-                        <td>
-                          <span 
-                            className="status-badge-pill"
-                            style={{ 
-                              ...getHealthStatusBadgeStyle(merchant.status),
-                              padding: '4px 10px',
-                              borderRadius: '20px',
-                              fontSize: '11px',
-                              fontWeight: '600',
-                              textTransform: 'uppercase'
-                            }}
-                          >
-                            {merchant.status === 'connected' ? 'Healthy' : merchant.status === 'disconnected' ? 'Offline' : 'Unconfigured'}
+                          <span className="role-badge-pill" style={{ textTransform: 'uppercase', fontSize: '11px' }}>
+                            {err.source}
                           </span>
+                        </td>
+                        <td>
+                          <span style={{ fontSize: '13px', color: 'var(--text-primary)', fontFamily: 'monospace' }}>
+                            {err.eventType}
+                          </span>
+                        </td>
+                        <td>
+                          <span style={{ fontSize: '13px', fontFamily: 'monospace' }}>
+                            {err.externalOrderId}
+                          </span>
+                        </td>
+                        <td style={{ color: '#ef4444', fontWeight: '500', maxWidth: '300px', wordBreak: 'break-all' }}>
+                          {err.error}
                         </td>
                         <td>
                           <span style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>
-                            {merchant.whatsappConnectedAt ? new Date(merchant.whatsappConnectedAt).toLocaleString() : 'Never'}
+                            {new Date(err.createdAt).toLocaleString()}
                           </span>
-                        </td>
-                        <td>
-                          <div style={{ display: 'flex', gap: '8px' }}>
-                            <button
-                              className="btn-primary"
-                              onClick={() => handleVerifyConnection(merchant._id)}
-                              disabled={verifyingHealthId === merchant._id || merchant.status === 'unconfigured'}
-                              style={{ padding: '6px 12px', fontSize: '12px', borderRadius: '6px', cursor: 'pointer' }}
-                            >
-                              {verifyingHealthId === merchant._id ? 'Verifying...' : 'Verify'}
-                            </button>
-                            <button
-                              className="btn-secondary btn-danger"
-                              onClick={() => handleAlertOffline(merchant._id)}
-                              disabled={alertingHealthId === merchant._id || merchant.status !== 'disconnected'}
-                              style={{ padding: '6px 12px', fontSize: '12px', borderRadius: '6px', cursor: 'pointer', background: merchant.status === 'disconnected' ? '#ef4444' : 'rgba(239, 68, 68, 0.1)', color: '#fff', border: 'none' }}
-                            >
-                              {alertingHealthId === merchant._id ? 'Alerting...' : 'Alert User'}
-                            </button>
-                          </div>
                         </td>
                       </tr>
                     ))}

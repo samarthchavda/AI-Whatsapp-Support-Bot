@@ -61,6 +61,14 @@ router.post('/db/restore', upload.single('file'), superAdminController.importDat
 
 // Connection health monitoring
 router.get('/health/connections', superAdminController.getConnectionHealthStatus);
+router.get('/system-health', superAdminController.getSystemHealthStatus);
+router.get('/whatsapp-monitoring', superAdminController.getWhatsAppMonitoringStatus);
+router.get('/live-operations', superAdminController.getLiveOperationsStatus);
+router.get('/integration-health', superAdminController.getIntegrationHealthStatus);
+router.get('/ai-usage', superAdminController.getAIUsageStatus);
+router.get('/billing-revenue', superAdminController.getBillingRevenueStatus);
+router.get('/feature-flags', superAdminController.getFeatureFlags);
+router.post('/feature-flags/toggle', superAdminController.toggleFeatureFlag);
 router.post('/users/:id/verify-whatsapp', superAdminController.verifyUserWhatsAppConnection);
 router.post('/users/:id/alert-health-offline', superAdminController.alertUserConnectionOffline);
 

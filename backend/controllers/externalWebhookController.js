@@ -8,6 +8,22 @@ exports.handleExternalOrder = async (req, res) => {
   const startTime = Date.now();
   const source = req.params.source || 'custom';
   const webhookData = req.body;
+
+  if (source === 'woocommerce') {
+    try {
+      const GlobalSettings = require('../models/GlobalSettings');
+      const flag = await GlobalSettings.findOne({ key: 'wooSyncEnabled' });
+      if (flag && flag.value === false) {
+        console.log('🛍️ WooCommerce webhook processing skipped (wooSyncEnabled flag is false)');
+        return res.status(200).json({
+          success: true,
+          message: 'WooCommerce sync is globally disabled by Super Admin. Webhook received but not processed.'
+        });
+      }
+    } catch (dbErr) {
+      console.error('Error checking wooSyncEnabled flag:', dbErr);
+    }
+  }
   
   let webhookLog = null;
   let order = null;

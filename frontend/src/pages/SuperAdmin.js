@@ -195,7 +195,7 @@ function SuperAdmin() {
         newUser,
         { headers: { Authorization: `Bearer ${token}` } }
       );
-      alert('User created successfully!');
+      alert('Merchant created successfully!');
       setShowAddUserModal(false);
       setNewUser({
         name: '',
@@ -212,7 +212,7 @@ function SuperAdmin() {
       });
       fetchData();
     } catch (error) {
-      alert(error.response?.data?.error || 'Failed to create user');
+      alert(error.response?.data?.error || 'Failed to create merchant');
     }
   };
 
@@ -346,7 +346,7 @@ function SuperAdmin() {
             <FaCrown className="crown-icon" />
             Super Admin
           </h1>
-          <p className="page-subtitle">Platform overview, user management, and revenue analytics</p>
+          <p className="page-subtitle">Platform overview, merchant management, and revenue analytics</p>
         </div>
         <div style={{ display: 'flex', gap: '12px' }}>
           <button
@@ -373,7 +373,7 @@ function SuperAdmin() {
             className="btn-primary"
             onClick={() => setShowAddUserModal(true)}
           >
-            <FaUserPlus /> Add User
+            <FaUserPlus /> Add Merchant
           </button>
         </div>
       </div>
@@ -501,7 +501,7 @@ function SuperAdmin() {
                   <FaUsers />
                 </div>
                 <div className="stat-info">
-                  <h3>Total Users</h3>
+                  <h3>Total Merchants</h3>
                   <p className="stat-value">{analytics.totalUsers}</p>
                   <small>{analytics.recentSignups} new this week</small>
                 </div>
@@ -511,12 +511,12 @@ function SuperAdmin() {
 
           <div className="table-container-premium super-admin-table">
             <div className="table-header-premium super-admin-table-header">
-              <h2><FaUsers /> Business Owners ({filteredUsers.length})</h2>
+              <h2><FaUsers /> All Merchants ({filteredUsers.length})</h2>
               <div className="super-admin-search">
                 <FaSearch />
                 <input
                   type="text"
-                  placeholder="Search users..."
+                  placeholder="Search merchants..."
                   value={userSearch}
                   onChange={(e) => setUserSearch(e.target.value)}
                 />
@@ -527,7 +527,7 @@ function SuperAdmin() {
               <table className="premium-table">
                 <thead>
                   <tr>
-                    <th>User</th>
+                    <th>Merchant</th>
                     <th>Role</th>
                     <th>Plan</th>
                     <th>Status</th>
@@ -539,7 +539,7 @@ function SuperAdmin() {
                   {filteredUsers.length === 0 ? (
                     <tr>
                       <td colSpan="6" className="super-admin-empty">
-                        No users found matching &quot;{userSearch}&quot;
+                        No merchants found matching &quot;{userSearch}&quot;
                       </td>
                     </tr>
                   ) : filteredUsers.map((user) => {
@@ -911,12 +911,12 @@ function SuperAdmin() {
 
 
 
-      {/* Add User Modal */}
+      {/* Add Merchant Modal */}
       {showAddUserModal && (
         <div className="modal-overlay" onClick={() => setShowAddUserModal(false)}>
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
-              <h2>Add New User</h2>
+              <h2>Add New Merchant</h2>
               <button onClick={() => setShowAddUserModal(false)} className="modal-close">
                 ✕
               </button>

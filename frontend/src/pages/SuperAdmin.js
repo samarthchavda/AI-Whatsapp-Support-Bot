@@ -138,7 +138,8 @@ function SuperAdmin() {
           headers: { Authorization: `Bearer ${token}` }
         });
         if (logsRes.data.success) {
-          setAuditLogs(logsRes.data.data);
+          const rawData = logsRes.data.data;
+          setAuditLogs(Array.isArray(rawData) ? rawData : (rawData?.logs || []));
         }
       } catch (err) {
         console.error('Error fetching audit logs:', err);

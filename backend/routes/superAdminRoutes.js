@@ -3,7 +3,7 @@ const router = express.Router();
 const multer = require('multer');
 const upload = multer({ dest: 'uploads/' });
 const { verifyToken } = require('../middleware/auth');
-const superAdminController = require('../controllers/superAdminController');
+const superAdminController = require('../controllers/superAdmin/superAdminController');
 
 // All routes require authentication and super admin role
 router.use(verifyToken);

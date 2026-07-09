@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const abandonedCartController = require('../controllers/abandonedCartController');
+const abandonedCartController = require('../controllers/merchant/abandonedCartController');
 const { verifyToken } = require('../middleware/auth');
 
 // All routes require authentication

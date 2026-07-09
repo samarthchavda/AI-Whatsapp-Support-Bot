@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { verifyToken } = require('../middleware/auth');
-const integrationController = require('../controllers/integrationController');
+const integrationController = require('../controllers/merchant/integrationController');
 
 // All routes require authentication
 router.use(verifyToken);

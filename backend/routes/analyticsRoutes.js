@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { verifyToken } = require('../middleware/auth');
-const analyticsController = require('../controllers/analyticsController');
+const analyticsController = require('../controllers/merchant/analyticsController');
 
 // All routes require authentication
 router.use(verifyToken);

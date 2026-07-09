@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const aiController = require('../controllers/aiController');
+const aiController = require('../controllers/merchant/aiController');
 const { verifyToken } = require('../middleware/auth');
 
 // Test endpoint - simulate WhatsApp message

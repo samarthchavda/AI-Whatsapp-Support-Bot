@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const conversationController = require('../controllers/conversationController');
+const conversationController = require('../controllers/merchant/conversationController');
 const { verifyToken } = require('../middleware/auth');
 
 // Conversation routes

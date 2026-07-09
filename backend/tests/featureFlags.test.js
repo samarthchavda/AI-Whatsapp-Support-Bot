@@ -1,5 +1,5 @@
-const { handleExternalOrder } = require('../controllers/externalWebhookController');
-const { toggleFeatureFlag, getFeatureFlags, getGlobalSettings, updateGlobalSettings } = require('../controllers/superAdminController');
+const { handleExternalOrder } = require('../controllers/public/externalWebhookController');
+const { toggleFeatureFlag, getFeatureFlags, getGlobalSettings, updateGlobalSettings } = require('../controllers/superAdmin/superAdminController');
 const aiService = require('../services/aiService');
 const GlobalSettings = require('../models/GlobalSettings');
 const Conversation = require('../models/Conversation');

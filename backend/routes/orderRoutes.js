@@ -3,7 +3,7 @@ const router = express.Router();
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
-const orderController = require('../controllers/orderController');
+const orderController = require('../controllers/merchant/orderController');
 const { verifyToken } = require('../middleware/auth');
 
 // Create uploads directory if it doesn't exist

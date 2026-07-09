@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const externalWebhookController = require('../controllers/externalWebhookController');
+const externalWebhookController = require('../controllers/public/externalWebhookController');
 const WebhookAuth = require('../middleware/webhookAuth');
 
 // Rate limiter for webhooks

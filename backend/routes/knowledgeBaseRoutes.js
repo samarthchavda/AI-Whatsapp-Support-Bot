@@ -3,7 +3,7 @@ const router = express.Router();
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
-const knowledgeBaseController = require('../controllers/knowledgeBaseController');
+const knowledgeBaseController = require('../controllers/merchant/knowledgeBaseController');
 const { verifyToken } = require('../middleware/auth');
 
 // Create uploads directory if it doesn't exist

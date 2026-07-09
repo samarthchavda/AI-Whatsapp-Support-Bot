@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { verifyToken } = require('../middleware/auth');
-const whatsappController = require('../controllers/whatsappController');
+const whatsappController = require('../controllers/merchant/whatsappController');
 
 // Require authentication for all template management endpoints
 router.use(verifyToken);

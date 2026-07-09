@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const demoRequestController = require('../controllers/demoRequestController');
+const demoRequestController = require('../controllers/superAdmin/demoRequestController');
 const { verifyToken } = require('../middleware/auth');
 
 // Public route - anyone can submit a demo request

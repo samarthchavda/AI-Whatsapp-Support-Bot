@@ -1,8 +1,8 @@
 const express = require('express');
 const router = express.Router();
 const { verifyToken } = require('../middleware/auth');
-const superAdminController = require('../controllers/superAdminController');
-const blogController = require('../controllers/blogController');
+const superAdminController = require('../controllers/superAdmin/superAdminController');
+const blogController = require('../controllers/merchant/blogController');
 
 // Public routes
 router.get('/', blogController.getPublishedPosts);

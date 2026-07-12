@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Link, useLocation, useNavigate, Navigate } from 'react-router-dom';
-import { FaHome, FaComments, FaBox, FaExclamationTriangle, FaPlug, FaRobot, FaSearch, FaBell, FaPlus, FaSignOutAlt, FaUser, FaBrain, FaCommentDots, FaBroadcastTower, FaChartLine, FaCog, FaCrown, FaFileAlt, FaShoppingCart, FaCoins, FaUserSecret, FaHeartbeat, FaBullhorn, FaBlog, FaBars, FaSun, FaMoon, FaWhatsapp, FaShieldAlt, FaToggleOn } from 'react-icons/fa';
+import { FaHome, FaComments, FaBox, FaExclamationTriangle, FaPlug, FaRobot, FaSearch, FaBell, FaPlus, FaSignOutAlt, FaUser, FaBrain, FaCommentDots, FaBroadcastTower, FaChartLine, FaCog, FaCrown, FaFileAlt, FaShoppingCart, FaCoins, FaUserSecret, FaHeartbeat, FaBullhorn, FaBlog, FaBars, FaSun, FaMoon, FaWhatsapp, FaShieldAlt, FaToggleOn, FaTimes } from 'react-icons/fa';
 import api, { clearAuthState, refreshAuth } from './services/api';
 import Dashboard from './pages/merchant/Dashboard/Dashboard';
 import Profile from './pages/merchant/Profile/Profile';
@@ -114,6 +114,11 @@ function Sidebar({ admin, onLogout, isOpen, onToggle, pendingDemoRequestsCount }
               );
             })()}
           </div>
+          {isOpen && (
+            <button className="sidebar-close-btn" onClick={onToggle} aria-label="Close sidebar">
+              <FaTimes />
+            </button>
+          )}
         </div>
 
         <nav className="sidebar-nav">
@@ -794,15 +799,19 @@ function App() {
           element={
             <ProtectedRoute isAuthenticated={isAuthenticated}>
               <div className="App">
-                 <Sidebar 
-                   admin={admin} 
-                   onLogout={handleLogout} 
-                   isOpen={sidebarOpen} 
-                   onToggle={handleToggleSidebar} 
-                   pendingDemoRequestsCount={pendingDemoRequestsCount} 
-                 />
+                  <Sidebar 
+                    admin={admin} 
+                    onLogout={handleLogout} 
+                    isOpen={sidebarOpen} 
+                    onToggle={handleToggleSidebar} 
+                    pendingDemoRequestsCount={pendingDemoRequestsCount} 
+                  />
 
-                <div className={`main-content${sidebarOpen ? ' main-content-expanded' : ''}`}>
+                  {sidebarOpen && (
+                    <div className="sidebar-backdrop" onClick={handleToggleSidebar} />
+                  )}
+
+                  <div className={`main-content${sidebarOpen ? ' main-content-expanded' : ''}`}>
                   {isImpersonated && (
                     <div className="impersonation-banner">
                       <div className="impersonation-content">

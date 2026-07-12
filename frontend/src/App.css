@@ -45,22 +45,22 @@
 
 /* Dark theme override */
 body.dark-theme {
-  --bg-app:         #0B0F19; /* Deep dark blue-black */
-  --bg-card:        #111827; /* Slightly lighter dark card */
-  --bg-hover:       #1F2937; /* Dark hover state */
-  --text-primary:   #F3F4F6; /* Crisp off-white */
-  --text-secondary: #9CA3AF; /* Light gray-blue */
-  --text-muted:     #6B7280; /* Muted gray */
-  --border:         #1F2937; /* Clean borders */
+  --bg-app:         #09090B; /* True dark / near-black */
+  --bg-card:        #18181B; /* Consistent dark surface */
+  --bg-hover:       #27272A; /* Slate/Zinc-800 hover state */
+  --text-primary:   #FFFFFF; /* Crisp white */
+  --text-secondary: #A1A1AA; /* Light gray */
+  --text-muted:     #71717A;
+  --border:         #27272A; /* Subtle dark-gray border */
   --shadow-sm: 0 1px 4px rgba(0,0,0,0.4);
   --shadow-md: 0 4px 16px rgba(0,0,0,0.5);
   --shadow-lg: 0 8px 32px rgba(0,0,0,0.6);
 
-  --sidebar-bg:     #0A1628; /* Keep dark sidebar in dark theme */
+  --sidebar-bg:     #18181B; /* Consistent dark surface */
   --sidebar-item:   rgba(255,255,255,0.06);
   --sidebar-active: rgba(255,255,255,0.08);
-  --sidebar-border: rgba(255,255,255,0.07);
-  --sidebar-text:   rgba(255,255,255,0.55);
+  --sidebar-border: #27272A;
+  --sidebar-text:   #A1A1AA;
   --sidebar-text-active: #ffffff;
 
   --brand:          #16A34A !important;
@@ -597,7 +597,7 @@ body {
 .search-input:focus {
   outline: none;
   border-color: var(--brand);
-  background: #fff;
+  background: var(--bg-card);
   box-shadow: 0 0 0 3px rgba(37,211,102,0.12);
 }
 

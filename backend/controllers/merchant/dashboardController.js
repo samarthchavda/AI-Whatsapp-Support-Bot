@@ -45,12 +45,12 @@ exports.getDashboardStats = async (req, res) => {
       Conversation.find(adminQuery)
         .sort({ updatedAt: -1 })
         .limit(5)
-        .select('customerName customerPhone status updatedAt escalated')
+        .select('customerName customerPhone status updatedAt escalated messages')
         .lean(),
       Escalation.find(adminQuery)
         .sort({ createdAt: -1 })
         .limit(5)
-        .select('customerName reason priority status createdAt')
+        .select('customerName reason priority status description createdAt')
         .lean(),
       Conversation.aggregate([
         { $match: { admin: req.admin._id, createdAt: { $gte: thirtyDaysAgo } } },

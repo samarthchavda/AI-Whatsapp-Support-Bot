@@ -23,15 +23,15 @@
 }
 
 body.dark-theme {
-  --bg-base:        #0B0F19; /* Deep dark blue-black */
-  --bg-elevated:    #111827; /* Slightly lighter dark card */
-  --bg-surface:     rgba(17,24,39,0.8);
-  --bg-input:       rgba(31,41,55,0.7);
-  --border-subtle:  #1F2937;
-  --border-default: #1F2937;
-  --text-primary:   #F3F4F6; /* Crisp off-white */
-  --text-secondary: #9CA3AF; /* Light gray-blue */
-  --text-muted:     #6B7280; /* Muted gray */
+  --bg-base:        #09090B; /* True dark / near-black */
+  --bg-elevated:    #18181B; /* Consistent dark surface */
+  --bg-surface:     #18181B;
+  --bg-input:       #27272A; /* Slate/Zinc-800 for inputs */
+  --border-subtle:  #27272A; /* Subtle dark-gray border */
+  --border-default: #27272A;
+  --text-primary:   #FFFFFF; /* Crisp white */
+  --text-secondary: #A1A1AA; /* Light gray */
+  --text-muted:     #71717A;
   --accent:         #16A34A !important; /* Soft brand green */
   --accent-secondary: #15803D !important;
   --success:        #16A34A;

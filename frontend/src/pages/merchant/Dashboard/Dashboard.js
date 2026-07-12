@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import io from 'socket.io-client';
 import { getDashboardStats } from '../../../services/api';
-import { FaComments, FaBox, FaExclamationTriangle, FaCheckCircle, FaStar, FaArrowUp, FaArrowDown, FaCommentDots, FaPlug, FaBrain, FaBroadcastTower } from 'react-icons/fa';
+import { FaComments, FaBox, FaExclamationTriangle, FaCheckCircle, FaCommentDots, FaPlug, FaBrain, FaBroadcastTower } from 'react-icons/fa';
 
 const SOCKET_URL = process.env.REACT_APP_API_URL?.replace('/api', '') || (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' ? 'http://localhost:5001' : window.location.origin);
 
@@ -70,6 +70,13 @@ function Dashboard() {
     ];
     const index = name.charCodeAt(0) % colors.length;
     return colors[index];
+  };
+
+  const getLastMessage = (conv) => {
+    if (conv.messages && conv.messages.length > 0) {
+      return conv.messages[conv.messages.length - 1].content;
+    }
+    return '';
   };
 
   if (loading) {
@@ -169,14 +176,14 @@ function Dashboard() {
       <div className="stats-grid">
         <div className="stat-card-premium">
           <div className="stat-card-header">
-            <h3>Total Conversations</h3>
+            <h3>Conversations Overview</h3>
             <div className="stat-icon-premium" style={{ background: 'rgba(99, 102, 241, 0.1)', color: '#6366f1' }}>
               <FaComments />
             </div>
           </div>
           <div className="stat-value-premium">{stats.conversations.total}</div>
           <div className="stat-change positive">
-            <FaArrowUp /> <span>Active: {stats.conversations.active}</span>
+            <span style={{ color: 'var(--text-secondary)' }}>Active: {stats.conversations.active} | Resolved: {stats.conversations.resolved}</span>
           </div>
         </div>
 
@@ -189,7 +196,7 @@ function Dashboard() {
           </div>
           <div className="stat-value-premium">{stats.orders.total}</div>
           <div className="stat-change">
-            <span style={{ color: '#9ca3af' }}>Pending: {stats.orders.pending}</span>
+            <span style={{ color: 'var(--text-secondary)' }}>Pending Orders: {stats.orders.pending}</span>
           </div>
         </div>
 
@@ -202,39 +209,34 @@ function Dashboard() {
           </div>
           <div className="stat-value-premium">{stats.escalations.total}</div>
           <div className="stat-change negative">
-            <FaArrowDown /> <span>Urgent: {stats.escalations.urgent}</span>
+            <span style={{ color: 'var(--text-secondary)' }}>Urgent Escalations: {stats.escalations.urgent}</span>
           </div>
         </div>
 
         <div className="stat-card-premium">
           <div className="stat-card-header">
-            <h3>Resolved</h3>
+            <h3>AI Resolution Rate</h3>
             <div className="stat-icon-premium" style={{ background: 'rgba(139, 92, 246, 0.1)', color: '#8b5cf6' }}>
               <FaCheckCircle />
             </div>
           </div>
-          <div className="stat-value-premium">{stats.conversations.resolved}</div>
+          <div className="stat-value-premium">
+            {stats.conversations.total > 0 ? Math.round((stats.conversations.resolved / stats.conversations.total) * 100) : 0}%
+          </div>
           <div className="stat-change positive">
-            {stats.conversations.avgSatisfaction ? (
-              <>
-                <FaStar style={{ color: '#fbbf24' }} />
-                <span>{stats.conversations.avgSatisfaction}/5 avg rating</span>
-              </>
-            ) : (
-              <span>Closed conversations</span>
-            )}
+            <span style={{ color: 'var(--text-secondary)' }}>Resolved: {stats.conversations.resolved} / {stats.conversations.total}</span>
           </div>
         </div>
       </div>
 
       <div className="quick-actions-grid">
         <Link to="/dashboard/whatsapp-connect" className="quick-action-card">
-          <div className="quick-action-icon" style={{ background: 'rgba(16, 185, 129, 0.12)', color: '#10b981' }}>
-            <FaPlug />
+          <div className="quick-action-icon" style={admin && admin.whatsappConnected ? { background: 'rgba(16, 185, 129, 0.12)', color: '#10b981' } : { background: 'rgba(245, 158, 11, 0.12)', color: '#f59e0b' }}>
+            {admin && admin.whatsappConnected ? <FaCheckCircle /> : <FaPlug />}
           </div>
           <div>
-            <h4>Connect WhatsApp</h4>
-            <p>Link your business number to start receiving messages</p>
+            <h4>{admin && admin.whatsappConnected ? 'WhatsApp Connected' : 'Connect WhatsApp'}</h4>
+            <p>{admin && admin.whatsappConnected ? 'Manage your active WhatsApp connection' : 'Link your business number to start receiving messages'}</p>
           </div>
         </Link>
         <Link to="/dashboard/knowledge-base" className="quick-action-card">
@@ -268,6 +270,7 @@ function Dashboard() {
               <thead>
                 <tr>
                   <th>Customer</th>
+                  <th>Last Message</th>
                   <th>Status</th>
                   <th>Last Updated</th>
                 </tr>
@@ -282,8 +285,12 @@ function Dashboard() {
                         </div>
                         <div className="customer-info">
                           <span className="customer-name">{conv.customerName}</span>
-                          <span className="customer-phone">{conv.customerPhone}</span>
                         </div>
+                      </div>
+                    </td>
+                    <td>
+                      <div style={{ maxWidth: '240px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={getLastMessage(conv)}>
+                        {getLastMessage(conv) || <span className="text-muted" style={{ fontStyle: 'italic' }}>No messages</span>}
                       </div>
                     </td>
                     <td>
@@ -328,7 +335,7 @@ function Dashboard() {
               <thead>
                 <tr>
                   <th>Customer</th>
-                  <th>Reason</th>
+                  <th>Reason / Description</th>
                   <th>Priority</th>
                   <th>Status</th>
                   <th>Created</th>
@@ -347,7 +354,11 @@ function Dashboard() {
                         </div>
                       </div>
                     </td>
-                    <td className="text-capitalize">{esc.reason.replace(/_/g, ' ')}</td>
+                    <td className="text-capitalize" title={esc.description || esc.reason.replace(/_/g, ' ')}>
+                      <div style={{ maxWidth: '300px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {esc.description || esc.reason.replace(/_/g, ' ')}
+                      </div>
+                    </td>
                     <td>
                       <span className={`badge-premium badge-${esc.priority}`}>
                         {esc.priority}

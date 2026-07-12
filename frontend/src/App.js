@@ -341,14 +341,6 @@ function Sidebar({ admin, onLogout, isOpen, onToggle, pendingDemoRequestsCount }
                       </span>
                     </Link>
                   </li>
-                  <li>
-                    <Link to="/dashboard/analytics" className={isActive('/dashboard/analytics')} title="Analytics">
-                      <FaChartLine />
-                      <span className="nav-label">
-                        Analytics {admin?.subscriptionPlan === 'starter' && <span style={{ marginLeft: '4px', fontSize: '10px' }}>🔒</span>}
-                      </span>
-                    </Link>
-                  </li>
                 </ul>
               </div>
 
@@ -367,6 +359,12 @@ function Sidebar({ admin, onLogout, isOpen, onToggle, pendingDemoRequestsCount }
                       <span className="nav-label">Templates</span>
                     </Link>
                   </li>
+                </ul>
+              </div>
+
+              <div className="nav-section">
+                {isOpen && <div className="nav-section-title">AI</div>}
+                <ul className="nav-links">
                   <li>
                     <Link to="/dashboard/knowledge-base" className={isActive('/dashboard/knowledge-base')} title="Knowledge Base">
                       <FaBrain />
@@ -374,17 +372,23 @@ function Sidebar({ admin, onLogout, isOpen, onToggle, pendingDemoRequestsCount }
                     </Link>
                   </li>
                   <li>
-                    <Link to="/dashboard/integrations" className={isActive('/dashboard/integrations')} title="Integrations">
-                      <FaCog />
-                      <span className="nav-label">Integrations</span>
+                    <Link to="/dashboard/demo-chat" className={isActive('/dashboard/demo-chat')} title="Demo Chat">
+                      <FaRobot />
+                      <span className="nav-label">Demo Chat</span>
                     </Link>
                   </li>
                 </ul>
               </div>
 
               <div className="nav-section">
-                {isOpen && <div className="nav-section-title">Account</div>}
+                {isOpen && <div className="nav-section-title">Integrations</div>}
                 <ul className="nav-links">
+                  <li>
+                    <Link to="/dashboard/integrations" className={isActive('/dashboard/integrations')} title="Integrations">
+                      <FaCog />
+                      <span className="nav-label">Integrations</span>
+                    </Link>
+                  </li>
                   <li>
                     <Link to="/dashboard/whatsapp-connect" className={isActive('/dashboard/whatsapp-connect')} title="WhatsApp Connect">
                       <div style={{ position: 'relative', display: 'inline-flex' }}>
@@ -396,12 +400,26 @@ function Sidebar({ admin, onLogout, isOpen, onToggle, pendingDemoRequestsCount }
                       <span className="nav-label">WA Connect</span>
                     </Link>
                   </li>
+                </ul>
+              </div>
+
+              <div className="nav-section">
+                {isOpen && <div className="nav-section-title">Insights</div>}
+                <ul className="nav-links">
                   <li>
-                    <Link to="/dashboard/demo-chat" className={isActive('/dashboard/demo-chat')} title="Demo Chat">
-                      <FaRobot />
-                      <span className="nav-label">Demo Chat</span>
+                    <Link to="/dashboard/analytics" className={isActive('/dashboard/analytics')} title="Analytics">
+                      <FaChartLine />
+                      <span className="nav-label">
+                        Analytics {admin?.subscriptionPlan === 'starter' && <span style={{ marginLeft: '4px', fontSize: '10px' }}>🔒</span>}
+                      </span>
                     </Link>
                   </li>
+                </ul>
+              </div>
+
+              <div className="nav-section">
+                {isOpen && <div className="nav-section-title">Account</div>}
+                <ul className="nav-links">
                   <li>
                     <Link to="/dashboard/billing" className={isActive('/dashboard/billing')} title="Billing & Plans">
                       <FaCrown style={{ color: '#fbbf24' }} />

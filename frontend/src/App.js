@@ -628,28 +628,36 @@ function App() {
           }
         }
 
-        try {
-          const response = await refreshAuth();
-          const refreshedToken = response;
-          const refreshedAdmin = localStorage.getItem('admin');
+        const isDashboardRoute = window.location.pathname.startsWith('/dashboard');
+        const hasSessionTrace = (storedToken && storedToken !== 'undefined' && storedToken !== 'null') || 
+                                (storedAdmin && storedAdmin !== 'undefined' && storedAdmin !== 'null');
 
-          if (
-            refreshedToken && 
-            refreshedToken !== 'undefined' && 
-            refreshedToken !== 'null' && 
-            refreshedAdmin && 
-            refreshedAdmin !== 'undefined' && 
-            refreshedAdmin !== 'null'
-          ) {
-            const parsedAdmin = JSON.parse(refreshedAdmin);
-            setIsAuthenticated(true);
-            setAdmin(parsedAdmin);
-            setLoading(false);
-            return;
+        if (hasSessionTrace || isDashboardRoute) {
+          try {
+            const response = await refreshAuth();
+            const refreshedToken = response;
+            const refreshedAdmin = localStorage.getItem('admin');
+
+            if (
+              refreshedToken && 
+              refreshedToken !== 'undefined' && 
+              refreshedToken !== 'null' && 
+              refreshedAdmin && 
+              refreshedAdmin !== 'undefined' && 
+              refreshedAdmin !== 'null'
+            ) {
+              const parsedAdmin = JSON.parse(refreshedAdmin);
+              setIsAuthenticated(true);
+              setAdmin(parsedAdmin);
+              setLoading(false);
+              return;
+            }
+          } catch (error) {
+            if (hasSessionTrace) {
+              console.warn('Session expired. Please log in again.');
+            }
+            clearAuthState();
           }
-        } catch (error) {
-          console.error('Refresh auth failed:', error);
-          clearAuthState();
         }
       } catch (globalError) {
         console.error('Global auth initialization error:', globalError);

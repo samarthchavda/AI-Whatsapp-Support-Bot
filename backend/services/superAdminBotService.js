@@ -22,11 +22,14 @@ class SuperAdminBotService {
   async getSuperAdmin(phone) {
     if (!phone) return null;
     const normalizedPhone = phone.replace(/\D/g, '');
+    const last10 = normalizedPhone.slice(-10);
     const superAdmins = await Admin.find({ role: 'super_admin' });
     
     return superAdmins.find(sa => {
       const saPhone = (sa.phone || sa.businessPhone || '').replace(/\D/g, '');
-      return saPhone && saPhone === normalizedPhone;
+      if (!saPhone) return false;
+      // Match exact OR by last 10 digits (handles country code variations)
+      return saPhone === normalizedPhone || saPhone.slice(-10) === last10;
     });
   }
 

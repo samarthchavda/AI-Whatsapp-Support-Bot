@@ -1658,6 +1658,24 @@ exports.verifyUserWhatsAppConnection = async (req, res) => {
       user.whatsappConnected = true;
       user.whatsappConnectedAt = user.whatsappConnectedAt || new Date();
       await user.save();
+
+      // Auto-subscribe Kwickbot app to this merchant's WABA webhook events
+      if (user.whatsappBusinessAccountId && user.whatsappAccessToken) {
+        try {
+          const axios = require('axios');
+          const subRes = await axios.post(
+            `https://graph.facebook.com/v18.0/${user.whatsappBusinessAccountId}/subscribed_apps`,
+            {},
+            { params: { access_token: user.whatsappAccessToken } }
+          );
+          if (subRes.data?.success) {
+            console.log(`✅ [SuperAdmin] Auto-subscribed Kwickbot app to WABA for ${user.email}`);
+          }
+        } catch (subErr) {
+          console.warn(`⚠️ [SuperAdmin] WABA auto-subscribe failed for ${user.email}: ${subErr.response?.data?.error?.message || subErr.message}`);
+        }
+      }
+
       return res.json({
         success: true,
         status: 'connected',

@@ -444,6 +444,23 @@ exports.connectWhatsApp = async (req, res) => {
     admin.whatsappConnectedAt = new Date();
     await admin.save();
 
+    // Auto-subscribe Kwickbot app to this merchant's WABA webhook events
+    if (admin.whatsappBusinessAccountId && admin.whatsappAccessToken) {
+      try {
+        const axios = require('axios');
+        const subRes = await axios.post(
+          `https://graph.facebook.com/v18.0/${admin.whatsappBusinessAccountId}/subscribed_apps`,
+          {},
+          { params: { access_token: admin.whatsappAccessToken } }
+        );
+        if (subRes.data?.success) {
+          console.log(`✅ [Webhook] Auto-subscribed Kwickbot app to WABA for ${admin.email}`);
+        }
+      } catch (subErr) {
+        console.warn(`⚠️ [Webhook] WABA auto-subscribe failed: ${subErr.response?.data?.error?.message || subErr.message}`);
+      }
+    }
+
     res.json({
       success: true,
       message: 'WhatsApp connected successfully'

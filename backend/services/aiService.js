@@ -377,13 +377,19 @@ Smart Fallback Rules (when specific information is not available in the knowledg
       conversation = await Conversation.findOne(conversationQuery);
 
       if (!conversation) {
+        // IMPORTANT: Always use the adminId passed from webhook (matched by phoneNumberId)
+        // Do NOT fall back to a generic findOne — that would route to the wrong merchant!
         let finalAdminId = adminId;
         if (!finalAdminId) {
-          let adminDoc = await Admin.findOne({ whatsappConnected: true, email: { $ne: 'demo@store.com' } })
+          // Only use fallback if no adminId was provided at all (e.g. legacy path)
+          let fallbackAdmin = await Admin.findOne({ whatsappConnected: true, email: { $ne: 'demo@store.com' } })
             || await Admin.findOne({ whatsappConnected: true })
             || await Admin.findOne({ email: 'demo@store.com' })
             || await Admin.findOne();
-          finalAdminId = adminDoc ? adminDoc._id : null;
+          finalAdminId = fallbackAdmin ? fallbackAdmin._id : null;
+          if (finalAdminId) {
+            console.warn(`⚠️ [ROUTING] No adminId passed — falling back to first available admin: ${fallbackAdmin?.email}`);
+          }
         }
 
         conversation = new Conversation({
@@ -394,6 +400,7 @@ Smart Fallback Rules (when specific information is not available in the knowledg
           status: 'active'
         });
         await conversation.save();
+        console.log(`🆕 New conversation created for ${customerPhone} under admin: ${finalAdminId}`);
       }
 
       // Check if message is a product inquiry
@@ -409,12 +416,17 @@ Smart Fallback Rules (when specific information is not available in the knowledg
         console.error('Error running product inquiry detection:', inquiryErr);
       }
 
-      // Retrieve Admin document
+      // Retrieve Admin document — always prefer the conversation's own admin
       let adminDoc = null;
       if (conversation.admin) {
         adminDoc = await Admin.findById(conversation.admin);
       }
+      // Final fallback: only if conversation has no admin linked (should not normally happen)
+      if (!adminDoc && adminId) {
+        adminDoc = await Admin.findById(adminId);
+      }
       if (!adminDoc) {
+        console.warn(`⚠️ [ROUTING] Could not find admin for conversation ${conversation._id}. Using generic fallback.`);
         adminDoc = await Admin.findOne({ whatsappConnected: true, email: { $ne: 'demo@store.com' } })
           || await Admin.findOne({ whatsappConnected: true })
           || await Admin.findOne({ email: 'demo@store.com' })

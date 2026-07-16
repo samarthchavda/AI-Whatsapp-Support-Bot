@@ -32,9 +32,30 @@ exports.getAllUsers = async (req, res) => {
       .select('-password')
       .sort({ createdAt: -1 });
 
+    // Calculate actual revenue per merchant from completed Invoice payments
+    const Invoice = require('../../models/Invoice');
+    const adminIds = users.map(u => u._id);
+    const invoices = await Invoice.find({
+      customerId: { $in: adminIds },
+      $or: [{ paymentStatus: 'completed' }, { status: 'paid' }]
+    }).select('customerId totalAmount');
+
+    // Build a revenue map: adminId -> total paid
+    const revenueMap = {};
+    invoices.forEach(inv => {
+      const key = inv.customerId?.toString();
+      if (key) revenueMap[key] = (revenueMap[key] || 0) + (inv.totalAmount || 0);
+    });
+
+    // Attach actualRevenue to each user
+    const usersWithRevenue = users.map(u => ({
+      ...u.toObject(),
+      actualRevenue: revenueMap[u._id.toString()] || 0
+    }));
+
     res.json({
       success: true,
-      data: users
+      data: usersWithRevenue
     });
   } catch (error) {
     console.error('Error fetching users:', error);

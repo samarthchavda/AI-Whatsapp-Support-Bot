@@ -544,7 +544,7 @@ function SuperAdmin() {
                       </td>
                     </tr>
                   ) : filteredUsers.map((user) => {
-                    const finalPrice = user.monthlyPrice - (user.monthlyPrice * user.customDiscount / 100);
+                    const actualRevenue = user.actualRevenue || 0;
                     const tokenPercentage = user.geminiTokensLimit > 0
                       ? Math.round((user.geminiTokensUsed / user.geminiTokensLimit) * 100)
                       : 0;
@@ -610,9 +610,11 @@ function SuperAdmin() {
                         </td>
                         <td>
                           <div className="revenue-cell">
-                            <strong className="revenue-amount">₹{finalPrice}</strong>
-                            {user.customDiscount > 0 && (
-                              <span className="discount-applied">-{user.customDiscount}%</span>
+                            <strong className="revenue-amount" style={{ color: actualRevenue > 0 ? '#10b981' : 'var(--text-secondary)' }}>
+                              ₹{actualRevenue.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            </strong>
+                            {actualRevenue === 0 && (
+                              <span style={{ fontSize: '10px', color: 'var(--text-muted)', display: 'block' }}>No payment yet</span>
                             )}
                           </div>
                         </td>

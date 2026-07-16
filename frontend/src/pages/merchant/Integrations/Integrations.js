@@ -351,7 +351,7 @@ function Integrations({ admin, onUpdateAdmin }) {
               <strong>Profile Incomplete:</strong> Please complete your <strong>Profile & Store settings</strong> (Store Name, Phone, and Support Email) before connecting integrations.
             </span>
             <button 
-              onClick={() => navigate('/profile')} 
+              onClick={() => navigate('/dashboard/profile')} 
               style={{
                 background: '#eab308',
                 color: '#000',

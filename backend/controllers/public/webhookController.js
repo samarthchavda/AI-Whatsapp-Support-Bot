@@ -479,6 +479,25 @@ exports.saveCredentials = async (req, res) => {
 
     await admin.save();
 
+    // Auto-subscribe the Kwickbot app to this merchant's WABA webhook events
+    // This ensures Meta sends incoming message events to our server (not just the test app)
+    if (admin.whatsappConnected && whatsappBusinessAccountId && whatsappAccessToken) {
+      try {
+        const axios = require('axios');
+        const subscribeRes = await axios.post(
+          `https://graph.facebook.com/v18.0/${whatsappBusinessAccountId}/subscribed_apps`,
+          {},
+          { params: { access_token: whatsappAccessToken } }
+        );
+        if (subscribeRes.data?.success) {
+          console.log(`✅ [Webhook] Auto-subscribed app to WABA ${whatsappBusinessAccountId} for admin ${admin.email}`);
+        }
+      } catch (subErr) {
+        // Non-fatal: log but don't fail the save
+        console.warn(`⚠️ [Webhook] Could not auto-subscribe app to WABA: ${subErr.response?.data?.error?.message || subErr.message}`);
+      }
+    }
+
     res.json({
       success: true,
       message: 'WhatsApp credentials saved successfully',

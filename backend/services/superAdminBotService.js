@@ -118,27 +118,57 @@ ${recentErrorsText}
 
 The Super Admin is asking: "${queryText}"
 
-Respond politely, professionally, and in a structured formatting using bold tags (*text*), lists, and clear emojis. Answer their query using the real-time stats provided. If they ask about recent errors, show them the latest failed errors list. Keep your response concise so it reads beautifully on WhatsApp.`;
+IMPORTANT FORMATTING RULES:
+- Use WhatsApp bold (*text*) for headers
+- Use bullet points with •
+- Use clear emojis for sections
+- Keep total response under 1200 characters
+- Be complete — do NOT cut off mid-sentence
+- If information is long, summarize key points concisely
+- Always end with a complete sentence`;
 
     let replyMessage = '';
     if (this.gemini) {
       try {
         const model = this.gemini.getGenerativeModel({
           model: this.geminiModelName,
-          generationConfig: { temperature: 0.3, maxOutputTokens: 600 }
+          generationConfig: { temperature: 0.3, maxOutputTokens: 1500 }
         });
         const result = await model.generateContent(systemPrompt);
-        replyMessage = result.response.text();
+        replyMessage = result.response.text().trim();
       } catch (geminiErr) {
         console.error('Gemini error in Super Admin Bot:', geminiErr);
-        replyMessage = `⚠️ Kwickbot Super Admin Assistant: Failed to parse query. Here is your system summary:\n\n${statsText}`;
+        replyMessage = `⚠️ AI error. Here is your system summary:\n\n${statsText}`;
       }
     } else {
       replyMessage = `⚠️ AI not configured. Here is the real-time system summary:\n\n${statsText}`;
     }
 
-    // Send the reply back to the Super Admin
-    await whatsappCloudAPI.sendMessage(senderPhone, replyMessage);
+    // Split and send long replies as multiple WhatsApp messages (max 1500 chars each)
+    const MAX_WA_LENGTH = 1500;
+    if (replyMessage.length <= MAX_WA_LENGTH) {
+      await whatsappCloudAPI.sendMessage(senderPhone, replyMessage);
+    } else {
+      // Split on newlines at clean boundaries
+      const lines = replyMessage.split('\n');
+      let chunk = '';
+      let partIndex = 1;
+      for (const line of lines) {
+        if ((chunk + '\n' + line).length > MAX_WA_LENGTH) {
+          if (chunk.trim()) {
+            await whatsappCloudAPI.sendMessage(senderPhone, chunk.trim());
+            await new Promise(r => setTimeout(r, 500)); // small delay between messages
+            partIndex++;
+          }
+          chunk = line;
+        } else {
+          chunk = chunk ? chunk + '\n' + line : line;
+        }
+      }
+      if (chunk.trim()) {
+        await whatsappCloudAPI.sendMessage(senderPhone, chunk.trim());
+      }
+    }
   }
 
   /**

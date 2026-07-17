@@ -16,164 +16,284 @@ class SuperAdminBotService {
 
   /**
    * Check if a phone number belongs to a Super Admin.
-   * @param {string} phone 
-   * @returns {Promise<Object|null>} The Super Admin Admin document or null
    */
   async getSuperAdmin(phone) {
     if (!phone) return null;
     const normalizedPhone = phone.replace(/\D/g, '');
     const last10 = normalizedPhone.slice(-10);
     const superAdmins = await Admin.find({ role: 'super_admin' });
-    
     return superAdmins.find(sa => {
       const saPhone = (sa.phone || sa.businessPhone || '').replace(/\D/g, '');
       if (!saPhone) return false;
-      // Match exact OR by last 10 digits (handles country code variations)
       return saPhone === normalizedPhone || saPhone.slice(-10) === last10;
     });
   }
 
   /**
-   * Get an aggregated, formatted text summary of Kwickbot's health and usage statistics.
+   * Gather ALL platform data for the AI to answer any question.
    */
-  async getSystemSummary() {
+  async getAllPlatformData() {
+    const data = {};
+
     try {
-      const totalMerchants = await Admin.countDocuments({ role: 'admin' });
-      const activeMerchants = await Admin.countDocuments({ role: 'admin', isActive: true });
-      
-      const plansBreakdown = await Admin.aggregate([
-        { $match: { role: 'admin' } },
-        { $group: { _id: '$subscriptionPlan', count: { $sum: 1 } } }
-      ]);
-      const plansStr = plansBreakdown.map(p => `• *${(p._id || 'starter').toUpperCase()}*: ${p.count}`).join('\n') || 'None';
+      // ── Merchants ──────────────────────────────────────────────
+      const merchants = await Admin.find({ role: 'admin' }).select(
+        'name email businessName subscriptionPlan subscriptionStatus isActive whatsappConnected ' +
+        'geminiTokensUsed geminiTokensLimit totalMessagesProcessed monthlyPrice customDiscount ' +
+        'createdAt subscriptionEndDate phone businessPhone shopifyEnabled woocommerceEnabled'
+      );
+      data.totalMerchants = merchants.length;
+      data.activeMerchants = merchants.filter(m => m.isActive).length;
+      data.trialMerchants = merchants.filter(m => m.subscriptionStatus === 'trial').length;
+      data.connectedBots = merchants.filter(m => m.whatsappConnected).length;
 
-      const totalDemos = await DemoRequest.countDocuments();
-      const pendingDemos = await DemoRequest.countDocuments({ status: 'pending' });
+      data.planBreakdown = {};
+      merchants.forEach(m => {
+        const plan = m.subscriptionPlan || 'starter';
+        data.planBreakdown[plan] = (data.planBreakdown[plan] || 0) + 1;
+      });
 
-      const totalRevenueResult = await Invoice.aggregate([
-        { $match: { paymentStatus: 'completed' } },
-        { $group: { _id: null, total: { $sum: '$totalAmount' } } }
-      ]);
-      const totalRevenue = totalRevenueResult.length > 0 ? totalRevenueResult[0].total : 0;
+      data.merchantList = merchants.map(m => ({
+        name: m.name,
+        email: m.email,
+        business: m.businessName || 'N/A',
+        plan: m.subscriptionPlan || 'starter',
+        status: m.subscriptionStatus || 'N/A',
+        active: m.isActive,
+        wpConnected: m.whatsappConnected,
+        messages: m.totalMessagesProcessed || 0,
+        tokensUsed: m.geminiTokensUsed || 0,
+        tokenLimit: m.geminiTokensLimit || 50000,
+        joinedDate: m.createdAt ? new Date(m.createdAt).toLocaleDateString('en-IN') : 'N/A',
+        shopify: m.shopifyEnabled,
+        woo: m.woocommerceEnabled
+      }));
 
-      const failedWebhooksCount = await WebhookLog.countDocuments({ status: 'failed' });
+      // ── Revenue / Invoices ─────────────────────────────────────
+      const paidInvoices = await Invoice.find({
+        $or: [{ paymentStatus: 'completed' }, { status: 'paid' }]
+      }).select('totalAmount customerId createdAt');
+      data.totalRevenue = paidInvoices.reduce((s, i) => s + (i.totalAmount || 0), 0);
+      data.totalInvoices = paidInvoices.length;
 
-      return `📊 *Kwickbot System Summary Overview*
+      // ── Demo Requests ──────────────────────────────────────────
+      data.totalDemos = await DemoRequest.countDocuments();
+      data.pendingDemos = await DemoRequest.countDocuments({ status: 'pending' });
+      data.completedDemos = await DemoRequest.countDocuments({ status: 'completed' });
+      const recentDemos = await DemoRequest.find().sort({ createdAt: -1 }).limit(5)
+        .select('name businessName email phone status preferredDate createdAt');
+      data.recentDemos = recentDemos.map(d => ({
+        name: d.name, business: d.businessName, email: d.email,
+        phone: d.phone, status: d.status,
+        date: d.preferredDate ? new Date(d.preferredDate).toLocaleDateString('en-IN') : 'N/A',
+        requestedOn: d.createdAt ? new Date(d.createdAt).toLocaleDateString('en-IN') : 'N/A'
+      }));
 
-👥 *Merchants:*
-• Total Registered: ${totalMerchants}
-• Active Stores: ${activeMerchants}
+      // ── Conversations ──────────────────────────────────────────
+      const Conversation = require('../models/Conversation');
+      data.totalConversations = await Conversation.countDocuments();
+      data.activeConversations = await Conversation.countDocuments({ status: 'active' });
+      data.escalatedConversations = await Conversation.countDocuments({ status: 'escalated' });
+      data.botPausedConversations = await Conversation.countDocuments({ botPaused: true });
 
-💳 *Active Plans:*
-${plansStr}
+      // ── Orders ─────────────────────────────────────────────────
+      const Order = require('../models/Order');
+      data.totalOrders = await Order.countDocuments();
+      data.pendingOrders = await Order.countDocuments({ status: 'pending' });
+      data.deliveredOrders = await Order.countDocuments({ status: 'delivered' });
+      data.cancelledOrders = await Order.countDocuments({ status: 'cancelled' });
 
-📈 *Sales & Demos:*
-• Total Demo Requests: ${totalDemos}
-• Pending Demos: ${pendingDemos}
-• Total Revenue Processed: ₹${totalRevenue.toLocaleString('en-IN')}
+      // ── Escalations ────────────────────────────────────────────
+      const Escalation = require('../models/Escalation');
+      data.totalEscalations = await Escalation.countDocuments();
+      data.openEscalations = await Escalation.countDocuments({ status: 'open' });
+      data.resolvedEscalations = await Escalation.countDocuments({ status: 'resolved' });
 
-⚠️ *System Status:*
-• Failed Webhook Syncs: ${failedWebhooksCount}`;
+      // ── Leads CRM ──────────────────────────────────────────────
+      const Lead = require('../models/Lead');
+      data.totalLeads = await Lead.countDocuments();
+      data.newLeads = await Lead.countDocuments({ status: 'new' });
+      data.convertedLeads = await Lead.countDocuments({ status: 'converted' });
+
+      // ── Knowledge Bases ────────────────────────────────────────
+      const KnowledgeBase = require('../models/KnowledgeBase');
+      data.totalKBs = await KnowledgeBase.countDocuments();
+      const merchantsWithKB = await KnowledgeBase.distinct('admin');
+      data.merchantsWithKB = merchantsWithKB.length;
+
+      // ── Broadcasts ─────────────────────────────────────────────
+      const Broadcast = require('../models/Broadcast');
+      data.totalBroadcasts = await Broadcast.countDocuments();
+      data.sentBroadcasts = await Broadcast.countDocuments({ status: 'sent' });
+
+      // ── AI Usage ───────────────────────────────────────────────
+      data.totalAIMessages = merchants.reduce((s, m) => s + (m.totalMessagesProcessed || 0), 0);
+      data.totalTokensUsed = merchants.reduce((s, m) => s + (m.geminiTokensUsed || 0), 0);
+
+      // ── Failed Webhooks ────────────────────────────────────────
+      data.failedWebhooks = await WebhookLog.countDocuments({ status: 'failed' });
+      const recentErrors = await WebhookLog.find({ status: 'failed' })
+        .sort({ createdAt: -1 }).limit(5)
+        .select('source errorMessage externalOrderId createdAt');
+      data.recentErrors = recentErrors.map(e => ({
+        source: e.source, error: e.errorMessage || 'Unknown',
+        orderId: e.externalOrderId,
+        time: e.createdAt ? new Date(e.createdAt).toLocaleString('en-IN') : 'N/A'
+      }));
+
+      // ── Customers ─────────────────────────────────────────────
+      const Customer = require('../models/Customer');
+      data.totalCustomers = await Customer.countDocuments();
+
+      // ── Recent Signups (last 7 days) ──────────────────────────
+      const sevenDaysAgo = new Date();
+      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+      data.recentSignups = merchants.filter(m => new Date(m.createdAt) >= sevenDaysAgo).length;
+
     } catch (err) {
-      console.error('Error fetching system summary for super admin bot:', err);
-      return '⚠️ Error gathering system summary stats.';
+      console.error('Error gathering platform data for Super Admin Bot:', err.message);
     }
+
+    return data;
+  }
+
+  /**
+   * Format all platform data as a readable text block for the AI prompt.
+   */
+  formatDataForPrompt(d) {
+    return `
+📊 PLATFORM OVERVIEW:
+• Total Merchants: ${d.totalMerchants} (Active: ${d.activeMerchants}, Trial: ${d.trialMerchants})
+• WhatsApp Bots Connected: ${d.connectedBots}
+• New Signups (last 7 days): ${d.recentSignups}
+
+💳 PLAN BREAKDOWN:
+${Object.entries(d.planBreakdown || {}).map(([plan, count]) => `• ${plan.toUpperCase()}: ${count}`).join('\n') || '• None'}
+
+💰 REVENUE:
+• Total Revenue Received: ₹${(d.totalRevenue || 0).toLocaleString('en-IN')}
+• Total Paid Invoices: ${d.totalInvoices}
+
+📩 DEMO REQUESTS:
+• Total: ${d.totalDemos} | Pending: ${d.pendingDemos} | Completed: ${d.completedDemos}
+• Recent Demos: ${JSON.stringify(d.recentDemos || [])}
+
+💬 CONVERSATIONS:
+• Total: ${d.totalConversations} | Active: ${d.activeConversations}
+• Escalated: ${d.escalatedConversations} | Bot Paused: ${d.botPausedConversations}
+
+📦 ORDERS:
+• Total: ${d.totalOrders} | Pending: ${d.pendingOrders}
+• Delivered: ${d.deliveredOrders} | Cancelled: ${d.cancelledOrders}
+
+🚨 ESCALATIONS:
+• Total: ${d.totalEscalations} | Open: ${d.openEscalations} | Resolved: ${d.resolvedEscalations}
+
+👥 LEADS CRM:
+• Total Leads: ${d.totalLeads} | New: ${d.newLeads} | Converted: ${d.convertedLeads}
+
+🧠 AI USAGE:
+• Total Messages Processed: ${d.totalAIMessages}
+• Total Tokens Used: ${(d.totalTokensUsed || 0).toLocaleString()}
+
+📚 KNOWLEDGE BASES:
+• Total KB Documents: ${d.totalKBs}
+• Merchants with KB Setup: ${d.merchantsWithKB}
+
+📣 BROADCASTS:
+• Total: ${d.totalBroadcasts} | Sent: ${d.sentBroadcasts}
+
+👤 CUSTOMERS:
+• Total Registered: ${d.totalCustomers}
+
+⚠️ SYSTEM HEALTH:
+• Failed Webhook Logs: ${d.failedWebhooks}
+• Recent Errors: ${JSON.stringify(d.recentErrors || [])}
+
+🏪 ALL MERCHANTS DETAIL:
+${JSON.stringify(d.merchantList || [], null, 2)}
+`.trim();
   }
 
   /**
    * Handle interactive questions from the Super Admin.
-   * @param {string} senderPhone 
-   * @param {string} queryText 
    */
   async handleSuperAdminQuery(senderPhone, queryText) {
     console.log(`🤖 Super Admin Bot processing query from ${senderPhone}: ${queryText}`);
-    
-    // 1. Gather real-time system stats
-    const statsText = await this.getSystemSummary();
 
-    // 2. Fetch recent errors
-    let recentErrorsText = 'None';
-    try {
-      const recentErrors = await WebhookLog.find({ status: 'failed' })
-        .sort({ createdAt: -1 })
-        .limit(3);
-      if (recentErrors.length > 0) {
-        recentErrorsText = recentErrors.map(e => 
-          `• [${e.source.toUpperCase()}] ID: ${e.externalOrderId} - Error: ${e.errorMessage || 'Unknown'}`
-        ).join('\n');
-      }
-    } catch (err) {
-      console.error('Error fetching recent errors:', err.message);
-    }
+    // Gather ALL platform data
+    const platformData = await this.getAllPlatformData();
+    const dataText = this.formatDataForPrompt(platformData);
 
-    // 3. Construct Gemini Prompt
     const systemPrompt = `You are the Kwickbot Super Admin WhatsApp Bot assistant.
-Your job is to help the platform owner (the Super Admin) inspect system stats, monitor updates, and manage the platform.
+Your job is to help the platform owner (Super Admin Samarth) monitor, manage, and understand the Kwickbot SaaS platform.
 
-Here are the real-time system stats:
-${statsText}
+You have access to ALL real-time platform data below. Use it to answer ANY question accurately.
 
-Here are the latest failed integration errors:
-${recentErrorsText}
+=== REAL-TIME PLATFORM DATA ===
+${dataText}
+=== END DATA ===
 
 The Super Admin is asking: "${queryText}"
 
-IMPORTANT FORMATTING RULES:
-- Use WhatsApp bold (*text*) for headers
-- Use bullet points with •
-- Use clear emojis for sections
-- Keep total response under 1200 characters
-- Be complete — do NOT cut off mid-sentence
-- If information is long, summarize key points concisely
-- Always end with a complete sentence`;
+RESPONSE RULES:
+- Answer directly and completely using the data above
+- Use WhatsApp formatting: *bold* for headers, • for bullets, emojis for sections
+- If asked about a specific merchant, find them in the merchants list and give full details
+- If asked about revenue, orders, conversations, escalations — use the exact numbers from data
+- If asked a question the data doesn't cover, say so honestly
+- Be complete — never cut off mid-sentence
+- Keep each response section concise but informative`;
 
     let replyMessage = '';
     if (this.gemini) {
       try {
         const model = this.gemini.getGenerativeModel({
           model: this.geminiModelName,
-          generationConfig: { temperature: 0.3, maxOutputTokens: 1500 }
+          generationConfig: { temperature: 0.2, maxOutputTokens: 2000 }
         });
         const result = await model.generateContent(systemPrompt);
         replyMessage = result.response.text().trim();
       } catch (geminiErr) {
         console.error('Gemini error in Super Admin Bot:', geminiErr);
-        replyMessage = `⚠️ AI error. Here is your system summary:\n\n${statsText}`;
+        replyMessage = `⚠️ AI error. Raw platform data:\n\n${dataText}`;
       }
     } else {
-      replyMessage = `⚠️ AI not configured. Here is the real-time system summary:\n\n${statsText}`;
+      replyMessage = `⚠️ AI not configured. Raw platform data:\n\n${dataText}`;
     }
 
-    // Split and send long replies as multiple WhatsApp messages (max 1500 chars each)
-    const MAX_WA_LENGTH = 1500;
-    if (replyMessage.length <= MAX_WA_LENGTH) {
-      await whatsappCloudAPI.sendMessage(senderPhone, replyMessage);
-    } else {
-      // Split on newlines at clean boundaries
-      const lines = replyMessage.split('\n');
-      let chunk = '';
-      let partIndex = 1;
-      for (const line of lines) {
-        if ((chunk + '\n' + line).length > MAX_WA_LENGTH) {
-          if (chunk.trim()) {
-            await whatsappCloudAPI.sendMessage(senderPhone, chunk.trim());
-            await new Promise(r => setTimeout(r, 500)); // small delay between messages
-            partIndex++;
-          }
-          chunk = line;
-        } else {
-          chunk = chunk ? chunk + '\n' + line : line;
+    // Split and send as multiple messages if too long (max 1500 chars per message)
+    await this.sendLongMessage(senderPhone, replyMessage);
+  }
+
+  /**
+   * Send a long message as multiple WhatsApp messages split at newlines.
+   */
+  async sendLongMessage(phone, message, maxLen = 1500) {
+    if (message.length <= maxLen) {
+      await whatsappCloudAPI.sendMessage(phone, message);
+      return;
+    }
+    const lines = message.split('\n');
+    let chunk = '';
+    for (const line of lines) {
+      if ((chunk + '\n' + line).length > maxLen) {
+        if (chunk.trim()) {
+          await whatsappCloudAPI.sendMessage(phone, chunk.trim());
+          await new Promise(r => setTimeout(r, 600));
         }
+        chunk = line;
+      } else {
+        chunk = chunk ? chunk + '\n' + line : line;
       }
-      if (chunk.trim()) {
-        await whatsappCloudAPI.sendMessage(senderPhone, chunk.trim());
-      }
+    }
+    if (chunk.trim()) {
+      await whatsappCloudAPI.sendMessage(phone, chunk.trim());
     }
   }
 
   /**
    * Broadcast proactive alert to all Super Admins.
-   * @param {string} message 
    */
   async broadcastToSuperAdmins(message) {
     try {
@@ -203,8 +323,7 @@ IMPORTANT FORMATTING RULES:
 • *Email:* ${demoRequest.email}
 • *Requested Date:* ${new Date(demoRequest.preferredDate).toLocaleDateString('en-IN')}
 
-🔗 Manage your bookings in the admin panel:
-https://kwickbot.in/dashboard/super-admin/demo-requests`;
+🔗 Manage: https://kwickbot.in/dashboard/super-admin/demo-requests`;
     await this.broadcastToSuperAdmins(alertMessage);
   }
 
@@ -235,8 +354,8 @@ https://kwickbot.in/dashboard/super-admin/demo-requests`;
 
 🔧 *Details:*
 • *Source:* ${source.toUpperCase()}
-• *Error message:* ${errorMsg}
-• *Timestamp:* ${new Date().toLocaleString('en-IN')}
+• *Error:* ${errorMsg}
+• *Time:* ${new Date().toLocaleString('en-IN')}
 ${details ? `• *Context:* ${details}` : ''}`;
     await this.broadcastToSuperAdmins(alertMessage);
   }

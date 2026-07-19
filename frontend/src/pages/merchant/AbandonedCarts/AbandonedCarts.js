@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { getAbandonedCarts, getAbandonedCartStats, sendAbandonedCartReminder } from '../../../services/api';
 import { FaShoppingCart, FaCheckCircle, FaPaperPlane, FaClock, FaSearch, FaExternalLinkAlt } from 'react-icons/fa';
 import './AbandonedCarts.css';
@@ -32,11 +33,14 @@ const formatCurrency = (amount, currencyCode) => {
 };
 
 function AbandonedCarts({ admin }) {
+  const plan = (admin?.subscriptionPlan || JSON.parse(localStorage.getItem('admin') || '{}')?.subscriptionPlan || 'starter').toLowerCase();
+
   const [carts, setCarts] = useState([]);
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [sendingReminderId, setSendingReminderId] = useState(null);
+
   const [filters, setFilters] = useState({
     status: '',
     search: ''
@@ -191,6 +195,52 @@ function AbandonedCarts({ admin }) {
         return 'Abandoned';
     }
   };
+
+  if (plan === 'starter') {
+    return (
+      <div className="abandoned-carts-container" style={{ position: 'relative' }}>
+        <div className="page-header">
+          <div>
+            <h1 className="page-title">Abandoned Cart Recovery</h1>
+            <p className="page-subtitle">Track, remind, and recover checkout abandonment automatically over WhatsApp.</p>
+          </div>
+        </div>
+        
+        <div className="carts-paywall-card" style={{
+          background: 'rgba(15, 23, 42, 0.4)',
+          border: '1px dashed rgba(16, 185, 129, 0.3)',
+          borderRadius: '16px',
+          padding: '60px 20px',
+          textAlign: 'center',
+          marginTop: '30px',
+          backdropFilter: 'blur(8px)',
+          boxShadow: '0 8px 32px 0 rgba(0, 0, 0, 0.37)'
+        }}>
+          <span style={{ fontSize: '48px', display: 'block', marginBottom: '16px' }}>🔒</span>
+          <h2 style={{ fontSize: '22px', fontWeight: 'bold', color: '#10b981', marginBottom: '10px' }}>
+            Abandoned Cart Recovery is Locked
+          </h2>
+          <p style={{ maxWidth: '550px', margin: '0 auto 24px', fontSize: '14px', color: '#cbd5e1', lineHeight: '1.6' }}>
+            Upgrade your plan to Professional or Enterprise tier to automatically track checkout drop-offs, dispatch automated WhatsApp recovery reminders, and boost your sales.
+          </p>
+          <Link to="/dashboard/billing" style={{
+            display: 'inline-block',
+            background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+            color: 'white',
+            fontWeight: 'bold',
+            padding: '12px 30px',
+            borderRadius: '8px',
+            textDecoration: 'none',
+            fontSize: '14px',
+            boxShadow: '0 4px 14px rgba(16, 185, 129, 0.4)',
+            transition: 'all 0.2s ease'
+          }}>
+            Upgrade Subscription Plan
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="abandoned-carts-container">

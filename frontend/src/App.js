@@ -330,7 +330,9 @@ function Sidebar({ admin, onLogout, isOpen, onToggle, pendingDemoRequestsCount }
                   <li>
                     <Link to="/dashboard/abandoned-carts" className={isActive('/dashboard/abandoned-carts')} title="Abandoned Carts">
                       <FaShoppingCart />
-                      <span className="nav-label">Abandoned Carts</span>
+                      <span className="nav-label">
+                        Abandoned Carts {admin?.subscriptionPlan === 'starter' && <span style={{ marginLeft: '4px', fontSize: '10px' }}>🔒</span>}
+                      </span>
                     </Link>
                   </li>
                   <li>

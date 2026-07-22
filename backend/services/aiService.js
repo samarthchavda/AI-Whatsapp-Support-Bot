@@ -793,6 +793,8 @@ Smart Fallback Rules (when specific information is not available in the knowledg
       // Detect intent
       const intent = this.detectIntent(message);
       
+      const merchantPlan = (adminDoc && adminDoc.subscriptionPlan) ? adminDoc.subscriptionPlan.toLowerCase() : 'starter';
+
       // Check for high priority/escalation keywords
       const needsEscalation = this.checkForEscalation(message, intent);
       
@@ -856,19 +858,23 @@ Smart Fallback Rules (when specific information is not available in the knowledg
           const refundResult = await this.handleRefundRequest(customerPhone, customerName, message, adminDoc ? adminDoc._id : null);
           response = refundResult.message;
           relatedOrderIds = refundResult.orderIds || [];
-          escalated = true;
-          escalationReason = 'refund_request';
+          if (merchantPlan !== 'starter') {
+            escalated = true;
+            escalationReason = 'refund_request';
+          }
           break;
 
         case 'complaint':
           response = await this.handleComplaint(customerPhone, customerName, message);
-          escalated = true;
-          escalationReason = 'complaint';
+          if (merchantPlan !== 'starter') {
+            escalated = true;
+            escalationReason = 'complaint';
+          }
           break;
 
         case 'general_inquiry':
         default:
-          if (needsEscalation) {
+          if (needsEscalation && merchantPlan !== 'starter') {
             response = await this.handleEscalation(customerPhone, customerName, message, 'high_priority');
             escalated = true;
             escalationReason = 'high_priority';

@@ -265,6 +265,14 @@ exports.updateDemoRequestStatus = async (req, res) => {
       if (status === 'contacted' && !demoRequest.contactedAt) {
         demoRequest.contactedAt = new Date();
       }
+      if (status === 'pending') {
+        demoRequest.approved = false;
+        demoRequest.adminCreated = false;
+        demoRequest.createdAdminId = null;
+        demoRequest.approvedBy = undefined;
+        demoRequest.approvedAt = undefined;
+        demoRequest.generatedPassword = undefined;
+      }
     }
 
     if (notes !== undefined) {

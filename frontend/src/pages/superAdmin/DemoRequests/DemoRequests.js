@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { FaEnvelope, FaPhone, FaBriefcase, FaCheck, FaTimes, FaEye, FaClock, FaCheckCircle, FaTimesCircle } from 'react-icons/fa';
+import { FaEnvelope, FaPhone, FaBriefcase, FaCheck, FaTimes, FaEye, FaClock, FaCheckCircle, FaTimesCircle, FaTrash, FaUndo } from 'react-icons/fa';
 import api from '../../../services/api';
 
 function DemoRequests() {
@@ -78,6 +78,38 @@ function DemoRequests() {
     } catch (error) {
       console.error('Error rejecting request:', error);
       alert('Failed to reject request');
+    }
+  };
+
+  const handleDelete = async (requestId) => {
+    if (!window.confirm('Are you sure you want to permanently delete this demo request? This action cannot be undone.')) {
+      return;
+    }
+    try {
+      await api.delete(`/demo-requests/${requestId}`);
+      alert('Demo request deleted successfully');
+      fetchRequests();
+      window.dispatchEvent(new Event('demoRequestUpdated'));
+      setShowModal(false);
+    } catch (error) {
+      console.error('Error deleting request:', error);
+      alert('Failed to delete request');
+    }
+  };
+
+  const handleReset = async (requestId) => {
+    if (!window.confirm('Are you sure you want to reset this request back to pending?')) {
+      return;
+    }
+    try {
+      await api.put(`/demo-requests/${requestId}`, { status: 'pending' });
+      alert('Request reset to pending successfully');
+      fetchRequests();
+      window.dispatchEvent(new Event('demoRequestUpdated'));
+      setShowModal(false);
+    } catch (error) {
+      console.error('Error resetting request:', error);
+      alert('Failed to reset request');
     }
   };
 
@@ -270,58 +302,106 @@ function DemoRequests() {
             </div>
           </div>
 
-          {!request.approved && request.status === 'pending' && (
             <div style={{
               display: 'flex',
+              flexWrap: 'wrap',
               gap: '12px',
               marginTop: '32px',
               paddingTop: '24px',
               borderTop: '1px solid rgba(63, 63, 70, 0.3)'
             }}>
+              {!request.approved && request.status === 'pending' && (
+                <>
+                  <button
+                    onClick={() => handleApprove(request._id)}
+                    disabled={approving}
+                    style={{
+                      flex: 1,
+                      minWidth: '200px',
+                      padding: '14px 24px',
+                      background: approving ? 'rgba(16, 185, 129, 0.5)' : 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '12px',
+                      fontSize: '15px',
+                      fontWeight: '600',
+                      cursor: approving ? 'not-allowed' : 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '8px',
+                      transition: 'all 0.2s ease'
+                    }}
+                  >
+                    <FaCheck /> {approving ? 'Approving...' : 'Approve & Create Account'}
+                  </button>
+                  <button
+                    onClick={() => handleReject(request._id)}
+                    disabled={approving}
+                    style={{
+                      padding: '14px 24px',
+                      background: 'rgba(239, 68, 68, 0.1)',
+                      color: '#ef4444',
+                      border: '1px solid rgba(239, 68, 68, 0.3)',
+                      borderRadius: '12px',
+                      fontSize: '15px',
+                      fontWeight: '600',
+                      cursor: approving ? 'not-allowed' : 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      transition: 'all 0.2s ease'
+                    }}
+                  >
+                    <FaTimes /> Reject
+                  </button>
+                </>
+              )}
+
+              {(request.approved || request.status !== 'pending') && (
+                <button
+                  onClick={() => handleReset(request._id)}
+                  style={{
+                    flex: 1,
+                    padding: '14px 24px',
+                    background: 'rgba(251, 191, 36, 0.1)',
+                    color: '#fbbf24',
+                    border: '1px solid rgba(251, 191, 36, 0.3)',
+                    borderRadius: '12px',
+                    fontSize: '15px',
+                    fontWeight: '600',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '8px',
+                    transition: 'all 0.2s ease'
+                  }}
+                >
+                  <FaUndo /> Reset to Pending
+                </button>
+              )}
+
               <button
-                onClick={() => handleApprove(request._id)}
-                disabled={approving}
+                onClick={() => handleDelete(request._id)}
                 style={{
-                  flex: 1,
                   padding: '14px 24px',
-                  background: approving ? 'rgba(16, 185, 129, 0.5)' : 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
-                  color: 'white',
-                  border: 'none',
+                  background: 'rgba(239, 68, 68, 0.2)',
+                  color: '#f87171',
+                  border: '1px solid rgba(239, 68, 68, 0.4)',
                   borderRadius: '12px',
                   fontSize: '15px',
                   fontWeight: '600',
-                  cursor: approving ? 'not-allowed' : 'pointer',
+                  cursor: 'pointer',
                   display: 'flex',
                   alignItems: 'center',
-                  justifyContent: 'center',
                   gap: '8px',
                   transition: 'all 0.2s ease'
                 }}
               >
-                <FaCheck /> {approving ? 'Approving...' : 'Approve & Create Account'}
-              </button>
-              <button
-                onClick={() => handleReject(request._id)}
-                disabled={approving}
-                style={{
-                  padding: '14px 24px',
-                  background: 'rgba(239, 68, 68, 0.1)',
-                  color: '#ef4444',
-                  border: '1px solid rgba(239, 68, 68, 0.3)',
-                  borderRadius: '12px',
-                  fontSize: '15px',
-                  fontWeight: '600',
-                  cursor: approving ? 'not-allowed' : 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  transition: 'all 0.2s ease'
-                }}
-              >
-                <FaTimes /> Reject
+                <FaTrash /> Delete Request
               </button>
             </div>
-          )}
         </div>
       </div>
     );
@@ -346,12 +426,13 @@ function DemoRequests() {
       </div>
 
       {/* Filters */}
-      <div style={{ marginBottom: '24px', display: 'flex', gap: '12px' }}>
-        {['all', 'pending', 'approved', 'rejected'].map((status) => (
+      <div style={{ marginBottom: '24px', display: 'flex', flexWrap: 'wrap', gap: '12px' }}>
+        {['all', 'pending', 'approved', 'rejected', 'contacted', 'completed', 'cancelled'].map((status) => (
           <button
             key={status}
             onClick={() => setFilter(status)}
             className={`demo-filter-btn ${filter === status ? 'active' : ''}`}
+            style={{ textTransform: 'capitalize' }}
           >
             {status}
           </button>
@@ -404,27 +485,48 @@ function DemoRequests() {
                       {new Date(request.createdAt).toLocaleDateString()}
                     </td>
                     <td>
-                      <button
-                        onClick={() => {
-                          setSelectedRequest(request);
-                          setShowModal(true);
-                        }}
-                        style={{
-                          padding: '8px 16px',
-                          background: 'var(--bg-hover)',
-                          border: '1px solid var(--border)',
-                          borderRadius: '8px',
-                          color: 'var(--text-secondary)',
-                          fontSize: '13px',
-                          fontWeight: '600',
-                          cursor: 'pointer',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '6px'
-                        }}
-                      >
-                        <FaEye /> View
-                      </button>
+                      <div style={{ display: 'flex', gap: '8px' }}>
+                        <button
+                          onClick={() => {
+                            setSelectedRequest(request);
+                            setShowModal(true);
+                          }}
+                          style={{
+                            padding: '8px 14px',
+                            background: 'var(--bg-hover)',
+                            border: '1px solid var(--border)',
+                            borderRadius: '8px',
+                            color: 'var(--text-secondary)',
+                            fontSize: '13px',
+                            fontWeight: '600',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '6px'
+                          }}
+                        >
+                          <FaEye /> View
+                        </button>
+                        <button
+                          onClick={() => handleDelete(request._id)}
+                          style={{
+                            padding: '8px 14px',
+                            background: 'rgba(239, 68, 68, 0.1)',
+                            border: '1px solid rgba(239, 68, 68, 0.2)',
+                            borderRadius: '8px',
+                            color: '#ef4444',
+                            fontSize: '13px',
+                            fontWeight: '600',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '6px',
+                            transition: 'all 0.2s ease'
+                          }}
+                        >
+                          <FaTrash /> Delete
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}

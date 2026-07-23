@@ -771,6 +771,30 @@ exports.deleteUser = async (req, res) => {
       });
     }
 
+    // Auto-reset associated DemoRequests back to pending
+    try {
+      const DemoRequest = require('../../models/DemoRequest');
+      await DemoRequest.updateMany(
+        { email: user.email.toLowerCase() },
+        {
+          $set: {
+            status: 'pending',
+            approved: false,
+            adminCreated: false,
+            createdAdminId: null
+          },
+          $unset: {
+            approvedBy: 1,
+            approvedAt: 1,
+            generatedPassword: 1
+          }
+        }
+      );
+      console.log(`♻️ Reset demo requests for deleted user email: ${user.email}`);
+    } catch (dbErr) {
+      console.error('Error resetting demo request on user delete:', dbErr.message);
+    }
+
     res.json({
       success: true,
       message: 'User deleted successfully'

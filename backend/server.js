@@ -192,6 +192,8 @@ app.get('/', (req, res) => {
 });
 
 // API Routes
+app.get('/api/sitemap.xml', require('./controllers/public/sitemapController').generateSitemap);
+
 app.use('/api/auth', authRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/invoices', invoiceRoutes);

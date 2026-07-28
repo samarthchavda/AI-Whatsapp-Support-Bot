@@ -42,7 +42,7 @@ async function run() {
 
 <h3>Boost Your Store Support Today</h3>
 <p>The WhatsApp Embedded Signup integration is coming to all Kwickbot dashboard users in our next update. Prepare your Meta Business Account today and unlock instant customer engagement.</p>`,
-    coverImage: 'https://images.unsplash.com/photo-1563986768609-322da13575f3?q=80&w=600&auto=format&fit=crop',
+    coverImage: '/uploads/blog/whatsapp-embedded-signup-cover.jpg',
     tags: ['Embedded Signup', 'WhatsApp API', 'Customer Support', 'Shopify Tips'],
     status: 'published',
     author: 'Kwickbot Team',

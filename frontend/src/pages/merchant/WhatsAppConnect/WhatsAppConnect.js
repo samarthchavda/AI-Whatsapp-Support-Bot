@@ -135,18 +135,18 @@ function WhatsAppConnect() {
 
   // Initialize Meta SDK dynamically
   useEffect(() => {
-    window.fbAsyncInit = function() {
+    window.fbAsyncInit = function () {
       if (window.FB) {
         window.FB.init({
-          appId            : '968921106124424',
-          cookie           : true,
-          xfbml            : true,
-          version          : 'v25.0'
+          appId: '968921106124424',
+          cookie: true,
+          xfbml: true,
+          version: 'v25.0'
         });
       }
     };
 
-    (function(d, s, id) {
+    (function (d, s, id) {
       var js, fjs = d.getElementsByTagName(s)[0];
       if (d.getElementById(id)) return;
       js = d.createElement(s); js.id = id;
@@ -164,7 +164,7 @@ function WhatsAppConnect() {
 
     const loginOptions = {
       response_type: 'code',
-      scope: 'public_profile,email,whatsapp_business_management,whatsapp_business_messaging'
+      scope: 'public_profile,whatsapp_business_management,whatsapp_business_messaging'
     };
 
     const configId = process.env.REACT_APP_META_CONFIG_ID;
@@ -192,21 +192,31 @@ function WhatsAppConnect() {
   const exchangeAuthCode = async (code) => {
     try {
       const token = localStorage.getItem('token') || localStorage.getItem('accessToken');
+      const redirectUri = window.location.href.split('#')[0];
       const res = await fetch(`${BASE_URL}/api/webhook/embedded-signup`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify({ code })
+        body: JSON.stringify({ code, redirectUri })
       });
-      const data = await res.json();
+
+      // Check if the response is JSON before parsing to avoid "Unexpected token < in JSON" errors
+      const contentType = res.headers.get("content-type");
+      let data = {};
+      if (contentType && contentType.includes("application/json")) {
+        data = await res.json();
+      }
+
       if (res.ok && data.success) {
-        alert('🎉 WhatsApp Business connected successfully via Meta Embedded Signup!');
+        alert('🎉 WhatsApp Business connected successfully!');
         setShowCredentialsForm(false);
         fetchCloudStatus();
       } else {
-        alert(data.error || 'Failed to exchange credentials with backend.');
+        // Provide a clearer error message for 500 status codes
+        const errorMsg = data.error || `Server Error (${res.status}). Please check backend logs.`;
+        alert(errorMsg);
       }
     } catch (err) {
       console.error(err);
@@ -215,14 +225,14 @@ function WhatsAppConnect() {
       setEmbeddedLoading(false);
     }
   };
-  
+
   // Onboarding Guide States
   const [isGuideOpen, setIsGuideOpen] = useState(false);
   const [currentGuideStep, setCurrentGuideStep] = useState(0);
   const [isWidgetGuideOpen, setIsWidgetGuideOpen] = useState(false);
   const [currentWidgetGuideStep, setCurrentWidgetGuideStep] = useState(0);
 
-  
+
 
 
   // Cloud API States
@@ -272,7 +282,7 @@ function WhatsAppConnect() {
     const cleanPhone = widgetPhone.replace(/\D/g, '');
     const encodedMessage = encodeURIComponent(widgetMessage);
     const alignment = widgetPosition === 'right' ? 'right: 24px;' : 'left: 24px;';
-    
+
     const pulseStyle = widgetPulse ? `\n  <style>
     @keyframes wa-pulse {
       0% { box-shadow: 0 0 0 0 rgba(${hexToRgb(widgetColor)}, 0.4); }
@@ -324,12 +334,12 @@ function WhatsAppConnect() {
       }
       const data = await response.json();
       setCloudStatus(data);
-      
+
       // Auto show form if Meta API credentials are not configured
       if (data && !data.isConfigured) {
         setShowCredentialsForm(true);
       }
-      
+
       // Populate states with current credentials if any
       if (data && data.credentials) {
         setWhatsappPhoneNumberId(data.credentials.whatsappPhoneNumberId || '');
@@ -401,7 +411,7 @@ function WhatsAppConnect() {
       alert('Please fill out all credentials to connect.');
       return;
     }
-    
+
     try {
       setSaveLoading(true);
       const token = localStorage.getItem('token') || localStorage.getItem('accessToken');
@@ -569,7 +579,7 @@ function WhatsAppConnect() {
             ) : cloudStatus ? (
               <div>
                 {showCredentialsForm ? (
-                  <form onSubmit={handleSaveCredentials} autoComplete="off" style={{ display: 'grid', gap: '16px' }}>
+                  <div style={{ display: 'grid', gap: '16px' }}>
                     <div style={{
                       padding: '12px 16px',
                       backgroundColor: 'var(--brand-light)',
@@ -580,22 +590,18 @@ function WhatsAppConnect() {
                       fontWeight: '500',
                       lineHeight: '1.4'
                     }}>
-                      💡 Connect your WhatsApp Business API by providing your credentials generated from the Meta Developer Console.
+                      💡 Connect your WhatsApp Business API automatically by clicking the button below. Your credentials will link instantly.
                     </div>
-                    
+
                     <div style={{
                       display: 'grid',
                       gap: '12px',
-                      padding: '20px',
+                      padding: '24px',
                       backgroundColor: 'rgba(24, 119, 242, 0.05)',
                       border: '1px dashed rgba(24, 119, 242, 0.3)',
                       borderRadius: '12px',
                       textAlign: 'center',
-                      marginBottom: '10px'
                     }}>
-                      <div style={{ fontSize: '13px', fontWeight: '500', color: 'var(--text-secondary)' }}>
-                        ⚡ <strong>Recommended:</strong> Connect automatically with Facebook Login
-                      </div>
                       <button
                         type="button"
                         disabled={embeddedLoading}
@@ -605,12 +611,12 @@ function WhatsAppConnect() {
                           alignItems: 'center',
                           justifyContent: 'center',
                           gap: '10px',
-                          padding: '12px 24px',
+                          padding: '14px 28px',
                           background: '#1877f2',
                           color: 'white',
                           border: 'none',
                           borderRadius: '8px',
-                          fontSize: '15px',
+                          fontSize: '16px',
                           fontWeight: '700',
                           cursor: 'pointer',
                           boxShadow: '0 2px 8px rgba(24, 119, 242, 0.25)',
@@ -622,100 +628,17 @@ function WhatsAppConnect() {
                       </button>
                     </div>
 
-                    <div style={{ textAlign: 'center', margin: '10px 0', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px' }}>
-                      <span style={{ height: '1px', flex: 1, backgroundColor: 'var(--border)' }}></span>
-                      <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>OR ENTER MANUALLY</span>
-                      <span style={{ height: '1px', flex: 1, backgroundColor: 'var(--border)' }}></span>
-                    </div>
-
-                    <div style={{ display: 'grid', gap: '6px' }}>
-                      <label style={{ fontSize: '14px', fontWeight: '600', color: 'var(--text-primary)', textAlign: 'left' }}>Meta Access Token</label>
-                      <input
-                        type="password"
-                        placeholder="EAAG..."
-                        value={whatsappAccessToken}
-                        onChange={(e) => setWhatsappAccessToken(e.target.value)}
-                        required
-                        autoComplete="new-password"
-                        style={{
-                          padding: '10px 12px',
-                          borderRadius: '8px',
-                          border: '1px solid var(--border)',
-                          backgroundColor: 'var(--bg-input)',
-                          color: 'var(--text-primary)',
-                          fontSize: '14px',
-                          outline: 'none',
-                          transition: 'border-color 0.2s'
-                        }}
-                      />
-                    </div>
-
-                    <div style={{ display: 'grid', gap: '6px' }}>
-                      <label style={{ fontSize: '14px', fontWeight: '600', color: 'var(--text-primary)', textAlign: 'left' }}>Phone Number ID</label>
-                      <input
-                        type="text"
-                        placeholder="e.g. 10654897258"
-                        value={whatsappPhoneNumberId}
-                        onChange={(e) => setWhatsappPhoneNumberId(e.target.value)}
-                        required
-                        autoComplete="off"
-                        style={{
-                          padding: '10px 12px',
-                          borderRadius: '8px',
-                          border: '1px solid var(--border)',
-                          backgroundColor: 'var(--bg-input)',
-                          color: 'var(--text-primary)',
-                          fontSize: '14px',
-                          outline: 'none',
-                          transition: 'border-color 0.2s'
-                        }}
-                      />
-                    </div>
-
-                    <div style={{ display: 'grid', gap: '6px' }}>
-                      <label style={{ fontSize: '14px', fontWeight: '600', color: 'var(--text-primary)', textAlign: 'left' }}>WhatsApp Business Account ID</label>
-                      <input
-                        type="text"
-                        placeholder="e.g. 20958473925"
-                        value={whatsappBusinessAccountId}
-                        onChange={(e) => setWhatsappBusinessAccountId(e.target.value)}
-                        required
-                        autoComplete="off"
-                        style={{
-                          padding: '10px 12px',
-                          borderRadius: '8px',
-                          border: '1px solid var(--border)',
-                          backgroundColor: 'var(--bg-input)',
-                          color: 'var(--text-primary)',
-                          fontSize: '14px',
-                          outline: 'none',
-                          transition: 'border-color 0.2s'
-                        }}
-                      />
-                    </div>
-
-                    <div style={{ display: 'flex', gap: '12px', marginTop: '10px' }}>
+                    {cloudStatus.isConfigured && (
                       <button
-                        type="submit"
-                        disabled={saveLoading}
-                        className="btn btn-primary"
-                        style={{ flex: 1, padding: '12px' }}
+                        type="button"
+                        onClick={() => setShowCredentialsForm(false)}
+                        className="btn btn-secondary"
+                        style={{ padding: '12px 20px', width: '100%' }}
                       >
-                        {saveLoading ? 'Saving...' : 'Save & Connect'}
+                        Cancel
                       </button>
-                      
-                      {cloudStatus.isConfigured && (
-                        <button
-                          type="button"
-                          onClick={() => setShowCredentialsForm(false)}
-                          className="btn btn-secondary"
-                          style={{ padding: '12px 20px' }}
-                        >
-                          Cancel
-                        </button>
-                      )}
-                    </div>
-                  </form>
+                    )}
+                  </div>
                 ) : (
                   <div>
                     <div style={{
@@ -739,11 +662,11 @@ function WhatsAppConnect() {
                           {(cloudStatus.isConfigured && cloudStatus.isConnected) ? 'WhatsApp Connected & Active' : 'WhatsApp Disconnected'}
                         </h4>
                         <p style={{ fontSize: '12.5px', color: 'var(--text-secondary)', margin: 0, textAlign: 'left' }}>
-                          {(cloudStatus.isConfigured && cloudStatus.isConnected) 
-                            ? 'Your server is connected and responding to customer messages.' 
-                            : cloudStatus.isConfigured 
-                            ? 'Your integration is configured but currently disconnected. The AI agent will not respond to messages.'
-                            : 'Complete the step-by-step setup in .env.'}
+                          {(cloudStatus.isConfigured && cloudStatus.isConnected)
+                            ? 'Your server is connected and responding to customer messages.'
+                            : cloudStatus.isConfigured
+                              ? 'Your integration is configured but currently disconnected. The AI agent will not respond to messages.'
+                              : 'Complete the step-by-step setup in .env.'}
                         </p>
                       </div>
                     </div>
@@ -783,7 +706,7 @@ function WhatsAppConnect() {
                       >
                         ⚙️ Update Meta Credentials
                       </button>
-                      
+
                       {cloudStatus.isConfigured && (
                         cloudStatus.isConnected ? (
                           <button
@@ -821,7 +744,7 @@ function WhatsAppConnect() {
               <h4 style={{ fontSize: '15px', fontWeight: '700', color: 'var(--text-primary)', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px', textAlign: 'left' }}>
                 <FaInfoCircle style={{ color: '#6366f1' }} /> Webhook Configuration Details
               </h4>
-              
+
               <div style={{ display: 'grid', gap: '12px', textAlign: 'left' }}>
                 <div>
                   <span style={{ fontSize: '12px', fontWeight: '600', color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>Callback URL</span>
@@ -919,7 +842,7 @@ function WhatsAppConnect() {
             border: '1px solid var(--border)'
           }}>
             <h3 style={{ fontSize: '18px', fontWeight: '700', marginBottom: '16px', color: 'var(--text-primary)' }}>Meta Developer Portal Setup</h3>
-            
+
             <button
               onClick={() => {
                 setIsGuideOpen(true);
@@ -1064,7 +987,7 @@ function WhatsAppConnect() {
 
             {/* Form Fields */}
             <div style={{ display: 'grid', gap: '18px', textAlign: 'left' }}>
-              
+
               {/* Phone number */}
               <div style={{ display: 'grid', gap: '6px' }}>
                 <label style={{ fontSize: '14px', fontWeight: '600', color: 'var(--text-primary)' }}>
@@ -1278,7 +1201,7 @@ function WhatsAppConnect() {
 
           {/* Right Column: Code & Preview */}
           <div style={{ display: 'grid', gap: '24px' }}>
-            
+
             {/* Live Preview Card */}
             <div style={{
               backgroundColor: 'var(--bg-app)',
@@ -1520,7 +1443,7 @@ function WhatsAppConnect() {
 
               {/* Accordion List */}
               <div style={{ display: 'grid', gap: '8px' }}>
-                
+
                 {/* Shopify Accordion */}
                 <div style={{ border: '1px solid #e4e4e7', borderRadius: '10px', overflow: 'hidden' }}>
                   <button

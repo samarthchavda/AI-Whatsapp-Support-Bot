@@ -59,9 +59,16 @@ exports.handleWebhook = async (req, res) => {
 
       // Find the corresponding admin/merchant account
       const Admin = require('../../models/Admin');
+      const { encrypt } = require('../../services/whatsappCredentialService');
       let matchedAdmin = null;
       if (incomingPhoneNumberId) {
-        matchedAdmin = await Admin.findOne({ whatsappPhoneNumberId: incomingPhoneNumberId });
+        const encryptedPhoneId = encrypt(incomingPhoneNumberId, true);
+        matchedAdmin = await Admin.findOne({
+          $or: [
+            { whatsappPhoneNumberId: encryptedPhoneId },
+            { whatsappPhoneNumberId: incomingPhoneNumberId }
+          ]
+        });
       }
 
       // Fallback 1: If no direct phone number match, check if there is an active conversation history for this sender

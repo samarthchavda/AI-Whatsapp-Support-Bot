@@ -1,5 +1,6 @@
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
+const { encrypt, decrypt } = require('../services/whatsappCredentialService');
 
 const adminSchema = new mongoose.Schema({
   email: {
@@ -121,15 +122,45 @@ const adminSchema = new mongoose.Schema({
   },
   whatsappAccessToken: {
     type: String,
-    default: null
+    default: null,
+    get: decrypt,
+    set: (val) => encrypt(val, false)
   },
   whatsappPhoneNumberId: {
     type: String,
-    default: null
+    default: null,
+    get: decrypt,
+    set: (val) => encrypt(val, true)
   },
   whatsappBusinessAccountId: {
     type: String,
-    default: null
+    default: null,
+    get: decrypt,
+    set: (val) => encrypt(val, true)
+  },
+  whatsappBusinessId: {
+    type: String,
+    default: null,
+    get: decrypt,
+    set: (val) => encrypt(val, false)
+  },
+  whatsappAppId: {
+    type: String,
+    default: null,
+    get: decrypt,
+    set: (val) => encrypt(val, false)
+  },
+  whatsappDisplayPhoneNumber: {
+    type: String,
+    default: null,
+    get: decrypt,
+    set: (val) => encrypt(val, false)
+  },
+  whatsappBusinessName: {
+    type: String,
+    default: null,
+    get: decrypt,
+    set: (val) => encrypt(val, false)
   },
   whatsappVerifyToken: {
     type: String,
@@ -195,7 +226,9 @@ const adminSchema = new mongoose.Schema({
     default: null
   }
 }, {
-  timestamps: true
+  timestamps: true,
+  toJSON: { getters: true },
+  toObject: { getters: true }
 });
 
 // Hash password before saving

@@ -131,6 +131,90 @@ const WIDGET_GUIDE_STEPS = [
 
 function WhatsAppConnect() {
   const [activeTab, setActiveTab] = useState('cloudapi');
+  const [embeddedLoading, setEmbeddedLoading] = useState(false);
+
+  // Initialize Meta SDK dynamically
+  useEffect(() => {
+    window.fbAsyncInit = function() {
+      if (window.FB) {
+        window.FB.init({
+          appId            : '968921106124424',
+          cookie           : true,
+          xfbml            : true,
+          version          : 'v25.0'
+        });
+      }
+    };
+
+    (function(d, s, id) {
+      var js, fjs = d.getElementsByTagName(s)[0];
+      if (d.getElementById(id)) return;
+      js = d.createElement(s); js.id = id;
+      js.src = "https://connect.facebook.net/en_US/sdk.js";
+      fjs.parentNode.insertBefore(js, fjs);
+    }(document, 'script', 'facebook-jssdk'));
+  }, []);
+
+  const handleLaunchEmbeddedSignup = () => {
+    if (!window.FB) {
+      alert('Meta Facebook SDK is loading, please try again in a few seconds.');
+      return;
+    }
+    setEmbeddedLoading(true);
+
+    const loginOptions = {
+      response_type: 'code',
+      scope: 'public_profile,email,whatsapp_business_management,whatsapp_business_messaging'
+    };
+
+    const configId = process.env.REACT_APP_META_CONFIG_ID;
+    if (configId) {
+      loginOptions.config_id = configId;
+    }
+
+    window.FB.login((response) => {
+      if (response.authResponse) {
+        const code = response.authResponse.code;
+        if (code) {
+          console.log('✅ Received Auth Code from Facebook Popup:', code);
+          exchangeAuthCode(code);
+        } else {
+          setEmbeddedLoading(false);
+          alert('Failed to retrieve authentication code from Meta signup popup.');
+        }
+      } else {
+        setEmbeddedLoading(false);
+        console.log('User cancelled Facebook login or did not fully authorize.');
+      }
+    }, loginOptions);
+  };
+
+  const exchangeAuthCode = async (code) => {
+    try {
+      const token = localStorage.getItem('token') || localStorage.getItem('accessToken');
+      const res = await fetch(`${BASE_URL}/api/webhook/embedded-signup`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ code })
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        alert('🎉 WhatsApp Business connected successfully via Meta Embedded Signup!');
+        setShowCredentialsForm(false);
+        fetchCloudStatus();
+      } else {
+        alert(data.error || 'Failed to exchange credentials with backend.');
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Error communicating with server during token verification.');
+    } finally {
+      setEmbeddedLoading(false);
+    }
+  };
   
   // Onboarding Guide States
   const [isGuideOpen, setIsGuideOpen] = useState(false);
@@ -499,6 +583,51 @@ function WhatsAppConnect() {
                       💡 Connect your WhatsApp Business API by providing your credentials generated from the Meta Developer Console.
                     </div>
                     
+                    <div style={{
+                      display: 'grid',
+                      gap: '12px',
+                      padding: '20px',
+                      backgroundColor: 'rgba(24, 119, 242, 0.05)',
+                      border: '1px dashed rgba(24, 119, 242, 0.3)',
+                      borderRadius: '12px',
+                      textAlign: 'center',
+                      marginBottom: '10px'
+                    }}>
+                      <div style={{ fontSize: '13px', fontWeight: '500', color: 'var(--text-secondary)' }}>
+                        ⚡ <strong>Recommended:</strong> Connect automatically with Facebook Login
+                      </div>
+                      <button
+                        type="button"
+                        disabled={embeddedLoading}
+                        onClick={handleLaunchEmbeddedSignup}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '10px',
+                          padding: '12px 24px',
+                          background: '#1877f2',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '8px',
+                          fontSize: '15px',
+                          fontWeight: '700',
+                          cursor: 'pointer',
+                          boxShadow: '0 2px 8px rgba(24, 119, 242, 0.25)',
+                          transition: 'all 0.2s'
+                        }}
+                      >
+                        <FaWhatsapp style={{ fontSize: '18px' }} />
+                        {embeddedLoading ? 'Connecting via Meta...' : 'Connect with Facebook'}
+                      </button>
+                    </div>
+
+                    <div style={{ textAlign: 'center', margin: '10px 0', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px' }}>
+                      <span style={{ height: '1px', flex: 1, backgroundColor: 'var(--border)' }}></span>
+                      <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>OR ENTER MANUALLY</span>
+                      <span style={{ height: '1px', flex: 1, backgroundColor: 'var(--border)' }}></span>
+                    </div>
+
                     <div style={{ display: 'grid', gap: '6px' }}>
                       <label style={{ fontSize: '14px', fontWeight: '600', color: 'var(--text-primary)', textAlign: 'left' }}>Meta Access Token</label>
                       <input

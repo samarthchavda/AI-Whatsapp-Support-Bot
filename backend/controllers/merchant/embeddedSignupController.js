@@ -33,7 +33,17 @@ exports.handleEmbeddedSignup = async (req, res) => {
     console.log(`🔑 Exchanging auth code for access token for App ID: ${appId} (code: ${maskSecret(code)})`);
 
     // 1. Exchange authorization code for access token
-    const finalRedirectUri = redirectUri || req.headers.origin || 'https://kwickbot.in';
+    // The Meta JS SDK always uses the domain's root origin with a trailing slash (e.g. "https://kwickbot.in/") as the dialog redirect_uri.
+    let finalRedirectUri = 'https://kwickbot.in/';
+    try {
+      const rawUri = redirectUri || req.headers.origin || 'https://kwickbot.in';
+      const urlObj = new URL(rawUri);
+      finalRedirectUri = `${urlObj.origin}/`;
+    } catch (urlErr) {
+      console.warn('⚠️ URL parsing failed for redirectUri, falling back to header:', urlErr.message);
+      const origin = req.headers.origin || 'https://kwickbot.in';
+      finalRedirectUri = origin.endsWith('/') ? origin : `${origin}/`;
+    }
     console.log(`📡 Using exchange redirect_uri: ${finalRedirectUri}`);
     
     const tokenResponse = await axios.get('https://graph.facebook.com/v25.0/oauth/access_token', {

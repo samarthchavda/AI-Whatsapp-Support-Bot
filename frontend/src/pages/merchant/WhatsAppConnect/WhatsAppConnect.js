@@ -164,6 +164,7 @@ function WhatsAppConnect() {
 
     const loginOptions = {
       response_type: 'code',
+      override_default_response_type: true,
       scope: 'public_profile,whatsapp_business_management,whatsapp_business_messaging'
     };
 
@@ -202,25 +203,36 @@ function WhatsAppConnect() {
         body: JSON.stringify({ code, redirectUri })
       });
 
-      // Check if the response is JSON before parsing to avoid "Unexpected token < in JSON" errors
-      const contentType = res.headers.get("content-type");
-      let data = {};
-      if (contentType && contentType.includes("application/json")) {
-        data = await res.json();
+      // Check if response is not OK (e.g. 500, 400 etc)
+      if (!res.ok) {
+        let errorData = {};
+        try {
+          const contentType = res.headers.get('content-type');
+          if (contentType && contentType.includes('application/json')) {
+            errorData = await res.json();
+          } else {
+            const rawText = await res.text();
+            errorData = { error: `HTTP ${res.status}: ${rawText.substring(0, 100)}...` };
+          }
+        } catch (parseErr) {
+          errorData = { error: `HTTP ${res.status} occurred but failed to parse response body.` };
+        }
+        console.error('Server Error Details:', errorData);
+        throw new Error(errorData.error || errorData.message || 'Internal Server Error');
       }
 
-      if (res.ok && data.success) {
-        alert('🎉 WhatsApp Business connected successfully!');
+      const data = await res.json();
+
+      if (data.success) {
+        alert('🎉 WhatsApp Business connected successfully via Meta Embedded Signup!');
         setShowCredentialsForm(false);
         fetchCloudStatus();
       } else {
-        // Provide a clearer error message for 500 status codes
-        const errorMsg = data.error || `Server Error (${res.status}). Please check backend logs.`;
-        alert(errorMsg);
+        alert(data.error || 'Failed to exchange credentials with backend.');
       }
     } catch (err) {
-      console.error(err);
-      alert('Error communicating with server during token verification.');
+      console.error('Exchange error:', err);
+      alert(`Connection Error: ${err.message}`);
     } finally {
       setEmbeddedLoading(false);
     }

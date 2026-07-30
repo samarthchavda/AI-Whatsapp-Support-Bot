@@ -36,24 +36,106 @@ exports.handleEmbeddedSignup = async (req, res) => {
     // The Meta JS SDK always uses the domain's root origin with a trailing slash (e.g. "https://kwickbot.in/") as the dialog redirect_uri.
     let finalRedirectUri = 'https://kwickbot.in/';
     try {
-      const rawUri = redirectUri || req.headers.origin || 'https://kwickbot.in';
+      // Prioritize referer header over origin to get the exact active page URL path
+      const rawUri = redirectUri || req.headers.referer || req.headers.origin || 'https://kwickbot.in';
       const urlObj = new URL(rawUri);
       finalRedirectUri = `${urlObj.origin}/`;
     } catch (urlErr) {
-      console.warn('⚠️ URL parsing failed for redirectUri, falling back to header:', urlErr.message);
+      console.warn('⚠️ URL parsing failed for redirectUri, falling back to origin header:', urlErr.message);
       const origin = req.headers.origin || 'https://kwickbot.in';
       finalRedirectUri = origin.endsWith('/') ? origin : `${origin}/`;
     }
-    console.log(`📡 Using exchange redirect_uri: ${finalRedirectUri}`);
+
+    console.log(`📡 Using initial exchange redirect_uri: ${finalRedirectUri}`);
     
-    const tokenResponse = await axios.get('https://graph.facebook.com/v25.0/oauth/access_token', {
-      params: {
-        client_id: appId,
-        client_secret: appSecret,
-        code: code,
-        redirect_uri: finalRedirectUri
+    let tokenResponse;
+    try {
+      tokenResponse = await axios.get('https://graph.facebook.com/v25.0/oauth/access_token', {
+        params: {
+          client_id: appId,
+          client_secret: appSecret,
+          code: code,
+          redirect_uri: finalRedirectUri
+        }
+      });
+    } catch (err) {
+      const isRedirectUriError = err.response?.data?.error?.error_subcode === 36008 || err.response?.data?.error?.code === 100;
+      if (isRedirectUriError) {
+        // Swap domain format (add/remove www) and try alternate root URL
+        let alternateUri;
+        if (finalRedirectUri.includes('https://www.')) {
+          alternateUri = finalRedirectUri.replace('https://www.', 'https://');
+        } else {
+          alternateUri = finalRedirectUri.replace('https://', 'https://www.');
+        }
+        
+        console.log(`🔄 Meta redirect URI mismatch (36008). Retrying with alternate redirect_uri: ${alternateUri}`);
+        try {
+          tokenResponse = await axios.get('https://graph.facebook.com/v25.0/oauth/access_token', {
+            params: {
+              client_id: appId,
+              client_secret: appSecret,
+              code: code,
+              redirect_uri: alternateUri
+            }
+          });
+        } catch (altErr) {
+          const isAltRedirectUriError = altErr.response?.data?.error?.error_subcode === 36008 || altErr.response?.data?.error?.code === 100;
+          if (isAltRedirectUriError) {
+            // Try with an empty string redirect_uri (standard fallback for JS SDK)
+            console.log(`🔄 Alternate root URL failed. Retrying with empty string redirect_uri...`);
+            try {
+              tokenResponse = await axios.get('https://graph.facebook.com/v25.0/oauth/access_token', {
+                params: {
+                  client_id: appId,
+                  client_secret: appSecret,
+                  code: code,
+                  redirect_uri: ""
+                }
+              });
+            } catch (emptyErr) {
+              const isEmptyRedirectUriError = emptyErr.response?.data?.error?.error_subcode === 36008 || emptyErr.response?.data?.error?.code === 100;
+              if (isEmptyRedirectUriError) {
+                // Try omitting redirect_uri completely
+                console.log(`🔄 Empty string redirect_uri failed. Retrying with omitted redirect_uri parameter...`);
+                try {
+                  tokenResponse = await axios.get('https://graph.facebook.com/v25.0/oauth/access_token', {
+                    params: {
+                      client_id: appId,
+                      client_secret: appSecret,
+                      code: code
+                    }
+                  });
+                } catch (omitErr) {
+                  const isOmitRedirectUriError = omitErr.response?.data?.error?.error_subcode === 36008 || omitErr.response?.data?.error?.code === 100;
+                  if (isOmitRedirectUriError) {
+                    // Final fallback: try using the original full page URL path
+                    const fullUriFallback = redirectUri || req.headers.referer || 'https://kwickbot.in/dashboard/whatsapp-connect';
+                    console.log(`🔄 Omitted redirect_uri failed. Retrying with full page URL fallback redirect_uri: ${fullUriFallback}`);
+                    tokenResponse = await axios.get('https://graph.facebook.com/v25.0/oauth/access_token', {
+                      params: {
+                        client_id: appId,
+                        client_secret: appSecret,
+                        code: code,
+                        redirect_uri: fullUriFallback
+                      }
+                    });
+                  } else {
+                    throw omitErr;
+                  }
+                }
+              } else {
+                throw emptyErr;
+              }
+            }
+          } else {
+            throw altErr;
+          }
+        }
+      } else {
+        throw err;
       }
-    });
+    }
 
     const accessToken = tokenResponse.data.access_token;
     if (!accessToken) {

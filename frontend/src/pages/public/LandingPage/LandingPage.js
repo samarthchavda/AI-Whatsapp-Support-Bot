@@ -807,8 +807,8 @@ function LandingPage() {
           </div>
           <div className="footer-links-col">
             <h4>Contact</h4>
-            <a href="mailto:kwickbotai@gmail.com" style={{ color: 'var(--text-secondary)', textDecoration: 'none', fontSize: '13px', margin: '4px 0', display: 'flex', alignItems: 'center' }}>
-              <FaEnvelope style={{ marginRight: '8px', color: '#22c55e' }} /> kwickbotai@gmail.com
+            <a href="mailto:hello@kwickbot.in" style={{ color: 'var(--text-secondary)', textDecoration: 'none', fontSize: '13px', margin: '4px 0', display: 'flex', alignItems: 'center' }}>
+              <FaEnvelope style={{ marginRight: '8px', color: '#22c55e' }} /> hello@kwickbot.in
             </a>
             <a href="tel:+918128420287" style={{ color: 'var(--text-secondary)', textDecoration: 'none', fontSize: '13px', margin: '4px 0', display: 'flex', alignItems: 'center' }}>
               <FaPhoneAlt style={{ marginRight: '8px', color: '#22c55e' }} /> +91 8128420287

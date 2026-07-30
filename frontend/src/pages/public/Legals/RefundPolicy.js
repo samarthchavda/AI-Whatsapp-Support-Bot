@@ -39,7 +39,7 @@ function RefundPolicy() {
           </p>
           <ul>
             <li>Navigate to your merchant dashboard, open the <strong>Billing & Subscriptions</strong> page, and click **Cancel Subscription**.</li>
-            <li>Alternatively, you can send an email cancellation request to `kwickbotai@gmail.com` at least 48 hours before your next billing cycle.</li>
+            <li>Alternatively, you can send an email cancellation request to `hello@kwickbot.in` at least 48 hours before your next billing cycle.</li>
             <li>Upon cancellation, your active bot replies, CRM, and integrations will remain functional until the end of your current 30-day paid billing cycle, after which your account will automatically downgrade and suspend features.</li>
           </ul>
         </section>
@@ -83,7 +83,7 @@ function RefundPolicy() {
             If you have any questions regarding your invoice, subscription status, or want to request a refund, please contact us directly:
           </p>
           <ul>
-            <li>📧 Email: **kwickbotai@gmail.com** (We reply within 24 hours)</li>
+            <li>📧 Email: **hello@kwickbot.in** (We reply within 24 hours)</li>
             <li>📞 Phone: **+91 8128420287**</li>
             <li>📍 Office Address: Gujarat, India</li>
           </ul>

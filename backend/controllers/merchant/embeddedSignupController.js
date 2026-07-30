@@ -145,77 +145,113 @@ exports.handleEmbeddedSignup = async (req, res) => {
     console.log(`✅ Access Token retrieved successfully: ${maskSecret(accessToken)}. Fetching WABA details...`);
 
     // 2. Retrieve WhatsApp Business Account (WABA) details
-    let wabaList = [];
-    try {
-      console.log(`🤖 Attempting to fetch WABAs directly via /me/whatsapp_business_accounts...`);
-      const wabaResponse = await axios.get('https://graph.facebook.com/v25.0/me/whatsapp_business_accounts', {
-        params: {
-          access_token: accessToken
-        }
-      });
-      wabaList = wabaResponse.data.data || [];
-    } catch (directErr) {
-      console.warn(`⚠️ Direct WABA fetch failed: ${directErr.message}. Trying fallback /me/businesses...`);
+    let targetWabaId = req.body.wabaId || null;
+    let targetPhoneNumberId = req.body.phoneNumberId || null;
+    let wabaName = 'WhatsApp Business Account';
+    let businessId = null;
+
+    // Strategy A: Inspect debug_token to extract target_ids from granular_scopes
+    if (!targetWabaId) {
       try {
-        const businessesResponse = await axios.get('https://graph.facebook.com/v25.0/me/businesses', {
+        console.log(`🤖 Inspecting access token via debug_token for WABA target IDs...`);
+        const debugResponse = await axios.get('https://graph.facebook.com/v25.0/debug_token', {
           params: {
-            access_token: accessToken
+            input_token: accessToken,
+            access_token: `${appId}|${appSecret}`
           }
         });
-        const businessList = businessesResponse.data.data || [];
-        console.log(`💼 Found ${businessList.length} business portfolios linked to user.`);
-        
-        for (const biz of businessList) {
-          try {
-            console.log(`🔍 Fetching WABAs for business ID: ${biz.id} (${biz.name})...`);
-            const bizWabaResponse = await axios.get(`https://graph.facebook.com/v25.0/${biz.id}/owned_whatsapp_business_accounts`, {
-              params: {
-                access_token: accessToken
-              }
-            });
-            const bizWabas = bizWabaResponse.data.data || [];
-            if (bizWabas.length > 0) {
-              wabaList = wabaList.concat(bizWabas);
+
+        const granularScopes = debugResponse.data?.data?.granular_scopes || [];
+        for (const scopeObj of granularScopes) {
+          if (scopeObj.scope === 'whatsapp_business_management' || scopeObj.scope === 'whatsapp_business_messaging') {
+            if (scopeObj.target_ids && scopeObj.target_ids.length > 0) {
+              targetWabaId = scopeObj.target_ids[0];
+              console.log(`✅ Extracted WABA ID from debug_token granular_scopes: ${targetWabaId}`);
+              break;
             }
-          } catch (bizErr) {
-            console.warn(`⚠️ Failed to fetch WABAs for business ${biz.id}: ${bizErr.message}`);
           }
         }
-      } catch (fallbackErr) {
-        console.error(`❌ Fallback business fetch failed: ${fallbackErr.message}`);
-        throw new Error(`Failed to retrieve WhatsApp Business Accounts: ${fallbackErr.message}`);
+      } catch (debugErr) {
+        console.warn(`⚠️ debug_token inspection failed: ${debugErr.message}`);
       }
     }
-    if (!wabaList || wabaList.length === 0) {
+
+    // Strategy B: Fallback to direct /me/whatsapp_business_accounts or /me/businesses if still not found
+    if (!targetWabaId) {
+      try {
+        console.log(`🤖 Attempting to fetch WABAs directly via /me/whatsapp_business_accounts...`);
+        const wabaResponse = await axios.get('https://graph.facebook.com/v25.0/me/whatsapp_business_accounts', {
+          params: { access_token: accessToken }
+        });
+        const list = wabaResponse.data?.data || [];
+        if (list.length > 0) {
+          targetWabaId = list[0].id;
+          wabaName = list[0].name || wabaName;
+          businessId = list[0].owner_business_info?.id || null;
+        }
+      } catch (directErr) {
+        console.warn(`⚠️ Direct WABA fetch failed: ${directErr.message}. Trying fallback /me/businesses...`);
+        try {
+          const businessesResponse = await axios.get('https://graph.facebook.com/v25.0/me/businesses', {
+            params: { access_token: accessToken }
+          });
+          const businessList = businessesResponse.data?.data || [];
+          for (const biz of businessList) {
+            try {
+              const bizWabaResponse = await axios.get(`https://graph.facebook.com/v25.0/${biz.id}/owned_whatsapp_business_accounts`, {
+                params: { access_token: accessToken }
+              });
+              const bizWabas = bizWabaResponse.data?.data || [];
+              if (bizWabas.length > 0) {
+                targetWabaId = bizWabas[0].id;
+                wabaName = bizWabas[0].name || wabaName;
+                businessId = biz.id;
+                break;
+              }
+            } catch (bErr) {
+              // ignore
+            }
+          }
+        } catch (fErr) {
+          console.error(`❌ Fallback business fetch failed: ${fErr.message}`);
+        }
+      }
+    }
+
+    if (!targetWabaId) {
       return res.status(400).json({
         success: false,
-        error: 'No WhatsApp Business Accounts found linked to this Facebook account.'
+        error: 'Could not determine WhatsApp Business Account ID from Meta. Please ensure you have selected a WABA during signup.'
       });
     }
 
-    const linkedWaba = wabaList[0];
-    const wabaId = linkedWaba.id;
-    const wabaName = linkedWaba.name;
-    const businessId = linkedWaba.owner_business_info?.id || null;
+    // Fetch WABA details directly using targetWabaId
+    try {
+      const wabaInfoResponse = await axios.get(`https://graph.facebook.com/v25.0/${targetWabaId}`, {
+        params: { access_token: accessToken }
+      });
+      wabaName = wabaInfoResponse.data?.name || wabaName;
+      businessId = wabaInfoResponse.data?.owner_business_info?.id || businessId;
+    } catch (infoErr) {
+      console.warn(`⚠️ Could not fetch WABA name details for ${targetWabaId}: ${infoErr.message}`);
+    }
 
-    console.log(`✅ Found WABA: ${wabaName} (${wabaId}), Business Owner ID: ${businessId || 'N/A'}. Fetching phone numbers...`);
+    console.log(`✅ Using WABA: ${wabaName} (${targetWabaId}). Fetching phone numbers...`);
 
-    // 3. Retrieve Phone Numbers associated with the WABA
-    const phoneResponse = await axios.get(`https://graph.facebook.com/v25.0/${wabaId}/phone_numbers`, {
-      params: {
-        access_token: accessToken
-      }
+    // 3. Retrieve Phone Numbers associated with the target WABA
+    const phoneResponse = await axios.get(`https://graph.facebook.com/v25.0/${targetWabaId}/phone_numbers`, {
+      params: { access_token: accessToken }
     });
 
-    const phoneList = phoneResponse.data.data;
-    if (!phoneList || phoneList.length === 0) {
+    const phoneList = phoneResponse.data?.data || [];
+    if (phoneList.length === 0) {
       return res.status(400).json({
         success: false,
-        error: `Found WhatsApp Business Account ${wabaName} but no phone numbers are linked to it.`
+        error: `Found WhatsApp Business Account (${targetWabaId}) but no registered phone numbers were returned by Meta.`
       });
     }
 
-    const phoneInfo = phoneList[0];
+    const phoneInfo = phoneList.find(p => p.id === targetPhoneNumberId) || phoneList[0];
     const phoneNumberId = phoneInfo.id;
     const displayPhoneNumber = phoneInfo.display_phone_number || '';
     const verifiedName = phoneInfo.verified_name || '';

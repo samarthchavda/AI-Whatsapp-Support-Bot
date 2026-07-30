@@ -153,6 +153,25 @@ function WhatsAppConnect() {
       js.src = "https://connect.facebook.net/en_US/sdk.js";
       fjs.parentNode.insertBefore(js, fjs);
     }(document, 'script', 'facebook-jssdk'));
+
+    const handleMetaMessage = (event) => {
+      if (event.origin.includes('facebook.com') || event.origin.includes('meta.com')) {
+        try {
+          const data = typeof event.data === 'string' ? JSON.parse(event.data) : event.data;
+          if (data && data.type === 'WA_EMBEDDED_SIGNUP') {
+            console.log('📌 Received Meta Embedded Signup sessionInfo:', data);
+            if (data.event === 'FINISH' && data.data) {
+              if (data.data.waba_id) window.__metaWabaId = data.data.waba_id;
+              if (data.data.phone_number_id) window.__metaPhoneNumberId = data.data.phone_number_id;
+            }
+          }
+        } catch (err) {
+          // ignore
+        }
+      }
+    };
+    window.addEventListener('message', handleMetaMessage);
+    return () => window.removeEventListener('message', handleMetaMessage);
   }, []);
 
   const handleLaunchEmbeddedSignup = () => {
@@ -200,7 +219,12 @@ function WhatsAppConnect() {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify({ code, redirectUri })
+        body: JSON.stringify({ 
+          code, 
+          redirectUri,
+          wabaId: window.__metaWabaId || null,
+          phoneNumberId: window.__metaPhoneNumberId || null
+        })
       });
 
       // Check if response is not OK (e.g. 500, 400 etc)

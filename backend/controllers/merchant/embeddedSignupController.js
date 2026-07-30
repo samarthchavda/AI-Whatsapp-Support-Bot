@@ -145,13 +145,47 @@ exports.handleEmbeddedSignup = async (req, res) => {
     console.log(`✅ Access Token retrieved successfully: ${maskSecret(accessToken)}. Fetching WABA details...`);
 
     // 2. Retrieve WhatsApp Business Account (WABA) details
-    const wabaResponse = await axios.get('https://graph.facebook.com/v25.0/me/whatsapp_business_accounts', {
-      params: {
-        access_token: accessToken
+    let wabaList = [];
+    try {
+      console.log(`🤖 Attempting to fetch WABAs directly via /me/whatsapp_business_accounts...`);
+      const wabaResponse = await axios.get('https://graph.facebook.com/v25.0/me/whatsapp_business_accounts', {
+        params: {
+          access_token: accessToken
+        }
+      });
+      wabaList = wabaResponse.data.data || [];
+    } catch (directErr) {
+      console.warn(`⚠️ Direct WABA fetch failed: ${directErr.message}. Trying fallback /me/businesses...`);
+      try {
+        const businessesResponse = await axios.get('https://graph.facebook.com/v25.0/me/businesses', {
+          params: {
+            access_token: accessToken
+          }
+        });
+        const businessList = businessesResponse.data.data || [];
+        console.log(`💼 Found ${businessList.length} business portfolios linked to user.`);
+        
+        for (const biz of businessList) {
+          try {
+            console.log(`🔍 Fetching WABAs for business ID: ${biz.id} (${biz.name})...`);
+            const bizWabaResponse = await axios.get(`https://graph.facebook.com/v25.0/${biz.id}/owned_whatsapp_business_accounts`, {
+              params: {
+                access_token: accessToken
+              }
+            });
+            const bizWabas = bizWabaResponse.data.data || [];
+            if (bizWabas.length > 0) {
+              wabaList = wabaList.concat(bizWabas);
+            }
+          } catch (bizErr) {
+            console.warn(`⚠️ Failed to fetch WABAs for business ${biz.id}: ${bizErr.message}`);
+          }
+        }
+      } catch (fallbackErr) {
+        console.error(`❌ Fallback business fetch failed: ${fallbackErr.message}`);
+        throw new Error(`Failed to retrieve WhatsApp Business Accounts: ${fallbackErr.message}`);
       }
-    });
-
-    const wabaList = wabaResponse.data.data;
+    }
     if (!wabaList || wabaList.length === 0) {
       return res.status(400).json({
         success: false,

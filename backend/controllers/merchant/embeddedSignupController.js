@@ -269,7 +269,7 @@ exports.handleEmbeddedSignup = async (req, res) => {
 
     admin.whatsappAccessToken = accessToken;
     admin.whatsappPhoneNumberId = phoneNumberId;
-    admin.whatsappBusinessAccountId = wabaId;
+    admin.whatsappBusinessAccountId = targetWabaId;
     admin.whatsappBusinessId = businessId;
     admin.whatsappAppId = appId;
     admin.whatsappDisplayPhoneNumber = displayPhoneNumber;
@@ -283,9 +283,9 @@ exports.handleEmbeddedSignup = async (req, res) => {
 
     // 5. Automatically register/subscribe webhook apps to the WABA
     try {
-      console.log(`🔗 Subscribing Kwickbot Webhook app to WABA ID: ${wabaId}`);
+      console.log(`🔗 Subscribing Kwickbot Webhook app to WABA ID: ${targetWabaId}`);
       await axios.post(
-        `https://graph.facebook.com/v25.0/${wabaId}/subscribed_apps`,
+        `https://graph.facebook.com/v25.0/${targetWabaId}/subscribed_apps`,
         {},
         {
           params: {
@@ -304,7 +304,7 @@ exports.handleEmbeddedSignup = async (req, res) => {
       data: {
         displayName: verifiedName || wabaName,
         phoneNumber: displayPhoneNumber,
-        wabaId,
+        wabaId: targetWabaId,
         phoneNumberId,
         businessId
       }

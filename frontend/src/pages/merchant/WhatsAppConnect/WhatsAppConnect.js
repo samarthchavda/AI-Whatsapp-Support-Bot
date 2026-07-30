@@ -227,8 +227,13 @@ function WhatsAppConnect() {
         })
       });
 
-      // Check if response is not OK (e.g. 500, 400 etc)
+      // Check if response is not OK (e.g. 500, 400, 401 etc)
       if (!res.ok) {
+        if (res.status === 401) {
+          alert('Your Kwickbot login session has expired. Please log in again.');
+          window.location.href = '/login';
+          return;
+        }
         let errorData = {};
         try {
           const contentType = res.headers.get('content-type');

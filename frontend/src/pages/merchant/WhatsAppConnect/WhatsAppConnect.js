@@ -184,13 +184,9 @@ function WhatsAppConnect() {
     const loginOptions = {
       response_type: 'code',
       override_default_response_type: true,
-      scope: 'public_profile,whatsapp_business_management,whatsapp_business_messaging'
+      scope: 'public_profile,whatsapp_business_management,whatsapp_business_messaging',
+      config_id: process.env.REACT_APP_META_CONFIG_ID || '1011610511514210'
     };
-
-    const configId = process.env.REACT_APP_META_CONFIG_ID;
-    if (configId) {
-      loginOptions.config_id = configId;
-    }
 
     window.FB.login((response) => {
       if (response.authResponse) {

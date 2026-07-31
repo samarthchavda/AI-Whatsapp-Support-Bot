@@ -298,6 +298,24 @@ exports.handleEmbeddedSignup = async (req, res) => {
       console.error('⚠️ Webhook subscription warning (non-blocking):', subErr.response?.data || subErr.message);
     }
 
+    // 6. Trigger Coexistence Data Sync (Contacts & Message History)
+    try {
+      console.log(`🔄 Triggering Coexistence SMB App Data sync for Phone Number ID: ${phoneNumberId}...`);
+      await axios.post(
+        `https://graph.facebook.com/v25.0/${phoneNumberId}/smb_app_data`,
+        { messaging_product: 'whatsapp', sync_type: 'smb_app_state_sync' },
+        { headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' } }
+      );
+      await axios.post(
+        `https://graph.facebook.com/v25.0/${phoneNumberId}/smb_app_data`,
+        { messaging_product: 'whatsapp', sync_type: 'history' },
+        { headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' } }
+      );
+      console.log('✅ Coexistence history & contact sync initiated successfully!');
+    } catch (syncErr) {
+      console.warn('⚠️ Coexistence sync notice (non-blocking):', syncErr.response?.data || syncErr.message);
+    }
+
     res.json({
       success: true,
       message: 'WhatsApp Business API connected successfully via Embedded Signup!',

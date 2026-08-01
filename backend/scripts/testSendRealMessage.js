@@ -31,6 +31,27 @@ const run = async () => {
         businessAccountId: admin.whatsappBusinessAccountId
       };
 
+      // Register phone number status with Meta to clear Error #133010 Account Not Registered
+      try {
+        console.log(`\n⚙️ Registering Phone Number ID ${admin.whatsappPhoneNumberId} with Meta Messaging Server...`);
+        const regRes = await axios.post(
+          `https://graph.facebook.com/v25.0/${admin.whatsappPhoneNumberId}/register`,
+          {
+            messaging_product: 'whatsapp',
+            pin: '123456'
+          },
+          {
+            headers: {
+              'Authorization': `Bearer ${admin.whatsappAccessToken}`,
+              'Content-Type': 'application/json'
+            }
+          }
+        );
+        console.log('✅ Meta Phone Registration Success:', regRes.data);
+      } catch (regErr) {
+        console.warn('⚠️ Meta Phone Registration Response:', regErr.response?.data || regErr.message);
+      }
+
       for (const rawNum of numbers) {
         console.log(`\n📤 Attempting to send test WhatsApp message to: ${rawNum}...`);
         const result = await whatsappCloudAPI.sendMessage(rawNum, messageText, credentials);

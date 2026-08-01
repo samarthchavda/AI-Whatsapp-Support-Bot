@@ -281,7 +281,20 @@ exports.handleEmbeddedSignup = async (req, res) => {
     await admin.save();
     console.log(`🔒 Securely stored encrypted WhatsApp credentials for Merchant Admin ID: ${admin._id}`);
 
-    // 5. Automatically register/subscribe webhook apps to the WABA
+    // 5. Automatically register phone number with Meta Cloud API if needed
+    try {
+      console.log(`⚙️ Registering Phone Number ID ${phoneNumberId} with Meta Cloud Messaging Server...`);
+      await axios.post(
+        `https://graph.facebook.com/v25.0/${phoneNumberId}/register`,
+        { messaging_product: 'whatsapp', pin: '123456' },
+        { headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' } }
+      );
+      console.log('✅ Meta Phone Number Registration completed!');
+    } catch (regErr) {
+      console.warn('⚠️ Meta Phone Number Registration notice (non-blocking):', regErr.response?.data || regErr.message);
+    }
+
+    // 6. Automatically register/subscribe webhook apps to the WABA
     try {
       console.log(`🔗 Subscribing Kwickbot Webhook app to WABA ID: ${targetWabaId}`);
       await axios.post(

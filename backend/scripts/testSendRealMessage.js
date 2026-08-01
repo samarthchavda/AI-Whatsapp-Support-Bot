@@ -1,5 +1,6 @@
 require('dotenv').config({ path: __dirname + '/../.env' });
 const mongoose = require('mongoose');
+const axios = require('axios');
 const Admin = require('../models/Admin');
 const whatsappCloudAPI = require('../services/whatsappCloudAPI');
 

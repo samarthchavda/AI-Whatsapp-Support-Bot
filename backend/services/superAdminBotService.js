@@ -267,11 +267,37 @@ RESPONSE RULES:
   }
 
   /**
+   * Helper to get active credentials for sending Super Admin Bot messages
+   */
+  async getActiveCredentials() {
+    try {
+      const connectedAdmin = await Admin.findOne({ 
+        whatsappConnected: true, 
+        whatsappAccessToken: { $exists: true, $ne: null },
+        whatsappPhoneNumberId: { $exists: true, $ne: null }
+      }).sort({ updatedAt: -1 });
+
+      if (connectedAdmin) {
+        return {
+          accessToken: connectedAdmin.whatsappAccessToken,
+          phoneNumberId: connectedAdmin.whatsappPhoneNumberId,
+          businessAccountId: connectedAdmin.whatsappBusinessAccountId
+        };
+      }
+    } catch (err) {
+      console.error('Error fetching connected admin credentials for Super Admin Bot:', err.message);
+    }
+    return null;
+  }
+
+  /**
    * Send a long message as multiple WhatsApp messages split at newlines.
    */
   async sendLongMessage(phone, message, maxLen = 1500) {
+    const customCredentials = await this.getActiveCredentials();
+
     if (message.length <= maxLen) {
-      await whatsappCloudAPI.sendMessage(phone, message);
+      await whatsappCloudAPI.sendMessage(phone, message, customCredentials);
       return;
     }
     const lines = message.split('\n');
@@ -279,7 +305,7 @@ RESPONSE RULES:
     for (const line of lines) {
       if ((chunk + '\n' + line).length > maxLen) {
         if (chunk.trim()) {
-          await whatsappCloudAPI.sendMessage(phone, chunk.trim());
+          await whatsappCloudAPI.sendMessage(phone, chunk.trim(), customCredentials);
           await new Promise(r => setTimeout(r, 600));
         }
         chunk = line;
@@ -288,7 +314,7 @@ RESPONSE RULES:
       }
     }
     if (chunk.trim()) {
-      await whatsappCloudAPI.sendMessage(phone, chunk.trim());
+      await whatsappCloudAPI.sendMessage(phone, chunk.trim(), customCredentials);
     }
   }
 
@@ -297,12 +323,13 @@ RESPONSE RULES:
    */
   async broadcastToSuperAdmins(message) {
     try {
+      const customCredentials = await this.getActiveCredentials();
       const superAdmins = await Admin.find({ role: 'super_admin' });
       for (const sa of superAdmins) {
         const phone = sa.phone || sa.businessPhone;
         if (phone) {
           console.log(`📣 Sending proactive alert to Super Admin ${sa.email} (${phone})`);
-          await whatsappCloudAPI.sendMessage(phone, message);
+          await whatsappCloudAPI.sendMessage(phone, message, customCredentials);
         }
       }
     } catch (err) {

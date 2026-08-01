@@ -137,12 +137,31 @@ exports.handleEmbeddedSignup = async (req, res) => {
       }
     }
 
-    const accessToken = tokenResponse.data.access_token;
+    let accessToken = tokenResponse.data.access_token;
     if (!accessToken) {
       throw new Error('No access token returned from Meta');
     }
 
-    console.log(`✅ Access Token retrieved successfully: ${maskSecret(accessToken)}. Fetching WABA details...`);
+    // Exchange short-lived token for Long-Lived Meta Access Token (60-day / perpetual)
+    try {
+      console.log('🔄 Exchanging short-lived token for Long-Lived Meta Access Token...');
+      const longLivedRes = await axios.get('https://graph.facebook.com/v25.0/oauth/access_token', {
+        params: {
+          grant_type: 'fb_exchange_token',
+          client_id: appId,
+          client_secret: appSecret,
+          fb_exchange_token: accessToken
+        }
+      });
+      if (longLivedRes.data && longLivedRes.data.access_token) {
+        accessToken = longLivedRes.data.access_token;
+        console.log(`✅ Long-Lived Access Token obtained: ${maskSecret(accessToken)}`);
+      }
+    } catch (longLivedErr) {
+      console.warn('⚠️ Long-lived token exchange notice (using initial token):', longLivedErr.response?.data || longLivedErr.message);
+    }
+
+    console.log(`✅ Access Token active: ${maskSecret(accessToken)}. Fetching WABA details...`);
 
     // 2. Retrieve WhatsApp Business Account (WABA) details
     let targetWabaId = req.body.wabaId || null;

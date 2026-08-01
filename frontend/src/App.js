@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Link, useLocation, useNavigate, Navigate } from 'react-router-dom';
 import { FaHome, FaComments, FaBox, FaExclamationTriangle, FaPlug, FaRobot, FaSearch, FaBell, FaPlus, FaSignOutAlt, FaUser, FaBrain, FaCommentDots, FaBroadcastTower, FaChartLine, FaCog, FaCrown, FaFileAlt, FaShoppingCart, FaCoins, FaUserSecret, FaHeartbeat, FaBullhorn, FaBlog, FaBars, FaSun, FaMoon, FaWhatsapp, FaShieldAlt, FaToggleOn, FaTimes } from 'react-icons/fa';
 import api, { clearAuthState, refreshAuth } from './services/api';
+import io from 'socket.io-client';
 import Dashboard from './pages/merchant/Dashboard/Dashboard';
 import Profile from './pages/merchant/Profile/Profile';
 import Conversations from './pages/merchant/Conversations/Conversations';
@@ -683,6 +684,53 @@ function App() {
     setIsAuthenticated(true);
     setAdmin(adminData);
   };
+
+  // Real-time subscription sync & profile refresh from Super Admin
+  useEffect(() => {
+    if (!isAuthenticated) return;
+
+    // 1. Refresh profile from server on load to catch instant Super Admin updates
+    const syncProfile = async () => {
+      try {
+        const res = await api.get('/auth/profile');
+        if (res.data && res.data.data) {
+          const freshAdmin = res.data.data;
+          setAdmin(prev => {
+            const updated = { ...(prev || {}), ...freshAdmin };
+            localStorage.setItem('admin', JSON.stringify(updated));
+            return updated;
+          });
+        }
+      } catch (err) {
+        // silent catch
+      }
+    };
+    syncProfile();
+
+    // 2. Listen to real-time Socket.IO subscription updates from Super Admin
+    const SOCKET_URL = process.env.REACT_APP_API_URL?.replace('/api', '') || (window.location.hostname === 'localhost' ? 'http://localhost:5001' : window.location.origin);
+    const socket = io(SOCKET_URL, { transports: ['websocket'] });
+
+    socket.on('user_subscription_updated', (data) => {
+      const currentAdmin = JSON.parse(localStorage.getItem('admin') || '{}');
+      if (currentAdmin && (currentAdmin._id === data.userId || currentAdmin.id === data.userId)) {
+        console.log('⚡ Instant subscription update received from Super Admin:', data);
+        const updatedAdmin = {
+          ...currentAdmin,
+          subscriptionPlan: data.subscriptionPlan,
+          subscriptionStatus: data.subscriptionStatus,
+          monthlyPrice: data.monthlyPrice,
+          geminiTokensLimit: data.geminiTokensLimit
+        };
+        setAdmin(updatedAdmin);
+        localStorage.setItem('admin', JSON.stringify(updatedAdmin));
+      }
+    });
+
+    return () => {
+      socket.disconnect();
+    };
+  }, [isAuthenticated]);
 
   const [activeAnnouncements, setActiveAnnouncements] = useState([]);
 

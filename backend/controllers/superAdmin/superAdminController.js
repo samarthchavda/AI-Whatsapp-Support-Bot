@@ -216,6 +216,17 @@ exports.updateUserSubscription = async (req, res) => {
 
     await user.save();
 
+    // Emit real-time Socket.IO notification for instant frontend plan sync
+    if (req.io) {
+      req.io.emit('user_subscription_updated', {
+        userId: user._id.toString(),
+        subscriptionPlan: user.subscriptionPlan,
+        subscriptionStatus: user.subscriptionStatus,
+        monthlyPrice: user.monthlyPrice,
+        geminiTokensLimit: user.geminiTokensLimit
+      });
+    }
+
     // Send email notification to user
     try {
       if (subscriptionStatus === 'active') {

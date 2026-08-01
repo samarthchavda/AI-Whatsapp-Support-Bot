@@ -88,11 +88,16 @@ class WhatsAppCloudAPI {
 
     try {
       const url = `${this.baseUrl}/${phoneNumberId}/messages`;
+      
+      let formattedPhone = phoneNumber.toString().replace(/\D/g, '');
+      if (formattedPhone.length === 10 && /^[6-9]/.test(formattedPhone)) {
+        formattedPhone = '91' + formattedPhone;
+      }
 
       const data = {
         messaging_product: 'whatsapp',
         recipient_type: 'individual',
-        to: phoneNumber.replace(/\D/g, ''), // Remove non-digits
+        to: formattedPhone,
         type: 'text',
         text: {
           body: message
@@ -108,20 +113,22 @@ class WhatsAppCloudAPI {
 
       const response = await axios.post(url, data, config);
       
-      console.log(`✅ Message sent to ${phoneNumber}`);
+      console.log(`✅ Message sent to ${formattedPhone}`);
       console.log('Response:', response.data);
       
       return {
         success: true,
-        messageId: response.data.messages[0].id,
+        messageId: response.data?.messages?.[0]?.id,
         timestamp: new Date()
       };
 
     } catch (error) {
-      console.error('❌ Error sending message:', error.response?.data || error.message);
+      const metaErrDetails = error.response?.data?.error;
+      const errorMsg = metaErrDetails ? `[Meta Error ${metaErrDetails.code}]: ${metaErrDetails.message}` : error.message;
+      console.error('❌ Error sending WhatsApp message:', error.response?.data || error.message);
       return {
         success: false,
-        error: error.response?.data || error.message
+        error: errorMsg
       };
     }
   }

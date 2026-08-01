@@ -11,29 +11,34 @@ const run = async () => {
     await mongoose.connect(process.env.MONGODB_URI);
     console.log('✅ Connected to MongoDB');
 
-    // Find active merchant admin with connected WhatsApp
-    const admin = await Admin.findOne({ whatsappConnected: true, whatsappAccessToken: { $exists: true } });
-    if (!admin) {
+    // Find all active merchant admins with connected WhatsApp
+    const admins = await Admin.find({ whatsappAccessToken: { $exists: true, $ne: null } });
+    if (!admins || admins.length === 0) {
       console.error('❌ No connected WhatsApp Admin found in database.');
       process.exit(1);
     }
 
-    console.log(`📱 Using connected WhatsApp Merchant: ${admin.name} (${admin.whatsappDisplayPhoneNumber || 'N/A'})`);
-    console.log(`🔑 WABA ID: ${admin.whatsappBusinessAccountId}, Phone ID: ${admin.whatsappPhoneNumberId}`);
+    console.log(`📱 Found ${admins.length} merchant admins connected to WhatsApp in DB.`);
+    for (const admin of admins) {
+      console.log(`\n========================================`);
+      console.log(`👤 Merchant: ${admin.name} (${admin.email})`);
+      console.log(`📱 Phone Display: ${admin.whatsappDisplayPhoneNumber || 'N/A'}, Phone ID: ${admin.whatsappPhoneNumberId}`);
+      console.log(`🔑 WABA ID: ${admin.whatsappBusinessAccountId}`);
 
-    const credentials = {
-      accessToken: admin.whatsappAccessToken,
-      phoneNumberId: admin.whatsappPhoneNumberId,
-      businessAccountId: admin.whatsappBusinessAccountId
-    };
+      const credentials = {
+        accessToken: admin.whatsappAccessToken,
+        phoneNumberId: admin.whatsappPhoneNumberId,
+        businessAccountId: admin.whatsappBusinessAccountId
+      };
 
-    for (const rawNum of numbers) {
-      console.log(`\n📤 Attempting to send test WhatsApp message to: ${rawNum}...`);
-      const result = await whatsappCloudAPI.sendMessage(rawNum, messageText, credentials);
-      if (result.success) {
-        console.log(`🎉 SUCCESS! Message sent to ${rawNum} (Message ID: ${result.messageId})`);
-      } else {
-        console.error(`❌ FAILED for ${rawNum}:`, result.error);
+      for (const rawNum of numbers) {
+        console.log(`\n📤 Attempting to send test WhatsApp message to: ${rawNum}...`);
+        const result = await whatsappCloudAPI.sendMessage(rawNum, messageText, credentials);
+        if (result.success) {
+          console.log(`🎉 SUCCESS! Message sent to ${rawNum} (Message ID: ${result.messageId})`);
+        } else {
+          console.error(`❌ FAILED for ${rawNum}:`, result.error);
+        }
       }
     }
 

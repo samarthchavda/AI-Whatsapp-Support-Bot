@@ -18,9 +18,12 @@ const run = async () => {
       console.log(`\n========================================`);
       console.log(`👤 Admin: ${admin.name} (${admin.email})`);
       console.log(`🆔 ID: ${admin._id}`);
-      console.log(`🏪 Store URL: ${admin.storeUrl || 'Not Connected'}`);
-      console.log(`🛍️ Shopify Connected: ${admin.shopifyConnected ? 'YES' : 'NO'}`);
-      console.log(`🔑 Shopify Access Token: ${admin.shopifyAccessToken ? 'PRESENT' : 'MISSING'}`);
+      const Integration = require('../models/Integration');
+      const integrations = await Integration.find({ adminId: admin._id });
+      console.log(`🔌 Integrations Found (${integrations.length}):`);
+      integrations.forEach((int, i) => {
+        console.log(`  Integration ${i + 1}: Platform: ${int.platform} | Active: ${int.isActive} | Store: ${int.storeUrl} | API Key: ${int.apiKey ? int.apiKey.substring(0, 10) + '...' : 'MISSING'}`);
+      });
 
       const orders = await Order.find({ admin: admin._id }).limit(3);
       console.log(`📦 Total Orders Found: ${await Order.countDocuments({ admin: admin._id })}`);

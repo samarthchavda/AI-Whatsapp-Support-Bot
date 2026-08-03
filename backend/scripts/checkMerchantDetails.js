@@ -25,10 +25,11 @@ const run = async () => {
         console.log(`  Integration ${i + 1}: Platform: ${int.platform} | Active: ${int.isActive} | Store: ${int.storeUrl} | API Key: ${int.apiKey ? int.apiKey.substring(0, 10) + '...' : 'MISSING'}`);
       });
 
-      const orders = await Order.find({ admin: admin._id }).limit(3);
-      console.log(`📦 Total Orders Found: ${await Order.countDocuments({ admin: admin._id })}`);
-      orders.forEach((o, i) => {
-        console.log(`  Order ${i + 1}: #${o.orderNumber} | Customer: ${o.customerName || 'N/A'} | Phone: ${o.customerPhone || 'N/A'} | Email: ${o.customerEmail || 'N/A'}`);
+      const ShopifyOrder = require('../models/ShopifyOrder');
+      const shopifyOrders = await ShopifyOrder.find({ adminId: admin._id }).limit(5);
+      console.log(`📦 Total ShopifyOrders Synced: ${await ShopifyOrder.countDocuments({ adminId: admin._id })}`);
+      shopifyOrders.forEach((so, i) => {
+        console.log(`  ShopifyOrder ${i + 1}: #${so.orderNumber} | Customer: ${so.customerName || 'N/A'} | Phone: ${so.customerPhone || 'N/A'} | Email: ${so.customerEmail || 'N/A'} | Status: ${so.financialStatus}/${so.fulfillmentStatus}`);
       });
 
       const carts = await AbandonedCart.find({ admin: admin._id }).limit(3);

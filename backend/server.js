@@ -182,12 +182,18 @@ mongoose.connect(process.env.MONGODB_URI, {
     process.exit(1);
   });
 
+// Swagger API Documentation UI
+const swaggerUi = require('swagger-ui-express');
+const swaggerSpec = require('./config/swagger');
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+
 // Test route
 app.get('/', (req, res) => {
   res.json({
     message: 'Kwickbot API',
     status: 'running',
-    version: '1.0.0'
+    version: '1.0.0',
+    docs: 'https://kwickbot.in/api-docs'
   });
 });
 

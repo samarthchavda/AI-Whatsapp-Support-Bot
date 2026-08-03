@@ -1,30 +1,57 @@
 const express = require('express');
-const invoiceController = require('../controllers/merchant/invoiceController');
-
 const router = express.Router();
+const invoiceController = require('../controllers/merchant/invoiceController');
+const { verifyToken } = require('../middleware/auth');
 
-// Create invoice (POST to root)
-router.post('/', invoiceController.createInvoice);
+/**
+ * @openapi
+ * /api/invoices:
+ *   get:
+ *     tags:
+ *       - Invoices & Billing
+ *     summary: Get All Merchant Invoices
+ *     security:
+ *       - BearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Invoices list
+ */
+router.get('/', verifyToken, invoiceController.getAllInvoices);
 
-// Get all invoices (GET to root with optional query params)
-router.get('/', invoiceController.getAllInvoices);
+/**
+ * @openapi
+ * /api/invoices/stats:
+ *   get:
+ *     tags:
+ *       - Invoices & Billing
+ *     summary: Get Invoice Billing Stats
+ *     security:
+ *       - BearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Invoice statistics
+ */
+router.get('/stats', verifyToken, invoiceController.getInvoiceStats);
 
-// Get overdue invoices (specific route before :id)
-router.get('/status/overdue', invoiceController.getOverdueInvoices);
-
-// Get invoice statistics (specific route before :id)
-router.get('/stats/summary', invoiceController.getInvoiceStats);
-
-// Get invoices by customer phone (specific route before :id)
-router.get('/phone/:phone', invoiceController.getInvoiceByPhone);
-
-// Record payment to specific invoice
-router.post('/:id/payment', invoiceController.recordPayment);
-
-// Get specific invoice by ID
-router.get('/:id', invoiceController.getInvoiceById);
-
-// Update specific invoice  
-router.put('/:id', invoiceController.updateInvoice);
+/**
+ * @openapi
+ * /api/invoices/{id}/download:
+ *   get:
+ *     tags:
+ *       - Invoices & Billing
+ *     summary: Download PDF Invoice File
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: PDF file stream
+ */
+router.get('/:id/download', verifyToken, invoiceController.downloadInvoicePDF);
 
 module.exports = router;

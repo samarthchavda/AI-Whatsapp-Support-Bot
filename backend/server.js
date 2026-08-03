@@ -182,10 +182,11 @@ mongoose.connect(process.env.MONGODB_URI, {
     process.exit(1);
   });
 
-// Swagger API Documentation UI
+// Swagger API Documentation UI (Protected with Basic Auth)
 const swaggerUi = require('swagger-ui-express');
 const swaggerSpec = require('./config/swagger');
-app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+const basicAuth = require('./middleware/basicAuth');
+app.use('/api/docs', basicAuth, swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 // Test route
 app.get('/', (req, res) => {
@@ -193,7 +194,7 @@ app.get('/', (req, res) => {
     message: 'Kwickbot API',
     status: 'running',
     version: '1.0.0',
-    docs: 'https://kwickbot.in/api-docs'
+    docs: 'https://kwickbot.in/api/docs'
   });
 });
 

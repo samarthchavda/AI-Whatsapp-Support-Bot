@@ -671,25 +671,47 @@ Bob Johnson,+1234567892,bob@example.com,Standard Item,3,149.99,shipped`;
                     <td className="text-muted">{new Date(order.orderDate).toLocaleDateString('en-IN')}</td>
                     <td>
                       <div className="order-actions">
-                        {order.status === 'pending' && (
-                          <button className="btn-action process" onClick={() => handleStatusUpdate(order.orderId, 'processing')}>
-                            Process
-                          </button>
-                        )}
-                        {order.status === 'processing' && (
-                          <button className="btn-action ship" onClick={() => handleStatusUpdate(order.orderId, 'shipped')}>
-                            Ship
-                          </button>
-                        )}
-                        {order.status === 'shipped' && (
-                          <button className="btn-action deliver" onClick={() => handleStatusUpdate(order.orderId, 'delivered')}>
-                            Deliver
-                          </button>
-                        )}
-                        {order.status === 'return_processing' && (
-                          <button className="btn-action return" onClick={() => handleStatusUpdate(order.orderId, 'returned')}>
-                            Complete Return
-                          </button>
+                        {order.source === 'shopify' || Boolean(order.externalOrderNumber) || (Boolean(order.externalOrderId) && !order.externalOrderId.startsWith('mock-')) ? (
+                          <span 
+                            title="Status is automatically updated from your Shopify store."
+                            style={{
+                              fontSize: '11px',
+                              color: '#10b981',
+                              background: 'rgba(16, 185, 129, 0.12)',
+                              padding: '4px 10px',
+                              borderRadius: '6px',
+                              border: '1px solid rgba(16, 185, 129, 0.25)',
+                              fontWeight: '500',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '4px'
+                            }}
+                          >
+                            ⚡ Auto-Synced (Shopify)
+                          </span>
+                        ) : (
+                          <>
+                            {order.status === 'pending' && (
+                              <button className="btn-action process" onClick={() => handleStatusUpdate(order.orderId, 'processing')}>
+                                Process
+                              </button>
+                            )}
+                            {order.status === 'processing' && (
+                              <button className="btn-action ship" onClick={() => handleStatusUpdate(order.orderId, 'shipped')}>
+                                Ship
+                              </button>
+                            )}
+                            {order.status === 'shipped' && (
+                              <button className="btn-action deliver" onClick={() => handleStatusUpdate(order.orderId, 'delivered')}>
+                                Deliver
+                              </button>
+                            )}
+                            {order.status === 'return_processing' && (
+                              <button className="btn-action return" onClick={() => handleStatusUpdate(order.orderId, 'returned')}>
+                                Complete Return
+                              </button>
+                            )}
+                          </>
                         )}
                       </div>
                     </td>

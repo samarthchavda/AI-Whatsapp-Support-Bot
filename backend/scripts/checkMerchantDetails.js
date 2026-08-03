@@ -25,11 +25,10 @@ const run = async () => {
         console.log(`  Integration ${i + 1}: Platform: ${int.platform} | Active: ${int.isActive} | Store: ${int.storeUrl} | API Key: ${int.apiKey ? int.apiKey.substring(0, 10) + '...' : 'MISSING'}`);
       });
 
-      const ShopifyOrder = require('../models/ShopifyOrder');
-      const shopifyOrders = await ShopifyOrder.find({ adminId: admin._id }).limit(5);
-      console.log(`📦 Total ShopifyOrders Synced: ${await ShopifyOrder.countDocuments({ adminId: admin._id })}`);
-      shopifyOrders.forEach((so, i) => {
-        console.log(`  ShopifyOrder ${i + 1}: #${so.orderNumber} | Customer: ${so.customerName || 'N/A'} | Phone: ${so.customerPhone || 'N/A'} | Email: ${so.customerEmail || 'N/A'} | Status: ${so.financialStatus}/${so.fulfillmentStatus}`);
+      const orders = await Order.find({ $or: [{ admin: admin._id }, { adminId: admin._id }] }).limit(10);
+      console.log(`📦 Total Orders Synced: ${await Order.countDocuments({ $or: [{ admin: admin._id }, { adminId: admin._id }] })}`);
+      orders.forEach((o, i) => {
+        console.log(`  Order ${i + 1}: #${o.orderNumber} | Customer: ${o.customerName || o.customer?.name || 'N/A'} | Phone: ${o.customerPhone || o.phone || o.shippingAddress?.phone || 'N/A'} | Email: ${o.customerEmail || o.email || 'N/A'}`);
       });
 
       const carts = await AbandonedCart.find({ admin: admin._id }).limit(3);

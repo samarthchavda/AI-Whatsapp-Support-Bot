@@ -260,17 +260,18 @@ const Products = () => {
                 </div>
 
                 <div className="product-action-footer">
-                  <button className="view-product-btn">
+                  {/* <button className="view-product-btn">
                     <FaRobot /> AI Sales Config
-                  </button>
+                  </button> */}
                   <a 
                     href="https://admin.shopify.com" 
                     target="_blank" 
                     rel="noreferrer" 
                     className="shopify-link-btn"
+                    style={{ width: '100%' }}
                     title="View on Shopify Admin"
                   >
-                    <FaExternalLinkAlt />
+                    <FaExternalLinkAlt /> View on Shopify Admin
                   </a>
                 </div>
               </div>

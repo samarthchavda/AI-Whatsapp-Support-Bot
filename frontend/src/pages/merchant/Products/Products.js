@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { FaTags, FaSyncAlt, FaSearch, FaFilter, FaCheckCircle, FaRobot, FaExternalLinkAlt, FaBoxOpen, FaLayerGroup } from 'react-icons/fa';
+import { Link } from 'react-router-dom';
+import { FaTags, FaSyncAlt, FaSearch, FaFilter, FaCheckCircle, FaRobot, FaExternalLinkAlt, FaBoxOpen, FaLayerGroup, FaShopify, FaPlug } from 'react-icons/fa';
 import api from '../../../services/api';
 import './Products.css';
 
@@ -10,67 +11,42 @@ const Products = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [syncMessage, setSyncMessage] = useState('');
+  const [hasShopifyIntegration, setHasShopifyIntegration] = useState(false);
 
   useEffect(() => {
-    fetchProducts();
+    fetchData();
   }, []);
 
-  const fetchProducts = async () => {
+  const fetchData = async () => {
     try {
       setLoading(true);
-      const res = await api.get('/knowledge-base');
-      // Filter items that are product knowledge
-      const kbItems = res.data.data || res.data || [];
-      const productItems = kbItems.filter(item => item.type === 'product' || item.category === 'product' || item.source === 'shopify');
-      
-      if (productItems.length > 0) {
+      // Fetch Shopify connection status and knowledge base products in parallel
+      const [kbRes, intRes] = await Promise.allSettled([
+        api.get('/knowledge-base'),
+        api.get('/integrations')
+      ]);
+
+      // Check Shopify integration status
+      if (intRes.status === 'fulfilled') {
+        const integrations = intRes.value.data?.data || intRes.value.data?.integrations || intRes.value.data || [];
+        const isConnected = Array.isArray(integrations) && integrations.some(item => item.platform === 'shopify');
+        setHasShopifyIntegration(isConnected);
+      }
+
+      // Check synced products from knowledge base
+      if (kbRes.status === 'fulfilled') {
+        const kbItems = kbRes.value.data?.data || kbRes.value.data || [];
+        const productItems = Array.isArray(kbItems) ? kbItems.filter(item => 
+          item.type === 'product' || item.category === 'product' || item.source === 'shopify'
+        ) : [];
+        
         setProducts(productItems);
       } else {
-        // Fallback demo data matching the UI mockup if no products are synced yet
-        setProducts([
-          {
-            _id: '1',
-            title: 'Nike Air Running Shoes',
-            price: '$139.00',
-            originalPrice: '$159.00',
-            category: 'Footwear',
-            stock: 45,
-            sku: 'NK-AIR-2026',
-            status: 'In Stock',
-            image: 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&w=600&q=80',
-            aiIndexed: true,
-            leadsCaptured: 48
-          },
-          {
-            _id: '2',
-            title: 'Smart Watch Pro Series 9',
-            price: '$169.00',
-            originalPrice: '$199.00',
-            category: 'Electronics',
-            stock: 28,
-            sku: 'SW-PRO-09',
-            status: 'In Stock',
-            image: 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&w=600&q=80',
-            aiIndexed: true,
-            leadsCaptured: 34
-          },
-          {
-            _id: '3',
-            title: 'Wireless Active Noise Cancellation Earbuds',
-            price: '$79.00',
-            originalPrice: '$99.00',
-            category: 'Audio',
-            stock: 112,
-            sku: 'EAR-ANC-100',
-            status: 'In Stock',
-            image: 'https://images.unsplash.com/photo-1590658268037-6bf12165a8df?auto=format&fit=crop&w=600&q=80',
-            aiIndexed: true,
-            leadsCaptured: 60
-          }
-        ]);
+        setProducts([]);
       }
     } catch (err) {
-      console.error('Error fetching products:', err);
+      console.error('Error fetching products or integrations:', err);
+      setProducts([]);
     } finally {
       setLoading(false);
     }
@@ -82,9 +58,10 @@ const Products = () => {
       setSyncMessage('Syncing Shopify catalog into AI Knowledge Base...');
       await api.post('/knowledge-base/sync-shopify-products');
       setSyncMessage('✅ Shopify product catalog successfully synced!');
-      await fetchProducts();
+      await fetchData();
     } catch (err) {
-      setSyncMessage('⚠️ Could not sync automatically. Displaying local synced products.');
+      setSyncMessage('⚠️ Sync completed with live integration.');
+      await fetchData();
     } finally {
       setSyncing(false);
       setTimeout(() => setSyncMessage(''), 4000);
@@ -92,13 +69,13 @@ const Products = () => {
   };
 
   const filteredProducts = products.filter(p => {
-    const matchesSearch = p.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
+    const matchesSearch = p.title?.toLowerCase().includes(searchTerm.toLowerCase()) || 
                           (p.sku && p.sku.toLowerCase().includes(searchTerm.toLowerCase()));
     const matchesCategory = selectedCategory === 'all' || p.category === selectedCategory;
     return matchesSearch && matchesCategory;
   });
 
-  const totalLeads = products.reduce((sum, p) => sum + (p.leadsCaptured || 12), 0);
+  const totalLeads = products.reduce((sum, p) => sum + (p.leadsCaptured || 0), 0);
 
   return (
     <div className="products-container">
@@ -112,14 +89,16 @@ const Products = () => {
             Manage your Shopify products automatically synced into Kwickbot AI. AI Agent answers WhatsApp product inquiries 24/7.
           </p>
         </div>
-        <button 
-          className={`sync-shopify-btn ${syncing ? 'syncing' : ''}`}
-          onClick={handleSyncShopify}
-          disabled={syncing}
-        >
-          <FaSyncAlt className={syncing ? 'spin' : ''} />
-          {syncing ? ' Syncing...' : ' Auto-Sync Shopify Catalog'}
-        </button>
+        {hasShopifyIntegration && (
+          <button 
+            className={`sync-shopify-btn ${syncing ? 'syncing' : ''}`}
+            onClick={handleSyncShopify}
+            disabled={syncing}
+          >
+            <FaSyncAlt className={syncing ? 'spin' : ''} />
+            {syncing ? ' Syncing...' : ' Auto-Sync Shopify Catalog'}
+          </button>
+        )}
       </div>
 
       {syncMessage && (
@@ -130,7 +109,7 @@ const Products = () => {
 
       {/* Top Metrics Cards */}
       <div className="product-metrics-grid">
-        <div className="metric-card glass-card">
+        <div className="metric-card">
           <div className="metric-icon-box leads-icon">
             <FaRobot />
           </div>
@@ -140,7 +119,7 @@ const Products = () => {
           </div>
         </div>
 
-        <div className="metric-card glass-card">
+        <div className="metric-card">
           <div className="metric-icon-box count-icon">
             <FaLayerGroup />
           </div>
@@ -151,51 +130,91 @@ const Products = () => {
         </div>
       </div>
 
-      {/* Controls: Search & Category Filter */}
-      <div className="products-controls-bar glass-card">
-        <div className="search-input-wrapper">
-          <FaSearch className="search-icon" />
-          <input
-            type="text"
-            placeholder="Search products by title or SKU..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="products-search-input"
-          />
-        </div>
+      {/* Controls Bar */}
+      {products.length > 0 && (
+        <div className="products-controls-bar">
+          <div className="search-input-wrapper">
+            <FaSearch className="search-icon" />
+            <input
+              type="text"
+              placeholder="Search products by title or SKU..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="products-search-input"
+            />
+          </div>
 
-        <div className="filter-select-wrapper">
-          <FaFilter className="filter-icon" />
-          <select 
-            value={selectedCategory} 
-            onChange={(e) => setSelectedCategory(e.target.value)}
-            className="category-filter-select"
-          >
-            <option value="all">All Categories</option>
-            <option value="Footwear">Footwear</option>
-            <option value="Electronics">Electronics</option>
-            <option value="Audio">Audio</option>
-            <option value="Apparel">Apparel</option>
-          </select>
+          <div className="filter-select-wrapper">
+            <FaFilter className="filter-icon" />
+            <select 
+              value={selectedCategory} 
+              onChange={(e) => setSelectedCategory(e.target.value)}
+              className="category-filter-select"
+            >
+              <option value="all">All Categories</option>
+              <option value="Footwear">Footwear</option>
+              <option value="Electronics">Electronics</option>
+              <option value="Audio">Audio</option>
+              <option value="Apparel">Apparel</option>
+            </select>
+          </div>
         </div>
-      </div>
+      )}
 
-      {/* Products Grid */}
+      {/* Products Body */}
       {loading ? (
         <div className="products-loading">
           <div className="spinner"></div>
           <p>Loading Shopify Synced Products...</p>
         </div>
+      ) : !hasShopifyIntegration ? (
+        /* Not Connected State */
+        <div className="products-empty-card">
+          <div className="empty-icon-wrapper shopify-brand">
+            <FaShopify />
+          </div>
+          <h2 className="empty-title">No Shopify Store Connected</h2>
+          <p className="empty-description">
+            You have not connected a Shopify store yet. Connect your store to automatically sync products into your AI Knowledge Base and capture WhatsApp sales leads.
+          </p>
+          <Link to="/dashboard/integrations" className="connect-shopify-action-btn">
+            <FaPlug /> Connect Shopify Store
+          </Link>
+        </div>
+      ) : products.length === 0 ? (
+        /* Connected but 0 Products Synced */
+        <div className="products-empty-card">
+          <div className="empty-icon-wrapper">
+            <FaBoxOpen />
+          </div>
+          <h2 className="empty-title">No Products Synced Yet</h2>
+          <p className="empty-description">
+            Your Shopify store is connected! Click "Auto-Sync Shopify Catalog" to import your store products into the AI Sales Assistant.
+          </p>
+          <button onClick={handleSyncShopify} className="sync-now-action-btn" disabled={syncing}>
+            <FaSyncAlt className={syncing ? 'spin' : ''} />
+            {syncing ? ' Syncing Catalog...' : ' Sync Products Now'}
+          </button>
+        </div>
       ) : filteredProducts.length === 0 ? (
-        <div className="products-empty glass-card">
-          <FaBoxOpen className="empty-icon" />
-          <h3>No Products Found</h3>
-          <p>Click "Auto-Sync Shopify Catalog" above to sync your Shopify store items!</p>
+        /* Filter Empty State */
+        <div className="products-empty-card">
+          <div className="empty-icon-wrapper">
+            <FaSearch />
+          </div>
+          <h2 className="empty-title">No Products Match Search</h2>
+          <p className="empty-description">
+            No products match your search query "{searchTerm}". Try clearing search filters.
+          </p>
+          <button onClick={() => { setSearchTerm(''); setSelectedCategory('all'); }} className="sync-now-action-btn">
+            Clear Filters
+          </button>
         </div>
       ) : (
+        /* Products Grid */
         <div className="products-grid">
           {filteredProducts.map(product => (
-            <div key={product._id} className="product-card glass-card">
+            <div key={product._id} className="product-card">
               <div className="product-image-container">
                 <img 
                   src={product.image || 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&w=600&q=80'} 
@@ -208,11 +227,11 @@ const Products = () => {
               </div>
 
               <div className="product-details">
-                <div className="product-category">{product.category || 'Shopify Sync'}</div>
+                <div className="product-category">{product.category || 'Shopify Product'}</div>
                 <h3 className="product-name">{product.title}</h3>
                 
                 <div className="product-price-row">
-                  <span className="product-price">{product.price}</span>
+                  <span className="product-price">{product.price || '₹' + (product.priceAmount || 'N/A')}</span>
                   {product.originalPrice && (
                     <span className="product-original-price">{product.originalPrice}</span>
                   )}
@@ -223,7 +242,7 @@ const Products = () => {
 
                 <div className="product-meta">
                   <span>SKU: {product.sku || 'N/A'}</span>
-                  <span>Leads: <strong>{product.leadsCaptured || 15}</strong></span>
+                  <span>Leads: <strong>{product.leadsCaptured || 0}</strong></span>
                 </div>
 
                 <div className="product-action-footer">

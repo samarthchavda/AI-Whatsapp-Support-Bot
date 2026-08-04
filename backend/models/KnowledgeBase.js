@@ -12,8 +12,16 @@ const knowledgeBaseSchema = new mongoose.Schema({
   },
   fileType: {
     type: String,
-    enum: ['pdf', 'txt', 'text', 'csv', 'url'],
+    enum: ['pdf', 'txt', 'text', 'csv', 'url', 'product'],
     required: true
+  },
+  productData: {
+    price: { type: String, default: '' },
+    originalPrice: { type: String, default: '' },
+    image: { type: String, default: '' },
+    sku: { type: String, default: '' },
+    category: { type: String, default: '' },
+    stock: { type: Number, default: 0 }
   },
   fileName: {
     type: String,

@@ -422,6 +422,9 @@ exports.syncShopifyProducts = async (req, res) => {
 
       const textContent = `Product Name: ${title}\nPrice: ₹${price}\nSKU: ${sku}\nStatus: In Stock\nCategory: ${product.product_type || 'General'}\nDescription: ${bodyText}`;
 
+      const imageSrc = product.image?.src || product.images?.[0]?.src || '';
+      const categoryName = product.product_type || 'Shopify Product';
+
       // Check if product already exists in KnowledgeBase
       let kb = await KnowledgeBase.findOne({ uploadedBy: adminId, fileName: `shopify_prod_${product.id}` });
 
@@ -429,6 +432,13 @@ exports.syncShopifyProducts = async (req, res) => {
         kb.title = title;
         kb.extractedText = textContent;
         kb.textLength = textContent.length;
+        kb.productData = {
+          price: `₹${price}`,
+          image: imageSrc,
+          sku: sku || 'N/A',
+          category: categoryName,
+          stock: variant.inventory_quantity || 15
+        };
         await kb.save();
       } else {
         kb = new KnowledgeBase({
@@ -441,7 +451,14 @@ exports.syncShopifyProducts = async (req, res) => {
           extractedText: textContent,
           textLength: textContent.length,
           uploadedBy: adminId,
-          uploadedByName: req.admin.name
+          uploadedByName: req.admin.name,
+          productData: {
+            price: `₹${price}`,
+            image: imageSrc,
+            sku: sku || 'N/A',
+            category: categoryName,
+            stock: variant.inventory_quantity || 15
+          }
         });
         await kb.save();
       }

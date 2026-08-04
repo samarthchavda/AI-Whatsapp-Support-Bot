@@ -365,3 +365,97 @@ exports.ingestURL = async (req, res) => {
     });
   }
 };
+
+/**
+ * Sync active Shopify products into Knowledge Base
+ */
+exports.syncShopifyProducts = async (req, res) => {
+  try {
+    const adminId = req.admin._id;
+    const Integration = require('../../models/Integration');
+    const axios = require('axios');
+
+    // Find active shopify integration
+    const integration = await Integration.findOne({ adminId, platform: 'shopify', isActive: true });
+    if (!integration || !integration.apiKey || !integration.storeUrl) {
+      return res.status(400).json({
+        success: false,
+        error: 'No active Shopify store connected. Please connect your Shopify store in Integrations.'
+      });
+    }
+
+    // Clean store domain
+    let shopDomain = integration.storeUrl.trim();
+    if (!shopDomain.includes('.myshopify.com')) {
+      shopDomain = shopDomain.replace(/^https?:\/\//i, '').replace(/\/+$/, '');
+      if (!shopDomain.includes('.')) {
+        shopDomain += '.myshopify.com';
+      }
+    }
+
+    const apiVersion = process.env.SHOPIFY_API_VERSION || '2024-07';
+    const shopifyUrl = `https://${shopDomain}/admin/api/${apiVersion}/products.json?limit=250`;
+
+    console.log(`🛍️ Fetching Shopify products for ${shopDomain}...`);
+
+    const response = await axios.get(shopifyUrl, {
+      headers: {
+        'X-Shopify-Access-Token': integration.apiKey,
+        'Content-Type': 'application/json'
+      },
+      timeout: 15000
+    });
+
+    const products = response.data.products || [];
+    let syncedCount = 0;
+
+    for (const product of products) {
+      const title = product.title;
+      const variant = product.variants?.[0] || {};
+      const price = variant.price || '0';
+      const sku = variant.sku || '';
+      const bodyText = (product.body_html || '').replace(/<[^>]*>?/gm, '');
+
+      const textContent = `Product Name: ${title}\nPrice: ₹${price}\nSKU: ${sku}\nStatus: In Stock\nCategory: ${product.product_type || 'General'}\nDescription: ${bodyText}`;
+
+      // Check if product already exists in KnowledgeBase
+      let kb = await KnowledgeBase.findOne({ uploadedBy: adminId, fileName: `shopify_prod_${product.id}` });
+
+      if (kb) {
+        kb.title = title;
+        kb.extractedText = textContent;
+        kb.textLength = textContent.length;
+        await kb.save();
+      } else {
+        kb = new KnowledgeBase({
+          title,
+          description: `Shopify Product: ${title}`,
+          fileType: 'product',
+          fileName: `shopify_prod_${product.id}`,
+          filePath: `shopify://${shopDomain}/${product.id}`,
+          fileSize: textContent.length,
+          extractedText: textContent,
+          textLength: textContent.length,
+          uploadedBy: adminId,
+          uploadedByName: req.admin.name
+        });
+        await kb.save();
+      }
+
+      syncedCount++;
+    }
+
+    return res.json({
+      success: true,
+      message: `Successfully synced ${syncedCount} products from Shopify into AI Knowledge Base`,
+      count: syncedCount
+    });
+  } catch (error) {
+    console.error('Error syncing Shopify products:', error.message);
+    return res.status(500).json({
+      success: false,
+      error: 'Failed to sync Shopify products',
+      message: error.response?.data?.errors || error.message
+    });
+  }
+};

@@ -41,6 +41,21 @@ router.post('/', verifyToken, upload.single('file'), knowledgeBaseController.upl
 
 /**
  * @openapi
+ * /api/knowledge-base/sync-shopify-products:
+ *   post:
+ *     tags:
+ *       - Knowledge Base & Products
+ *     summary: Sync Shopify Products into AI Knowledge Base
+ *     security:
+ *       - BearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Shopify products synced
+ */
+router.post('/sync-shopify-products', verifyToken, knowledgeBaseController.syncShopifyProducts);
+
+/**
+ * @openapi
  * /api/knowledge-base/url:
  *   post:
  *     tags:

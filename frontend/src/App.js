@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Link, useLocation, useNavigate, Navigate } from 'react-router-dom';
-import { FaHome, FaComments, FaBox, FaExclamationTriangle, FaPlug, FaRobot, FaSearch, FaBell, FaPlus, FaSignOutAlt, FaUser, FaBrain, FaCommentDots, FaBroadcastTower, FaChartLine, FaCog, FaCrown, FaFileAlt, FaShoppingCart, FaCoins, FaUserSecret, FaHeartbeat, FaBullhorn, FaBlog, FaBars, FaSun, FaMoon, FaWhatsapp, FaShieldAlt, FaToggleOn, FaTimes } from 'react-icons/fa';
+import { FaHome, FaComments, FaBox, FaExclamationTriangle, FaPlug, FaRobot, FaSearch, FaBell, FaPlus, FaSignOutAlt, FaUser, FaBrain, FaCommentDots, FaBroadcastTower, FaChartLine, FaCog, FaCrown, FaFileAlt, FaShoppingCart, FaCoins, FaUserSecret, FaHeartbeat, FaBullhorn, FaBlog, FaBars, FaSun, FaMoon, FaWhatsapp, FaShieldAlt, FaToggleOn, FaTimes, FaTags } from 'react-icons/fa';
 import api, { clearAuthState, refreshAuth } from './services/api';
 import io from 'socket.io-client';
 import Dashboard from './pages/merchant/Dashboard/Dashboard';
@@ -48,6 +48,7 @@ import DataDeletion from './pages/public/Legals/DataDeletion';
 import Blog from './pages/merchant/Blog/Blog';
 import BlogPost from './pages/merchant/Blog/BlogPost';
 import SuperAdminBlog from './pages/superAdmin/Blog/SuperAdminBlog';
+import Products from './pages/merchant/Products/Products';
 import axios from 'axios';
 import './App.css';
 
@@ -326,6 +327,12 @@ function Sidebar({ admin, onLogout, isOpen, onToggle, pendingDemoRequestsCount }
                     <Link to="/dashboard/orders" className={isActive('/dashboard/orders')} title="Orders">
                       <FaBox />
                       <span className="nav-label">Orders</span>
+                    </Link>
+                  </li>
+                  <li>
+                    <Link to="/dashboard/products" className={isActive('/dashboard/products')} title="Products">
+                      <FaTags />
+                      <span className="nav-label">Products</span>
                     </Link>
                   </li>
                   <li>
@@ -945,6 +952,7 @@ function App() {
                     <Route path="/live-chat" element={<LiveChat />} />
                     <Route path="/conversations" element={<Conversations />} />
                     <Route path="/orders" element={<Orders admin={admin} />} />
+                    <Route path="/products" element={<Products admin={admin} />} />
                     <Route path="/escalations" element={<Escalations admin={admin} />} />
                     <Route path="/broadcast" element={<Broadcast />} />
                     <Route path="/knowledge-base" element={<KnowledgeBase />} />

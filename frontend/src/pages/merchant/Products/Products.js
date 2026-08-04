@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { FaTags, FaSyncAlt, FaSearch, FaFilter, FaRobot, FaExternalLinkAlt, FaBoxOpen, FaLayerGroup, FaShopify, FaPlug } from 'react-icons/fa';
+import { FaTags, FaSyncAlt, FaSearch, FaFilter, FaExternalLinkAlt, FaBoxOpen, FaLayerGroup, FaShopify, FaPlug, FaChevronLeft, FaChevronRight, FaRobot } from 'react-icons/fa';
 import api from '../../../services/api';
 import './Products.css';
+
+const PRODUCTS_PER_PAGE = 15;
 
 const Products = () => {
   const [products, setProducts] = useState([]);
@@ -10,6 +12,7 @@ const Products = () => {
   const [syncing, setSyncing] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
+  const [currentPage, setCurrentPage] = useState(1);
   const [syncMessage, setSyncMessage] = useState('');
   const [hasShopifyIntegration, setHasShopifyIntegration] = useState(false);
   const [totalLeads, setTotalLeads] = useState(0);
@@ -21,25 +24,21 @@ const Products = () => {
   const fetchData = async () => {
     try {
       setLoading(true);
-      // Fetch Shopify connection status and knowledge base products in parallel
       const [kbRes, intRes] = await Promise.allSettled([
         api.get('/knowledge-base'),
         api.get('/integrations')
       ]);
 
-      // Check Shopify integration status
       if (intRes.status === 'fulfilled') {
         const integrations = intRes.value.data?.data || intRes.value.data?.integrations || intRes.value.data || [];
         const isConnected = Array.isArray(integrations) && integrations.some(item => item.platform === 'shopify');
         setHasShopifyIntegration(isConnected);
       }
 
-      // Check synced products from knowledge base & real lead count
       if (kbRes.status === 'fulfilled') {
         const responseData = kbRes.value.data;
         const kbItems = responseData?.data || [];
         
-        // Extract real WhatsApp leads count for product inquiries
         const realLeads = responseData?.productLeadsCount || 0;
         setTotalLeads(realLeads);
 
@@ -87,12 +86,28 @@ const Products = () => {
     }
   };
 
+  const handleSearchChange = (e) => {
+    setSearchTerm(e.target.value);
+    setCurrentPage(1);
+  };
+
+  const handleCategoryChange = (e) => {
+    setSelectedCategory(e.target.value);
+    setCurrentPage(1);
+  };
+
   const filteredProducts = products.filter(p => {
     const matchesSearch = p.title?.toLowerCase().includes(searchTerm.toLowerCase()) || 
                           (p.sku && p.sku.toLowerCase().includes(searchTerm.toLowerCase()));
     const matchesCategory = selectedCategory === 'all' || p.category === selectedCategory;
     return matchesSearch && matchesCategory;
   });
+
+  // Pagination calculation
+  const totalPages = Math.ceil(filteredProducts.length / PRODUCTS_PER_PAGE);
+  const indexOfLastProduct = currentPage * PRODUCTS_PER_PAGE;
+  const indexOfFirstProduct = indexOfLastProduct - PRODUCTS_PER_PAGE;
+  const currentProducts = filteredProducts.slice(indexOfFirstProduct, indexOfLastProduct);
 
   return (
     <div className="products-container">
@@ -156,7 +171,7 @@ const Products = () => {
               type="text"
               placeholder="Search products by title or SKU..."
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              onChange={handleSearchChange}
               className="products-search-input"
             />
           </div>
@@ -165,7 +180,7 @@ const Products = () => {
             <FaFilter className="filter-icon" />
             <select 
               value={selectedCategory} 
-              onChange={(e) => setSelectedCategory(e.target.value)}
+              onChange={handleCategoryChange}
               className="category-filter-select"
             >
               <option value="all">All Categories</option>
@@ -223,61 +238,96 @@ const Products = () => {
           <p className="empty-description">
             No products match your search query "{searchTerm}". Try clearing search filters.
           </p>
-          <button onClick={() => { setSearchTerm(''); setSelectedCategory('all'); }} className="sync-now-action-btn">
+          <button onClick={() => { setSearchTerm(''); setSelectedCategory('all'); setCurrentPage(1); }} className="sync-now-action-btn">
             Clear Filters
           </button>
         </div>
       ) : (
-        /* Products Grid */
-        <div className="products-grid">
-          {filteredProducts.map(product => (
-            <div key={product._id} className="product-card">
-              <div className="product-image-container">
-                <img 
-                  src={product.image || 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&w=600&q=80'} 
-                  alt={product.title} 
-                  className="product-image"
-                />
+        <>
+          {/* Products Grid (15 per page) */}
+          <div className="products-grid">
+            {currentProducts.map(product => (
+              <div key={product._id} className="product-card">
+                <div className="product-image-container">
+                  <img 
+                    src={product.image || 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&w=600&q=80'} 
+                    alt={product.title} 
+                    className="product-image"
+                  />
+                </div>
+
+                <div className="product-details">
+                  <div className="product-category">{product.category || 'Shopify Product'}</div>
+                  <h3 className="product-name">{product.title}</h3>
+                  
+                  <div className="product-price-row">
+                    <span className="product-price">{product.price}</span>
+                    {product.originalPrice && (
+                      <span className="product-original-price">{product.originalPrice}</span>
+                    )}
+                    <span className="stock-status-badge in-stock">
+                      {product.status || 'In Stock'}
+                    </span>
+                  </div>
+
+                  <div className="product-meta">
+                    <span>SKU: {product.sku || 'N/A'}</span>
+                    <span>Stock: <strong>{product.stock || 15}</strong></span>
+                  </div>
+
+                  <div className="product-action-footer">
+                    {/* <button className="view-product-btn">
+                      <FaRobot /> AI Sales Config
+                    </button> */}
+                    <a 
+                      href="https://admin.shopify.com" 
+                      target="_blank" 
+                      rel="noreferrer" 
+                      className="shopify-link-btn"
+                      style={{ width: '100%' }}
+                      title="View on Shopify Admin"
+                    >
+                      <FaExternalLinkAlt /> View on Shopify Admin
+                    </a>
+                  </div>
+                </div>
               </div>
+            ))}
+          </div>
 
-              <div className="product-details">
-                <div className="product-category">{product.category || 'Shopify Product'}</div>
-                <h3 className="product-name">{product.title}</h3>
-                
-                <div className="product-price-row">
-                  <span className="product-price">{product.price}</span>
-                  {product.originalPrice && (
-                    <span className="product-original-price">{product.originalPrice}</span>
-                  )}
-                  <span className="stock-status-badge in-stock">
-                    {product.status || 'In Stock'}
-                  </span>
-                </div>
+          {/* Pagination Controls */}
+          {totalPages > 1 && (
+            <div className="pagination-container">
+              <button 
+                className="pagination-btn"
+                onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                disabled={currentPage === 1}
+              >
+                <FaChevronLeft /> Previous
+              </button>
 
-                <div className="product-meta">
-                  <span>SKU: {product.sku || 'N/A'}</span>
-                  <span>Stock: <strong>{product.stock || 15}</strong></span>
-                </div>
-
-                <div className="product-action-footer">
-                  {/* <button className="view-product-btn">
-                    <FaRobot /> AI Sales Config
-                  </button> */}
-                  <a 
-                    href="https://admin.shopify.com" 
-                    target="_blank" 
-                    rel="noreferrer" 
-                    className="shopify-link-btn"
-                    style={{ width: '100%' }}
-                    title="View on Shopify Admin"
+              <div className="pagination-pages">
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+                  <button
+                    key={page}
+                    className={`page-number-btn ${currentPage === page ? 'active' : ''}`}
+                    onClick={() => setCurrentPage(page)}
                   >
-                    <FaExternalLinkAlt /> View on Shopify Admin
-                  </a>
-                </div>
+                    {page}
+                  </button>
+                ))}
               </div>
+
+              <button 
+                className="pagination-btn"
+                onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                disabled={currentPage === totalPages}
+              >
+                Next <FaChevronRight />
+              </button>
             </div>
-          ))}
-        </div>
+          )}
+        </>
       )}
     </div>
   );

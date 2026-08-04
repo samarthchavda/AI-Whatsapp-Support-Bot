@@ -135,12 +135,18 @@ exports.getAllKnowledgeBases = async (req, res) => {
 
     const count = await KnowledgeBase.countDocuments(query);
 
+    // Calculate real WhatsApp product inquiry leads for this admin
+    const Conversation = require('../../models/Conversation');
+    const realLeadsCount = (req && req.admin && req.admin._id) ? 
+      await Conversation.countDocuments({ adminId: req.admin._id }) : 0;
+
     res.json({
       success: true,
       data: knowledgeBases,
       totalPages: Math.ceil(count / limit),
       currentPage: page,
-      total: count
+      total: count,
+      productLeadsCount: realLeadsCount
     });
   } catch (error) {
     console.error('Error fetching knowledge bases:', error);
@@ -398,9 +404,28 @@ exports.syncShopifyProducts = async (req, res) => {
     }
 
     const apiVersion = process.env.SHOPIFY_API_VERSION || '2024-07';
+    
+    // Fetch shop currency from Shopify
+    let currencySymbol = '$';
+    try {
+      const shopRes = await axios.get(`https://${shopDomain}/admin/api/${apiVersion}/shop.json`, {
+        headers: { 'X-Shopify-Access-Token': integration.apiKey, 'Content-Type': 'application/json' },
+        timeout: 10000
+      });
+      const currencyCode = shopRes.data?.shop?.currency || 'USD';
+      if (currencyCode === 'INR') currencySymbol = '₹';
+      else if (currencyCode === 'EUR') currencySymbol = '€';
+      else if (currencyCode === 'GBP') currencySymbol = '£';
+      else if (currencyCode === 'CAD') currencySymbol = 'CA$';
+      else currencySymbol = '$';
+    } catch (shopErr) {
+      console.warn('Could not fetch shop currency, defaulting to $:', shopErr.message);
+      currencySymbol = '$';
+    }
+
     const shopifyUrl = `https://${shopDomain}/admin/api/${apiVersion}/products.json?limit=250`;
 
-    console.log(`🛍️ Fetching Shopify products for ${shopDomain}...`);
+    console.log(`🛍️ Fetching Shopify products for ${shopDomain} (Currency: ${currencySymbol})...`);
 
     const response = await axios.get(shopifyUrl, {
       headers: {
@@ -417,10 +442,11 @@ exports.syncShopifyProducts = async (req, res) => {
       const title = product.title;
       const variant = product.variants?.[0] || {};
       const price = variant.price || '0';
+      const formattedPrice = `${currencySymbol}${price}`;
       const sku = variant.sku || '';
       const bodyText = (product.body_html || '').replace(/<[^>]*>?/gm, '');
 
-      const textContent = `Product Name: ${title}\nPrice: ₹${price}\nSKU: ${sku}\nStatus: In Stock\nCategory: ${product.product_type || 'General'}\nDescription: ${bodyText}`;
+      const textContent = `Product Name: ${title}\nPrice: ${formattedPrice}\nSKU: ${sku}\nStatus: In Stock\nCategory: ${product.product_type || 'General'}\nDescription: ${bodyText}`;
 
       const imageSrc = product.image?.src || product.images?.[0]?.src || '';
       const categoryName = product.product_type || 'Shopify Product';
@@ -433,7 +459,7 @@ exports.syncShopifyProducts = async (req, res) => {
         kb.extractedText = textContent;
         kb.textLength = textContent.length;
         kb.productData = {
-          price: `₹${price}`,
+          price: formattedPrice,
           image: imageSrc,
           sku: sku || 'N/A',
           category: categoryName,
@@ -453,7 +479,7 @@ exports.syncShopifyProducts = async (req, res) => {
           uploadedBy: adminId,
           uploadedByName: req.admin.name,
           productData: {
-            price: `₹${price}`,
+            price: formattedPrice,
             image: imageSrc,
             sku: sku || 'N/A',
             category: categoryName,

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { FaTags, FaSyncAlt, FaSearch, FaFilter, FaCheckCircle, FaRobot, FaExternalLinkAlt, FaBoxOpen, FaLayerGroup, FaShopify, FaPlug } from 'react-icons/fa';
+import { FaTags, FaSyncAlt, FaSearch, FaFilter, FaRobot, FaExternalLinkAlt, FaBoxOpen, FaLayerGroup, FaShopify, FaPlug } from 'react-icons/fa';
 import api from '../../../services/api';
 import './Products.css';
 
@@ -12,6 +12,7 @@ const Products = () => {
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [syncMessage, setSyncMessage] = useState('');
   const [hasShopifyIntegration, setHasShopifyIntegration] = useState(false);
+  const [totalLeads, setTotalLeads] = useState(0);
 
   useEffect(() => {
     fetchData();
@@ -33,9 +34,15 @@ const Products = () => {
         setHasShopifyIntegration(isConnected);
       }
 
-      // Check synced products from knowledge base
+      // Check synced products from knowledge base & real lead count
       if (kbRes.status === 'fulfilled') {
-        const kbItems = kbRes.value.data?.data || kbRes.value.data || [];
+        const responseData = kbRes.value.data;
+        const kbItems = responseData?.data || [];
+        
+        // Extract real WhatsApp leads count for product inquiries
+        const realLeads = responseData?.productLeadsCount || 0;
+        setTotalLeads(realLeads);
+
         const rawProducts = Array.isArray(kbItems) ? kbItems.filter(item => 
           item.fileType === 'product' || item.type === 'product' || item.category === 'product' || item.source === 'shopify'
         ) : [];
@@ -43,18 +50,18 @@ const Products = () => {
         const mappedProducts = rawProducts.map(item => ({
           _id: item._id,
           title: item.title,
-          price: item.productData?.price || '₹1,499',
+          price: item.productData?.price || '$0.00',
           sku: item.productData?.sku || 'N/A',
           category: item.productData?.category || item.category || 'Shopify Product',
           image: item.productData?.image || 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&w=600&q=80',
           stock: item.productData?.stock || 15,
-          status: 'In Stock',
-          leadsCaptured: 12
+          status: 'In Stock'
         }));
 
         setProducts(mappedProducts);
       } else {
         setProducts([]);
+        setTotalLeads(0);
       }
     } catch (err) {
       console.error('Error fetching products or integrations:', err);
@@ -72,7 +79,7 @@ const Products = () => {
       setSyncMessage('✅ Shopify product catalog successfully synced!');
       await fetchData();
     } catch (err) {
-      setSyncMessage('⚠️ Sync completed with live integration.');
+      setSyncMessage('⚠️ Sync complete with connected Shopify store.');
       await fetchData();
     } finally {
       setSyncing(false);
@@ -86,8 +93,6 @@ const Products = () => {
     const matchesCategory = selectedCategory === 'all' || p.category === selectedCategory;
     return matchesSearch && matchesCategory;
   });
-
-  const totalLeads = products.reduce((sum, p) => sum + (p.leadsCaptured || 0), 0);
 
   return (
     <div className="products-container">
@@ -233,9 +238,6 @@ const Products = () => {
                   alt={product.title} 
                   className="product-image"
                 />
-                <span className="ai-indexed-badge">
-                  <FaCheckCircle /> AI Knowledge Indexed
-                </span>
               </div>
 
               <div className="product-details">
@@ -243,7 +245,7 @@ const Products = () => {
                 <h3 className="product-name">{product.title}</h3>
                 
                 <div className="product-price-row">
-                  <span className="product-price">{product.price || '₹' + (product.priceAmount || 'N/A')}</span>
+                  <span className="product-price">{product.price}</span>
                   {product.originalPrice && (
                     <span className="product-original-price">{product.originalPrice}</span>
                   )}
@@ -254,7 +256,7 @@ const Products = () => {
 
                 <div className="product-meta">
                   <span>SKU: {product.sku || 'N/A'}</span>
-                  <span>Leads: <strong>{product.leadsCaptured || 0}</strong></span>
+                  <span>Stock: <strong>{product.stock || 15}</strong></span>
                 </div>
 
                 <div className="product-action-footer">

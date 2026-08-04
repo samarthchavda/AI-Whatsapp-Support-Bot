@@ -77,22 +77,7 @@ router.post('/', verifyToken, orderController.createOrder);
 
 /**
  * @openapi
- * /api/orders/stats:
- *   get:
- *     tags:
- *       - Order Management
- *     summary: Get Order Statistics & Metrics
- *     security:
- *       - BearerAuth: []
- *     responses:
- *       200:
- *         description: Order statistics summary
- */
-router.get('/stats', verifyToken, orderController.getOrderStats);
-
-/**
- * @openapi
- * /api/orders/import-csv:
+ * /api/orders/bulk-upload:
  *   post:
  *     tags:
  *       - Order Management
@@ -112,7 +97,28 @@ router.get('/stats', verifyToken, orderController.getOrderStats);
  *       200:
  *         description: CSV orders imported
  */
-router.post('/import-csv', verifyToken, upload.single('file'), orderController.importOrdersCSV);
+router.post('/bulk-upload', verifyToken, upload.single('file'), orderController.bulkUploadOrders);
+
+/**
+ * @openapi
+ * /api/orders/phone/{phone}:
+ *   get:
+ *     tags:
+ *       - Order Management
+ *     summary: Get Orders by Customer Phone Number
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: phone
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Customer orders list
+ */
+router.get('/phone/:phone', verifyToken, orderController.getOrdersByPhone);
 
 /**
  * @openapi
@@ -158,8 +164,24 @@ router.post('/import-csv', verifyToken, upload.single('file'), orderController.i
  *     responses:
  *       200:
  *         description: Status updated
+ *   delete:
+ *     tags:
+ *       - Order Management
+ *     summary: Delete Order by ID
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Order deleted
  */
 router.get('/:id', verifyToken, orderController.getOrderById);
 router.patch('/:id', verifyToken, orderController.updateOrderStatus);
+router.delete('/:id', verifyToken, orderController.deleteOrder);
 
 module.exports = router;

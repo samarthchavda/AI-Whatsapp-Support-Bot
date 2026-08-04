@@ -2,29 +2,50 @@ const express = require('express');
 const router = express.Router();
 const knowledgeBaseController = require('../controllers/merchant/knowledgeBaseController');
 const { verifyToken } = require('../middleware/auth');
+const multer = require('multer');
+const upload = multer({ dest: 'uploads/' });
 
 /**
  * @openapi
- * /api/knowledge-base/sync-shopify-products:
- *   post:
+ * /api/knowledge-base:
+ *   get:
  *     tags:
  *       - Knowledge Base & Products
- *     summary: Sync Shopify Products into AI Knowledge Base
+ *     summary: Get All Knowledge Base Documents
  *     security:
  *       - BearerAuth: []
  *     responses:
  *       200:
- *         description: Shopify products synced into AI engine
- */
-router.post('/sync-shopify-products', verifyToken, knowledgeBaseController.syncShopifyProducts);
-
-/**
- * @openapi
- * /api/knowledge-base/text:
+ *         description: Documents list
  *   post:
  *     tags:
  *       - Knowledge Base & Products
- *     summary: Add Custom FAQ Text Snippet
+ *     summary: Upload Document (PDF/Doc/CSV) to Knowledge Base
+ *     security:
+ *       - BearerAuth: []
+ *     requestBody:
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               file:
+ *                 type: string
+ *                 format: binary
+ *     responses:
+ *       201:
+ *         description: Document uploaded and ingested into AI
+ */
+router.get('/', verifyToken, knowledgeBaseController.getAllKnowledgeBases);
+router.post('/', verifyToken, upload.single('file'), knowledgeBaseController.uploadKnowledgeBase);
+
+/**
+ * @openapi
+ * /api/knowledge-base/url:
+ *   post:
+ *     tags:
+ *       - Knowledge Base & Products
+ *     summary: Ingest Webpage URL into Knowledge Base
  *     security:
  *       - BearerAuth: []
  *     requestBody:
@@ -33,18 +54,52 @@ router.post('/sync-shopify-products', verifyToken, knowledgeBaseController.syncS
  *         application/json:
  *           schema:
  *             type: object
- *             required: [title, content]
+ *             required: [url]
  *             properties:
- *               title:
+ *               url:
  *                 type: string
- *                 example: "Return Policy"
- *               content:
- *                 type: string
- *                 example: "We offer 7-day hassle-free returns on all products."
+ *                 example: "https://myshop.com/faq"
  *     responses:
- *       201:
- *         description: Text snippet added
+ *       200:
+ *         description: URL content ingested
  */
-router.post('/text', verifyToken, knowledgeBaseController.addTextSnippet);
+router.post('/url', verifyToken, knowledgeBaseController.ingestURL);
+
+/**
+ * @openapi
+ * /api/knowledge-base/{id}:
+ *   get:
+ *     tags:
+ *       - Knowledge Base & Products
+ *     summary: Get Knowledge Base Document Details
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Document details
+ *   delete:
+ *     tags:
+ *       - Knowledge Base & Products
+ *     summary: Delete Knowledge Base Document
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Document deleted
+ */
+router.get('/:id', verifyToken, knowledgeBaseController.getKnowledgeBaseById);
+router.delete('/:id', verifyToken, knowledgeBaseController.deleteKnowledgeBase);
 
 module.exports = router;

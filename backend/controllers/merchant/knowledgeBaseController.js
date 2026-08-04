@@ -384,13 +384,17 @@ exports.syncShopifyProducts = async (req, res) => {
       });
     }
 
-    // Clean store domain
+    // Clean store domain properly
     let shopDomain = integration.storeUrl.trim();
-    if (!shopDomain.includes('.myshopify.com')) {
-      shopDomain = shopDomain.replace(/^https?:\/\//i, '').replace(/\/+$/, '');
-      if (!shopDomain.includes('.')) {
-        shopDomain += '.myshopify.com';
+    shopDomain = shopDomain.replace(/^https?:\/\//i, '').replace(/\/+$/, '');
+    if (shopDomain.includes('admin.shopify.com')) {
+      const parts = shopDomain.split('/');
+      const storeIndex = parts.indexOf('store');
+      if (storeIndex !== -1 && parts[storeIndex + 1]) {
+        shopDomain = parts[storeIndex + 1] + '.myshopify.com';
       }
+    } else if (!shopDomain.includes('.')) {
+      shopDomain += '.myshopify.com';
     }
 
     const apiVersion = process.env.SHOPIFY_API_VERSION || '2024-07';

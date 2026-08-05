@@ -243,16 +243,26 @@ exports.deleteKnowledgeBase = async (req, res) => {
       return res.status(403).json({ success: false, error: 'Forbidden' });
     }
 
-    // Delete the file
-    // Delete associated vector chunks
+    // 1. Delete associated vector chunks from MongoDB
     try {
       const KnowledgeBaseChunk = require('../../models/KnowledgeBaseChunk');
-      await KnowledgeBaseChunk.deleteMany({ knowledgeBaseId: req.params.id });
+      await KnowledgeBaseChunk.deleteMany({ knowledgeBaseId: knowledgeBase._id });
     } catch (chunkError) {
       console.error('Error deleting chunks:', chunkError);
     }
 
-    await KnowledgeBase.findByIdAndDelete(req.params.id);
+    // 2. Delete physical PDF file from server disk
+    if (knowledgeBase.filePath && !knowledgeBase.filePath.startsWith('shopify://')) {
+      try {
+        const fs = require('fs').promises;
+        await fs.unlink(knowledgeBase.filePath);
+      } catch (fileErr) {
+        console.warn('Physical file deletion warning:', fileErr.message);
+      }
+    }
+
+    // 3. Delete KnowledgeBase document from MongoDB
+    await KnowledgeBase.findByIdAndDelete(knowledgeBase._id);
 
     res.json({
       success: true,

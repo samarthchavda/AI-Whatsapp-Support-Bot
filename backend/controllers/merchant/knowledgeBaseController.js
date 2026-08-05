@@ -500,6 +500,24 @@ exports.syncShopifyProducts = async (req, res) => {
       syncedCount++;
     }
 
+    // Prune products that were deleted from Shopify
+    const activeFileNames = products.map(p => `shopify_prod_${p.id}`);
+    const KnowledgeChunk = require('../../models/KnowledgeBaseChunk');
+    const staleKbs = await KnowledgeBase.find({
+      uploadedBy: adminId,
+      fileType: 'product',
+      fileName: { $regex: /^shopify_prod_/ },
+      fileName: { $nin: activeFileNames }
+    });
+
+    for (const stale of staleKbs) {
+      await KnowledgeChunk.deleteMany({ knowledgeBaseId: stale._id });
+      await KnowledgeBase.deleteOne({ _id: stale._id });
+    }
+    if (staleKbs.length > 0) {
+      console.log(`🧹 Pruned ${staleKbs.length} deleted Shopify products from KnowledgeBase`);
+    }
+
     return res.json({
       success: true,
       message: `Successfully synced ${syncedCount} products from Shopify into AI Knowledge Base`,

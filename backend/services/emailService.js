@@ -50,6 +50,9 @@ async function sendEmail({ to, subject, html, text, from }) {
         host: process.env.SMTP_HOST || 'smtp.gmail.com',
         port: parseInt(process.env.SMTP_PORT) || 587,
         secure: false,
+        connectionTimeout: 3000,
+        greetingTimeout: 3000,
+        socketTimeout: 5000,
         auth: {
           user: process.env.SMTP_USER,
           pass: process.env.SMTP_PASS

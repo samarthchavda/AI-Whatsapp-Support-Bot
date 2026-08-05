@@ -48,149 +48,126 @@ exports.createDemoRequest = async (req, res) => {
       console.error('Error notifying super admins of new demo request:', waErr.message);
     }
 
-    // Send email notifications
-    try {
-      // 1. Send confirmation email to Customer
-      const customerHtml = `
-        <!DOCTYPE html>
-        <html>
-        <head>
-          <style>
-            body { font-family: 'Inter', Arial, sans-serif; background: #f3f4f6; margin: 0; padding: 0; }
-            .container { max-width: 600px; margin: 40px auto; background: white; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 24px rgba(0,0,0,0.1); }
-            .header { background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); padding: 40px; text-align: center; }
-            .header h1 { color: white; margin: 0; font-size: 28px; font-weight: 700; }
-            .content { padding: 40px; }
-            .content h2 { color: #1f2937; font-size: 24px; margin-bottom: 16px; }
-            .content p { color: #6b7280; line-height: 1.6; margin-bottom: 16px; }
-            .details { background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 12px; padding: 20px; margin: 24px 0; }
-            .details-item { margin-bottom: 10px; font-size: 15px; }
-            .details-label { font-weight: 600; color: #4b5563; }
-            .details-value { color: #1f2937; }
-            .footer { background: #f9fafb; padding: 24px; text-align: center; color: #9ca3af; font-size: 14px; }
-          </style>
-        </head>
-        <body>
-          <div class="container">
-            <div class="header">
-              <h1>Demo Request Received</h1>
+    // Send email notifications in background (non-blocking)
+    (async () => {
+      try {
+        const customerHtml = `
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <style>
+              body { font-family: 'Inter', Arial, sans-serif; background: #f3f4f6; margin: 0; padding: 0; }
+              .container { max-width: 600px; margin: 40px auto; background: white; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 24px rgba(0,0,0,0.1); }
+              .header { background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); padding: 40px; text-align: center; }
+              .header h1 { color: white; margin: 0; font-size: 28px; font-weight: 700; }
+              .content { padding: 40px; }
+              .content h2 { color: #1f2937; font-size: 24px; margin-bottom: 16px; }
+              .content p { color: #6b7280; line-height: 1.6; margin-bottom: 16px; }
+              .details { background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 12px; padding: 20px; margin: 24px 0; }
+              .details-item { margin-bottom: 10px; font-size: 15px; }
+              .details-label { font-weight: 600; color: #4b5563; }
+              .details-value { color: #1f2937; }
+              .footer { background: #f9fafb; padding: 24px; text-align: center; color: #9ca3af; font-size: 14px; }
+            </style>
+          </head>
+          <body>
+            <div class="container">
+              <div class="header">
+                <h1>Demo Request Received</h1>
+              </div>
+              <div class="content">
+                <h2>Hi ${name},</h2>
+                <p>Thank you for your interest in Kwickbot! We have successfully received your request for a personalized demo.</p>
+                <p>Our team will contact you within the next 24 hours to schedule the demo and show you how Kwickbot can transform your customer service.</p>
+                
+                <div class="details">
+                  <h3 style="margin-top: 0; color: #1f2937; font-size: 16px;">Submitted Details:</h3>
+                  <div class="details-item">
+                    <span class="details-label">Business Name:</span>
+                    <span class="details-value">${businessName}</span>
+                  </div>
+                  <div class="details-item">
+                    <span class="details-label">Phone Number:</span>
+                    <span class="details-value">${phone}</span>
+                  </div>
+                  <div class="details-item">
+                    <span class="details-label">Website URL:</span>
+                    <span class="details-value">${websiteUrl}</span>
+                  </div>
+                </div>
+                
+                <p>In the meantime, feel free to reply to this email if you have any immediate questions.</p>
+                <p>Best regards,<br><strong>Kwickbot Team</strong></p>
+              </div>
+              <div class="footer">
+                <p>© ${new Date().getFullYear()} Kwickbot. All rights reserved.</p>
+              </div>
             </div>
-            <div class="content">
-              <h2>Hi ${name},</h2>
-              <p>Thank you for your interest in Kwickbot! We have successfully received your request for a personalized demo.</p>
-              <p>Our team will contact you within the next 24 hours to schedule the demo and show you how Kwickbot can transform your customer service.</p>
-              
-              <div class="details">
-                <h3 style="margin-top: 0; color: #1f2937; font-size: 16px;">Submitted Details:</h3>
-                <div class="details-item">
-                  <span class="details-label">Business Name:</span>
-                  <span class="details-value">${businessName}</span>
+          </body>
+          </html>
+        `;
+
+        const customerText = `Hello ${name},\n\nThank you for your interest in Kwickbot! We have successfully received your request for a personalized demo.\n\nOur team will contact you within the next 24 hours to schedule the demo.\n\nSubmitted Details:\n- Business Name: ${businessName}\n- Phone Number: ${phone}\n- Website URL: ${websiteUrl}\n\nBest regards,\nKwickbot Team`;
+
+        await emailService.sendEmail({
+          to: email,
+          subject: 'Demo Request Received - Kwickbot',
+          html: customerHtml,
+          text: customerText
+        });
+
+        const adminRecipient = process.env.ESCALATION_EMAIL || process.env.SMTP_USER;
+        if (adminRecipient) {
+          const adminHtml = `
+            <!DOCTYPE html>
+            <html>
+            <head>
+              <style>
+                body { font-family: 'Inter', Arial, sans-serif; background: #f3f4f6; margin: 0; padding: 0; }
+                .container { max-width: 600px; margin: 40px auto; background: white; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 24px rgba(0,0,0,0.1); }
+                .header { background: #1e1b4b; padding: 32px; text-align: center; }
+                .header h1 { color: white; margin: 0; font-size: 24px; font-weight: 700; }
+                .content { padding: 32px; }
+                .details { background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 12px; padding: 20px; margin: 20px 0; }
+                .details-item { margin-bottom: 10px; font-size: 15px; }
+                .details-label { font-weight: 600; color: #4b5563; }
+                .details-value { color: #1f2937; }
+              </style>
+            </head>
+            <body>
+              <div class="container">
+                <div class="header">
+                  <h1>🚀 New Demo Request Alert</h1>
                 </div>
-                <div class="details-item">
-                  <span class="details-label">Phone Number:</span>
-                  <span class="details-value">${phone}</span>
-                </div>
-                <div class="details-item">
-                  <span class="details-label">Website URL:</span>
-                  <span class="details-value">${websiteUrl}</span>
+                <div class="content">
+                  <p>A new demo request has been submitted on the Kwickbot website.</p>
+                  <div class="details">
+                    <div class="details-item"><span class="details-label">Full Name:</span> <span class="details-value">${name}</span></div>
+                    <div class="details-item"><span class="details-label">Email:</span> <span class="details-value">${email}</span></div>
+                    <div class="details-item"><span class="details-label">Phone:</span> <span class="details-value">${phone}</span></div>
+                    <div class="details-item"><span class="details-label">Business Name:</span> <span class="details-value">${businessName}</span></div>
+                    <div class="details-item"><span class="details-label">Website:</span> <span class="details-value">${websiteUrl}</span></div>
+                  </div>
                 </div>
               </div>
-              
-              <p>In the meantime, feel free to reply to this email if you have any immediate questions.</p>
-              <p>Best regards,<br><strong>Kwickbot Team</strong></p>
-            </div>
-            <div class="footer">
-              <p>© ${new Date().getFullYear()} Kwickbot. All rights reserved.</p>
-            </div>
-          </div>
-        </body>
-        </html>
-      `;
+            </body>
+            </html>
+          `;
 
-      const customerText = `Hello ${name},\n\nThank you for your interest in Kwickbot! We have successfully received your request for a personalized demo.\n\nOur team will contact you within the next 24 hours to schedule the demo.\n\nSubmitted Details:\n- Business Name: ${businessName}\n- Phone Number: ${phone}\n- Website URL: ${websiteUrl}\n\nBest regards,\nKwickbot Team`;
+          const adminText = `A new demo request has been submitted on the Kwickbot website.\n\nDetails:\n- Full Name: ${name}\n- Email: ${email}\n- Phone: ${phone}\n- Business Name: ${businessName}\n- Website URL: ${websiteUrl}\n- Business Details: ${businessDetails}`;
 
-      await emailService.sendEmail({
-        to: email,
-        subject: 'Demo Request Received - Kwickbot',
-        html: customerHtml,
-        text: customerText
-      });
-
-      // 2. Send notification email to Admin / Escalation
-      const adminRecipient = process.env.ESCALATION_EMAIL || process.env.SMTP_USER;
-      const adminHtml = `
-        <!DOCTYPE html>
-        <html>
-        <head>
-          <style>
-            body { font-family: 'Inter', Arial, sans-serif; background: #f3f4f6; margin: 0; padding: 0; }
-            .container { max-width: 600px; margin: 40px auto; background: white; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 24px rgba(0,0,0,0.1); }
-            .header { background: #1f2937; padding: 30px; text-align: center; }
-            .header h1 { color: white; margin: 0; font-size: 24px; font-weight: 700; }
-            .content { padding: 40px; }
-            .details { background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 12px; padding: 20px; margin: 24px 0; }
-            .details-item { margin-bottom: 12px; font-size: 15px; border-bottom: 1px solid #f3f4f6; padding-bottom: 8px; }
-            .details-item:last-child { border-bottom: none; padding-bottom: 0; }
-            .details-label { font-weight: 600; color: #4b5563; display: block; margin-bottom: 4px; }
-            .details-value { color: #1f2937; white-space: pre-wrap; }
-          </style>
-        </head>
-        <body>
-          <div class="container">
-            <div class="header">
-              <h1>New Lead: Demo Request</h1>
-            </div>
-            <div class="content">
-              <p>A new demo request has been submitted on Kwickbot website. Here are the details:</p>
-              
-              <div class="details">
-                <div class="details-item">
-                  <span class="details-label">Full Name:</span>
-                  <span class="details-value">${name}</span>
-                </div>
-                <div class="details-item">
-                  <span class="details-label">Email Address:</span>
-                  <span class="details-value">${email}</span>
-                </div>
-                <div class="details-item">
-                  <span class="details-label">Phone Number:</span>
-                  <span class="details-value">${phone}</span>
-                </div>
-                <div class="details-item">
-                  <span class="details-label">Business Name:</span>
-                  <span class="details-value">${businessName}</span>
-                </div>
-                <div class="details-item">
-                  <span class="details-label">Business Details / Challenges:</span>
-                  <span class="details-value">${businessDetails}</span>
-                </div>
-                <div class="details-item">
-                  <span class="details-label">Website URL:</span>
-                  <span class="details-value"><a href="${websiteUrl.startsWith('http') ? websiteUrl : 'https://' + websiteUrl}" target="_blank" style="color: #4f46e5; text-decoration: underline;">${websiteUrl}</a></span>
-                </div>
-              </div>
-              
-              <p style="text-align: center; margin-top: 30px;">
-                <a href="${getFrontendUrl(req)}/super-admin" style="background: #4f46e5; color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: 600;">Open Super Admin Dashboard</a>
-              </p>
-            </div>
-          </div>
-        </body>
-        </html>
-      `;
-
-      const adminText = `A new demo request has been submitted on the Kwickbot website.\n\nDetails:\n- Full Name: ${name}\n- Email: ${email}\n- Phone: ${phone}\n- Business Name: ${businessName}\n- Website URL: ${websiteUrl}\n- Business Details: ${businessDetails}`;
-
-      await emailService.sendEmail({
-        to: adminRecipient,
-        subject: `New Demo Request from ${businessName}`,
-        html: adminHtml,
-        text: adminText,
-        from: `"Kwickbot System" <${process.env.SMTP_USER}>`
-      });
-    } catch (emailErr) {
-      console.error('❌ Error sending demo request emails:', emailErr);
-    }
+          await emailService.sendEmail({
+            to: adminRecipient,
+            subject: `New Demo Request from ${businessName}`,
+            html: adminHtml,
+            text: adminText,
+            from: `"Kwickbot System" <${process.env.SMTP_USER}>`
+          });
+        }
+      } catch (emailErr) {
+        console.error('❌ Background demo request email notification failed:', emailErr.message);
+      }
+    })();
 
     res.status(201).json({
       success: true,

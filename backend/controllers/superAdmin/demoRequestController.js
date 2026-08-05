@@ -365,100 +365,100 @@ exports.approveDemoRequest = async (req, res) => {
     demoRequest.generatedPassword = generatedPassword; // Store temporarily for email
     await demoRequest.save();
 
-    // Send email with credentials
-    try {
-      const emailHtml = `
-        <!DOCTYPE html>
-        <html>
-        <head>
-          <style>
-            body { font-family: 'Inter', Arial, sans-serif; background: #f3f4f6; margin: 0; padding: 0; }
-            .container { max-width: 600px; margin: 40px auto; background: white; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 24px rgba(0,0,0,0.1); }
-            .header { background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); padding: 40px; text-align: center; }
-            .header h1 { color: white; margin: 0; font-size: 28px; font-weight: 700; }
-            .content { padding: 40px; }
-            .content h2 { color: #1f2937; font-size: 24px; margin-bottom: 16px; }
-            .content p { color: #6b7280; line-height: 1.6; margin-bottom: 16px; }
-            .credentials { background: #f9fafb; border: 2px solid #e5e7eb; border-radius: 12px; padding: 24px; margin: 24px 0; }
-            .credentials h3 { color: #1f2937; font-size: 18px; margin-bottom: 16px; }
-            .credential-item { margin-bottom: 12px; }
-            .credential-label { color: #6b7280; font-size: 14px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
-            .credential-value { color: #1f2937; font-size: 16px; font-weight: 700; margin-top: 4px; background: white; padding: 12px; border-radius: 8px; border: 1px solid #e5e7eb; }
-            .button { display: inline-block; background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); color: white; padding: 14px 32px; border-radius: 10px; text-decoration: none; font-weight: 600; margin: 24px 0; }
-            .footer { background: #f9fafb; padding: 24px; text-align: center; color: #9ca3af; font-size: 14px; }
-            .warning { background: #fef3c7; border-left: 4px solid #f59e0b; padding: 16px; margin: 24px 0; border-radius: 8px; }
-            .warning p { color: #92400e; margin: 0; }
-          </style>
-        </head>
-        <body>
-          <div class="container">
-            <div class="header">
-              <h1>Welcome to Kwickbot!</h1>
-            </div>
-            <div class="content">
-              <h2>Hi ${demoRequest.name},</h2>
-              <p>Great news! Your demo request has been approved. We've created your account and you can now access the Kwickbot dashboard.</p>
-              
-              <div class="credentials">
-                <h3>🔐 Your Login Credentials</h3>
-                <div class="credential-item">
-                  <div class="credential-label">Email</div>
-                  <div class="credential-value">${demoRequest.email}</div>
-                </div>
-                <div class="credential-item">
-                  <div class="credential-label">Password</div>
-                  <div class="credential-value">${generatedPassword}</div>
-                </div>
-                <div class="credential-item">
-                  <div class="credential-label">Subscription Plan</div>
-                  <div class="credential-value">${subscriptionPlan}</div>
-                </div>
+    // Dispatch email & WhatsApp credentials in background (non-blocking)
+    (async () => {
+      // 1. Send Email
+      try {
+        const emailHtml = `
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <style>
+              body { font-family: 'Inter', Arial, sans-serif; background: #f3f4f6; margin: 0; padding: 0; }
+              .container { max-width: 600px; margin: 40px auto; background: white; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 24px rgba(0,0,0,0.1); }
+              .header { background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); padding: 40px; text-align: center; }
+              .header h1 { color: white; margin: 0; font-size: 28px; font-weight: 700; }
+              .content { padding: 40px; }
+              .content h2 { color: #1f2937; font-size: 24px; margin-bottom: 16px; }
+              .content p { color: #6b7280; line-height: 1.6; margin-bottom: 16px; }
+              .credentials { background: #f9fafb; border: 2px solid #e5e7eb; border-radius: 12px; padding: 24px; margin: 24px 0; }
+              .credentials h3 { color: #1f2937; font-size: 18px; margin-bottom: 16px; }
+              .credential-item { margin-bottom: 12px; }
+              .credential-label { color: #6b7280; font-size: 14px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+              .credential-value { color: #1f2937; font-size: 16px; font-weight: 700; margin-top: 4px; background: white; padding: 12px; border-radius: 8px; border: 1px solid #e5e7eb; }
+              .button { display: inline-block; background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); color: white; padding: 14px 32px; border-radius: 10px; text-decoration: none; font-weight: 600; margin: 24px 0; }
+              .footer { background: #f9fafb; padding: 24px; text-align: center; color: #9ca3af; font-size: 14px; }
+              .warning { background: #fef3c7; border-left: 4px solid #f59e0b; padding: 16px; margin: 24px 0; border-radius: 8px; }
+              .warning p { color: #92400e; margin: 0; }
+            </style>
+          </head>
+          <body>
+            <div class="container">
+              <div class="header">
+                <h1>Welcome to Kwickbot!</h1>
               </div>
+              <div class="content">
+                <h2>Hi ${demoRequest.name},</h2>
+                <p>Great news! Your demo request has been approved. We've created your account and you can now access the Kwickbot dashboard.</p>
+                
+                <div class="credentials">
+                  <h3>🔐 Your Login Credentials</h3>
+                  <div class="credential-item">
+                    <div class="credential-label">Email</div>
+                    <div class="credential-value">${demoRequest.email}</div>
+                  </div>
+                  <div class="credential-item">
+                    <div class="credential-label">Password</div>
+                    <div class="credential-value">${generatedPassword}</div>
+                  </div>
+                  <div class="credential-item">
+                    <div class="credential-label">Subscription Plan</div>
+                    <div class="credential-value">${subscriptionPlan}</div>
+                  </div>
+                </div>
 
-              <div class="warning">
-                <p><strong>⚠️ Important:</strong> Please change your password after your first login for security purposes.</p>
+                <div class="warning">
+                  <p><strong>⚠️ Important:</strong> Please change your password after your first login for security purposes.</p>
+                </div>
+
+                <a href="${getFrontendUrl(req)}/login" class="button">Login to Dashboard</a>
+
+                <p><strong>What's Next?</strong></p>
+                <ul style="color: #6b7280; line-height: 1.8;">
+                  <li>Login to your dashboard using the credentials above</li>
+                  <li>Connect your WhatsApp Business account</li>
+                  <li>Configure your AI bot settings</li>
+                  <li>Start automating customer support!</li>
+                </ul>
+
+                <p>If you have any questions or need assistance, feel free to reach out to our support team.</p>
+                
+                <p style="margin-top: 32px;">Best regards,<br><strong>Kwickbot Team</strong></p>
               </div>
-
-              <a href="${getFrontendUrl(req)}/login" class="button">Login to Dashboard</a>
-
-              <p><strong>What's Next?</strong></p>
-              <ul style="color: #6b7280; line-height: 1.8;">
-                <li>Login to your dashboard using the credentials above</li>
-                <li>Connect your WhatsApp Business account</li>
-                <li>Configure your AI bot settings</li>
-                <li>Start automating customer support!</li>
-              </ul>
-
-              <p>If you have any questions or need assistance, feel free to reach out to our support team.</p>
-              
-              <p style="margin-top: 32px;">Best regards,<br><strong>Kwickbot Team</strong></p>
+              <div class="footer">
+                <p>© ${new Date().getFullYear()} Kwickbot. All rights reserved.</p>
+              </div>
             </div>
-            <div class="footer">
-              <p>© ${new Date().getFullYear()} Kwickbot. All rights reserved.</p>
-              <p>This is an automated email. Please do not reply to this message.</p>
-            </div>
-          </div>
-        </body>
-        </html>
-      `;
+          </body>
+          </html>
+        `;
 
-      const emailText = `Hi ${demoRequest.name},\n\nGreat news! Your demo request has been approved. We've created your account and you can now access the Kwickbot dashboard.\n\nYour Login Credentials:\n- Email: ${demoRequest.email}\n- Password: ${generatedPassword}\n- Subscription Plan: ${subscriptionPlan}\n\nImportant: Please change your password after your first login for security purposes.\n\nLogin to Dashboard here: ${getFrontendUrl(req)}/login\n\nBest regards,\nKwickbot Team`;
+        const emailText = `Hi ${demoRequest.name},\n\nGreat news! Your demo request has been approved. We've created your account and you can now access the Kwickbot dashboard.\n\nYour Login Credentials:\n- Email: ${demoRequest.email}\n- Password: ${generatedPassword}\n- Subscription Plan: ${subscriptionPlan}\n\nLogin here: ${getFrontendUrl(req)}/login\n\nBest regards,\nKwickbot Team`;
 
-      await emailService.sendEmail({
-        to: demoRequest.email,
-        subject: 'Your Kwickbot Account is Ready',
-        html: emailHtml,
-        text: emailText
-      });
-      console.log(`✅ Welcome email sent to ${demoRequest.email}`);
-    } catch (emailError) {
-      console.error('❌ Error sending email:', emailError);
-      // Don't fail the request if email fails
-    }
+        await emailService.sendEmail({
+          to: demoRequest.email,
+          subject: 'Your Kwickbot Account is Ready',
+          html: emailHtml,
+          text: emailText
+        });
+        console.log(`✅ Welcome email dispatched to ${demoRequest.email}`);
+      } catch (emailError) {
+        console.error('❌ Background welcome email delivery failed:', emailError.message);
+      }
 
-    // Send WhatsApp notification with credentials
-    try {
-      const whatsappMessage = `🎉 *Congratulations!* Your Kwickbot account has been approved.
+      // 2. Send WhatsApp Notification
+      try {
+        const whatsappMessage = `🎉 *Congratulations!* Your Kwickbot account has been approved.
 
 Here are your login credentials:
 📧 *Email:* ${demoRequest.email}
@@ -469,16 +469,17 @@ Please log in to your dashboard here:
 
 _Note: For security, please change your password after your first login._`;
 
-      const whatsappCloudAPI = require('../../services/whatsappCloudAPI');
-      const waResult = await whatsappCloudAPI.sendMessage(demoRequest.phone, whatsappMessage);
-      if (waResult.success) {
-        console.log(`✅ Welcome WhatsApp message sent to ${demoRequest.phone}`);
-      } else {
-        console.error(`❌ Welcome WhatsApp message failed to send:`, waResult.error);
+        const whatsappCloudAPI = require('../../services/whatsappCloudAPI');
+        const waResult = await whatsappCloudAPI.sendMessage(demoRequest.phone, whatsappMessage);
+        if (waResult.success) {
+          console.log(`✅ Welcome WhatsApp message sent to ${demoRequest.phone}`);
+        } else {
+          console.warn(`⚠️ Welcome WhatsApp message not sent (Meta token check needed):`, waResult.error);
+        }
+      } catch (waError) {
+        console.error('❌ Background welcome WhatsApp delivery failed:', waError.message);
       }
-    } catch (waError) {
-      console.error('❌ Error sending welcome WhatsApp message:', waError.message);
-    }
+    })();
 
     res.json({
       success: true,

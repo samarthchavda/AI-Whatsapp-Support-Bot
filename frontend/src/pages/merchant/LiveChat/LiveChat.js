@@ -130,7 +130,7 @@ function LiveChat() {
   }, [fetchConversations]);
 
   useEffect(() => {
-    const socket = io(SOCKET_URL, { transports: ['websocket'] });
+    const socket = io(SOCKET_URL, { transports: ['websocket', 'polling'] });
     socket.on('new_message', (data) => {
       fetchConversations();
       if (selectedConversation && data && data.customerPhone === selectedConversation.customerPhone) {

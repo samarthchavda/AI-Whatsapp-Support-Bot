@@ -58,18 +58,23 @@ exports.getConversationsByPhone = async (req, res) => {
     const rawPhone = (req.params.phone || '').replace(/[^0-9]/g, '');
     const cleanPhone = rawPhone.length === 10 ? '91' + rawPhone : rawPhone;
 
-    const conversation = await Conversation.findOne({ 
-      admin: req.admin._id,
+    let query = {
       $or: [
         { customerPhone: req.params.phone },
         { customerPhone: `+${cleanPhone}` },
         { customerPhone: cleanPhone },
         { customerPhone: new RegExp((rawPhone.slice(-10) || '___') + '$') }
       ]
-    }).sort({ updatedAt: -1 });
+    };
+
+    if (req.admin && req.admin.role !== 'super_admin') {
+      query.admin = req.admin._id;
+    }
+
+    const conversation = await Conversation.findOne(query).sort({ updatedAt: -1 });
 
     if (!conversation) {
-      return res.status(404).json({ success: false, error: 'Conversation not found' });
+      return res.json({ success: true, conversation: null, messages: [] });
     }
 
     res.json({

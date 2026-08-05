@@ -54,30 +54,49 @@ function LiveChat() {
     }
   }, []);
 
-  const fetchMessages = useCallback(async (conv) => {
-    if (!conv) return;
+  const fetchMessages = useCallback(async (target) => {
+    if (!target) return;
     try {
-      if (conv.messages && Array.isArray(conv.messages) && conv.messages.length > 0) {
-        setMessages(conv.messages);
+      const conversationId = typeof target === 'object' ? target._id : (typeof target === 'string' && target.length === 24 ? target : null);
+      const phoneNum = typeof target === 'object' ? target.customerPhone : (typeof target === 'string' && target.length !== 24 ? target : null);
+
+      if (typeof target === 'object' && Array.isArray(target.messages) && target.messages.length > 0) {
+        setMessages(target.messages);
       }
-      if (conv._id) {
-        const response = await getConversationById(conv._id);
+
+      if (conversationId) {
+        const response = await getConversationById(conversationId);
         const convData = response.data;
         if (convData && Array.isArray(convData.messages)) {
           setMessages(convData.messages);
           return;
         }
       }
-      if (conv.customerPhone) {
-        const response = await getConversationsByPhone(conv.customerPhone);
+
+      if (phoneNum) {
+        const response = await getConversationsByPhone(phoneNum);
         const fetchedConv = response.data?.conversation || response.data?.conversations?.[0];
-        setMessages(fetchedConv?.messages || conv.messages || []);
+        if (fetchedConv && Array.isArray(fetchedConv.messages)) {
+          setMessages(fetchedConv.messages);
+          return;
+        }
       }
     } catch (error) {
       console.error('Error fetching messages:', error);
-      setMessages(conv.messages || []);
+      if (typeof target === 'object' && Array.isArray(target.messages)) {
+        setMessages(target.messages);
+      }
     }
   }, []);
+
+  const handleSelectConversation = (conv) => {
+    if (!conv) return;
+    setSelectedConversation(conv);
+    if (Array.isArray(conv.messages)) {
+      setMessages(conv.messages);
+    }
+    fetchMessages(conv);
+  };
 
   const toggleBotPause = async () => {
     if (!selectedConversation) return;
@@ -136,7 +155,7 @@ function LiveChat() {
         sender: 'admin'
       });
       setMessageInput('');
-      await fetchMessages(selectedConversation.customerPhone);
+      await fetchMessages(selectedConversation);
       await fetchConversations();
     } catch (error) {
       console.error('Error sending message:', error);
@@ -239,7 +258,7 @@ function LiveChat() {
                 <div
                   key={conv._id}
                   className={`conversation-item ${selectedConversation?._id === conv._id ? 'active' : ''}`}
-                  onClick={() => setSelectedConversation(conv)}
+                  onClick={() => handleSelectConversation(conv)}
                 >
                   <div
                     className="conversation-avatar"

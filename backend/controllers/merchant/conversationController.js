@@ -55,14 +55,30 @@ exports.getConversationById = async (req, res) => {
 // Get conversations by customer phone
 exports.getConversationsByPhone = async (req, res) => {
   try {
-    const conversations = await Conversation.find({ 
-      admin: req.admin._id, // Filter by logged-in admin
-      customerPhone: req.params.phone 
-    }).sort({ createdAt: -1 });
+    const rawPhone = (req.params.phone || '').replace(/[^0-9]/g, '');
+    const cleanPhone = rawPhone.length === 10 ? '91' + rawPhone : rawPhone;
 
-    res.json({ conversations, count: conversations.length });
+    const conversation = await Conversation.findOne({ 
+      admin: req.admin._id,
+      $or: [
+        { customerPhone: req.params.phone },
+        { customerPhone: `+${cleanPhone}` },
+        { customerPhone: cleanPhone },
+        { customerPhone: new RegExp((rawPhone.slice(-10) || '___') + '$') }
+      ]
+    }).sort({ updatedAt: -1 });
+
+    if (!conversation) {
+      return res.status(404).json({ success: false, error: 'Conversation not found' });
+    }
+
+    res.json({
+      success: true,
+      conversation,
+      messages: conversation.messages || []
+    });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ success: false, error: error.message });
   }
 };
 

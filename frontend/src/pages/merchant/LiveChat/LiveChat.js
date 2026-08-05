@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { FaPaperPlane, FaRobot, FaUser, FaCircle, FaSearch, FaPhone, FaCommentDots } from 'react-icons/fa';
 import io from 'socket.io-client';
-import { getConversations, getConversationsByPhone, sendConversationMessage, updateConversation } from '../../../services/api';
+import { getConversations, getConversationById, getConversationsByPhone, sendConversationMessage, updateConversation } from '../../../services/api';
 import './LiveChat.css';
 
 const SOCKET_URL = process.env.REACT_APP_API_URL?.replace('/api', '') || (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' ? 'http://localhost:5001' : window.location.origin);
@@ -54,13 +54,28 @@ function LiveChat() {
     }
   }, []);
 
-  const fetchMessages = useCallback(async (customerPhone) => {
+  const fetchMessages = useCallback(async (conv) => {
+    if (!conv) return;
     try {
-      const response = await getConversationsByPhone(customerPhone);
-      setMessages(response.data.conversation?.messages || []);
+      if (conv.messages && Array.isArray(conv.messages) && conv.messages.length > 0) {
+        setMessages(conv.messages);
+      }
+      if (conv._id) {
+        const response = await getConversationById(conv._id);
+        const convData = response.data;
+        if (convData && Array.isArray(convData.messages)) {
+          setMessages(convData.messages);
+          return;
+        }
+      }
+      if (conv.customerPhone) {
+        const response = await getConversationsByPhone(conv.customerPhone);
+        const fetchedConv = response.data?.conversation || response.data?.conversations?.[0];
+        setMessages(fetchedConv?.messages || conv.messages || []);
+      }
     } catch (error) {
       console.error('Error fetching messages:', error);
-      setMessages([]);
+      setMessages(conv.messages || []);
     }
   }, []);
 
@@ -93,12 +108,7 @@ function LiveChat() {
     socket.on('new_message', (data) => {
       fetchConversations();
       if (selectedConversation && data && data.customerPhone === selectedConversation.customerPhone) {
-        fetchMessages(selectedConversation.customerPhone);
-        getConversationsByPhone(selectedConversation.customerPhone).then(response => {
-          if (response.data?.success && response.data?.conversation) {
-            setSelectedConversation(response.data.conversation);
-          }
-        }).catch(err => console.error('Error refreshing selected conversation:', err));
+        fetchMessages(selectedConversation);
       }
     });
     return () => socket.disconnect();
@@ -106,7 +116,7 @@ function LiveChat() {
 
   useEffect(() => {
     if (selectedConversation) {
-      fetchMessages(selectedConversation.customerPhone);
+      fetchMessages(selectedConversation);
     }
   }, [selectedConversation, fetchMessages]);
 

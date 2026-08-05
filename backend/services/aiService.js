@@ -431,11 +431,11 @@ Smart Fallback Rules (when specific information is not available in the knowledg
         adminDoc = await Admin.findById(adminId);
       }
       if (!adminDoc) {
-        console.warn(`⚠️ [ROUTING] Could not find admin for conversation ${conversation._id}. Using generic fallback.`);
-        adminDoc = await Admin.findOne({ whatsappConnected: true, email: { $ne: 'demo@store.com' } })
-          || await Admin.findOne({ whatsappConnected: true })
-          || await Admin.findOne({ email: 'demo@store.com' })
-          || await Admin.findOne();
+        console.warn(`⚠️ [ROUTING] Could not find admin for conversation ${conversation._id}. Using generic merchant fallback.`);
+        adminDoc = await Admin.findOne({ whatsappConnected: true, role: { $ne: 'super_admin' }, email: { $ne: 'demo@store.com' } })
+          || await Admin.findOne({ whatsappConnected: true, role: { $ne: 'super_admin' } })
+          || await Admin.findOne({ role: { $ne: 'super_admin' }, email: { $ne: 'demo@store.com' } })
+          || await Admin.findOne({ role: { $ne: 'super_admin' } });
       }
 
       // Detect language and translate if foreign

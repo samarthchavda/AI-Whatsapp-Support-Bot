@@ -57,13 +57,14 @@ exports.handleWebhook = async (req, res) => {
       const phoneMetadata = webhookValue.metadata;
       const incomingPhoneNumberId = phoneMetadata?.phone_number_id;
 
-      // Find the corresponding admin/merchant account
+      // Find the corresponding merchant admin account (excluding super_admin)
       const Admin = require('../../models/Admin');
       const { encrypt } = require('../../services/whatsappCredentialService');
       let matchedAdmin = null;
       if (incomingPhoneNumberId) {
         const encryptedPhoneId = encrypt(incomingPhoneNumberId, true);
         matchedAdmin = await Admin.findOne({
+          role: { $ne: 'super_admin' },
           $or: [
             { whatsappPhoneNumberId: encryptedPhoneId },
             { whatsappPhoneNumberId: incomingPhoneNumberId }
@@ -78,34 +79,19 @@ exports.handleWebhook = async (req, res) => {
           const Conversation = require('../../models/Conversation');
           const existingConvo = await Conversation.findOne({ customerPhone }).sort({ updatedAt: -1 });
           if (existingConvo && existingConvo.admin) {
-            matchedAdmin = await Admin.findById(existingConvo.admin);
+            matchedAdmin = await Admin.findOne({ _id: existingConvo.admin, role: { $ne: 'super_admin' } });
           }
         } catch (err) {
           console.error('Error looking up existing conversation:', err.message);
         }
       }
 
-      // Fallback 2: If still no match, search for a default admin configuration
+      // Fallback 2: Search for merchant admin configuration (excluding super_admin)
       if (!matchedAdmin) {
-        // Fetch dynamic phone number ID from GlobalSettings
-        let systemPhoneId = process.env.WHATSAPP_PHONE_NUMBER_ID;
-        try {
-          const GlobalSettings = require('../../models/GlobalSettings');
-          const phoneIdSetting = await GlobalSettings.findOne({ key: 'whatsapp_phone_number_id' });
-          if (phoneIdSetting && phoneIdSetting.value) systemPhoneId = phoneIdSetting.value;
-        } catch (err) {
-          console.error('Error fetching dynamic WhatsApp phone number ID from DB:', err.message);
-        }
-
-        // If the incoming ID matches the env or DB system ID, fallback to default admin
-        if (incomingPhoneNumberId === systemPhoneId || incomingPhoneNumberId === process.env.WHATSAPP_PHONE_NUMBER_ID) {
-          matchedAdmin = await Admin.findOne({ whatsappConnected: true, email: { $ne: 'demo@store.com' } })
-            || await Admin.findOne({ whatsappConnected: true })
-            || await Admin.findOne({ email: 'demo@store.com' })
-            || await Admin.findOne();
-        } else {
-          console.warn(`⚠️ Received message for unconfigured Phone Number ID: ${incomingPhoneNumberId}`);
-        }
+        matchedAdmin = await Admin.findOne({ whatsappConnected: true, role: { $ne: 'super_admin' }, email: { $ne: 'demo@store.com' } })
+          || await Admin.findOne({ whatsappConnected: true, role: { $ne: 'super_admin' } })
+          || await Admin.findOne({ role: { $ne: 'super_admin' }, email: { $ne: 'demo@store.com' } })
+          || await Admin.findOne({ role: { $ne: 'super_admin' } });
       }
 
       // Handle messages

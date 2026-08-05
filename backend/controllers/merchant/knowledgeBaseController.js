@@ -489,6 +489,14 @@ exports.syncShopifyProducts = async (req, res) => {
         await kb.save();
       }
 
+      // Process vector embeddings for Gemini RAG search
+      try {
+        const knowledgeBaseService = require('../../services/knowledgeBaseService');
+        await knowledgeBaseService.processAndSaveChunks(kb);
+      } catch (chunkErr) {
+        console.warn(`Could not chunk product ${title}:`, chunkErr.message);
+      }
+
       syncedCount++;
     }
 

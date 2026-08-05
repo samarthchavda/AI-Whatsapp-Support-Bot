@@ -97,5 +97,6 @@ router.get('/:id', verifyToken, conversationController.getConversationById);
  *       - BearerAuth: []
  */
 router.put('/:id', verifyToken, conversationController.updateConversationStatus);
+router.patch('/:id', verifyToken, conversationController.updateConversationStatus);
 
 module.exports = router;

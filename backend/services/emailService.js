@@ -46,13 +46,16 @@ async function sendEmail({ to, subject, html, text, from }) {
   // Fallback: Use standard Nodemailer SMTP
   if (process.env.SMTP_USER && process.env.SMTP_PASS && process.env.SMTP_USER !== 'your_email@gmail.com') {
     try {
+      const smtpPort = parseInt(process.env.SMTP_PORT) || 587;
+      const isSecure = process.env.SMTP_SECURE === 'true' || smtpPort === 465;
+
       const transporter = nodemailer.createTransport({
         host: process.env.SMTP_HOST || 'smtp.gmail.com',
-        port: parseInt(process.env.SMTP_PORT) || 587,
-        secure: false,
-        connectionTimeout: 3000,
-        greetingTimeout: 3000,
-        socketTimeout: 5000,
+        port: smtpPort,
+        secure: isSecure,
+        connectionTimeout: 10000,
+        greetingTimeout: 10000,
+        socketTimeout: 10000,
         auth: {
           user: process.env.SMTP_USER,
           pass: process.env.SMTP_PASS

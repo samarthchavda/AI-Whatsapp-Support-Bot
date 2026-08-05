@@ -65,24 +65,31 @@ function LiveChat() {
       }
 
       if (conversationId) {
-        const response = await getConversationById(conversationId);
-        const convData = response.data;
-        if (convData && Array.isArray(convData.messages)) {
-          setMessages(convData.messages);
-          return;
+        try {
+          const response = await getConversationById(conversationId);
+          const convData = response.data;
+          if (convData && Array.isArray(convData.messages)) {
+            setMessages(convData.messages);
+            return;
+          }
+        } catch (idErr) {
+          // Silently handle 404 if conversation not found by ID
         }
       }
 
       if (phoneNum) {
-        const response = await getConversationsByPhone(phoneNum);
-        const fetchedConv = response.data?.conversation || response.data?.conversations?.[0];
-        if (fetchedConv && Array.isArray(fetchedConv.messages)) {
-          setMessages(fetchedConv.messages);
-          return;
+        try {
+          const response = await getConversationsByPhone(encodeURIComponent(phoneNum));
+          const fetchedConv = response.data?.conversation || response.data?.conversations?.[0];
+          if (fetchedConv && Array.isArray(fetchedConv.messages)) {
+            setMessages(fetchedConv.messages);
+            return;
+          }
+        } catch (phoneErr) {
+          // Silently handle 404 if conversation not found by phone
         }
       }
     } catch (error) {
-      console.error('Error fetching messages:', error);
       if (typeof target === 'object' && Array.isArray(target.messages)) {
         setMessages(target.messages);
       }

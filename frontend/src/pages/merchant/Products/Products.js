@@ -141,15 +141,17 @@ const Products = () => {
 
       {/* Top Metrics Cards */}
       <div className="product-metrics-grid">
-        <div className="metric-card">
+        <Link to="/dashboard/leads" className="metric-card clickable-metric-card" title="Click to view WhatsApp Leads CRM">
           <div className="metric-icon-box leads-icon">
             <FaRobot />
           </div>
           <div>
             <div className="metric-value">{totalLeads}</div>
-            <div className="metric-label">Product Inquiry WhatsApp Leads Captured</div>
+            <div className="metric-label">
+              Product Inquiry WhatsApp Leads Captured <FaExternalLinkAlt style={{ fontSize: '10px', marginLeft: '4px' }} />
+            </div>
           </div>
-        </div>
+        </Link>
 
         <div className="metric-card">
           <div className="metric-icon-box count-icon">

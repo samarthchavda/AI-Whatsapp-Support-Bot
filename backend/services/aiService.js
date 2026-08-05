@@ -1062,22 +1062,30 @@ Smart Fallback Rules (when specific information is not available in the knowledg
       }));
       await aiLogDoc.save();
 
-      // Record WhatsApp Product Lead for Merchant Dashboard
+      // Record WhatsApp Product Lead for Merchant Dashboard (Unique lead per customer phone)
       if (adminDoc) {
         try {
           const MerchantProductLead = require('../models/MerchantProductLead');
           const custName = (conversation && conversation.customerName) || customerPhone || 'WhatsApp Customer';
           const prodTitle = message.length > 50 ? message.substring(0, 50) + '...' : message;
-          await MerchantProductLead.create({
-            adminId: adminDoc._id,
-            customerPhone: customerPhone,
-            customerName: custName,
-            productName: prodTitle,
-            userMessage: message,
-            aiResponse: response,
-            status: 'new',
-            source: 'whatsapp'
-          });
+
+          await MerchantProductLead.findOneAndUpdate(
+            { adminId: adminDoc._id, customerPhone: customerPhone },
+            {
+              $set: {
+                customerName: custName,
+                productName: prodTitle,
+                userMessage: message,
+                aiResponse: response,
+                updatedAt: Date.now()
+              },
+              $setOnInsert: {
+                status: 'new',
+                source: 'whatsapp'
+              }
+            },
+            { upsert: true, new: true }
+          );
         } catch (leadErr) {
           console.error('Error recording MerchantProductLead:', leadErr.message);
         }

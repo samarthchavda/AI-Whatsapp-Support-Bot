@@ -136,9 +136,9 @@ exports.getAllKnowledgeBases = async (req, res) => {
     const count = await KnowledgeBase.countDocuments(query);
 
     // Calculate real WhatsApp product inquiry leads for this admin
-    const Conversation = require('../../models/Conversation');
+    const MerchantProductLead = require('../../models/MerchantProductLead');
     const realLeadsCount = (req && req.admin && req.admin._id) ? 
-      await Conversation.countDocuments({ adminId: req.admin._id }) : 0;
+      await MerchantProductLead.countDocuments({ adminId: req.admin._id }) : 0;
 
     res.json({
       success: true,

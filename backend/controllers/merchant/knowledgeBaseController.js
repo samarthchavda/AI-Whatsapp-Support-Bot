@@ -423,19 +423,40 @@ exports.syncShopifyProducts = async (req, res) => {
       currencySymbol = '$';
     }
 
-    const shopifyUrl = `https://${shopDomain}/admin/api/${apiVersion}/products.json?limit=250`;
+    let nextUrl = `https://${shopDomain}/admin/api/${apiVersion}/products.json?limit=250`;
+    let products = [];
 
     console.log(`🛍️ Fetching Shopify products for ${shopDomain} (Currency: ${currencySymbol})...`);
 
-    const response = await axios.get(shopifyUrl, {
-      headers: {
-        'X-Shopify-Access-Token': integration.apiKey,
-        'Content-Type': 'application/json'
-      },
-      timeout: 15000
-    });
+    while (nextUrl) {
+      const response = await axios.get(nextUrl, {
+        headers: {
+          'X-Shopify-Access-Token': integration.apiKey,
+          'Content-Type': 'application/json'
+        },
+        timeout: 15000
+      });
 
-    const products = response.data.products || [];
+      const pageProducts = response.data.products || [];
+      products.push(...pageProducts);
+
+      // Parse Shopify header Link for page_info cursor pagination
+      const linkHeader = response.headers.link;
+      nextUrl = null;
+      if (linkHeader) {
+        const links = linkHeader.split(',');
+        const nextLink = links.find(l => l.includes('rel="next"'));
+        if (nextLink) {
+          const match = nextLink.match(/<([^>]+)>/);
+          if (match) {
+            nextUrl = match[1];
+          }
+        }
+      }
+    }
+
+    console.log(`🛍️ Found total ${products.length} products across all Shopify pages`);
+
     let syncedCount = 0;
 
     for (const product of products) {

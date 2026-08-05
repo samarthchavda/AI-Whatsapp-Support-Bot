@@ -62,4 +62,40 @@ router.get('/stats', verifyToken, conversationController.getConversationStats);
  */
 router.post('/send-message', verifyToken, conversationController.sendAdminMessage);
 
+/**
+ * @openapi
+ * /api/conversations/phone/{phone}:
+ *   get:
+ *     tags:
+ *       - WhatsApp Live Conversations
+ *     summary: Get Conversation By Phone Number
+ *     security:
+ *       - BearerAuth: []
+ */
+router.get('/phone/:phone', verifyToken, conversationController.getConversationsByPhone);
+
+/**
+ * @openapi
+ * /api/conversations/{id}:
+ *   get:
+ *     tags:
+ *       - WhatsApp Live Conversations
+ *     summary: Get Conversation By ID
+ *     security:
+ *       - BearerAuth: []
+ */
+router.get('/:id', verifyToken, conversationController.getConversationById);
+
+/**
+ * @openapi
+ * /api/conversations/{id}:
+ *   put:
+ *     tags:
+ *       - WhatsApp Live Conversations
+ *     summary: Update Conversation Status or Bot Pause State
+ *     security:
+ *       - BearerAuth: []
+ */
+router.put('/:id', verifyToken, conversationController.updateConversationStatus);
+
 module.exports = router;

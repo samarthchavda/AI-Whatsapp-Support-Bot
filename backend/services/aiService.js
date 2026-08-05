@@ -1058,6 +1058,27 @@ Smart Fallback Rules (when specific information is not available in the knowledg
       }));
       await aiLogDoc.save();
 
+      // Record WhatsApp Product Lead for Merchant Dashboard
+      if (adminDoc) {
+        try {
+          const MerchantProductLead = require('../models/MerchantProductLead');
+          const custName = (conversation && conversation.customerName) || customerPhone || 'WhatsApp Customer';
+          const prodTitle = message.length > 50 ? message.substring(0, 50) + '...' : message;
+          await MerchantProductLead.create({
+            adminId: adminDoc._id,
+            customerPhone: customerPhone,
+            customerName: custName,
+            productName: prodTitle,
+            userMessage: message,
+            aiResponse: response,
+            status: 'new',
+            source: 'whatsapp'
+          });
+        } catch (leadErr) {
+          console.error('Error recording MerchantProductLead:', leadErr.message);
+        }
+      }
+
       // Increment admin usage metrics in database
       if (adminDoc) {
         adminDoc.totalMessagesProcessed = (adminDoc.totalMessagesProcessed || 0) + 1;

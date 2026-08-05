@@ -219,6 +219,7 @@ app.use('/api/whatsapp', whatsappRoutes);
 app.use('/api/traffic', trafficRoutes);
 app.use('/api/abandoned-carts', abandonedCartRoutes);
 app.use('/api/blog', blogRoutes);
+app.use('/api/merchant-leads', require('./routes/merchantLeadRoutes'));
 
 // Error handling middleware
 app.use((err, req, res, next) => {

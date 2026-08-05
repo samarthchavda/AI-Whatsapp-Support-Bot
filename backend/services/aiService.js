@@ -20,6 +20,7 @@ class AIService {
       ? new GoogleGenerativeAI(geminiApiKey)
       : null;
 
+    //open ai api key also use whenever gemini is not available or not working 
     const apiKey = process.env.OPENAI_API_KEY;
     this.openaiModelName = process.env.OPENAI_MODEL || 'gpt-3.5-turbo';
     this.openai = apiKey && apiKey !== 'your_openai_api_key_here' && apiKey !== 'sk-test-key'

@@ -189,17 +189,22 @@ function WhatsAppConnect() {
     return () => window.removeEventListener('message', handleMetaMessage);
   }, []);
 
-  const launchDirectOAuth = (appId, configId) => {
+  const handleLaunchEmbeddedSignup = () => {
+    setEmbeddedLoading(true);
+
+    const appId = process.env.REACT_APP_META_APP_ID || '2242808243238982';
+    const configId = process.env.REACT_APP_META_CONFIG_ID || '1066111046278122';
+
     const rawUri = window.location.href.split('#')[0].split('?')[0];
     const redirectUri = encodeURIComponent(rawUri);
-    const extrasObj = JSON.stringify({ feature: 'whatsapp_embedded_signup', setup: {} });
-    const extras = encodeURIComponent(extrasObj);
-    const oauthUrl = `https://www.facebook.com/v25.0/dialog/oauth?client_id=${appId}&config_id=${configId}&redirect_uri=${redirectUri}&response_type=code&extras=${extras}`;
+    const oauthUrl = `https://www.facebook.com/v25.0/dialog/oauth?client_id=${appId}&config_id=${configId}&redirect_uri=${redirectUri}&response_type=code`;
 
     const width = 600;
     const height = 750;
     const left = window.screenX + (window.outerWidth - width) / 2;
     const top = window.screenY + (window.outerHeight - height) / 2;
+
+    console.log('🚀 Opening Meta WhatsApp Embedded Signup OAuth popup...');
 
     const popup = window.open(
       oauthUrl,
@@ -223,45 +228,14 @@ function WhatsAppConnect() {
             popup.close();
             clearInterval(checkPopupInterval);
             if (code) {
+              console.log('✅ Captured authorization code from popup window');
               exchangeAuthCode(code);
             }
           }
         } catch (crossOriginErr) {
-          // Cross-origin restriction while on facebook.com domain is expected
+          // Cross-origin restriction while user is on facebook.com domain is expected
         }
       }, 500);
-    }
-  };
-
-  const handleLaunchEmbeddedSignup = () => {
-    setEmbeddedLoading(true);
-
-    const appId = process.env.REACT_APP_META_APP_ID || '2242808243238982';
-    const configId = process.env.REACT_APP_META_CONFIG_ID || '1066111046278122';
-
-    if (window.FB) {
-      const loginOptions = {
-        config_id: configId,
-        response_type: 'code',
-        override_default_response_type: true,
-        extras: {
-          feature: 'whatsapp_embedded_signup',
-          setup: {}
-        }
-      };
-
-      window.FB.login((response) => {
-        if (response.authResponse && response.authResponse.code) {
-          console.log('✅ Received Auth Code from Facebook Popup');
-          exchangeAuthCode(response.authResponse.code);
-        } else {
-          console.warn('⚠️ FB.login did not return auth code, launching direct Meta OAuth popup fallback...');
-          launchDirectOAuth(appId, configId);
-        }
-      }, loginOptions);
-    } else {
-      console.log('⚠️ Meta SDK not loaded, launching direct Meta OAuth popup fallback...');
-      launchDirectOAuth(appId, configId);
     }
   };
 

@@ -59,7 +59,7 @@ exports.handleEmbeddedSignup = async (req, res) => {
         }
       });
     } catch (err) {
-      const isRedirectUriError = err.response?.data?.error?.error_subcode === 36008 || err.response?.data?.error?.code === 100;
+      const isRedirectUriError = err.response?.data?.error?.error_subcode === 36008 || err.response?.data?.error?.code === 100 || err.response?.data?.error?.code === 191;
       if (isRedirectUriError) {
         // Swap domain format (add/remove www) and try alternate root URL
         let alternateUri;
@@ -80,7 +80,7 @@ exports.handleEmbeddedSignup = async (req, res) => {
             }
           });
         } catch (altErr) {
-          const isAltRedirectUriError = altErr.response?.data?.error?.error_subcode === 36008 || altErr.response?.data?.error?.code === 100;
+          const isAltRedirectUriError = altErr.response?.data?.error?.error_subcode === 36008 || altErr.response?.data?.error?.code === 100 || altErr.response?.data?.error?.code === 191;
           if (isAltRedirectUriError) {
             // Try with an empty string redirect_uri (standard fallback for JS SDK)
             console.log(`🔄 Alternate root URL failed. Retrying with empty string redirect_uri...`);
@@ -94,7 +94,7 @@ exports.handleEmbeddedSignup = async (req, res) => {
                 }
               });
             } catch (emptyErr) {
-              const isEmptyRedirectUriError = emptyErr.response?.data?.error?.error_subcode === 36008 || emptyErr.response?.data?.error?.code === 100;
+              const isEmptyRedirectUriError = emptyErr.response?.data?.error?.error_subcode === 36008 || emptyErr.response?.data?.error?.code === 100 || emptyErr.response?.data?.error?.code === 191;
               if (isEmptyRedirectUriError) {
                 // Try omitting redirect_uri completely
                 console.log(`🔄 Empty string redirect_uri failed. Retrying with omitted redirect_uri parameter...`);
@@ -107,7 +107,7 @@ exports.handleEmbeddedSignup = async (req, res) => {
                     }
                   });
                 } catch (omitErr) {
-                  const isOmitRedirectUriError = omitErr.response?.data?.error?.error_subcode === 36008 || omitErr.response?.data?.error?.code === 100;
+                  const isOmitRedirectUriError = omitErr.response?.data?.error?.error_subcode === 36008 || omitErr.response?.data?.error?.code === 100 || omitErr.response?.data?.error?.code === 191;
                   if (isOmitRedirectUriError) {
                     // Final fallback: try using the original full page URL path
                     const fullUriFallback = redirectUri || req.headers.referer || 'https://kwickbot.in/dashboard/whatsapp-connect';

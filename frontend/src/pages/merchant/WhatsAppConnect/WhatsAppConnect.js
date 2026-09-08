@@ -192,7 +192,9 @@ function WhatsAppConnect() {
   const launchDirectOAuth = (appId, configId) => {
     const rawUri = window.location.href.split('#')[0].split('?')[0];
     const redirectUri = encodeURIComponent(rawUri);
-    const oauthUrl = `https://www.facebook.com/v25.0/dialog/oauth?client_id=${appId}&config_id=${configId}&redirect_uri=${redirectUri}&response_type=code`;
+    const extrasObj = JSON.stringify({ feature: 'whatsapp_embedded_signup', setup: {} });
+    const extras = encodeURIComponent(extrasObj);
+    const oauthUrl = `https://www.facebook.com/v25.0/dialog/oauth?client_id=${appId}&config_id=${configId}&redirect_uri=${redirectUri}&response_type=code&extras=${extras}`;
 
     const width = 600;
     const height = 750;
@@ -241,7 +243,11 @@ function WhatsAppConnect() {
       const loginOptions = {
         config_id: configId,
         response_type: 'code',
-        override_default_response_type: true
+        override_default_response_type: true,
+        extras: {
+          feature: 'whatsapp_embedded_signup',
+          setup: {}
+        }
       };
 
       window.FB.login((response) => {

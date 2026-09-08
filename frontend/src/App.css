@@ -45,27 +45,27 @@
 
 /* Dark theme override */
 body.dark-theme {
-  --bg-app:         #09090B;
-  --bg-card:        #18181B;
-  --bg-hover:       #27272A;
-  --text-primary:   #FFFFFF;
-  --text-secondary: #A1A1AA;
-  --text-muted:     #71717A;
-  --border:         #27272A;
-  --shadow-sm: 0 1px 4px rgba(0,0,0,0.4);
-  --shadow-md: 0 4px 16px rgba(0,0,0,0.5);
-  --shadow-lg: 0 8px 32px rgba(0,0,0,0.6);
+  --bg-app:         #F7FAFF;
+  --bg-card:        #FFFFFF;
+  --bg-hover:       #F0F5FA;
+  --text-primary:   #101828;
+  --text-secondary: #667085;
+  --text-muted:     #98A2B3;
+  --border:         #D9E8F7;
+  --shadow-sm: 0 1px 3px 0 rgba(16, 24, 40, 0.05);
+  --shadow-md: 0 4px 6px -1px rgba(16, 24, 40, 0.05);
+  --shadow-lg: 0 10px 15px -3px rgba(16, 24, 40, 0.05);
 
-  --sidebar-bg:     #18181B;
-  --sidebar-item:   rgba(255,255,255,0.06);
-  --sidebar-active: rgba(22, 119, 255, 0.15);
-  --sidebar-border: #27272A;
-  --sidebar-text:   #A1A1AA;
-  --sidebar-text-active: #ffffff;
+  --sidebar-bg:     #FFFFFF;
+  --sidebar-item:   transparent;
+  --sidebar-active: #EAF4FF;
+  --sidebar-border: #D9E8F7;
+  --sidebar-text:   #667085;
+  --sidebar-text-active: #1677FF;
 
   --brand:          #1677FF !important;
   --brand-dark:     #0958D9 !important;
-  --brand-light:    rgba(22, 119, 255, 0.1) !important;
+  --brand-light:    #EAF4FF !important;
   --brand-glow:     rgba(22, 119, 255, 0.12) !important;
 }
 

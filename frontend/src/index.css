@@ -1,22 +1,22 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
 
 :root {
-  --bg-base:        #F7F9FC;
+  --bg-base:        #F7FAFF;
   --bg-elevated:    #FFFFFF;
   --bg-surface:     #FFFFFF;
   --bg-input:       #F8FAFC;
-  --bg-soft-blue:   #EEF6FF;
-  --border-subtle:  #DCE6F2;
-  --border-default: #DCE6F2;
+  --bg-soft-blue:   #EAF4FF;
+  --border-subtle:  #D9E8F7;
+  --border-default: #D9E8F7;
   --text-primary:   #101828;
   --text-secondary: #667085;
   --text-muted:     #98A2B3;
-  --accent:         #1683D8;
-  --accent-secondary: #0B6FC4;
-  --brand:          #1683D8;
-  --brand-dark:     #0B6FC4;
-  --brand-light:    #EEF6FF;
-  --brand-glow:     rgba(22, 131, 216, 0.1);
+  --accent:         #1677FF;
+  --accent-secondary: #0958D9;
+  --brand:          #1677FF;
+  --brand-dark:     #0958D9;
+  --brand-light:    #EAF4FF;
+  --brand-glow:     rgba(22, 119, 255, 0.1);
   --success:        #16A36A;
   --danger:         #EF4444;
   --warning:        #F59E0B;
@@ -24,33 +24,33 @@
   --radius-md:  14px;
   --radius-lg:  18px;
   --radius-xl:  24px;
-  --shadow-glow: 0 4px 20px rgba(22, 131, 216, 0.12);
+  --shadow-glow: 0 4px 20px rgba(22, 119, 255, 0.12);
   --shadow-sm: 0 1px 3px rgba(16, 24, 40, 0.05);
   --shadow-md: 0 4px 16px rgba(16, 24, 40, 0.06);
 }
 
 body.dark-theme {
-  --bg-base:        #09090B;
-  --bg-elevated:    #18181B;
-  --bg-surface:     #18181B;
-  --bg-input:       #27272A;
-  --bg-soft-blue:   rgba(22, 131, 216, 0.1);
-  --border-subtle:  #27272A;
-  --border-default: #27272A;
-  --text-primary:   #FFFFFF;
-  --text-secondary: #A1A1AA;
-  --text-muted:     #71717A;
-  --accent:         #1683D8 !important;
-  --accent-secondary: #0B6FC4 !important;
+  --bg-base:        #F7FAFF;
+  --bg-elevated:    #FFFFFF;
+  --bg-surface:     #FFFFFF;
+  --bg-input:       #F8FAFC;
+  --bg-soft-blue:   #EAF4FF;
+  --border-subtle:  #D9E8F7;
+  --border-default: #D9E8F7;
+  --text-primary:   #101828;
+  --text-secondary: #667085;
+  --text-muted:     #98A2B3;
+  --accent:         #1677FF !important;
+  --accent-secondary: #0958D9 !important;
   --success:        #16A36A;
   --danger:         #EF4444;
   --warning:        #F59E0B;
-  --shadow-glow: 0 4px 20px rgba(22, 131, 216, 0.15);
+  --shadow-glow: 0 4px 20px rgba(22, 119, 255, 0.15);
 
-  --brand:        #1683D8 !important;
-  --brand-dark:   #0B6FC4 !important;
-  --brand-light:  rgba(22, 131, 216, 0.1) !important;
-  --brand-glow:   rgba(22, 131, 216, 0.12) !important;
+  --brand:        #1677FF !important;
+  --brand-dark:   #0958D9 !important;
+  --brand-light:  #EAF4FF !important;
+  --brand-glow:   rgba(22, 119, 255, 0.12) !important;
 }
 
 * {

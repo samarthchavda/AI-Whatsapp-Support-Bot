@@ -4,69 +4,69 @@
    DESIGN TOKENS — AiSensy-inspired Professional SaaS Theme
    ============================================================ */
 :root {
-  --brand:        #16A34A;   /* Softer professional Brand Green */
-  --brand-dark:   #15803D;   /* Darker professional Brand Green */
-  --brand-light:  #F0FDF4;   /* Very light green tint */
-  --brand-glow:   rgba(22, 163, 74, 0.08);
+  --brand:        #1677FF;   /* Primary Blue */
+  --brand-dark:   #0958D9;   /* Strong/Hover Blue */
+  --brand-light:  #EAF4FF;   /* Light Blue Tint */
+  --brand-glow:   rgba(22, 119, 255, 0.08);
 
   --sidebar-bg:   #FFFFFF;   /* White sidebar background */
   --sidebar-item: transparent;
-  --sidebar-active: #F0FDF4; /* Softer light green for active item */
-  --sidebar-border: #E2E8F0; /* Clean border color */
+  --sidebar-active: #EAF4FF; /* Light blue active item */
+  --sidebar-border: #DCE6F2; /* Clean border color */
   --sidebar-text: #64748B;   /* Slate-500 */
-  --sidebar-text-active: #16A34A; /* Active green text */
+  --sidebar-text-active: #1677FF; /* Active blue text */
 
-  --bg-app:       #F8FAFC;   /* Premium light background */
+  --bg-app:       #F7FAFF;   /* Premium light background */
   --bg-card:      #FFFFFF;   /* Clean white card background */
-  --bg-hover:     #F1F5F9;   /* Slate-100 hover background */
+  --bg-hover:     #F0F5FA;   /* Light blue hover background */
 
-  --text-primary:   #0F172A; /* Slate-900 */
-  --text-secondary: #64748B; /* Slate-500 */
-  --text-muted:     #94A3B8; /* Slate-400 */
+  --text-primary:   #101828; /* Dark Navy */
+  --text-secondary: #667085; /* Muted Slate */
+  --text-muted:     #98A2B3;
 
-  --border:         #E2E8F0; /* Slate-200 border color */
-  --border-focus:   #16A34A; /* Green focus border */
+  --border:         #DCE6F2;
+  --border-focus:   #1677FF;
 
-  --success:  #16A34A;
+  --success:  #16A36A;
   --danger:   #EF4444;
   --warning:  #F59E0B;
-  --info:     #3B82F6;
+  --info:     #1677FF;
 
   --radius-sm:  8px;
   --radius-md:  12px;
   --radius-lg:  16px;
   --radius-xl:  20px;
 
-  --shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.05), 0 1px 2px -1px rgba(0, 0, 0, 0.05);
-  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
-  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -4px rgba(0, 0, 0, 0.05);
-  --shadow-brand: 0 4px 12px rgba(22, 163, 74, 0.15);
+  --shadow-sm: 0 1px 3px 0 rgba(16, 24, 40, 0.05), 0 1px 2px -1px rgba(16, 24, 40, 0.05);
+  --shadow-md: 0 4px 6px -1px rgba(16, 24, 40, 0.05), 0 2px 4px -2px rgba(16, 24, 40, 0.05);
+  --shadow-lg: 0 10px 15px -3px rgba(16, 24, 40, 0.05), 0 4px 6px -4px rgba(16, 24, 40, 0.05);
+  --shadow-brand: 0 4px 12px rgba(22, 119, 255, 0.15);
 }
 
 /* Dark theme override */
 body.dark-theme {
-  --bg-app:         #09090B; /* True dark / near-black */
-  --bg-card:        #18181B; /* Consistent dark surface */
-  --bg-hover:       #27272A; /* Slate/Zinc-800 hover state */
-  --text-primary:   #FFFFFF; /* Crisp white */
-  --text-secondary: #A1A1AA; /* Light gray */
+  --bg-app:         #09090B;
+  --bg-card:        #18181B;
+  --bg-hover:       #27272A;
+  --text-primary:   #FFFFFF;
+  --text-secondary: #A1A1AA;
   --text-muted:     #71717A;
-  --border:         #27272A; /* Subtle dark-gray border */
+  --border:         #27272A;
   --shadow-sm: 0 1px 4px rgba(0,0,0,0.4);
   --shadow-md: 0 4px 16px rgba(0,0,0,0.5);
   --shadow-lg: 0 8px 32px rgba(0,0,0,0.6);
 
-  --sidebar-bg:     #18181B; /* Consistent dark surface */
+  --sidebar-bg:     #18181B;
   --sidebar-item:   rgba(255,255,255,0.06);
-  --sidebar-active: rgba(255,255,255,0.08);
+  --sidebar-active: rgba(22, 119, 255, 0.15);
   --sidebar-border: #27272A;
   --sidebar-text:   #A1A1AA;
   --sidebar-text-active: #ffffff;
 
-  --brand:          #16A34A !important;
-  --brand-dark:     #15803D !important;
-  --brand-light:    rgba(22, 163, 74, 0.08) !important;
-  --brand-glow:     rgba(22, 163, 74, 0.1) !important;
+  --brand:          #1677FF !important;
+  --brand-dark:     #0958D9 !important;
+  --brand-light:    rgba(22, 119, 255, 0.1) !important;
+  --brand-glow:     rgba(22, 119, 255, 0.12) !important;
 }
 
 /* ============================================================

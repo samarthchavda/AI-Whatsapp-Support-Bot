@@ -450,68 +450,68 @@ function Billing() {
                 <ul className="upgrade-features-list">
                   {/* Conversations */}
                   {plan.name === 'starter' && (
-                    <li><FaCheck style={{ color: '#10b981' }} /> Up to 500 WhatsApp Conversations/mo (new customer chat sessions)</li>
+                    <li><FaCheck style={{ color: '#1677FF' }} /> Up to 500 WhatsApp Conversations/mo (new customer chat sessions)</li>
                   )}
                   {plan.name === 'professional' && (
-                    <li><FaCheck style={{ color: '#10b981' }} /> Up to 3,000 WhatsApp Conversations/mo (ideal for active marketing & sales)</li>
+                    <li><FaCheck style={{ color: '#1677FF' }} /> Up to 3,000 WhatsApp Conversations/mo (ideal for active marketing & sales)</li>
                   )}
                   {plan.name === 'enterprise' && (
-                    <li><FaCheck style={{ color: '#10b981' }} /> Unlimited WhatsApp Conversations/mo (no support volume restrictions)</li>
+                    <li><FaCheck style={{ color: '#1677FF' }} /> Unlimited WhatsApp Conversations/mo (no support volume restrictions)</li>
                   )}
                   
                   {/* Messages */}
                   {plan.name === 'starter' && (
-                    <li><FaCheck style={{ color: '#10b981' }} /> Up to 2,000 incoming & outgoing messages/mo (individual text bubbles)</li>
+                    <li><FaCheck style={{ color: '#1677FF' }} /> Up to 2,000 incoming & outgoing messages/mo (individual text bubbles)</li>
                   )}
                   {plan.name === 'professional' && (
-                    <li><FaCheck style={{ color: '#10b981' }} /> Up to 15,000 incoming & outgoing messages/mo (individual text bubbles)</li>
+                    <li><FaCheck style={{ color: '#1677FF' }} /> Up to 15,000 incoming & outgoing messages/mo (individual text bubbles)</li>
                   )}
                   {plan.name === 'enterprise' && (
-                    <li><FaCheck style={{ color: '#10b981' }} /> Unlimited incoming & outgoing messages/mo (individual text bubbles)</li>
+                    <li><FaCheck style={{ color: '#1677FF' }} /> Unlimited incoming & outgoing messages/mo (individual text bubbles)</li>
                   )}
 
 
                   {/* WhatsApp Connections */}
                   {plan.name === 'starter' && (
-                    <li><FaCheck style={{ color: '#10b981' }} /> 1 Active WhatsApp Phone Number connection</li>
+                    <li><FaCheck style={{ color: '#1677FF' }} /> 1 Active WhatsApp Phone Number connection</li>
                   )}
                   {plan.name === 'professional' && (
-                    <li><FaCheck style={{ color: '#10b981' }} /> Up to 2 Active WhatsApp Phone Number connections</li>
+                    <li><FaCheck style={{ color: '#1677FF' }} /> Up to 2 Active WhatsApp Phone Number connections</li>
                   )}
                   {plan.name === 'enterprise' && (
-                    <li><FaCheck style={{ color: '#10b981' }} /> Up to 5 Active WhatsApp Connections simultaneously</li>
+                    <li><FaCheck style={{ color: '#1677FF' }} /> Up to 5 Active WhatsApp Connections simultaneously</li>
                   )}
                   
                   {/* KB Document Upload */}
                   {plan.name === 'starter' && (
-                    <li><FaCheck style={{ color: '#10b981' }} /> Max 1 PDF Upload (for training the AI bot on your basic FAQs)</li>
+                    <li><FaCheck style={{ color: '#1677FF' }} /> Max 1 PDF Upload (for training the AI bot on your basic FAQs)</li>
                   )}
                   {plan.name === 'professional' && (
-                    <li><FaCheck style={{ color: '#10b981' }} /> Max 3 PDF Uploads (train AI on detailed shipping, refund, & FAQ catalogs)</li>
+                    <li><FaCheck style={{ color: '#1677FF' }} /> Max 3 PDF Uploads (train AI on detailed shipping, refund, & FAQ catalogs)</li>
                   )}
                   {plan.name === 'enterprise' && (
-                    <li><FaCheck style={{ color: '#10b981' }} /> Unlimited PDF Uploads (train AI on entire store documents and manuals)</li>
+                    <li><FaCheck style={{ color: '#1677FF' }} /> Unlimited PDF Uploads (train AI on entire store documents and manuals)</li>
                   )}
 
                   {/* E-commerce Integrations */}
                   {plan.name === 'starter' && (
-                    <li><FaCheck style={{ color: '#10b981' }} /> 1 Active Integration (connect either your Shopify OR WooCommerce store)</li>
+                    <li><FaCheck style={{ color: '#1677FF' }} /> 1 Active Integration (connect either your Shopify OR WooCommerce store)</li>
                   )}
                   {plan.name === 'professional' && (
-                    <li><FaCheck style={{ color: '#10b981' }} /> 1 Active Integration (connect either your Shopify OR WooCommerce store)</li>
+                    <li><FaCheck style={{ color: '#1677FF' }} /> 1 Active Integration (connect either your Shopify OR WooCommerce store)</li>
                   )}
                   {plan.name === 'enterprise' && (
-                    <li><FaCheck style={{ color: '#10b981' }} /> Multiple Integrations (connect both Shopify & WooCommerce simultaneously)</li>
+                    <li><FaCheck style={{ color: '#1677FF' }} /> Multiple Integrations (connect both Shopify & WooCommerce simultaneously)</li>
                   )}
 
                   {/* Knowledge Base & Live Chat */}
-                  <li><FaCheck style={{ color: '#10b981' }} /> Instant AI Answers (reads your store FAQ & policy PDFs)</li>
-                  <li><FaCheck style={{ color: '#10b981' }} /> Live Chat Console for manual customer reply</li>
+                  <li><FaCheck style={{ color: '#1677FF' }} /> Instant AI Answers (reads your store FAQ & policy PDFs)</li>
+                  <li><FaCheck style={{ color: '#1677FF' }} /> Live Chat Console for manual customer reply</li>
 
                   {/* Advanced Analytics */}
                   <li style={{ opacity: features.advancedAnalytics ? 1 : 0.5 }}>
                     {features.advancedAnalytics ? (
-                      <><FaCheck style={{ color: '#10b981' }} /> Advanced Analytics (real-time chat reports & charts)</>
+                      <><FaCheck style={{ color: '#1677FF' }} /> Advanced Analytics (real-time chat reports & charts)</>
                     ) : (
                       <><FaTimes style={{ color: '#ef4444', marginRight: '8px' }} /> <span style={{ textDecoration: 'line-through' }}>Advanced Analytics Dashboard</span></>
                     )}
@@ -520,7 +520,7 @@ function Billing() {
                   {/* Handoff Escalations */}
                   <li style={{ opacity: (plan.name !== 'starter') ? 1 : 0.5 }}>
                     {plan.name !== 'starter' ? (
-                      <><FaCheck style={{ color: '#10b981' }} /> Live Agent Handoff (auto-alerts team for complex queries)</>
+                      <><FaCheck style={{ color: '#1677FF' }} /> Live Agent Handoff (auto-alerts team for complex queries)</>
                     ) : (
                       <><FaTimes style={{ color: '#ef4444', marginRight: '8px' }} /> <span style={{ textDecoration: 'line-through' }}>Live Agent Handoff Escalations</span></>
                     )}
@@ -529,7 +529,7 @@ function Billing() {
                   {/* Order Cancellation */}
                   <li style={{ opacity: (plan.name !== 'starter') ? 1 : 0.5 }}>
                     {plan.name !== 'starter' ? (
-                      <><FaCheck style={{ color: '#10b981' }} /> Automated Order Cancellations via WhatsApp</>
+                      <><FaCheck style={{ color: '#1677FF' }} /> Automated Order Cancellations via WhatsApp</>
                     ) : (
                       <><FaTimes style={{ color: '#ef4444', marginRight: '8px' }} /> <span style={{ textDecoration: 'line-through' }}>Automated Order Cancellations via WhatsApp</span></>
                     )}
@@ -538,7 +538,7 @@ function Billing() {
                   {/* Custom Branding */}
                   <li style={{ opacity: features.customBranding ? 1 : 0.5 }}>
                     {features.customBranding ? (
-                      <><FaCheck style={{ color: '#10b981' }} /> White-Labeling (remove Kwickbot branding & add your logo)</>
+                      <><FaCheck style={{ color: '#1677FF' }} /> White-Labeling (remove Kwickbot branding & add your logo)</>
                     ) : (
                       <><FaTimes style={{ color: '#ef4444', marginRight: '8px' }} /> <span style={{ textDecoration: 'line-through' }}>Custom Branding (White-Labeling)</span></>
                     )}
@@ -547,7 +547,7 @@ function Billing() {
                   {/* API Access */}
                   <li style={{ opacity: features.apiAccess ? 1 : 0.5 }}>
                     {features.apiAccess ? (
-                      <><FaCheck style={{ color: '#10b981' }} /> Developer API & Webhooks (for custom websites)</>
+                      <><FaCheck style={{ color: '#1677FF' }} /> Developer API & Webhooks (for custom websites)</>
                     ) : (
                       <><FaTimes style={{ color: '#ef4444', marginRight: '8px' }} /> <span style={{ textDecoration: 'line-through' }}>Developer API & Webhooks Access</span></>
                     )}
@@ -559,10 +559,10 @@ function Billing() {
                       <><FaTimes style={{ color: '#ef4444', marginRight: '8px' }} /> <span style={{ textDecoration: 'line-through' }}>Priority Customer Support</span></>
                     )}
                     {plan.name === 'professional' && (
-                      <><FaCheck style={{ color: '#10b981' }} /> Priority Email & Chat Support (under 4-hour response time)</>
+                      <><FaCheck style={{ color: '#1677FF' }} /> Priority Email & Chat Support (under 4-hour response time)</>
                     )}
                     {plan.name === 'enterprise' && (
-                      <><FaCheck style={{ color: '#10b981' }} /> Dedicated Account Manager & 24/7 Instant Slack Support</>
+                      <><FaCheck style={{ color: '#1677FF' }} /> Dedicated Account Manager & 24/7 Instant Slack Support</>
                     )}
                   </li>
                 </ul>

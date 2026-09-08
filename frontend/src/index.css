@@ -601,11 +601,11 @@ body:not(.dark-theme) .message-time {
 }
 
 body:not(.dark-theme) .admin-message .message-sender {
-  color: #065f46 !important;
+  color: var(--accent-secondary) !important;
 }
 
 body:not(.dark-theme) .admin-message .message-time {
-  color: #047857 !important;
+  color: var(--accent) !important;
 }
 
 body:not(.dark-theme) .conversation-item.active::before {
@@ -613,13 +613,13 @@ body:not(.dark-theme) .conversation-item.active::before {
 }
 
 body:not(.dark-theme) .ai-toggle-btn.active {
-  background: rgba(16, 185, 129, 0.08) !important;
-  border-color: rgba(16, 185, 129, 0.3) !important;
-  color: #065f46 !important;
+  background: var(--brand-light) !important;
+  border-color: rgba(22, 131, 216, 0.3) !important;
+  color: var(--accent-secondary) !important;
 }
 
 body:not(.dark-theme) .ai-toggle-btn.active:hover {
-  background: rgba(16, 185, 129, 0.15) !important;
+  background: rgba(22, 131, 216, 0.15) !important;
 }
 
 body:not(.dark-theme) .ai-toggle-btn.paused {
@@ -633,9 +633,9 @@ body:not(.dark-theme) .ai-toggle-btn.paused:hover {
 }
 
 body:not(.dark-theme) .input-notice {
-  background: rgba(16, 185, 129, 0.08) !important;
-  border-color: rgba(16, 185, 129, 0.3) !important;
-  color: #065f46 !important;
+  background: var(--brand-light) !important;
+  border-color: rgba(22, 131, 216, 0.3) !important;
+  color: var(--accent-secondary) !important;
 }
 
 body:not(.dark-theme) .input-notice.paused {

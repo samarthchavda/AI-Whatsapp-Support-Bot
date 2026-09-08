@@ -871,7 +871,7 @@ function WhatsAppConnect() {
                       }}
                       style={{
                         padding: '8px 12px',
-                        backgroundColor: copiedWebhookUrl ? '#1b9a4b' : '#25d366',
+                        backgroundColor: copiedWebhookUrl ? '#0958D9' : '#1677FF',
                         color: '#ffffff',
                         border: 'none',
                         borderRadius: '6px',
@@ -913,7 +913,7 @@ function WhatsAppConnect() {
                       }}
                       style={{
                         padding: '8px 12px',
-                        backgroundColor: copiedVerifyToken ? '#1b9a4b' : '#25d366',
+                        backgroundColor: copiedVerifyToken ? '#0958D9' : '#1677FF',
                         color: '#ffffff',
                         border: 'none',
                         borderRadius: '6px',

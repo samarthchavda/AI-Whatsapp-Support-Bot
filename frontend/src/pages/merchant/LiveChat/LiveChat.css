@@ -250,18 +250,18 @@
 }
 
 .status-active {
-  background: rgba(16, 185, 129, 0.2);
-  color: #10b981;
+  background: rgba(22, 119, 255, 0.12);
+  color: #1677FF;
 }
 
 .status-escalated {
-  background: rgba(239, 68, 68, 0.2);
+  background: rgba(239, 68, 68, 0.15);
   color: #ef4444;
 }
 
 .status-resolved {
-  background: rgba(99, 102, 241, 0.2);
-  color: #6366f1;
+  background: rgba(22, 119, 255, 0.15);
+  color: #0958D9;
 }
 
 .status-closed {
@@ -302,7 +302,7 @@
   width: 56px;
   height: 56px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+  background: linear-gradient(135deg, #1677FF 0%, #0958D9 100%);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -381,14 +381,14 @@
 
 .ai-message {
   align-self: flex-start;
-  background: linear-gradient(135deg, rgba(99, 102, 241, 0.2) 0%, rgba(139, 92, 246, 0.2) 100%);
-  border: 1px solid rgba(99, 102, 241, 0.3);
+  background: linear-gradient(135deg, rgba(22, 119, 255, 0.12) 0%, rgba(9, 88, 217, 0.12) 100%);
+  border: 1px solid rgba(22, 119, 255, 0.25);
 }
 
 .admin-message {
   align-self: flex-end;
-  background: linear-gradient(135deg, rgba(16, 185, 129, 0.2) 0%, rgba(5, 150, 105, 0.2) 100%);
-  border: 1px solid rgba(16, 185, 129, 0.3);
+  background: linear-gradient(135deg, rgba(22, 119, 255, 0.2) 0%, rgba(9, 88, 217, 0.2) 100%);
+  border: 1px solid rgba(22, 119, 255, 0.35);
 }
 
 .message-header {

@@ -1368,9 +1368,9 @@ select:focus, textarea:focus {
 
 /* Single Source of Truth Brand Logo */
 .header-logo-img {
-  width: 155px;
+  width: 162px;
   height: auto;
-  max-height: 44px;
+  max-height: 54px;
   object-fit: contain;
   display: block;
   transition: transform 0.25s ease, opacity 0.2s ease;
@@ -1382,9 +1382,9 @@ select:focus, textarea:focus {
 }
 
 .footer-logo-img {
-  width: 160px;
+  width: 165px;
   height: auto;
-  max-height: 48px;
+  max-height: 55px;
   object-fit: contain;
   display: block;
   transition: transform 0.25s ease;
@@ -1394,14 +1394,21 @@ select:focus, textarea:focus {
   transform: scale(1.04);
 }
 
+@media (min-width: 769px) and (max-width: 1024px) {
+  .header-logo-img {
+    width: 148px;
+    max-height: 50px;
+  }
+}
+
 @media (max-width: 768px) {
   .header-logo-img {
-    width: 125px;
-    max-height: 38px;
+    width: 132px;
+    max-height: 44px;
   }
   .footer-logo-img {
-    width: 140px;
-    max-height: 42px;
+    width: 145px;
+    max-height: 48px;
   }
 }
 

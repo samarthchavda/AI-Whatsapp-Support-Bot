@@ -1,49 +1,56 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
 
 :root {
-  --bg-base:        #F5F7FA;
+  --bg-base:        #F7F9FC;
   --bg-elevated:    #FFFFFF;
   --bg-surface:     #FFFFFF;
-  --bg-input:       #F5F7FA;
-  --border-subtle:  #E8EDF5;
-  --border-default: #E8EDF5;
-  --text-primary:   #232323;
-  --text-secondary: #718096;
-  --text-muted:     #B1B1B1;
-  --accent:         #396AFF;
-  --accent-secondary: #1D4ED8;
-  --success:        #25D366;
-  --danger:         #FE5C73;
-  --warning:        #FFBB38;
+  --bg-input:       #F8FAFC;
+  --bg-soft-blue:   #EEF6FF;
+  --border-subtle:  #DCE6F2;
+  --border-default: #DCE6F2;
+  --text-primary:   #101828;
+  --text-secondary: #667085;
+  --text-muted:     #98A2B3;
+  --accent:         #1683D8;
+  --accent-secondary: #0B6FC4;
+  --brand:          #1683D8;
+  --brand-dark:     #0B6FC4;
+  --brand-light:    #EEF6FF;
+  --brand-glow:     rgba(22, 131, 216, 0.1);
+  --success:        #16A36A;
+  --danger:         #EF4444;
+  --warning:        #F59E0B;
   --radius-sm:  8px;
-  --radius-md:  15px;
-  --radius-lg:  20px;
-  --radius-xl:  25px;
-  --shadow-glow: 0 4px 20px rgba(57,106,255,0.15);
+  --radius-md:  14px;
+  --radius-lg:  18px;
+  --radius-xl:  24px;
+  --shadow-glow: 0 4px 20px rgba(22, 131, 216, 0.12);
+  --shadow-sm: 0 1px 3px rgba(16, 24, 40, 0.05);
+  --shadow-md: 0 4px 16px rgba(16, 24, 40, 0.06);
 }
 
 body.dark-theme {
-  --bg-base:        #09090B; /* True dark / near-black */
-  --bg-elevated:    #18181B; /* Consistent dark surface */
+  --bg-base:        #09090B;
+  --bg-elevated:    #18181B;
   --bg-surface:     #18181B;
-  --bg-input:       #27272A; /* Slate/Zinc-800 for inputs */
-  --border-subtle:  #27272A; /* Subtle dark-gray border */
+  --bg-input:       #27272A;
+  --bg-soft-blue:   rgba(22, 131, 216, 0.1);
+  --border-subtle:  #27272A;
   --border-default: #27272A;
-  --text-primary:   #FFFFFF; /* Crisp white */
-  --text-secondary: #A1A1AA; /* Light gray */
+  --text-primary:   #FFFFFF;
+  --text-secondary: #A1A1AA;
   --text-muted:     #71717A;
-  --accent:         #16A34A !important; /* Soft brand green */
-  --accent-secondary: #15803D !important;
-  --success:        #16A34A;
+  --accent:         #1683D8 !important;
+  --accent-secondary: #0B6FC4 !important;
+  --success:        #16A36A;
   --danger:         #EF4444;
   --warning:        #F59E0B;
-  --shadow-glow: 0 4px 20px rgba(22, 163, 74, 0.15);
+  --shadow-glow: 0 4px 20px rgba(22, 131, 216, 0.15);
 
-  /* Overrides for Kwickbot brand colors in Dark Mode to be Soft Green */
-  --brand:        #16A34A !important;
-  --brand-dark:   #15803D !important;
-  --brand-light:  rgba(22, 163, 74, 0.08) !important;
-  --brand-glow:   rgba(22, 163, 74, 0.1) !important;
+  --brand:        #1683D8 !important;
+  --brand-dark:   #0B6FC4 !important;
+  --brand-light:  rgba(22, 131, 216, 0.1) !important;
+  --brand-glow:   rgba(22, 131, 216, 0.12) !important;
 }
 
 * {
@@ -89,21 +96,21 @@ textarea:focus {
 
 /* Light Theme Component Overrides */
 body:not(.dark-theme) {
-  --brand: #16A34A !important;   /* Softer professional Brand Green */
-  --brand-dark: #15803D !important;
-  --brand-light: #F0FDF4 !important;
-  --brand-glow: rgba(22, 163, 74, 0.08) !important;
+  --brand: #1683D8 !important;
+  --brand-dark: #0B6FC4 !important;
+  --brand-light: #EEF6FF !important;
+  --brand-glow: rgba(22, 131, 216, 0.08) !important;
   
-  --bg-app: #F8FAFC !important;
+  --bg-app: #F7F9FC !important;
   --bg-card: #FFFFFF !important;
-  --bg-hover: #F1F5F9 !important;
-  --border: #E2E8F0 !important;
+  --bg-hover: #F0F5FA !important;
+  --border: #DCE6F2 !important;
   
-  --accent: #16A34A !important;
-  --accent-secondary: #15803D !important;
-  --text-primary: #0F172A !important;
-  --text-secondary: #64748B !important;
-  --text-muted: #94A3B8 !important;
+  --accent: #1683D8 !important;
+  --accent-secondary: #0B6FC4 !important;
+  --text-primary: #101828 !important;
+  --text-secondary: #667085 !important;
+  --text-muted: #98A2B3 !important;
 }
 
 body:not(.dark-theme) .top-bar {

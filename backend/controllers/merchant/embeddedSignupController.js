@@ -20,10 +20,10 @@ exports.handleEmbeddedSignup = async (req, res) => {
     }
 
     const appId = process.env.META_APP_ID || '2242808243238982';
-    const appSecret = process.env.META_CLIENT_SECRET;
+    const appSecret = process.env.META_CLIENT_SECRET || process.env.META_APP_SECRET || process.env.FACEBOOK_CLIENT_SECRET;
 
     if (!appSecret) {
-      console.error('❌ Meta Client Secret is missing from environment variables.');
+      console.error('❌ Meta Client Secret is missing from environment variables (META_CLIENT_SECRET).');
       return res.status(500).json({
         success: false,
         error: 'Meta Client Secret is not configured in backend environment variables (.env)'

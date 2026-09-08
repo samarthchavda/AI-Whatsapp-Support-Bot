@@ -96,18 +96,20 @@ textarea:focus {
 
 /* Light Theme Component Overrides */
 body:not(.dark-theme) {
-  --brand: #1683D8 !important;
-  --brand-dark: #0B6FC4 !important;
-  --brand-light: #EEF6FF !important;
-  --brand-glow: rgba(22, 131, 216, 0.08) !important;
+  --brand: #1677FF !important;
+  --brand-dark: #0958D9 !important;
+  --brand-light: #EAF4FF !important;
+  --brand-glow: rgba(22, 119, 255, 0.08) !important;
   
-  --bg-app: #F7F9FC !important;
+  --bg-app: #F7FAFF !important;
   --bg-card: #FFFFFF !important;
-  --bg-hover: #F0F5FA !important;
-  --border: #DCE6F2 !important;
+  --bg-hover: #EAF4FF !important;
+  --border: #D9E8F7 !important;
+  --border-subtle: #D9E8F7 !important;
+  --border-default: #D9E8F7 !important;
   
-  --accent: #1683D8 !important;
-  --accent-secondary: #0B6FC4 !important;
+  --accent: #1677FF !important;
+  --accent-secondary: #0958D9 !important;
   --text-primary: #101828 !important;
   --text-secondary: #667085 !important;
   --text-muted: #98A2B3 !important;

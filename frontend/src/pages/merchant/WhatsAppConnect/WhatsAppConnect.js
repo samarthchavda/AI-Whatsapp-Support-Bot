@@ -154,7 +154,7 @@ function WhatsAppConnect() {
         window.FB.init({
           appId: process.env.REACT_APP_META_APP_ID || '2242808243238982',
           cookie: true,
-          status: true,
+          status: false,
           xfbml: true,
           version: 'v25.0'
         });
@@ -174,7 +174,7 @@ function WhatsAppConnect() {
         try {
           const data = typeof event.data === 'string' ? JSON.parse(event.data) : event.data;
           if (data && data.type === 'WA_EMBEDDED_SIGNUP') {
-            console.log('📌 Received Meta Embedded Signup sessionInfo event');
+            console.log('📌 Received Meta Embedded Signup sessionInfo event', data);
             if (data.event === 'FINISH' && data.data) {
               if (data.data.waba_id) window.__metaWabaId = data.data.waba_id;
               if (data.data.phone_number_id) window.__metaPhoneNumberId = data.data.phone_number_id;
@@ -213,12 +213,12 @@ function WhatsAppConnect() {
 
     if (window.FB) {
       window.FB.login((response) => {
-        if (response.authResponse && response.authResponse.code) {
-          console.log('✅ Received Auth Code from Facebook Popup');
+        if (response && response.authResponse && response.authResponse.code) {
+          console.log('✅ Received Auth Code from Facebook SDK');
           exchangeAuthCode(response.authResponse.code);
         } else {
-          console.warn('⚠️ FB.login did not return auth code, launching direct Meta OAuth popup...');
-          openOAuthPopup(oauthUrl);
+          console.warn('⚠️ FB.login popup closed or did not return auth code:', response);
+          setEmbeddedLoading(false);
         }
       }, loginOptions);
     } else {
@@ -239,7 +239,8 @@ function WhatsAppConnect() {
     );
 
     if (!popup || popup.closed || typeof popup.closed === 'undefined') {
-      window.location.href = oauthUrl;
+      alert('Pop-up window was blocked by your browser. Please allow pop-ups for kwickbot.in and try again.');
+      setEmbeddedLoading(false);
     } else {
       const checkPopupInterval = setInterval(() => {
         try {

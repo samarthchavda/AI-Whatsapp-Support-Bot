@@ -19,7 +19,7 @@ exports.handleEmbeddedSignup = async (req, res) => {
       });
     }
 
-    const appId = process.env.META_APP_ID || '968921106124424';
+    const appId = process.env.META_APP_ID || '2242808243238982';
     const appSecret = process.env.META_CLIENT_SECRET;
 
     if (!appSecret) {

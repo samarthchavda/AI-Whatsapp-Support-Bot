@@ -138,7 +138,7 @@ function WhatsAppConnect() {
     window.fbAsyncInit = function () {
       if (window.FB) {
         window.FB.init({
-          appId: '968921106124424',
+          appId: process.env.REACT_APP_META_APP_ID || '2242808243238982',
           cookie: true,
           xfbml: true,
           version: 'v25.0'
@@ -159,7 +159,7 @@ function WhatsAppConnect() {
         try {
           const data = typeof event.data === 'string' ? JSON.parse(event.data) : event.data;
           if (data && data.type === 'WA_EMBEDDED_SIGNUP') {
-            console.log('📌 Received Meta Embedded Signup sessionInfo:', data);
+            console.log('📌 Received Meta Embedded Signup sessionInfo event');
             if (data.event === 'FINISH' && data.data) {
               if (data.data.waba_id) window.__metaWabaId = data.data.waba_id;
               if (data.data.phone_number_id) window.__metaPhoneNumberId = data.data.phone_number_id;
@@ -184,15 +184,14 @@ function WhatsAppConnect() {
     const loginOptions = {
       response_type: 'code',
       override_default_response_type: true,
-      scope: 'public_profile,whatsapp_business_management,whatsapp_business_messaging',
-      config_id: process.env.REACT_APP_META_CONFIG_ID || '1011610511514210'
+      config_id: process.env.REACT_APP_META_CONFIG_ID || '1066111046278122'
     };
 
     window.FB.login((response) => {
       if (response.authResponse) {
         const code = response.authResponse.code;
         if (code) {
-          console.log('✅ Received Auth Code from Facebook Popup:', code);
+          console.log('✅ Received Auth Code from Facebook Popup');
           exchangeAuthCode(code);
         } else {
           setEmbeddedLoading(false);

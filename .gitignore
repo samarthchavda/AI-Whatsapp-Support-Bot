@@ -49,3 +49,11 @@ video .zip
 *.jpeg
 *.gif
 *.ico
+
+# Exception for public assets
+!frontend/public/*.png
+!frontend/public/*.ico
+!frontend/public/*.svg
+!frontend/public/*.jpg
+!frontend/public/*.jpeg
+

@@ -99,12 +99,14 @@ function ServicesPage() {
       </main>
 
       {/* Footer */}
-      <footer className="services-footer">
-        <div className="footer-brand">
-          <img src="/logo.png" className="footer-logo-img" alt="Kwickbot Logo" />
+      <footer className="services-footer-wrapper">
+        <div className="services-footer">
+          <div className="footer-brand">
+            <img src="/logo.png" className="footer-logo-img" alt="Kwickbot Logo" />
+          </div>
+          <p>WhatsApp support automation for real commerce operations.</p>
+          <button onClick={() => navigate('/book-demo')}>Book demo <FaArrowRight /></button>
         </div>
-        <p>WhatsApp support automation for real commerce operations.</p>
-        <button onClick={() => navigate('/book-demo')}>Book demo <FaArrowRight /></button>
       </footer>
     </div>
   );

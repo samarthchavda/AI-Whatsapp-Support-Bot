@@ -123,16 +123,18 @@ function AboutPage() {
       </main>
 
       {/* Footer */}
-      <footer className="about-footer">
-        <div className="footer-brand">
-          <img src="/logo.png" className="footer-logo-img" alt="Kwickbot Logo" />
+      <footer className="about-footer-wrapper">
+        <div className="about-footer">
+          <div className="footer-brand">
+            <img src="/logo.png" className="footer-logo-img" alt="Kwickbot Logo" />
+          </div>
+          <p>WhatsApp support automation for real commerce operations.</p>
+          <div className="footer-contacts" style={{ marginTop: '12px', marginBottom: '12px', fontSize: '13px', display: 'flex', flexDirection: 'column', gap: '6px', alignItems: 'center' }}>
+            <a href="mailto:hello@kwickbot.in" style={{ color: 'inherit', textDecoration: 'none' }}>📧 hello@kwickbot.in</a>
+            <a href="tel:+918128420287" style={{ color: 'inherit', textDecoration: 'none' }}>📞 +91 8128420287</a>
+          </div>
+          <button onClick={() => navigate('/book-demo')}>Book demo <FaArrowRight /></button>
         </div>
-        <p>WhatsApp support automation for real commerce operations.</p>
-        <div className="footer-contacts" style={{ marginTop: '12px', marginBottom: '12px', fontSize: '13px', display: 'flex', flexDirection: 'column', gap: '6px', alignItems: 'center' }}>
-          <a href="mailto:hello@kwickbot.in" style={{ color: 'inherit', textDecoration: 'none' }}>📧 hello@kwickbot.in</a>
-          <a href="tel:+918128420287" style={{ color: 'inherit', textDecoration: 'none' }}>📞 +91 8128420287</a>
-        </div>
-        <button onClick={() => navigate('/book-demo')}>Book demo <FaArrowRight /></button>
       </footer>
     </div>
   );

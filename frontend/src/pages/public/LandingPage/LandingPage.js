@@ -769,53 +769,55 @@ function LandingPage() {
         </section>
       </main>
 
-      <footer className="landing-footer">
-        <div className="footer-brand-container">
-          <div className="footer-brand">
-            <img src="/logo.png" className="footer-logo-img" alt="Kwickbot Logo" />
+      <footer className="landing-footer-wrapper">
+        <div className="landing-footer">
+          <div className="footer-brand-container">
+            <div className="footer-brand">
+              <img src="/logo.png" className="footer-logo-img" alt="Kwickbot Logo" />
+            </div>
+            <p>WhatsApp support automation for real E-commerce operations.</p>
+            <div className="footer-socials">
+              <a href="https://www.linkedin.com/company/kwickbot/" target="_blank" rel="noopener noreferrer" title="LinkedIn"><FaLinkedin /></a>
+              <a href="https://twitter.com" target="_blank" rel="noopener noreferrer" title="Twitter"><FaTwitter /></a>
+              <a href="https://wa.me/918128420287" target="_blank" rel="noopener noreferrer" title="WhatsApp Support"><FaWhatsapp /></a>
+            </div>
           </div>
-          <p>WhatsApp support automation for real E-commerce operations.</p>
-          <div className="footer-socials">
-            <a href="https://www.linkedin.com/company/kwickbot/" target="_blank" rel="noopener noreferrer" title="LinkedIn"><FaLinkedin /></a>
-            <a href="https://twitter.com" target="_blank" rel="noopener noreferrer" title="Twitter"><FaTwitter /></a>
-            <a href="https://wa.me/918128420287" target="_blank" rel="noopener noreferrer" title="WhatsApp Support"><FaWhatsapp /></a>
-          </div>
-        </div>
 
-        <div className="footer-links-grid">
-          <div className="footer-links-col">
-            <h4>Product</h4>
-            <button onClick={() => scrollToSection('how-it-works')}>How it works</button>
-            <button onClick={() => scrollToSection('workflows')}>Workflows</button>
-            <button onClick={() => scrollToSection('pricing')}>Pricing</button>
+          <div className="footer-links-grid">
+            <div className="footer-links-col">
+              <h4>Product</h4>
+              <button onClick={() => scrollToSection('how-it-works')}>How it works</button>
+              <button onClick={() => scrollToSection('workflows')}>Workflows</button>
+              <button onClick={() => scrollToSection('pricing')}>Pricing</button>
+            </div>
+            <div className="footer-links-col">
+              <h4>Company</h4>
+              <button onClick={() => navigate('/about')}>About Us</button>
+              <button onClick={() => navigate('/services')}>Services</button>
+              <button onClick={() => navigate('/blog')}>Blog</button>
+              <button onClick={() => navigate('/privacy')}>Privacy Policy</button>
+              <button onClick={() => navigate('/terms')}>Terms & Conditions</button>
+              <button onClick={() => navigate('/refund-policy')}>Refund Policy</button>
+            </div>
+            <div className="footer-links-col">
+              <h4>Account</h4>
+              <button onClick={() => navigate('/login')}>Sign In</button>
+              <button onClick={() => navigate('/book-demo')}>Book Demo</button>
+            </div>
+            <div className="footer-links-col">
+              <h4>Contact</h4>
+              <a href="mailto:hello@kwickbot.in" style={{ color: 'var(--text-secondary)', textDecoration: 'none', fontSize: '13px', margin: '4px 0', display: 'flex', alignItems: 'center' }}>
+                <FaEnvelope style={{ marginRight: '8px', color: '#1677FF' }} /> hello@kwickbot.in
+              </a>
+              <a href="tel:+918128420287" style={{ color: 'var(--text-secondary)', textDecoration: 'none', fontSize: '13px', margin: '4px 0', display: 'flex', alignItems: 'center' }}>
+                <FaPhoneAlt style={{ marginRight: '8px', color: '#1677FF' }} /> +91 8128420287
+              </a>
+            </div>
           </div>
-          <div className="footer-links-col">
-            <h4>Company</h4>
-            <button onClick={() => navigate('/about')}>About Us</button>
-            <button onClick={() => navigate('/services')}>Services</button>
-            <button onClick={() => navigate('/blog')}>Blog</button>
-            <button onClick={() => navigate('/privacy')}>Privacy Policy</button>
-            <button onClick={() => navigate('/terms')}>Terms & Conditions</button>
-            <button onClick={() => navigate('/refund-policy')}>Refund Policy</button>
-          </div>
-          <div className="footer-links-col">
-            <h4>Account</h4>
-            <button onClick={() => navigate('/login')}>Sign In</button>
-            <button onClick={() => navigate('/book-demo')}>Book Demo</button>
-          </div>
-          <div className="footer-links-col">
-            <h4>Contact</h4>
-            <a href="mailto:hello@kwickbot.in" style={{ color: 'var(--text-secondary)', textDecoration: 'none', fontSize: '13px', margin: '4px 0', display: 'flex', alignItems: 'center' }}>
-              <FaEnvelope style={{ marginRight: '8px', color: '#22c55e' }} /> hello@kwickbot.in
-            </a>
-            <a href="tel:+918128420287" style={{ color: 'var(--text-secondary)', textDecoration: 'none', fontSize: '13px', margin: '4px 0', display: 'flex', alignItems: 'center' }}>
-              <FaPhoneAlt style={{ marginRight: '8px', color: '#22c55e' }} /> +91 8128420287
-            </a>
-          </div>
-        </div>
 
-        <div className="footer-cta-container">
-          <button className="footer-cta-btn" onClick={() => navigate('/book-demo')}>Book demo <FaArrowRight /></button>
+          <div className="footer-cta-container">
+            <button className="footer-cta-btn" onClick={() => navigate('/book-demo')}>Book demo <FaArrowRight /></button>
+          </div>
         </div>
       </footer>
 

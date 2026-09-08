@@ -265,15 +265,20 @@
 }
 
 /* Footer Styling */
+.services-footer-wrapper {
+  width: 100%;
+  background: #FFFFFF;
+  border-top: 1px solid var(--border-subtle);
+  margin-top: 40px;
+}
+
 .services-footer {
-  max-width: 1180px;
+  max-width: 1200px;
   margin: 0 auto;
   padding: 42px 28px;
   display: flex;
   align-items: center;
   gap: 18px;
-  border-top: 1px solid var(--border-subtle);
-  background: #FFFFFF;
 }
 
 .footer-brand {

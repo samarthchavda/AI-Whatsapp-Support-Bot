@@ -140,6 +140,7 @@ function WhatsAppConnect() {
         window.FB.init({
           appId: process.env.REACT_APP_META_APP_ID || '2242808243238982',
           cookie: true,
+          status: true,
           xfbml: true,
           version: 'v25.0'
         });
@@ -182,9 +183,9 @@ function WhatsAppConnect() {
     setEmbeddedLoading(true);
 
     const loginOptions = {
+      config_id: process.env.REACT_APP_META_CONFIG_ID || '1066111046278122',
       response_type: 'code',
-      override_default_response_type: true,
-      config_id: process.env.REACT_APP_META_CONFIG_ID || '1066111046278122'
+      override_default_response_type: true
     };
 
     window.FB.login((response) => {

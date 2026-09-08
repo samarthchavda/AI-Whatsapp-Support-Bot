@@ -1,7 +1,8 @@
 .abandoned-carts-container {
-  padding: 30px;
-  max-width: 1200px;
-  margin: 0 auto;
+  padding: 24px;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .page-header {
@@ -192,11 +193,16 @@
 /* Table Wrappers */
 .table-wrapper {
   overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
   min-height: 200px;
 }
 
 .carts-table {
   width: 100%;
+  min-width: 840px;
   border-collapse: collapse;
   text-align: left;
 }

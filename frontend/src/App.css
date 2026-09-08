@@ -528,15 +528,22 @@ body {
    ============================================================ */
 .main-content {
   flex: 1;
+  min-width: 0;
+  width: calc(100% - 72px);
+  max-width: calc(100% - 72px);
   margin-left: 72px;
   display: flex;
   flex-direction: column;
   min-height: 100vh;
-  transition: margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-sizing: border-box;
+  overflow-x: hidden;
+  transition: margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1), width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .main-content.main-content-expanded {
   margin-left: 248px;
+  width: calc(100% - 248px);
+  max-width: calc(100% - 248px);
 }
 
 /* ============================================================
@@ -907,11 +914,16 @@ body {
    TABLES
    ============================================================ */
 .table-container,
-.table-container-premium {
+.table-container-premium,
+.table-wrapper {
   background: var(--bg-card);
   border: 1.5px solid var(--border);
   border-radius: var(--radius-lg);
-  overflow: hidden;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
   margin-bottom: 24px;
   box-shadow: var(--shadow-sm);
 }
@@ -936,6 +948,7 @@ body {
 
 table, .premium-table {
   width: 100%;
+  min-width: 720px;
   border-collapse: collapse;
 }
 

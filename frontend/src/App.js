@@ -120,12 +120,12 @@ function Sidebar({ admin, onLogout, isOpen, onToggle, pendingDemoRequestsCount }
               return (
                 <img 
                   src={isOpen ? "/logo.png" : "/app-icon.png"} 
-                  className={isOpen ? "header-logo-img" : "logo-img"} 
+                  className={isOpen ? "sidebar-logo-img" : "logo-img"} 
                   alt="Kwickbot Logo" 
                   style={{ 
-                    width: isOpen ? '140px' : '32px', 
+                    width: isOpen ? '120px' : '28px', 
                     height: 'auto', 
-                    maxHeight: '36px', 
+                    maxHeight: '34px', 
                     flexShrink: 0, 
                     objectFit: 'contain' 
                   }} 
@@ -326,12 +326,6 @@ function Sidebar({ admin, onLogout, isOpen, onToggle, pendingDemoRequestsCount }
                     <Link to="/dashboard" className={isActive('/dashboard')} title="Dashboard">
                       <FaHome />
                       <span className="nav-label">Dashboard</span>
-                    </Link>
-                  </li>
-                  <li>
-                    <Link to="/dashboard/live-chat" className={isActive('/dashboard/live-chat')} title="Live Chat">
-                      <FaCommentDots />
-                      <span className="nav-label">Live Chat</span>
                     </Link>
                   </li>
                   <li>
@@ -950,7 +944,6 @@ function App() {
                       } 
                     />
                     <Route path="/analytics" element={<Analytics admin={admin} />} />
-                    <Route path="/live-chat" element={<LiveChat />} />
                     <Route path="/conversations" element={<Conversations />} />
                     <Route path="/orders" element={<Orders admin={admin} />} />
                     <Route path="/products" element={<Products admin={admin} />} />

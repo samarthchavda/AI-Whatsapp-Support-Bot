@@ -104,16 +104,32 @@ function Sidebar({ admin, onLogout, isOpen, onToggle, pendingDemoRequestsCount }
               const isBrandingAllowed = admin && (admin.subscriptionPlan === 'enterprise' || admin.subscriptionPlan === 'custom');
               const customLogo = isBrandingAllowed && admin.customBranding?.logoUrl;
               const customName = isBrandingAllowed && admin.customBranding?.brandName;
+              if (customLogo) {
+                return (
+                  <>
+                    <img 
+                      src={customLogo} 
+                      className="logo-img" 
+                      alt={`${customName || 'Custom'} Logo`} 
+                      style={{ width: '36px', height: '36px', borderRadius: '8px', flexShrink: 0, objectFit: 'contain' }} 
+                    />
+                    {isOpen && <span className="sidebar-brand-name">{customName}</span>}
+                  </>
+                );
+              }
               return (
-                <>
-                  <img 
-                    src={customLogo || "/logo.png"} 
-                    className="logo-img" 
-                    alt={customName ? `${customName} Logo` : "Kwickbot Logo"} 
-                    style={{ width: '36px', height: '36px', borderRadius: '8px', flexShrink: 0, objectFit: 'contain' }} 
-                  />
-                  {isOpen && <span className="sidebar-brand-name">{customName || "Kwickbot"}</span>}
-                </>
+                <img 
+                  src={isOpen ? "/logo.png" : "/app-icon.png"} 
+                  className={isOpen ? "header-logo-img" : "logo-img"} 
+                  alt="Kwickbot Logo" 
+                  style={{ 
+                    width: isOpen ? '140px' : '32px', 
+                    height: 'auto', 
+                    maxHeight: '36px', 
+                    flexShrink: 0, 
+                    objectFit: 'contain' 
+                  }} 
+                />
               );
             })()}
           </div>

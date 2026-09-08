@@ -1366,6 +1366,45 @@ select:focus, textarea:focus {
   filter: drop-shadow(0 4px 10px rgba(22, 119, 255, 0.25));
 }
 
+/* Single Source of Truth Brand Logo */
+.header-logo-img {
+  width: 155px;
+  height: auto;
+  max-height: 44px;
+  object-fit: contain;
+  display: block;
+  transition: transform 0.25s ease, opacity 0.2s ease;
+}
+
+.header-logo-img:hover {
+  transform: scale(1.03);
+  opacity: 0.95;
+}
+
+.footer-logo-img {
+  width: 160px;
+  height: auto;
+  max-height: 48px;
+  object-fit: contain;
+  display: block;
+  transition: transform 0.25s ease;
+}
+
+.footer-logo-img:hover {
+  transform: scale(1.04);
+}
+
+@media (max-width: 768px) {
+  .header-logo-img {
+    width: 125px;
+    max-height: 38px;
+  }
+  .footer-logo-img {
+    width: 140px;
+    max-height: 42px;
+  }
+}
+
 /* ============================================================
    SYSTEM ANNOUNCEMENT BANNER
    ============================================================ */

@@ -16,9 +16,8 @@ function DataDeletion() {
         <button className="back-btn" onClick={() => navigate('/')}>
           <FaChevronLeft /> Back to Home
         </button>
-        <div className="privacy-logo">
-          <img src="/logo.png" className="logo-img" alt="Kwickbot Logo" style={{ width: '38px', height: '38px' }} />
-          <span className="logo-text">Kwickbot Privacy Center</span>
+        <div className="privacy-logo" onClick={() => navigate('/')} style={{ cursor: 'pointer' }}>
+          <img src="/logo.png" className="header-logo-img" alt="Kwickbot Logo" />
         </div>
       </header>
 

@@ -88,8 +88,8 @@ function BookDemo() {
 
       <div className="book-demo-container">
         <div className="demo-header">
-          <div className="demo-logo">
-            <img src="/logo.png" className="logo-img-large" alt="Kwickbot Logo" />
+          <div className="demo-logo" onClick={() => navigate('/')} style={{ cursor: 'pointer' }}>
+            <img src="/logo.png" className="header-logo-img" alt="Kwickbot Logo" />
           </div>
           <h1>Book a Demo</h1>
           <p>See how Kwickbot can transform your customer service</p>

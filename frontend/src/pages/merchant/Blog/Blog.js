@@ -57,8 +57,7 @@ function Blog() {
       <nav className="about-nav">
         <div className="about-nav-inner">
           <button className="about-logo" onClick={() => navigate('/')} aria-label="Kwickbot home">
-            <img src="/logo.png" className="logo-img" alt="Kwickbot Logo" style={{ width: '38px', height: '38px' }} />
-            <span>Kwickbot</span>
+            <img src="/logo.png" className="header-logo-img" alt="Kwickbot Logo" />
           </button>
 
           <div className="about-nav-links" aria-label="Primary navigation">

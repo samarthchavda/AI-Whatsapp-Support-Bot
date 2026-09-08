@@ -50,9 +50,8 @@ function ResetPassword() {
         </button>
 
         <div className="reset-brand-content">
-          <div className="reset-brand-logo">
-            <img src="/logo.png" className="logo-img" alt="Kwickbot Logo" style={{ width: '30px', height: '30px' }} />
-            <span>Kwickbot</span>
+          <div className="reset-brand-logo" onClick={() => navigate('/')} style={{ cursor: 'pointer' }}>
+            <img src="/logo.png" className="header-logo-img" alt="Kwickbot Logo" />
           </div>
           <h2 className="reset-brand-title">
             Reset Your Admin Credentials

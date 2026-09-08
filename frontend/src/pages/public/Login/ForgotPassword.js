@@ -37,9 +37,8 @@ function ForgotPassword() {
         </button>
 
         <div className="forgot-brand-content">
-          <div className="forgot-brand-logo">
-            <img src="/logo.png" className="logo-img" alt="Kwickbot Logo" style={{ width: '30px', height: '30px' }} />
-            <span>Kwickbot</span>
+          <div className="forgot-brand-logo" onClick={() => navigate('/')} style={{ cursor: 'pointer' }}>
+            <img src="/logo.png" className="header-logo-img" alt="Kwickbot Logo" />
           </div>
           <h2 className="forgot-brand-title">
             Recover Your Support Dashboard

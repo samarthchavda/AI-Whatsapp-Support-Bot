@@ -192,8 +192,7 @@ function LandingPage() {
       <nav className="landing-nav">
         <div className="landing-nav-inner">
           <button className="landing-logo" onClick={() => scrollToSection('top')} aria-label="Kwickbot home">
-            <img src="/logo.png" className="logo-img" alt="Kwickbot Logo" style={{ width: '38px', height: '38px' }} />
-            <span>Kwickbot</span>
+            <img src="/logo.png" className="header-logo-img" alt="Kwickbot Logo" />
           </button>
 
           <div className="landing-nav-links" aria-label="Primary navigation">
@@ -773,8 +772,7 @@ function LandingPage() {
       <footer className="landing-footer">
         <div className="footer-brand-container">
           <div className="footer-brand">
-            <img src="/logo.png" className="logo-img" alt="Kwickbot Logo" style={{ width: '30px', height: '30px' }} />
-            <span>Kwickbot</span>
+            <img src="/logo.png" className="footer-logo-img" alt="Kwickbot Logo" />
           </div>
           <p>WhatsApp support automation for real E-commerce operations.</p>
           <div className="footer-socials">

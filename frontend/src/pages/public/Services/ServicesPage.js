@@ -45,8 +45,7 @@ function ServicesPage() {
       <nav className="services-nav">
         <div className="services-nav-inner">
           <button className="services-logo" onClick={() => navigate('/')} aria-label="Kwickbot home">
-            <img src="/logo.png" className="logo-img" alt="Kwickbot Logo" style={{ width: '38px', height: '38px' }} />
-            <span>Kwickbot</span>
+            <img src="/logo.png" className="header-logo-img" alt="Kwickbot Logo" />
           </button>
 
           <div className="services-nav-links" aria-label="Primary navigation">
@@ -102,8 +101,7 @@ function ServicesPage() {
       {/* Footer */}
       <footer className="services-footer">
         <div className="footer-brand">
-          <img src="/logo.png" className="logo-img" alt="Kwickbot Logo" style={{ width: '30px', height: '30px' }} />
-          <span>Kwickbot</span>
+          <img src="/logo.png" className="footer-logo-img" alt="Kwickbot Logo" />
         </div>
         <p>WhatsApp support automation for real commerce operations.</p>
         <button onClick={() => navigate('/book-demo')}>Book demo <FaArrowRight /></button>

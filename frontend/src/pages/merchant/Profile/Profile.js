@@ -329,29 +329,6 @@ function Profile({ admin, onUpdateAdmin }) {
               )}
             </div>
           </div>
-
-          {/* Theme Preference Quick selector */}
-          <div className="profile-card theme-preference-card">
-            <h3>Theme Preference</h3>
-            <div className="theme-toggle-options">
-              <button 
-                type="button"
-                className={`theme-option-btn light-option ${profileData.theme === 'light' ? 'active' : ''}`}
-                onClick={() => handleThemeChange('light')}
-              >
-                <FaSun />
-                <span>Light</span>
-              </button>
-              <button 
-                type="button"
-                className={`theme-option-btn dark-option ${profileData.theme === 'dark' ? 'active' : ''}`}
-                onClick={() => handleThemeChange('dark')}
-              >
-                <FaMoon />
-                <span>Dark</span>
-              </button>
-            </div>
-          </div>
         </div>
 
         {/* Right Side: Configuration Forms */}

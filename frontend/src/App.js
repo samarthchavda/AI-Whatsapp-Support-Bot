@@ -533,16 +533,6 @@ function TopBar({ admin, onUpdateAdmin, isImpersonated, onToggleSidebar, theme, 
       </div>
 
       <div className="top-bar-actions">
-        <button 
-          className="icon-button theme-toggle-btn" 
-          onClick={onToggleTheme} 
-          title={theme === 'light' ? 'Switch to Dark Mode' : 'Switch to Light Mode'} 
-          aria-label="Toggle Theme"
-        >
-          {theme === 'light' ? <FaMoon /> : <FaSun />}
-        </button>
-
-
         <button className="icon-button" title="Notifications" aria-label="Notifications">
           <FaBell />
         </button>
@@ -582,26 +572,12 @@ const isJwtExpired = (token) => {
   }
 };
 
-function ThemeHandler({ admin, theme }) {
+function ThemeHandler() {
   const location = useLocation();
 
   useEffect(() => {
-    const isPublicPath = [
-      '/', '/book-demo', '/login', '/about', '/services', '/forgot-password', '/privacy', '/blog', '/data-deletion'
-    ].includes(location.pathname) || 
-    location.pathname.startsWith('/reset-password') ||
-    location.pathname.startsWith('/blog/');
-
-    if (isPublicPath) {
-      document.body.classList.add('dark-theme');
-    } else {
-      if (theme === 'dark') {
-        document.body.classList.add('dark-theme');
-      } else {
-        document.body.classList.remove('dark-theme');
-      }
-    }
-  }, [location.pathname, theme]);
+    document.body.classList.remove('dark-theme');
+  }, [location.pathname]);
 
   return null;
 }

@@ -196,8 +196,6 @@ function LandingPage() {
           </button>
 
           <div className="landing-nav-links" aria-label="Primary navigation">
-            <button onClick={() => scrollToSection('how-it-works')}>How it Works</button>
-            <button onClick={() => scrollToSection('workflows')}>Workflows</button>
             <button onClick={() => navigate('/services')}>Services</button>
             <button onClick={() => navigate('/about')}>About Us</button>
             <button onClick={() => navigate('/blog')}>Blog</button>

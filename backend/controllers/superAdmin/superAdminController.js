@@ -1892,7 +1892,7 @@ exports.getConnectionHealthStatus = async (req, res) => {
 exports.getWhatsAppMonitoringStatus = async (req, res) => {
   try {
     const merchants = await Admin.find({ role: 'admin' })
-      .select('name email businessPhone whatsappConnected whatsappConnectedAt whatsappBusinessAccountId totalMessagesProcessed updatedAt');
+      .select('name email businessPhone whatsappConnected whatsappConnectedAt whatsappBusinessAccountId whatsappDisplayPhoneNumber totalMessagesProcessed updatedAt');
 
     const totalAccounts = merchants.length;
     const connectedAccounts = merchants.filter(m => m.whatsappConnected).length;
@@ -1907,6 +1907,7 @@ exports.getWhatsAppMonitoringStatus = async (req, res) => {
           name: m.name,
           email: m.email,
           businessPhone: m.businessPhone,
+          whatsappDisplayPhoneNumber: m.whatsappDisplayPhoneNumber || m.businessPhone,
           whatsappConnected: m.whatsappConnected,
           whatsappConnectedAt: m.whatsappConnectedAt,
           whatsappBusinessAccountId: m.whatsappBusinessAccountId,

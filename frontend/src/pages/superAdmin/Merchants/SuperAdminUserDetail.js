@@ -395,7 +395,7 @@ function SuperAdminUserDetail() {
                 </div>
                 <div className="detail-row">
                   <span>Connected Phone Number:</span>
-                  <strong>{user.businessPhone || 'N/A'}</strong>
+                  <strong>{user.whatsappDisplayPhoneNumber || user.businessPhone || 'N/A'}</strong>
                 </div>
                 <div className="detail-row">
                   <span>WhatsApp Business Account ID (WABA ID):</span>

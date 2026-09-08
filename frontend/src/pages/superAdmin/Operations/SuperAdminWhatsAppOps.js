@@ -183,7 +183,7 @@ function SuperAdminWhatsAppOps() {
                       </div>
                     </td>
                     <td>
-                      <strong>{merchant.businessPhone || 'Not available'}</strong>
+                      <strong>{merchant.whatsappDisplayPhoneNumber || merchant.businessPhone || 'Not available'}</strong>
                     </td>
                     <td>
                       <span className={merchant.whatsappConnected ? 'status-connected' : 'status-disconnected'}>

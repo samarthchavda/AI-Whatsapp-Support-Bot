@@ -172,16 +172,14 @@
 .landing-hero h1 {
   margin: 18px 0 18px;
   max-width: 620px;
-  background: linear-gradient(135deg, #ffffff 0%, #1677FF 50%, #1677FF 100%);
-  background-size: 200% auto;
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  animation: shineText 6s linear infinite, fadeInUpSlight 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-  animation-delay: 0s, 0.25s;
-  font-size: 48px;
+  color: #101828 !important;
+  -webkit-text-fill-color: #101828 !important;
+  background: none !important;
+  font-size: 52px;
   line-height: 1.15;
   font-weight: 900;
   letter-spacing: -0.02em;
+  opacity: 1 !important;
 }
 
 .landing-hero-lede {
@@ -1239,9 +1237,17 @@
   }
 
   .landing-hero h1 {
-    font-size: 36px;
-    line-height: 1.2;
-  }
+  margin: 18px 0 18px;
+  max-width: 620px;
+  color: #101828 !important;
+  -webkit-text-fill-color: #101828 !important;
+  background: none !important;
+  font-size: 52px;
+  line-height: 1.15;
+  font-weight: 900;
+  letter-spacing: -0.02em;
+  opacity: 1 !important;
+}
 
   .landing-hero-lede {
     font-size: 16px;
@@ -2128,9 +2134,16 @@
 }
 
 .landing-hero h1 {
-  opacity: 0;
-  animation: fadeInUpSlight 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-  animation-delay: 0.25s;
+  margin: 18px 0 18px;
+  max-width: 620px;
+  color: #101828 !important;
+  -webkit-text-fill-color: #101828 !important;
+  background: none !important;
+  font-size: 52px;
+  line-height: 1.15;
+  font-weight: 900;
+  letter-spacing: -0.02em;
+  opacity: 1 !important;
 }
 
 .landing-hero-lede {
@@ -3224,3 +3237,166 @@
 
 
 
+
+
+/* ============================================================
+   HIGH-CONTRAST & TEXT VISIBILITY OVERRIDES (LIGHT BLUE THEME)
+   ============================================================ */
+
+.landing-hero h1,
+.landing-hero h1 * {
+  color: #101828 !important;
+  -webkit-text-fill-color: #101828 !important;
+  background: none !important;
+  opacity: 1 !important;
+}
+
+.landing-hero h1 span.gradient-text,
+.landing-hero h1 span.blue-highlight,
+.landing-hero h1 .highlight {
+  color: #1677FF !important;
+  -webkit-text-fill-color: #1677FF !important;
+  background: none !important;
+  opacity: 1 !important;
+}
+
+.landing-hero-lede {
+  color: #667085 !important;
+  opacity: 1 !important;
+  font-size: 19px !important;
+  line-height: 1.65 !important;
+}
+
+.landing-kicker,
+.section-heading span,
+.platform-copy span {
+  color: #1677FF !important;
+  background: #EAF4FF !important;
+  border: 1px solid rgba(22, 119, 255, 0.25) !important;
+  opacity: 1 !important;
+}
+
+/* WhatsApp Operations UI Mockup High-Contrast Overrides */
+.product-preview {
+  background: #FFFFFF !important;
+  border: 1px solid #D9E8F7 !important;
+  box-shadow: 0 10px 30px rgba(16, 24, 40, 0.06) !important;
+  opacity: 1 !important;
+}
+
+.preview-toolbar {
+  background: #F8FAFC !important;
+  border-bottom: 1px solid #D9E8F7 !important;
+  opacity: 1 !important;
+}
+
+.preview-label {
+  color: #667085 !important;
+  opacity: 1 !important;
+}
+
+.preview-toolbar strong,
+.preview-toolbar span,
+.preview-toolbar h3,
+.preview-toolbar div {
+  color: #101828 !important;
+  opacity: 1 !important;
+}
+
+.preview-status {
+  background: #EAF4FF !important;
+  border: 1px solid rgba(22, 119, 255, 0.3) !important;
+  color: #1677FF !important;
+  opacity: 1 !important;
+}
+
+.preview-sidebar {
+  background: #F8FAFC !important;
+  border-right: 1px solid #D9E8F7 !important;
+  opacity: 1 !important;
+}
+
+.preview-tab {
+  color: #667085 !important;
+  opacity: 1 !important;
+}
+
+.preview-tab.active,
+.preview-tab:hover {
+  background: #EAF4FF !important;
+  color: #1677FF !important;
+  border-color: #1677FF !important;
+  opacity: 1 !important;
+}
+
+.landing-proof-row {
+  background: #FFFFFF !important;
+  border: 1px solid #D9E8F7 !important;
+  box-shadow: 0 4px 14px rgba(16, 24, 40, 0.04) !important;
+  opacity: 1 !important;
+}
+
+.landing-proof-item strong {
+  color: #101828 !important;
+  opacity: 1 !important;
+}
+
+.landing-proof-item span {
+  color: #667085 !important;
+  opacity: 1 !important;
+}
+
+/* Footer High-Contrast Overrides */
+.landing-footer {
+  background: #FFFFFF !important;
+  border-top: 1px solid #D9E8F7 !important;
+  opacity: 1 !important;
+}
+
+.footer-brand p,
+.footer-col p,
+.footer-bottom,
+.footer-bottom span,
+.footer-copyright {
+  color: #667085 !important;
+  opacity: 1 !important;
+}
+
+.footer-col h4,
+.footer-brand h3,
+.footer-brand strong,
+.landing-footer h4 {
+  color: #101828 !important;
+  opacity: 1 !important;
+}
+
+.footer-col a,
+.footer-col button,
+.landing-footer a,
+.landing-footer button {
+  color: #475467 !important;
+  opacity: 1 !important;
+}
+
+.footer-col a:hover,
+.footer-col button:hover,
+.landing-footer a:hover,
+.landing-footer button:hover {
+  color: #1677FF !important;
+}
+
+/* FAQ Accordion Contrast Overrides */
+.faq-question {
+  color: #101828 !important;
+  opacity: 1 !important;
+}
+
+.faq-answer {
+  color: #667085 !important;
+  opacity: 1 !important;
+}
+
+.faq-item {
+  background: #FFFFFF !important;
+  border: 1px solid #D9E8F7 !important;
+}

@@ -201,8 +201,8 @@ body:not(.dark-theme) .sidebar-logout-btn:hover {
   border-color: #EF4444 !important;
 }
 
-body:not(.dark-theme) h1,
-body:not(.dark-theme) h2,
+body:not(.dark-theme) h1:not(.landing-hero-title),
+body:not(.dark-theme) h2:not(.landing-hero-title),
 body:not(.dark-theme) h3,
 body:not(.dark-theme) h4,
 body:not(.dark-theme) h5,
@@ -210,15 +210,15 @@ body:not(.dark-theme) h6,
 body:not(.dark-theme) .card h3,
 body:not(.dark-theme) .stat-value,
 body:not(.dark-theme) .stats-value {
-  color: var(--text-primary) !important;
+  color: var(--text-primary);
 }
 
-body:not(.dark-theme) p,
-body:not(.dark-theme) span:not(.sidebar-role-badge):not(.badge):not(.btn-primary):not(.badge-success):not(.badge-danger):not(.badge-warning):not(.badge-info):not(.status-dot):not(.ai-status-dot),
+body:not(.dark-theme) p:not(.landing-hero-lede),
+body:not(.dark-theme) span:not(.sidebar-role-badge):not(.badge):not(.btn):not(.btn-primary):not(.btn-secondary):not(.landing-primary-button):not(.landing-secondary-button):not(.landing-kicker):not(.preview-status):not(.gradient-text):not(.blue-highlight):not(.badge-success):not(.badge-danger):not(.badge-warning):not(.badge-info):not(.status-dot):not(.ai-status-dot),
 body:not(.dark-theme) label,
 body:not(.dark-theme) .stat-label,
 body:not(.dark-theme) .stats-label {
-  color: var(--text-secondary) !important;
+  color: var(--text-secondary);
 }
 
 body:not(.dark-theme) th {

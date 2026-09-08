@@ -133,6 +133,20 @@ function WhatsAppConnect() {
   const [activeTab, setActiveTab] = useState('cloudapi');
   const [embeddedLoading, setEmbeddedLoading] = useState(false);
 
+  // Handle URL query parameters (?code=xxx) if redirected back from Meta OAuth
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const codeParam = urlParams.get('code');
+    if (codeParam && !window.__metaCodeHandled) {
+      window.__metaCodeHandled = true;
+      console.log('✅ Captured Meta authorization code from URL parameters');
+      // Clean query parameter from URL without page refresh
+      const cleanUrl = window.location.pathname + window.location.hash;
+      window.history.replaceState({}, document.title, cleanUrl);
+      exchangeAuthCode(codeParam);
+    }
+  }, []);
+
   // Initialize Meta SDK dynamically
   useEffect(() => {
     window.fbAsyncInit = function () {
@@ -175,34 +189,74 @@ function WhatsAppConnect() {
     return () => window.removeEventListener('message', handleMetaMessage);
   }, []);
 
-  const handleLaunchEmbeddedSignup = () => {
-    if (!window.FB) {
-      alert('Meta Facebook SDK is loading, please try again in a few seconds.');
-      return;
+  const launchDirectOAuth = (appId, configId) => {
+    const rawUri = window.location.href.split('#')[0].split('?')[0];
+    const redirectUri = encodeURIComponent(rawUri);
+    const oauthUrl = `https://www.facebook.com/v25.0/dialog/oauth?client_id=${appId}&config_id=${configId}&redirect_uri=${redirectUri}&response_type=code`;
+
+    const width = 600;
+    const height = 750;
+    const left = window.screenX + (window.outerWidth - width) / 2;
+    const top = window.screenY + (window.outerHeight - height) / 2;
+
+    const popup = window.open(
+      oauthUrl,
+      'MetaWhatsAppEmbeddedSignup',
+      `width=${width},height=${height},left=${left},top=${top},scrollbars=yes,status=yes`
+    );
+
+    if (!popup || popup.closed || typeof popup.closed === 'undefined') {
+      window.location.href = oauthUrl;
+    } else {
+      const checkPopupInterval = setInterval(() => {
+        try {
+          if (popup.closed) {
+            clearInterval(checkPopupInterval);
+            setEmbeddedLoading(false);
+            return;
+          }
+          if (popup.location && popup.location.href.includes('code=')) {
+            const popupUrl = new URL(popup.location.href);
+            const code = popupUrl.searchParams.get('code');
+            popup.close();
+            clearInterval(checkPopupInterval);
+            if (code) {
+              exchangeAuthCode(code);
+            }
+          }
+        } catch (crossOriginErr) {
+          // Cross-origin restriction while on facebook.com domain is expected
+        }
+      }, 500);
     }
+  };
+
+  const handleLaunchEmbeddedSignup = () => {
     setEmbeddedLoading(true);
 
-    const loginOptions = {
-      config_id: process.env.REACT_APP_META_CONFIG_ID || '1066111046278122',
-      response_type: 'code',
-      override_default_response_type: true
-    };
+    const appId = process.env.REACT_APP_META_APP_ID || '2242808243238982';
+    const configId = process.env.REACT_APP_META_CONFIG_ID || '1066111046278122';
 
-    window.FB.login((response) => {
-      if (response.authResponse) {
-        const code = response.authResponse.code;
-        if (code) {
+    if (window.FB) {
+      const loginOptions = {
+        config_id: configId,
+        response_type: 'code',
+        override_default_response_type: true
+      };
+
+      window.FB.login((response) => {
+        if (response.authResponse && response.authResponse.code) {
           console.log('✅ Received Auth Code from Facebook Popup');
-          exchangeAuthCode(code);
+          exchangeAuthCode(response.authResponse.code);
         } else {
-          setEmbeddedLoading(false);
-          alert('Failed to retrieve authentication code from Meta signup popup.');
+          console.warn('⚠️ FB.login did not return auth code, launching direct Meta OAuth popup fallback...');
+          launchDirectOAuth(appId, configId);
         }
-      } else {
-        setEmbeddedLoading(false);
-        console.log('User cancelled Facebook login or did not fully authorize.');
-      }
-    }, loginOptions);
+      }, loginOptions);
+    } else {
+      console.log('⚠️ Meta SDK not loaded, launching direct Meta OAuth popup fallback...');
+      launchDirectOAuth(appId, configId);
+    }
   };
 
   const exchangeAuthCode = async (code) => {

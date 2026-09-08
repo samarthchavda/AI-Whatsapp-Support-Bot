@@ -50,6 +50,7 @@ import BlogPost from './pages/merchant/Blog/BlogPost';
 import SuperAdminBlog from './pages/superAdmin/Blog/SuperAdminBlog';
 import Products from './pages/merchant/Products/Products';
 import MerchantLeads from './pages/merchant/Leads/MerchantLeads';
+import NotificationDropdown from './components/NotificationDropdown/NotificationDropdown';
 import axios from 'axios';
 import './App.css';
 
@@ -527,9 +528,7 @@ function TopBar({ admin, onUpdateAdmin, isImpersonated, onToggleSidebar, theme, 
       </div>
 
       <div className="top-bar-actions">
-        <button className="icon-button" title="Notifications" aria-label="Notifications">
-          <FaBell />
-        </button>
+        <NotificationDropdown admin={admin} />
       </div>
     </div>
   );

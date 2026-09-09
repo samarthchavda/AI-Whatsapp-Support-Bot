@@ -8,7 +8,6 @@ import Profile from './pages/merchant/Profile/Profile';
 import Conversations from './pages/merchant/Conversations/Conversations';
 import Orders from './pages/merchant/Orders/Orders';
 import Escalations from './pages/merchant/Escalations/Escalations';
-import DemoChat from './pages/merchant/DemoChat/DemoChat';
 import WhatsAppConnect from './pages/merchant/WhatsAppConnect/WhatsAppConnect';
 import Login from './pages/public/Login/Login';
 import LandingPage from './pages/public/LandingPage/LandingPage';
@@ -405,12 +404,6 @@ function Sidebar({ admin, onLogout, isOpen, onToggle, pendingDemoRequestsCount }
                     <Link to="/dashboard/knowledge-base" className={isActive('/dashboard/knowledge-base')} title="Knowledge Base">
                       <FaBrain />
                       <span className="nav-label">Knowledge Base</span>
-                    </Link>
-                  </li>
-                  <li>
-                    <Link to="/dashboard/demo-chat" className={isActive('/dashboard/demo-chat')} title="Demo Chat">
-                      <FaRobot />
-                      <span className="nav-label">Demo Chat</span>
                     </Link>
                   </li>
                 </ul>
@@ -961,7 +954,6 @@ function App() {
                     <Route path="/whatsapp-connect" element={<WhatsAppConnect />} />
                     <Route path="/templates" element={<Templates />} />
                     <Route path="/abandoned-carts" element={<AbandonedCarts admin={admin} />} />
-                    <Route path="/demo-chat" element={<DemoChat admin={admin} />} />
                     <Route path="/billing" element={<Billing />} />
                     <Route path="/profile" element={<Profile admin={admin} onUpdateAdmin={handleUpdateAdmin} />} />
                     

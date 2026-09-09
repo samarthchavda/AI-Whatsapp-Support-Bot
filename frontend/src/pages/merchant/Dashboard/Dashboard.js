@@ -317,8 +317,8 @@ function Dashboard() {
             </div>
             <h3 className="empty-state-title">All Quiet Here</h3>
             <p className="empty-state-text">New messages from your WhatsApp bot will appear here</p>
-            <Link to="/dashboard/demo-chat" className="btn btn-primary" style={{ marginTop: '20px' }}>
-              Try Demo Chat
+            <Link to="/dashboard/whatsapp-connect" className="btn btn-primary" style={{ marginTop: '20px' }}>
+              Connect WhatsApp
             </Link>
           </div>
         )}

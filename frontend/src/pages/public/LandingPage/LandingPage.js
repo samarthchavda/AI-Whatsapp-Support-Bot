@@ -18,9 +18,11 @@ import {
   FaEnvelope,
   FaPhoneAlt,
   FaLinkedin,
-  FaTwitter
+  FaTwitter,
+  FaPaperPlane
 } from 'react-icons/fa';
 import { SiWhatsapp, SiMeta, SiShopify, SiWoocommerce, SiOpenai } from 'react-icons/si';
+import { getGroundedWebsiteAnswer } from '../../../services/websiteKnowledge';
 import './LandingPage.css';
 
 const metrics = [
@@ -92,11 +94,23 @@ function LandingPage() {
 
   const [isChatOpen, setIsChatOpen] = useState(false);
 
+  const WELCOME_MESSAGE = "Hi! I'm the Kwickbot AI assistant. I can help you understand Kwickbot's features, setup process, integrations, and pricing. What would you like to know?";
+
   const [chatMessages, setChatMessages] = useState([
-    { role: 'assistant', content: 'Hi there! 👋 I am the Kwickbot Sales & Setup Assistant. Ask me about features, plans, extra charges, integration setup, or how to give access permissions!' }
+    { role: 'assistant', content: WELCOME_MESSAGE }
   ]);
   const [chatInput, setChatInput] = useState('');
+  const [isTyping, setIsTyping] = useState(false);
   const chatEndRef = useRef(null);
+
+  const quickReplies = [
+    "What is Kwickbot?",
+    "How does it work?",
+    "Pricing",
+    "Shopify integration",
+    "WooCommerce integration",
+    "Book a demo"
+  ];
 
   // Hero Real-time Live Demo Animation State
   // States: 'customer-typing' | 'customer-sent' | 'ai-typing' | 'ai-sent' | 'note-sent' | 'reset'
@@ -123,11 +137,9 @@ function LandingPage() {
     return () => clearTimeout(timer);
   }, [animState, activeTab]);
 
-
-
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [chatMessages]);
+  }, [chatMessages, isTyping]);
 
   // Scroll Entrance Animations Observer
   useEffect(() => {
@@ -147,35 +159,24 @@ function LandingPage() {
     };
   }, []);
 
+  const sendQuery = (queryText) => {
+    const trimmed = queryText.trim();
+    if (!trimmed || isTyping) return;
+
+    setChatMessages(prev => [...prev, { role: 'user', content: trimmed }]);
+    setChatInput('');
+    setIsTyping(true);
+
+    setTimeout(() => {
+      const groundedAnswer = getGroundedWebsiteAnswer(trimmed);
+      setChatMessages(prev => [...prev, { role: 'assistant', content: groundedAnswer }]);
+      setIsTyping(false);
+    }, 600);
+  };
+
   const handleChatSubmit = (e) => {
     e.preventDefault();
-    if (!chatInput.trim()) return;
-
-    const userMessage = chatInput.trim();
-    setChatMessages(prev => [...prev, { role: 'user', content: userMessage }]);
-    setChatInput('');
-
-    // Simulated AI response logic
-    setTimeout(() => {
-      let reply = '';
-      const input = userMessage.toLowerCase();
-
-      if (input.includes('price') || input.includes('pricing') || input.includes('cost') || input.includes('plan') || input.includes('money')) {
-        reply = '💰 Kwickbot Plans:\n• Starter (₹1499/mo): 500 AI messages, standard knowledge base.\n• Growth (₹2999/mo): 2,500 AI messages, WooCommerce/Shopify sync, campaigns.\n• Scale (₹9999/mo): Unlimited volume, custom CRM integrations.';
-      } else if (input.includes('charge') || input.includes('pay') || input.includes('extra') || input.includes('hidden') || input.includes('fee')) {
-        reply = '⚠️ Hidden/Extra Charges:\nThere are no hidden fees or extra charges from Kwickbot. If you integrate the official WhatsApp Cloud API, Meta charges directly per conversation (typically around $0.008 to $0.015 depending on the country).';
-      } else if (input.includes('setup') || input.includes('integrate') || input.includes('integration') || input.includes('how to use') || input.includes('start') || input.includes('connect')) {
-        reply = '🔧 Setup & Integration:\n1. Sign Up / Sign In to Kwickbot.\n2. Connect WhatsApp: Under "WhatsApp Connect", scan the QR code (for Web Bot) or enter your Meta developer credentials (for Cloud API).\n3. Link Shop: Go to "Integrations" and sync your Shopify or WooCommerce store.\n4. Train AI: Upload text FAQs or PDFs so the bot answers like your team!';
-      } else if (input.includes('access') || input.includes('permission') || input.includes('agent') || input.includes('role') || input.includes('give')) {
-        reply = '👥 Access & Permissions:\n• You can invite support agents from your settings.\n• Agents can reply in the Live Chat CRM console but cannot change integration settings.\n• Super Admins manage token limits, custom pricing rules, and agent permission roles.';
-      } else if (input.includes('feature') || input.includes('what can') || input.includes('why') || input.includes('workflow')) {
-        reply = '🚀 Core Features:\n• AI Auto-Reply: Resolves 80%+ of common store policy & order FAQs.\n• Instant Human Takeover: Pauses the AI bot and alerts agents on high frustration or refund requests.\n• Bulk Broadcasts: Send campaign updates with delivery analytics.\n• Focused CRM Console: Real-time chats, orders, and escalation queues.';
-      } else {
-        reply = '👋 I am here to help you get started with Kwickbot! Ask me about pricing & extra charges, how to setup integration, how to give access permissions, or core features.';
-      }
-
-      setChatMessages(prev => [...prev, { role: 'assistant', content: reply }]);
-    }, 800);
+    sendQuery(chatInput);
   };
 
   const toggleFaq = (index) => {
@@ -828,7 +829,7 @@ function LandingPage() {
           <button
             className="chat-trigger-button"
             onClick={() => setIsChatOpen(true)}
-            aria-label="Open AI Demo Chat"
+            aria-label="Open Kwickbot AI Assistant"
           >
             <FaWhatsapp />
             <span className="pulse-notification">1</span>
@@ -836,12 +837,14 @@ function LandingPage() {
         ) : (
           <div className="widget-chat-window">
             <div className="widget-chat-header">
-              <FaWhatsapp className="widget-chat-icon" />
-              <div>
-                <h4>AI Support Assistant</h4>
-                <span>Online • Powered by Gemini</span>
+              <div className="widget-header-brand">
+                <img src="/app-icon.png" alt="Kwickbot App Icon" className="widget-header-avatar" onError={(e) => { e.target.src = '/logo.png'; }} />
+                <div>
+                  <h4>Kwickbot AI Assistant</h4>
+                  <span className="header-status-badge"><span className="status-dot"></span> Online • Website Assistant</span>
+                </div>
               </div>
-              <button className="widget-chat-close-btn" onClick={() => setIsChatOpen(false)}>×</button>
+              <button className="widget-chat-close-btn" onClick={() => setIsChatOpen(false)} title="Close Chat">×</button>
             </div>
 
             <div className="widget-chat-messages">
@@ -850,6 +853,37 @@ function LandingPage() {
                   <p style={{ margin: 0, whiteSpace: 'pre-line' }}>{msg.content}</p>
                 </div>
               ))}
+
+              {/* Quick Reply Chips (Shown at start or when user can pick common questions) */}
+              {chatMessages.length <= 2 && !isTyping && (
+                <div className="quick-replies-container">
+                  <span className="quick-replies-label">Suggested Questions:</span>
+                  <div className="quick-replies-grid">
+                    {quickReplies.map((chip, idx) => (
+                      <button
+                        key={idx}
+                        className="quick-reply-chip"
+                        onClick={() => sendQuery(chip)}
+                      >
+                        {chip}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Typing Indicator */}
+              {isTyping && (
+                <div className="widget-chat-bubble assistant typing-bubble">
+                  <div className="typing-dots">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                  </div>
+                  <span className="typing-text">Kwickbot AI is thinking...</span>
+                </div>
+              )}
+
               <div ref={chatEndRef} />
             </div>
 
@@ -858,10 +892,13 @@ function LandingPage() {
                 type="text"
                 value={chatInput}
                 onChange={(e) => setChatInput(e.target.value)}
-                placeholder="Ask about pricing, integration, access..."
+                placeholder="Ask about features, pricing, setup..."
+                disabled={isTyping}
                 required
               />
-              <button type="submit"><FaArrowRight /></button>
+              <button type="submit" disabled={isTyping || !chatInput.trim()} aria-label="Send message">
+                <FaPaperPlane />
+              </button>
             </form>
           </div>
         )}

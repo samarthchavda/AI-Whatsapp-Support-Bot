@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { FaArrowLeft, FaCalendarAlt, FaUser, FaTag, FaBlog } from 'react-icons/fa';
+import { FaArrowLeft, FaCalendarAlt, FaUser, FaTag, FaBlog, FaArrowRight } from 'react-icons/fa';
 import '../../public/About/AboutPage.css'; // Reuse nav/landing page styles
 
 const API_BASE = process.env.REACT_APP_API_URL || (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' ? 'http://localhost:5001/api' : '/api');
@@ -11,8 +11,8 @@ const BlogImage = ({ src, alt, height = '200px' }) => {
 
   if (error || !src) {
     return (
-      <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(135deg, #1e1b4b 0%, #09090b 100%)', color: '#6366f1' }}>
-        <FaBlog size={height === '400px' ? 80 : 48} style={{ opacity: 0.5 }} />
+      <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(135deg, #EFF6FF 0%, #DBEAFE 100%)', color: '#1677FF' }}>
+        <FaBlog size={height === '400px' ? 80 : 48} style={{ opacity: 0.6 }} />
       </div>
     );
   }
@@ -53,28 +53,28 @@ function BlogPost() {
     fetchPost();
   }, [slug]);
 
-  // Clean formatting for body content
+  // Clean formatting for body content matching light SaaS theme
   const formatBodyContent = (text) => {
     if (!text) return '';
     // If the content doesn't look like HTML (doesn't contain tag structures), replace newlines with paragraphs
     if (!text.includes('<p>') && !text.includes('</h3>') && !text.includes('</div>')) {
       return text
         .split('\n\n')
-        .map(p => `<p style="margin-bottom: 1.5em; line-height: 1.8; color: #d4d4d8;">${p.replace(/\n/g, '<br />')}</p>`)
+        .map(p => `<p style="margin-bottom: 1.5em; line-height: 1.8; color: #334155; font-size: 1.05rem;">${p.replace(/\n/g, '<br />')}</p>`)
         .join('');
     }
-    // Return HTML directly but style some elements dynamically
+    // Return HTML directly but style elements dynamically for crisp readability
     return text
-      .replace(/<p>/g, '<p style="margin-bottom: 1.5em; line-height: 1.8; color: #d4d4d8;">')
-      .replace(/<h3>/g, '<h3 style="font-size: 1.5rem; font-weight: 700; color: #fafafa; margin-top: 1.8em; margin-bottom: 0.8em;">')
-      .replace(/<h4>/g, '<h4 style="font-size: 1.25rem; font-weight: 600; color: #f4f4f5; margin-top: 1.5em; margin-bottom: 0.6em;">')
-      .replace(/<ul>/g, '<ul style="margin-bottom: 1.5em; padding-left: 20px; list-style-type: disc; color: #d4d4d8;">')
-      .replace(/<ol>/g, '<ol style="margin-bottom: 1.5em; padding-left: 20px; list-style-type: decimal; color: #d4d4d8;">')
-      .replace(/<li>/g, '<li style="margin-bottom: 0.5em; line-height: 1.7;">');
+      .replace(/<p>/g, '<p style="margin-bottom: 1.5em; line-height: 1.8; color: #334155; font-size: 1.05rem;">')
+      .replace(/<h3>/g, '<h3 style="font-size: 1.5rem; font-weight: 800; color: #0F172A; margin-top: 1.8em; margin-bottom: 0.8em; line-height: 1.3;">')
+      .replace(/<h4>/g, '<h4 style="font-size: 1.25rem; font-weight: 700; color: #0F172A; margin-top: 1.5em; margin-bottom: 0.6em;">')
+      .replace(/<ul>/g, '<ul style="margin-bottom: 1.5em; padding-left: 20px; list-style-type: disc; color: #334155; font-size: 1.05rem;">')
+      .replace(/<ol>/g, '<ol style="margin-bottom: 1.5em; padding-left: 20px; list-style-type: decimal; color: #334155; font-size: 1.05rem;">')
+      .replace(/<li>/g, '<li style="margin-bottom: 0.6em; line-height: 1.7;">');
   };
 
   return (
-    <div className="about-page" style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+    <div className="about-page" style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', background: '#FFFFFF' }}>
       {/* Navigation */}
       <nav className="about-nav">
         <div className="about-nav-inner">
@@ -99,24 +99,34 @@ function BlogPost() {
       </nav>
 
       {/* Main Container */}
-      <main className="about-container" style={{ flex: 1, padding: '40px 20px', maxWidth: '800px', margin: '0 auto', width: '100%' }}>
+      <main className="about-container" style={{ flex: 1, padding: '40px 20px', maxWidth: '840px', margin: '0 auto', width: '100%' }}>
         <button 
           onClick={() => navigate('/blog')}
           style={{ 
-            background: 'transparent', 
-            border: 'none', 
-            color: '#a1a1aa', 
+            background: '#F8FAFC', 
+            border: '1px solid #E2E8F0', 
+            color: '#475569', 
             display: 'inline-flex', 
             alignItems: 'center', 
             gap: '8px', 
             cursor: 'pointer', 
-            fontSize: '14px', 
-            fontWeight: '600',
+            fontSize: '13.5px', 
+            fontWeight: '700',
             marginBottom: '28px',
-            padding: 0
+            padding: '8px 16px',
+            borderRadius: '20px',
+            transition: 'all 0.2s ease'
           }}
-          onMouseEnter={(e) => e.currentTarget.style.color = '#6366f1'}
-          onMouseLeave={(e) => e.currentTarget.style.color = '#a1a1aa'}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.color = '#1677FF';
+            e.currentTarget.style.borderColor = '#1677FF';
+            e.currentTarget.style.background = '#EFF6FF';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.color = '#475569';
+            e.currentTarget.style.borderColor = '#E2E8F0';
+            e.currentTarget.style.background = '#F8FAFC';
+          }}
         >
           <FaArrowLeft /> Back to Blog
         </button>
@@ -126,66 +136,74 @@ function BlogPost() {
             <div className="spinner"></div>
           </div>
         ) : error ? (
-          <div style={{ textAlign: 'center', padding: '40px', background: 'rgba(239, 68, 68, 0.08)', border: '1px solid #ef4444', borderRadius: '12px', color: '#ef4444' }}>
+          <div style={{ textAlign: 'center', padding: '40px', background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: '12px', color: '#DC2626' }}>
             <FaBlog size={48} style={{ marginBottom: '16px', opacity: 0.5 }} />
             <p style={{ fontSize: '18px', fontWeight: '700' }}>Article Not Found</p>
-            <p style={{ fontSize: '14px', color: '#71717a', marginTop: '4px' }}>{error}</p>
+            <p style={{ fontSize: '14px', color: '#64748B', marginTop: '4px' }}>{error}</p>
           </div>
         ) : !post ? null : (
-          <article style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+          <article style={{ display: 'flex', flexDirection: 'column', gap: '28px' }}>
             {/* Header Metadata */}
-            <header style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            <header style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
               {post.tags && post.tags.length > 0 && (
                 <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                   {post.tags.map(tag => (
-                    <span key={tag} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '11px', fontWeight: '700', color: '#818cf8', background: 'rgba(99, 102, 241, 0.1)', padding: '4px 10px', borderRadius: '4px' }}>
-                      <FaTag size={9} /> {tag}
+                    <span key={tag} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '11.5px', fontWeight: '700', color: '#1D4ED8', background: '#EFF6FF', border: '1px solid #BFDBFE', padding: '4px 10px', borderRadius: '20px' }}>
+                      <FaTag size={9} style={{ color: '#1677FF' }} /> {tag}
                     </span>
                   ))}
                 </div>
               )}
 
-              <h1 style={{ fontSize: '2.5rem', fontWeight: '800', color: '#fafafa', lineHeight: '1.25', margin: '4px 0 8px' }}>
+              {/* Title Header - Crisp dark slate text for 100% visibility */}
+              <h1 style={{ fontSize: '2.4rem', fontWeight: '900', color: '#0F172A', lineHeight: '1.25', margin: '4px 0 8px', letterSpacing: '-0.02em' }}>
                 {post.title}
               </h1>
 
-              <div style={{ display: 'flex', gap: '20px', fontSize: '14px', color: '#a1a1aa', borderBottom: '1px solid rgba(63, 63, 70, 0.3)', paddingBottom: '16px' }}>
-                <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <FaUser style={{ color: '#6366f1' }} /> Written by {post.author}
+              <div style={{ display: 'flex', gap: '20px', fontSize: '13.5px', color: '#64748B', borderBottom: '1px solid #E2E8F0', paddingBottom: '18px' }}>
+                <span style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: '500' }}>
+                  <FaUser style={{ color: '#1677FF' }} /> Written by {post.author}
                 </span>
-                <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <FaCalendarAlt style={{ color: '#6366f1' }} /> {new Date(post.createdAt).toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' })}
+                <span style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: '500' }}>
+                  <FaCalendarAlt style={{ color: '#1677FF' }} /> {new Date(post.createdAt).toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' })}
                 </span>
               </div>
             </header>
 
             {/* Cover Image */}
             {post.coverImage && (
-              <div style={{ width: '100%', height: '400px', borderRadius: '16px', overflow: 'hidden', background: '#18181b', border: '1px solid rgba(63, 63, 70, 0.3)' }}>
+              <div style={{ width: '100%', height: '400px', borderRadius: '16px', overflow: 'hidden', background: '#F8FAFC', border: '1px solid #E2E8F0', boxShadow: '0 4px 20px rgba(16, 24, 40, 0.04)' }}>
                 <BlogImage src={post.coverImage} alt={post.title} height="400px" />
               </div>
             )}
 
             {/* Summary Block */}
-            <div style={{ padding: '20px', background: 'rgba(99, 102, 241, 0.05)', borderLeft: '4px solid #6366f1', borderRadius: '0 8px 8px 0', fontSize: '16px', color: '#e4e4e7', fontStyle: 'italic', lineHeight: '1.6' }}>
+            <div style={{ padding: '20px 24px', background: '#EFF6FF', borderLeft: '4px solid #1677FF', borderRadius: '0 12px 12px 0', fontSize: '16px', color: '#1E293B', fontStyle: 'italic', lineHeight: '1.6', fontWeight: '500' }}>
               {post.summary}
             </div>
 
             {/* Content Body */}
             <div 
-              style={{ fontSize: '16px', color: '#d4d4d8', lineHeight: '1.8' }}
+              style={{ fontSize: '16.5px', color: '#334155', lineHeight: '1.8' }}
               dangerouslySetInnerHTML={{ __html: formatBodyContent(post.content) }}
             />
           </article>
         )}
       </main>
 
-      <footer style={{ borderTop: '1px solid rgba(63, 63, 70, 0.3)', padding: '24px', textAlign: 'center', color: '#71717a', fontSize: '13px', marginTop: 'auto' }}>
-        <div style={{ marginBottom: '10px' }}>
-          <a href="mailto:hello@kwickbot.in" style={{ color: 'inherit', textDecoration: 'none', marginRight: '16px' }}>📧 hello@kwickbot.in</a>
-          <a href="tel:+918128420287" style={{ color: 'inherit', textDecoration: 'none' }}>📞 +91 8128420287</a>
+      {/* Footer */}
+      <footer className="about-footer-wrapper">
+        <div className="about-footer">
+          <div className="footer-brand">
+            <img src="/logo.png" className="footer-logo-img" alt="Kwickbot Logo" />
+          </div>
+          <p>WhatsApp support automation for real commerce operations.</p>
+          <div className="footer-contacts" style={{ marginTop: '12px', marginBottom: '12px', fontSize: '13px', display: 'flex', flexDirection: 'column', gap: '6px', alignItems: 'center' }}>
+            <a href="mailto:hello@kwickbot.in" style={{ color: 'inherit', textDecoration: 'none' }}>📧 hello@kwickbot.in</a>
+            <a href="tel:+918128420287" style={{ color: 'inherit', textDecoration: 'none' }}>📞 +91 8128420287</a>
+          </div>
+          <button onClick={() => navigate('/book-demo')}>Book demo <FaArrowRight /></button>
         </div>
-        &copy; {new Date().getFullYear()} Kwickbot. All rights reserved.
       </footer>
     </div>
   );

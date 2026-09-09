@@ -6,10 +6,21 @@ import '../../public/About/AboutPage.css'; // Reuse nav/landing page styles
 
 const API_BASE = process.env.REACT_APP_API_URL || (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' ? 'http://localhost:5001/api' : '/api');
 
+const getImageUrl = (url) => {
+  if (!url) return '';
+  if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('data:')) {
+    return url;
+  }
+  const cleanPath = url.startsWith('/') ? url : `/${url}`;
+  const backendHost = API_BASE.replace(/\/api\/?$/, '');
+  return `${backendHost}${cleanPath}`;
+};
+
 const BlogImage = ({ src, alt, height = '200px' }) => {
   const [error, setError] = useState(false);
+  const imageUrl = getImageUrl(src);
 
-  if (error || !src) {
+  if (error || !imageUrl) {
     return (
       <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(135deg, #EFF6FF 0%, #DBEAFE 100%)', color: '#1677FF' }}>
         <FaBlog size={height === '400px' ? 80 : 48} style={{ opacity: 0.6 }} />
@@ -19,7 +30,7 @@ const BlogImage = ({ src, alt, height = '200px' }) => {
 
   return (
     <img 
-      src={src} 
+      src={imageUrl} 
       alt={alt} 
       onError={() => setError(true)}
       style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
@@ -56,21 +67,29 @@ function BlogPost() {
   // Clean formatting for body content matching light SaaS theme
   const formatBodyContent = (text) => {
     if (!text) return '';
+
+    // Replace relative image URLs inside HTML content body with absolute backend URLs
+    let formattedText = text.replace(/<img\s+([^>]*?)src=["'](\/uploads\/[^"']+)["']/gi, (match, prefix, src) => {
+      return `<img ${prefix}src="${getImageUrl(src)}"`;
+    });
+
     // If the content doesn't look like HTML (doesn't contain tag structures), replace newlines with paragraphs
-    if (!text.includes('<p>') && !text.includes('</h3>') && !text.includes('</div>')) {
-      return text
+    if (!formattedText.includes('<p>') && !formattedText.includes('</h3>') && !formattedText.includes('</div>')) {
+      return formattedText
         .split('\n\n')
         .map(p => `<p style="margin-bottom: 1.5em; line-height: 1.8; color: #334155; font-size: 1.05rem;">${p.replace(/\n/g, '<br />')}</p>`)
         .join('');
     }
+
     // Return HTML directly but style elements dynamically for crisp readability
-    return text
+    return formattedText
       .replace(/<p>/g, '<p style="margin-bottom: 1.5em; line-height: 1.8; color: #334155; font-size: 1.05rem;">')
       .replace(/<h3>/g, '<h3 style="font-size: 1.5rem; font-weight: 800; color: #0F172A; margin-top: 1.8em; margin-bottom: 0.8em; line-height: 1.3;">')
       .replace(/<h4>/g, '<h4 style="font-size: 1.25rem; font-weight: 700; color: #0F172A; margin-top: 1.5em; margin-bottom: 0.6em;">')
       .replace(/<ul>/g, '<ul style="margin-bottom: 1.5em; padding-left: 20px; list-style-type: disc; color: #334155; font-size: 1.05rem;">')
       .replace(/<ol>/g, '<ol style="margin-bottom: 1.5em; padding-left: 20px; list-style-type: decimal; color: #334155; font-size: 1.05rem;">')
-      .replace(/<li>/g, '<li style="margin-bottom: 0.6em; line-height: 1.7;">');
+      .replace(/<li>/g, '<li style="margin-bottom: 0.6em; line-height: 1.7;">')
+      .replace(/<img\b/g, '<img style="max-width: 100%; height: auto; border-radius: 12px; margin: 1.5em 0; border: 1px solid #E2E8F0;"');
   };
 
   return (

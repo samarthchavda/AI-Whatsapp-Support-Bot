@@ -6,10 +6,21 @@ import '../../public/About/AboutPage.css'; // Reuse nav/landing page styles
 
 const API_BASE = process.env.REACT_APP_API_URL || (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' ? 'http://localhost:5001/api' : '/api');
 
+const getImageUrl = (url) => {
+  if (!url) return '';
+  if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('data:')) {
+    return url;
+  }
+  const cleanPath = url.startsWith('/') ? url : `/${url}`;
+  const backendHost = API_BASE.replace(/\/api\/?$/, '');
+  return `${backendHost}${cleanPath}`;
+};
+
 const BlogImage = ({ src, alt, height = '200px' }) => {
   const [error, setError] = useState(false);
+  const imageUrl = getImageUrl(src);
 
-  if (error || !src) {
+  if (error || !imageUrl) {
     return (
       <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(135deg, #EFF6FF 0%, #DBEAFE 100%)', color: '#1677FF' }}>
         <FaBlog size={height === '400px' ? 80 : 48} style={{ opacity: 0.6 }} />
@@ -19,7 +30,7 @@ const BlogImage = ({ src, alt, height = '200px' }) => {
 
   return (
     <img 
-      src={src} 
+      src={imageUrl} 
       alt={alt} 
       onError={() => setError(true)}
       style={{ width: '100%', height: '100%', objectFit: 'cover' }} 

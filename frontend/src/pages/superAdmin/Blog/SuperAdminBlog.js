@@ -328,10 +328,10 @@ function SuperAdminBlog() {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                   <label style={{ fontSize: '13px', fontWeight: '600', color: '#a1a1aa' }}>Cover Image URL</label>
                   <input
-                    type="url"
+                    type="text"
                     value={formData.coverImage}
                     onChange={(e) => setFormData(prev => ({ ...prev, coverImage: e.target.value }))}
-                    placeholder="https://images.unsplash.com/photo-..."
+                    placeholder="https://images.unsplash.com/... or /uploads/blog/..."
                     style={{ padding: '10px 14px', background: '#09090b', border: '1px solid #27272a', borderRadius: '8px', color: '#fafafa' }}
                   />
                 </div>

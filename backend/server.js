@@ -114,13 +114,22 @@ io.on('connection', (socket) => {
 });
 
 // MongoDB Connection
-mongoose.connect(process.env.MONGODB_URI, {
+const mongoUri = process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/whatsapp-bot';
+mongoose.connect(mongoUri, {
   useNewUrlParser: true,
   useUnifiedTopology: true,
   maxPoolSize: 50, // Increase connection pool size to handle high concurrent traffic
 })
   .then(() => {
     console.log('✅ Connected to MongoDB');
+
+    // Seed/update default blog posts on startup
+    try {
+      const seedBlogs = require('./scripts/seedBlogs');
+      seedBlogs().catch(e => console.error('Blog auto-seed warning:', e.message));
+    } catch (e) {
+      // silent fallback
+    }
 
     // Initialize WhatsApp bot after DB connection (if available and enabled)
     if (whatsappWebBot) {
@@ -237,7 +246,7 @@ app.use('*', (req, res) => {
   res.status(404).json({ error: 'Route not found' });
 });
 
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 5001;
 
 server.listen(PORT, async () => {
   console.log(`🚀 Server running on port ${PORT}`);

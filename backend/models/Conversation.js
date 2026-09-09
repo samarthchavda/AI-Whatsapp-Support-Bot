@@ -111,6 +111,11 @@ const conversationSchema = new mongoose.Schema({
     type: Date,
     default: null
   },
+  isSuperAdminChat: {
+    type: Boolean,
+    default: false,
+    index: true
+  },
   metadata: {
     aiModel: String,
     totalTokens: Number,

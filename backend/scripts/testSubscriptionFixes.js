@@ -50,11 +50,14 @@ async function runTests() {
   assert.strictEqual(isFeatureAllowed('starter', 'orderCancellation'), false);
   assert.strictEqual(isFeatureAllowed('starter', 'customBranding'), false);
   assert.strictEqual(isFeatureAllowed('starter', 'developerApi'), false);
+  assert.strictEqual(isFeatureAllowed('starter', 'broadcastingAccess'), false);
 
   // Growth Features
   assert.strictEqual(isFeatureAllowed('growth', 'advancedAnalytics'), true);
   assert.strictEqual(isFeatureAllowed('growth', 'escalations'), true);
   assert.strictEqual(isFeatureAllowed('growth', 'orderCancellation'), true);
+  assert.strictEqual(isFeatureAllowed('growth', 'broadcastingAccess'), true);
+  assert.strictEqual(isFeatureAllowed('growth', 'scheduledBroadcasts'), true);
   assert.strictEqual(isFeatureAllowed('growth', 'customBranding'), false);
   assert.strictEqual(isFeatureAllowed('growth', 'developerApi'), false);
 
@@ -62,6 +65,8 @@ async function runTests() {
   assert.strictEqual(isFeatureAllowed('scale', 'advancedAnalytics'), true);
   assert.strictEqual(isFeatureAllowed('scale', 'escalations'), true);
   assert.strictEqual(isFeatureAllowed('scale', 'orderCancellation'), true);
+  assert.strictEqual(isFeatureAllowed('scale', 'broadcastingAccess'), true);
+  assert.strictEqual(isFeatureAllowed('scale', 'scheduledBroadcasts'), true);
   assert.strictEqual(isFeatureAllowed('scale', 'customBranding'), true);
   assert.strictEqual(isFeatureAllowed('scale', 'developerApi'), true);
   console.log('  ✅ Feature Entitlements Matrix Passed!');
@@ -136,7 +141,19 @@ async function runTests() {
   assert.strictEqual(subscriptionService.checkLimitExceeded(scaleAdminHeavyUsage).exceeded, false, 'Scale plan should never breach message/conversation limits');
   console.log('  ✅ Quota Enforcement Logic Passed!');
 
-  console.log('\n🎉 ALL SUBSCRIPTION & PLAN LIMIT TESTS PASSED SUCCESSFULLY!');
+  // Test 8: Broadcasting Access & Quota Limits
+  console.log('8️⃣ Testing WhatsApp Broadcasting Access & Quotas...');
+  assert.strictEqual(getPlanLimit('starter', 'maxBroadcastMessages'), 0, 'Starter broadcast message limit should be 0');
+  assert.strictEqual(getPlanLimit('starter', 'maxBroadcastCampaigns'), 0, 'Starter broadcast campaign limit should be 0');
+
+  assert.strictEqual(getPlanLimit('growth', 'maxBroadcastMessages'), 5000, 'Growth broadcast message limit should be 5000');
+  assert.strictEqual(getPlanLimit('growth', 'maxBroadcastCampaigns'), 10, 'Growth broadcast campaign limit should be 10');
+
+  assert.strictEqual(getPlanLimit('scale', 'maxBroadcastMessages'), 25000, 'Scale broadcast message limit should be 25000');
+  assert.strictEqual(getPlanLimit('scale', 'maxBroadcastCampaigns'), -1, 'Scale broadcast campaign limit should be unlimited (-1)');
+  console.log('  ✅ WhatsApp Broadcasting Access & Quotas Passed!');
+
+  console.log('\n🎉 ALL SUBSCRIPTION, PLAN LIMIT & BROADCASTING TESTS PASSED SUCCESSFULLY!');
 }
 
 runTests().catch(err => {

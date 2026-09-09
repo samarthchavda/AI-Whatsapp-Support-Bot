@@ -1,9 +1,13 @@
 const express = require('express');
 const router = express.Router();
 const broadcastController = require('../controllers/merchant/broadcastController');
-const { verifyToken } = require('../middleware/auth');
+const { verifyToken, requireFeature } = require('../middleware/auth');
 const multer = require('multer');
 const upload = multer({ dest: 'uploads/' });
+
+// All broadcast endpoints require authentication and broadcastingAccess entitlement
+router.use(verifyToken);
+router.use(requireFeature('broadcastingAccess'));
 
 /**
  * @openapi
@@ -44,8 +48,8 @@ const upload = multer({ dest: 'uploads/' });
  *       201:
  *         description: Campaign created
  */
-router.get('/', verifyToken, broadcastController.getAllBroadcasts);
-router.post('/', verifyToken, upload.single('csvFile'), broadcastController.createBroadcast);
+router.get('/', broadcastController.getAllBroadcasts);
+router.post('/', upload.single('csvFile'), broadcastController.createBroadcast);
 
 /**
  * @openapi
@@ -60,7 +64,7 @@ router.post('/', verifyToken, upload.single('csvFile'), broadcastController.crea
  *       200:
  *         description: Broadcast performance statistics
  */
-router.get('/stats', verifyToken, broadcastController.getBroadcastStats);
+router.get('/stats', broadcastController.getBroadcastStats);
 
 /**
  * @openapi
@@ -81,6 +85,6 @@ router.get('/stats', verifyToken, broadcastController.getBroadcastStats);
  *       200:
  *         description: Campaign triggered
  */
-router.post('/:id/send', verifyToken, broadcastController.sendBroadcastNow);
+router.post('/:id/send', broadcastController.sendBroadcastNow);
 
 module.exports = router;

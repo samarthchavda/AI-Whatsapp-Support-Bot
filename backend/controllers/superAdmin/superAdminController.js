@@ -933,6 +933,17 @@ exports.getGlobalSettings = async (req, res) => {
       }
     });
 
+    const superAdmin = await Admin.findOne({ role: 'super_admin' });
+    if (superAdmin) {
+      settingsMap['superAdminWhatsApp'] = {
+        connected: superAdmin.whatsappConnected || false,
+        phoneNumber: superAdmin.whatsappDisplayPhoneNumber || superAdmin.phone || superAdmin.businessPhone || null,
+        wabaId: superAdmin.whatsappBusinessAccountId || null,
+        phoneNumberId: superAdmin.whatsappPhoneNumberId || null,
+        connectedAt: superAdmin.whatsappConnectedAt || null
+      };
+    }
+
     res.json({
       success: true,
       data: settingsMap

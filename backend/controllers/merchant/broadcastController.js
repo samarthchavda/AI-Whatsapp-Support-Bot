@@ -21,6 +21,27 @@ exports.createBroadcast = async (req, res) => {
       });
     }
 
+    const subscriptionService = require('../../services/subscriptionService');
+    const isBroadcastingAllowed = subscriptionService.isFeatureAllowed(req.admin.subscriptionPlan, 'broadcastingAccess');
+    if (!isBroadcastingAllowed) {
+      if (req.file) await fs.unlink(req.file.path).catch(() => {});
+      return res.status(403).json({
+        success: false,
+        error: 'WhatsApp Broadcasting is not available on your current plan. Please upgrade to Growth or Scale to run broadcast campaigns.'
+      });
+    }
+
+    // Check campaign limit
+    const maxCampaigns = subscriptionService.getPlanLimit(req.admin.subscriptionPlan, 'maxBroadcastCampaigns');
+    const campaignsUsed = req.admin.broadcastCampaignsUsed || 0;
+    if (maxCampaigns !== -1 && maxCampaigns !== Infinity && campaignsUsed >= maxCampaigns) {
+      if (req.file) await fs.unlink(req.file.path).catch(() => {});
+      return res.status(403).json({
+        success: false,
+        error: `You have reached your monthly broadcast campaign limit (${campaignsUsed}/${maxCampaigns}). Please upgrade to the Scale plan for unlimited campaigns.`
+      });
+    }
+
     if (recipientSource === 'crm') {
       // Delete uploaded file if it was sent by mistake
       if (req.file) {
@@ -128,6 +149,17 @@ exports.createBroadcast = async (req, res) => {
       }
     }
 
+    // Check broadcast message quota
+    const maxMessages = subscriptionService.getPlanLimit(req.admin.subscriptionPlan, 'maxBroadcastMessages');
+    const messagesUsed = req.admin.broadcastMessagesUsed || 0;
+    if (maxMessages !== -1 && maxMessages !== Infinity && (messagesUsed + recipients.length) > maxMessages) {
+      if (req.file) await fs.unlink(req.file.path).catch(() => {});
+      return res.status(403).json({
+        success: false,
+        error: `This campaign (${recipients.length} recipients) exceeds your monthly broadcast message quota. You have used ${messagesUsed.toLocaleString()}/${maxMessages.toLocaleString()} broadcast messages.`
+      });
+    }
+
     // Create broadcast
     const broadcast = new Broadcast({
       title,
@@ -144,8 +176,21 @@ exports.createBroadcast = async (req, res) => {
       csvFileName: csvFileName
     });
 
+    // Increment merchant broadcastCampaignsUsed
+    const Admin = require('../../models/Admin');
+    await Admin.findByIdAndUpdate(req.admin._id, { $inc: { broadcastCampaignsUsed: 1 } }).catch(() => {});
+
     // Handle scheduling
     if (scheduledFor) {
+      const isScheduledAllowed = subscriptionService.isFeatureAllowed(req.admin.subscriptionPlan, 'scheduledBroadcasts');
+      if (!isScheduledAllowed) {
+        if (req.file) await fs.unlink(req.file.path).catch(() => {});
+        return res.status(403).json({
+          success: false,
+          error: 'Scheduled Broadcasts are not available on your current plan. Please upgrade to Growth or Scale.'
+        });
+      }
+
       const scheduledDate = new Date(scheduledFor);
       const now = new Date();
 

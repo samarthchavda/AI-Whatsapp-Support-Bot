@@ -53,51 +53,53 @@ exports.handleWebhook = async (req, res) => {
       // Extract customer name safely
       const contactName = webhookValue.contacts?.[0]?.profile?.name || 'Customer';
 
-      // Extract phone number ID from metadata to identify target merchant
+      // Extract phone number ID from metadata to identify target merchant/admin connection
       const phoneMetadata = webhookValue.metadata;
       const incomingPhoneNumberId = phoneMetadata?.phone_number_id;
 
-      // Find the corresponding merchant admin account (excluding super_admin)
+      if (!incomingPhoneNumberId) {
+        console.warn('🔒 [SECURITY] Webhook payload missing phone_number_id metadata. Fail-closed: skipping AI processing.');
+        res.status(200).json({ success: true, message: 'Missing phone_number_id metadata' });
+        return;
+      }
+
+      // Find the corresponding admin account strictly by receiving phone number ID across all accounts
       const Admin = require('../../models/Admin');
       const { encrypt } = require('../../services/whatsappCredentialService');
-      let matchedAdmin = null;
-      if (incomingPhoneNumberId) {
-        const encryptedPhoneId = encrypt(incomingPhoneNumberId, true);
-        matchedAdmin = await Admin.findOne({
-          role: { $ne: 'super_admin' },
-          $or: [
-            { whatsappPhoneNumberId: encryptedPhoneId },
-            { whatsappPhoneNumberId: incomingPhoneNumberId }
-          ]
-        });
-      }
+      const encryptedPhoneId = encrypt(incomingPhoneNumberId, true);
+      const matchedAdmin = await Admin.findOne({
+        $or: [
+          { whatsappPhoneNumberId: encryptedPhoneId },
+          { whatsappPhoneNumberId: incomingPhoneNumberId },
+          { 'whatsappConnections.phoneNumberId': incomingPhoneNumberId }
+        ]
+      });
 
-      // Fallback 1: If no direct phone number match, check if there is an active conversation history for this sender
-      const customerPhone = webhookValue.messages?.[0]?.from;
-      if (!matchedAdmin && customerPhone) {
-        try {
-          const Conversation = require('../../models/Conversation');
-          const existingConvo = await Conversation.findOne({ customerPhone }).sort({ updatedAt: -1 });
-          if (existingConvo && existingConvo.admin) {
-            matchedAdmin = await Admin.findOne({ _id: existingConvo.admin, role: { $ne: 'super_admin' } });
-          }
-        } catch (err) {
-          console.error('Error looking up existing conversation:', err.message);
-        }
-      }
-
-      // Fallback 2: Search for merchant admin configuration (excluding super_admin)
+      // Fail-closed enforcement: if receiving connection is not registered, stop processing immediately
       if (!matchedAdmin) {
-        matchedAdmin = await Admin.findOne({ whatsappConnected: true, role: { $ne: 'super_admin' }, email: { $ne: 'demo@store.com' } })
-          || await Admin.findOne({ whatsappConnected: true, role: { $ne: 'super_admin' } })
-          || await Admin.findOne({ role: { $ne: 'super_admin' }, email: { $ne: 'demo@store.com' } })
-          || await Admin.findOne({ role: { $ne: 'super_admin' } });
+        console.warn(`🔒 [SECURITY] Unrecognized receiving phone_number_id (${incomingPhoneNumberId}). Fail-closed: skipping AI processing.`);
+        res.status(200).json({ success: true, message: 'Unrecognized recipient connection' });
+        return;
       }
+
+      // Build explicit, immutable request context for this incoming message
+      const isSuperAdminConnection = matchedAdmin.role === 'super_admin';
+      const requestContext = {
+        contextType: isSuperAdminConnection ? 'super_admin' : 'merchant',
+        receivingPhoneNumberId: incomingPhoneNumberId,
+        adminId: matchedAdmin._id,
+        role: matchedAdmin.role,
+        credentials: {
+          accessToken: matchedAdmin.whatsappAccessToken,
+          phoneNumberId: matchedAdmin.whatsappPhoneNumberId || incomingPhoneNumberId,
+          businessAccountId: matchedAdmin.whatsappBusinessAccountId
+        }
+      };
 
       // Handle messages
       if (webhookValue.messages) {
         for (const message of webhookValue.messages) {
-          handleIncomingMessage(message, contactName, matchedAdmin, incomingPhoneNumberId).catch(err => {
+          handleIncomingMessage(message, contactName, matchedAdmin, requestContext).catch(err => {
             console.error('Error handling incoming message:', err);
           });
         }
@@ -124,7 +126,7 @@ exports.handleWebhook = async (req, res) => {
 };
 
 // Process incoming message
-async function handleIncomingMessage(message, contactName, matchedAdmin, incomingPhoneNumberId = null) {
+async function handleIncomingMessage(message, contactName, matchedAdmin, requestContext) {
   try {
     const customerPhone = message.from;
     const messageId = message.id;
@@ -156,20 +158,37 @@ async function handleIncomingMessage(message, contactName, matchedAdmin, incomin
       messageContent = `[${message.type.toUpperCase()}] Message received`;
     }
 
-    console.log(`📨 Message from ${customerPhone} to ID ${matchedAdmin?.whatsappPhoneNumberId || 'sandbox'}: ${messageContent}`);
+    console.log(`📨 Message on Connection (${requestContext.contextType.toUpperCase()}:${requestContext.receivingPhoneNumberId}) from ${customerPhone}: ${messageContent}`);
 
-    // Retrieve custom credentials if available
-    let customCredentials = null;
-    if (matchedAdmin && matchedAdmin.whatsappAccessToken && matchedAdmin.whatsappPhoneNumberId) {
-      customCredentials = {
-        accessToken: matchedAdmin.whatsappAccessToken,
-        phoneNumberId: matchedAdmin.whatsappPhoneNumberId,
-        businessAccountId: matchedAdmin.whatsappBusinessAccountId
-      };
+    const customCredentials = requestContext.credentials && requestContext.credentials.accessToken && requestContext.credentials.phoneNumberId
+      ? requestContext.credentials
+      : null;
+
+    // Mark message as read using connection credentials
+    await whatsappCloudAPI.markAsRead(messageId, customCredentials);
+
+    // FLOW B: SUPER ADMIN CONNECTION FLOW
+    if (requestContext.contextType === 'super_admin') {
+      console.log(`👑 [SUPER ADMIN FLOW] Message received on Super Admin Connection (${requestContext.receivingPhoneNumberId}) from ${customerPhone}`);
+      const superAdminBotService = require('../../services/superAdminBotService');
+      const isAuthorized = superAdminBotService.isAuthorizedSender(customerPhone);
+      
+      if (isAuthorized) {
+        console.log(`✅ Sender ${customerPhone} is AUTHORIZED Super Admin (+91 8128420287)`);
+        await superAdminBotService.handleSuperAdminQuery(requestContext, customerPhone, messageContent);
+      } else {
+        console.warn(`⛔ Sender ${customerPhone} is NOT authorized to access Super Admin AI Assistant.`);
+        await whatsappCloudAPI.sendMessage(
+          customerPhone,
+          "Hello! For support or inquiries regarding Kwickbot AI, please visit https://kwickbot.in",
+          customCredentials
+        );
+      }
+      return;
     }
 
-    // Mark message as read (using custom credentials if matched)
-    await whatsappCloudAPI.markAsRead(messageId, customCredentials);
+    // FLOW A: MERCHANT / ADMIN CONNECTION FLOW ONLY
+    console.log(`🏪 [MERCHANT FLOW] Message received on Merchant Connection (${requestContext.receivingPhoneNumberId}) for Admin ${matchedAdmin._id} from ${customerPhone}`);
 
     // Determine if it is a platform system number message (to bypass merchant disconnected status check)
     let isSystemNumber = false;
@@ -178,19 +197,20 @@ async function handleIncomingMessage(message, contactName, matchedAdmin, incomin
       const GlobalSettings = require('../../models/GlobalSettings');
       const phoneIdSetting = await GlobalSettings.findOne({ key: 'whatsapp_phone_number_id' });
       if (phoneIdSetting && phoneIdSetting.value) systemPhoneId = phoneIdSetting.value;
-      isSystemNumber = !!(incomingPhoneNumberId && incomingPhoneNumberId === systemPhoneId);
+      isSystemNumber = !!(requestContext.receivingPhoneNumberId && requestContext.receivingPhoneNumberId === systemPhoneId);
     } catch (err) {
       console.error('Error detecting system number flag:', err.message);
     }
 
-    // Process with AI service
+    // Process with Merchant AI service (strictly Merchant context)
     const aiResponse = await aiService.processMessage({
       customerPhone,
       customerName: contactName,
       message: messageContent,
       messageId,
-      adminId: matchedAdmin ? matchedAdmin._id : null,
-      isSystemNumber
+      adminId: matchedAdmin._id,
+      isSystemNumber,
+      requestContext
     });
 
     if (aiResponse.botPaused) {

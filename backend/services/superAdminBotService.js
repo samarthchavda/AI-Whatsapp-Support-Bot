@@ -15,18 +15,55 @@ class SuperAdminBotService {
   }
 
   /**
+   * Normalize phone number and check if authorized (+91 8128420287)
+   */
+  isAuthorizedSender(phone) {
+    if (!phone) return false;
+    const digitsOnly = phone.replace(/\D/g, '');
+    const last10 = digitsOnly.slice(-10);
+    return last10 === '8128420287';
+  }
+
+  /**
    * Check if a phone number belongs to a Super Admin.
    */
   async getSuperAdmin(phone) {
-    if (!phone) return null;
-    const normalizedPhone = phone.replace(/\D/g, '');
-    const last10 = normalizedPhone.slice(-10);
-    const superAdmins = await Admin.find({ role: 'super_admin' });
-    return superAdmins.find(sa => {
-      const saPhone = (sa.phone || sa.businessPhone || '').replace(/\D/g, '');
-      if (!saPhone) return false;
-      return saPhone === normalizedPhone || saPhone.slice(-10) === last10;
-    });
+    if (!this.isAuthorizedSender(phone)) return null;
+    return await Admin.findOne({ role: 'super_admin' });
+  }
+
+  /**
+   * Gather System Health metrics dynamically.
+   */
+  getSystemHealthMetrics() {
+    const mongoose = require('mongoose');
+    const os = require('os');
+
+    const processMemory = process.memoryUsage().heapUsed;
+    const processMemoryMB = Math.round(processMemory / 1024 / 1024);
+
+    const uptimeSeconds = process.uptime();
+    const uptimeHours = Math.floor(uptimeSeconds / 3600);
+    const uptimeMinutes = Math.floor((uptimeSeconds % 3600) / 60);
+    const formattedUptime = `${uptimeHours}h ${uptimeMinutes}m`;
+
+    const loadAvg = os.loadavg()[0];
+    const cpuCoresCount = os.cpus().length || 1;
+    const cpuUsagePct = parseFloat(((loadAvg / cpuCoresCount) * 100).toFixed(1));
+
+    const dbState = mongoose.connection.readyState;
+    const dbStatus = dbState === 1 ? 'Operational' : 'Down';
+    const geminiStatus = process.env.GEMINI_API_KEY ? 'Operational' : 'Not Available';
+
+    return {
+      backendStatus: 'Operational',
+      databaseStatus: dbStatus,
+      whatsappStatus: 'Operational',
+      aiStatus: geminiStatus,
+      memoryUsage: `${processMemoryMB} MB`,
+      cpuUsage: `${cpuUsagePct}%`,
+      uptime: formattedUptime
+    };
   }
 
   /**
@@ -36,6 +73,9 @@ class SuperAdminBotService {
     const data = {};
 
     try {
+      // ── System Health ───────────────────────────────────────────
+      data.systemHealth = this.getSystemHealthMetrics();
+
       // ── Merchants ──────────────────────────────────────────────
       const merchants = await Admin.find({ role: 'admin' }).select(
         'name email businessName subscriptionPlan subscriptionStatus isActive whatsappConnected ' +
@@ -161,7 +201,15 @@ class SuperAdminBotService {
    * Format all platform data as a readable text block for the AI prompt.
    */
   formatDataForPrompt(d) {
+    const sh = d.systemHealth || {};
     return `
+🏥 LIVE SYSTEM HEALTH:
+• Backend API: ${sh.backendStatus || 'Operational'}
+• Database: ${sh.databaseStatus || 'Connected'}
+• WhatsApp Webhook: ${sh.whatsappStatus || 'Operational'}
+• AI Service: ${sh.aiStatus || 'Operational'}
+• Heap Memory: ${sh.memoryUsage || 'N/A'} | CPU: ${sh.cpuUsage || 'N/A'} | Uptime: ${sh.uptime || 'N/A'}
+
 📊 PLATFORM OVERVIEW:
 • Total Merchants: ${d.totalMerchants} (Active: ${d.activeMerchants}, Trial: ${d.trialMerchants})
 • WhatsApp Bots Connected: ${d.connectedBots}
@@ -206,7 +254,7 @@ ${Object.entries(d.planBreakdown || {}).map(([plan, count]) => `• ${plan.toUpp
 👤 CUSTOMERS:
 • Total Registered: ${d.totalCustomers}
 
-⚠️ SYSTEM HEALTH:
+⚠️ SYSTEM ISSUES:
 • Failed Webhook Logs: ${d.failedWebhooks}
 • Recent Errors: ${JSON.stringify(d.recentErrors || [])}
 
@@ -218,15 +266,91 @@ ${JSON.stringify(d.merchantList || [], null, 2)}
   /**
    * Handle interactive questions from the Super Admin.
    */
-  async handleSuperAdminQuery(senderPhone, queryText) {
+  async handleSuperAdminQuery(requestContextOrPhone, senderPhoneOrQuery, queryTextOrCredentials = null, overrideCredentials = null) {
+    let requestContext = null;
+    let senderPhone = null;
+    let queryText = null;
+    let customCredentials = null;
+
+    if (typeof requestContextOrPhone === 'object' && requestContextOrPhone !== null) {
+      requestContext = requestContextOrPhone;
+      senderPhone = senderPhoneOrQuery;
+      queryText = queryTextOrCredentials;
+      customCredentials = overrideCredentials || requestContext.credentials;
+    } else {
+      senderPhone = requestContextOrPhone;
+      queryText = senderPhoneOrQuery;
+      customCredentials = queryTextOrCredentials;
+    }
+
+    // Security Isolation Check: Verify contextType is super_admin if context object is passed
+    if (requestContext && requestContext.contextType !== 'super_admin') {
+      console.error('🔒 [SECURITY ERROR] Super Admin service received non-super_admin contextType! Aborting.');
+      throw new Error('Security Isolation Error: Super Admin service cannot process merchant AI requests.');
+    }
+
+    if (!this.isAuthorizedSender(senderPhone)) {
+      console.warn(`⛔ Unauthorized access attempt to Super Admin Bot from phone: ${senderPhone}`);
+      return;
+    }
+
     console.log(`🤖 Super Admin Bot processing query from ${senderPhone}: ${queryText}`);
+
+    // Check for secret key / token requests and enforce security refusal
+    const secretKeywords = [
+      'access token', 'accesstoken', 'secret', 'password', 'env', 'environment variable',
+      'api key', 'apikey', 'key_secret', 'razorpay secret', 'database uri', 'mongodb uri',
+      'jwt secret', 'auth secret'
+    ];
+    const isRequestingSecret = secretKeywords.some(kw => queryText.toLowerCase().includes(kw));
+    if (isRequestingSecret) {
+      console.log('🔒 Refusing request for secret credentials via Super Admin WhatsApp');
+      const refusalMsg = "I cannot provide credentials or secret keys via WhatsApp.";
+      await this.sendLongMessage(senderPhone, refusalMsg, 1500, customCredentials);
+      return;
+    }
+
+    // Gather conversation history for context
+    const Conversation = require('../models/Conversation');
+    const superAdminDoc = await Admin.findOne({ role: 'super_admin' });
+    let convo = await Conversation.findOne({ customerPhone: senderPhone, isSuperAdminChat: true }).sort({ updatedAt: -1 });
+
+    if (!convo && superAdminDoc) {
+      convo = new Conversation({
+        admin: superAdminDoc._id,
+        customerPhone: senderPhone,
+        customerName: 'Super Admin',
+        isSuperAdminChat: true,
+        messages: []
+      });
+    }
+
+    // Append incoming user query to conversation history
+    if (convo) {
+      convo.messages.push({
+        role: 'user',
+        content: queryText,
+        timestamp: new Date()
+      });
+    }
 
     // Gather ALL platform data
     const platformData = await this.getAllPlatformData();
     const dataText = this.formatDataForPrompt(platformData);
 
+    // Format recent chat history
+    let historyText = '';
+    if (convo && convo.messages.length > 1) {
+      const recentMsgs = convo.messages.slice(-6, -1);
+      historyText = recentMsgs.map(m => `${m.role === 'user' ? 'SuperAdmin' : 'Assistant'}: ${m.content}`).join('\n');
+    }
+
     const systemPrompt = `You are the Kwickbot Super Admin WhatsApp Bot assistant.
 Your job is to help the platform owner (Super Admin Samarth) monitor, manage, and understand the Kwickbot SaaS platform.
+
+STRICT SECURITY RULE:
+- NEVER output passwords, access tokens, API keys, Razorpay secrets, database connection URIs, environment variables, or encryption keys.
+- If asked for secrets, respond with: "I cannot provide credentials or secret keys via WhatsApp."
 
 You have access to ALL real-time platform data below. Use it to answer ANY question accurately.
 
@@ -234,16 +358,21 @@ You have access to ALL real-time platform data below. Use it to answer ANY quest
 ${dataText}
 === END DATA ===
 
+${historyText ? `=== RECENT CONVERSATION HISTORY ===\n${historyText}\n=== END HISTORY ===\n` : ''}
 The Super Admin is asking: "${queryText}"
 
 RESPONSE RULES:
-- Answer directly and completely using the data above
-- Use WhatsApp formatting: *bold* for headers, • for bullets, emojis for sections
+- Answer directly and completely using the live data above
+- Use clean WhatsApp formatting: *bold* for headers, • for bullets, emojis for sections
+- Format System Health responses concisely:
+  *System Health*
+  ✅ Backend: Healthy
+  ✅ Database: Connected
+  ✅ WhatsApp: Operational
+  ✅ AI Service: Operational
 - If asked about a specific merchant, find them in the merchants list and give full details
 - If asked about revenue, orders, conversations, escalations — use the exact numbers from data
-- If asked a question the data doesn't cover, say so honestly
-- Be complete — never cut off mid-sentence
-- Keep each response section concise but informative`;
+- Be concise, operational, and accurate`;
 
     let replyMessage = '';
     if (this.gemini) {
@@ -256,14 +385,24 @@ RESPONSE RULES:
         replyMessage = result.response.text().trim();
       } catch (geminiErr) {
         console.error('Gemini error in Super Admin Bot:', geminiErr);
-        replyMessage = `⚠️ AI error. Raw platform data:\n\n${dataText}`;
+        replyMessage = `⚠️ AI processing error. Live System Summary:\n\n${dataText.substring(0, 1000)}`;
       }
     } else {
-      replyMessage = `⚠️ AI not configured. Raw platform data:\n\n${dataText}`;
+      replyMessage = `⚠️ AI not configured. Live System Summary:\n\n${dataText.substring(0, 1000)}`;
     }
 
-    // Split and send as multiple messages if too long (max 1500 chars per message)
-    await this.sendLongMessage(senderPhone, replyMessage);
+    // Save assistant response to conversation history
+    if (convo) {
+      convo.messages.push({
+        role: 'assistant',
+        content: replyMessage,
+        timestamp: new Date()
+      });
+      await convo.save();
+    }
+
+    // Split and send as WhatsApp messages
+    await this.sendLongMessage(senderPhone, replyMessage, 1500, customCredentials);
   }
 
   /**
@@ -271,21 +410,37 @@ RESPONSE RULES:
    */
   async getActiveCredentials() {
     try {
-      const connectedAdmin = await Admin.findOne({ 
-        whatsappConnected: true, 
+      // 1. Prioritize Super Admin Admin record
+      const superAdmin = await Admin.findOne({
+        role: 'super_admin',
+        whatsappConnected: true,
         whatsappAccessToken: { $exists: true, $ne: null },
         whatsappPhoneNumberId: { $exists: true, $ne: null }
-      }).sort({ updatedAt: -1 });
+      });
 
-      if (connectedAdmin) {
+      if (superAdmin) {
         return {
-          accessToken: connectedAdmin.whatsappAccessToken,
-          phoneNumberId: connectedAdmin.whatsappPhoneNumberId,
-          businessAccountId: connectedAdmin.whatsappBusinessAccountId
+          accessToken: superAdmin.whatsappAccessToken,
+          phoneNumberId: superAdmin.whatsappPhoneNumberId,
+          businessAccountId: superAdmin.whatsappBusinessAccountId
+        };
+      }
+
+      // 2. Fallback to GlobalSettings if configured
+      const GlobalSettings = require('../models/GlobalSettings');
+      const tokenSetting = await GlobalSettings.findOne({ key: 'whatsapp_access_token' });
+      const phoneIdSetting = await GlobalSettings.findOne({ key: 'whatsapp_phone_number_id' });
+      const wabaSetting = await GlobalSettings.findOne({ key: 'whatsapp_business_account_id' });
+
+      if (tokenSetting?.value && phoneIdSetting?.value) {
+        return {
+          accessToken: tokenSetting.value,
+          phoneNumberId: phoneIdSetting.value,
+          businessAccountId: wabaSetting?.value || null
         };
       }
     } catch (err) {
-      console.error('Error fetching connected admin credentials for Super Admin Bot:', err.message);
+      console.error('Error fetching Super Admin credentials for Bot:', err.message);
     }
     return null;
   }
@@ -293,8 +448,8 @@ RESPONSE RULES:
   /**
    * Send a long message as multiple WhatsApp messages split at newlines.
    */
-  async sendLongMessage(phone, message, maxLen = 1500) {
-    const customCredentials = await this.getActiveCredentials();
+  async sendLongMessage(phone, message, maxLen = 1500, overrideCredentials = null) {
+    const customCredentials = overrideCredentials || await this.getActiveCredentials();
 
     if (message.length <= maxLen) {
       await whatsappCloudAPI.sendMessage(phone, message, customCredentials);

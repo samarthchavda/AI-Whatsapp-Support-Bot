@@ -298,10 +298,16 @@ STRICT KNOWLEDGE BASE GROUNDING RULES:
     return { valid: errors.length === 0, errors };
   }
 
-  async processMessage({ customerPhone, customerName, message, messageId, adminId = null, isSystemNumber = false }) {
+  async processMessage({ customerPhone, customerName, message, messageId, adminId = null, isSystemNumber = false, requestContext = null }) {
     const startTime = Date.now();
     let conversation = null;
     let aiLogDoc = null;
+
+    // Defense-in-depth security check: Merchant AI service must NEVER process Super Admin requests
+    if (requestContext && requestContext.contextType === 'super_admin') {
+      console.error('🔒 [SECURITY ERROR] Merchant aiService received a super_admin contextType! Aborting.');
+      throw new Error('Security Isolation Error: Merchant aiService cannot process Super Admin AI requests.');
+    }
 
     try {
       // Validate input
@@ -348,9 +354,10 @@ STRICT KNOWLEDGE BASE GROUNDING RULES:
         };
       }
 
-      // Get or create conversation for logging, scoped by admin/tenant if available
+      // Get or create conversation for logging, scoped by admin/tenant and excluding Super Admin chats
       const conversationQuery = {
         customerPhone,
+        isSuperAdminChat: { $ne: true },
         status: { $in: ['active', 'escalated'] }
       };
       if (adminId) {

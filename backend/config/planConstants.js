@@ -1,9 +1,9 @@
 /**
  * Official Centralized Subscription Plan Definitions & Features
  * Kwickbot Public Pricing Source of Truth:
- * - STARTER  (starter): ₹1,499/mo | 500 Conversations | 2,000 Messages | 1 WA Connection | 1 PDF KB | 1 Store Integration
- * - GROWTH   (growth):  ₹2,999/mo | 3,000 Conversations | 15,000 Messages | 2 WA Connections | 3 PDF KBs | 1 Store Integration
- * - SCALE    (scale):   ₹9,999/mo | Unlimited Conversations | Unlimited Messages | 5 WA Connections | Unlimited PDF KBs | Multiple Store Integrations
+ * - STARTER  (starter): ₹1,499/mo | 500 Conversations | 2,000 Messages | 1 WA Connection | 1 PDF KB | 1 Store Integration | NO Broadcasting
+ * - GROWTH   (growth):  ₹2,999/mo | 3,000 Conversations | 15,000 Messages | 2 WA Connections | 3 PDF KBs | 1 Store Integration | 5,000 Broadcast Msgs | 10 Campaigns
+ * - SCALE    (scale):   ₹9,999/mo | Unlimited Conversations | Unlimited Messages | 5 WA Connections | Unlimited PDF KBs | Multiple Store Integrations | 25,000 Broadcast Msgs | Unlimited Campaigns
  */
 
 const PLAN_DEFINITIONS = {
@@ -19,6 +19,12 @@ const PLAN_DEFINITIONS = {
       maxWhatsAppConnections: 1,
       maxKbUploads: 1,
       maxIntegrations: 1,
+      maxBroadcastMessages: 0,
+      maxBroadcastCampaigns: 0,
+      broadcastingAccess: false,
+      scheduledBroadcasts: false,
+      audienceSegmentation: false,
+      broadcastAnalytics: 'none',
       advancedAnalytics: false,
       escalations: false,
       orderCancellation: false,
@@ -34,7 +40,7 @@ const PLAN_DEFINITIONS = {
     name: 'growth',
     displayName: 'Growth Plan',
     monthlyPrice: 2999,
-    description: 'Great for growing businesses looking for premium AI support and automation.',
+    description: 'Great for growing businesses looking for premium AI support and WhatsApp broadcasting.',
     features: {
       maxConversations: 3000,
       maxMessages: 15000,
@@ -42,6 +48,12 @@ const PLAN_DEFINITIONS = {
       maxWhatsAppConnections: 2,
       maxKbUploads: 3,
       maxIntegrations: 1,
+      maxBroadcastMessages: 5000,
+      maxBroadcastCampaigns: 10,
+      broadcastingAccess: true,
+      scheduledBroadcasts: true,
+      audienceSegmentation: true,
+      broadcastAnalytics: 'basic',
       advancedAnalytics: true,
       escalations: true,
       orderCancellation: true,
@@ -65,6 +77,12 @@ const PLAN_DEFINITIONS = {
       maxWhatsAppConnections: 5,
       maxKbUploads: -1,
       maxIntegrations: -1,
+      maxBroadcastMessages: 25000,
+      maxBroadcastCampaigns: -1,
+      broadcastingAccess: true,
+      scheduledBroadcasts: true,
+      audienceSegmentation: true,
+      broadcastAnalytics: 'advanced',
       advancedAnalytics: true,
       escalations: true,
       orderCancellation: true,
@@ -88,6 +106,12 @@ const PLAN_DEFINITIONS = {
       maxWhatsAppConnections: 10,
       maxKbUploads: -1,
       maxIntegrations: -1,
+      maxBroadcastMessages: 100000,
+      maxBroadcastCampaigns: -1,
+      broadcastingAccess: true,
+      scheduledBroadcasts: true,
+      audienceSegmentation: true,
+      broadcastAnalytics: 'advanced',
       advancedAnalytics: true,
       escalations: true,
       orderCancellation: true,

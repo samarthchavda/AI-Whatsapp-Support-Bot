@@ -100,6 +100,8 @@ async function checkAndResetMonthlyTokens() {
           geminiTokensUsed: 0,
           totalMessagesProcessed: 0,
           monthlyConversationsCount: 0,
+          broadcastMessagesUsed: 0,
+          broadcastCampaignsUsed: 0,
           limitNotificationSent: false,
           lastTokenReset: now 
         } 

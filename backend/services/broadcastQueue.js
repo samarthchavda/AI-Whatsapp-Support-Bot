@@ -33,8 +33,14 @@ async function sendBroadcastWithoutQueue(broadcastId) {
 
     // Send messages sequentially
     for (let i = 0; i < broadcast.recipients.length; i++) {
+      const recipient = broadcast.recipients[i];
+
+      // Skip already sent recipients (prevents double-counting or re-sending during retries)
+      if (recipient.status === 'sent') {
+        continue;
+      }
+
       try {
-        const recipient = broadcast.recipients[i];
         const personalizedMessage = broadcast.message.replace(/{{name}}/gi, recipient.name || 'there');
         
         console.log(`📤 Sending actual WhatsApp broadcast to ${recipient.phone}: ${personalizedMessage.substring(0, 50)}...`);
@@ -45,6 +51,7 @@ async function sendBroadcastWithoutQueue(broadcastId) {
           broadcast.recipients[i].status = 'sent';
           broadcast.recipients[i].sentAt = new Date();
           broadcast.sentCount += 1;
+          await Admin.findByIdAndUpdate(broadcast.admin, { $inc: { broadcastMessagesUsed: 1 } }).catch(err => console.error('Error incrementing broadcastMessagesUsed:', err.message));
         } else {
           throw new Error(sendResult ? sendResult.error : 'Failed to send via Cloud API');
         }

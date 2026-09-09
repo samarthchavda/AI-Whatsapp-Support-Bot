@@ -92,6 +92,14 @@ const adminSchema = new mongoose.Schema({
     type: Number,
     default: 0
   },
+  broadcastMessagesUsed: {
+    type: Number,
+    default: 0
+  },
+  broadcastCampaignsUsed: {
+    type: Number,
+    default: 0
+  },
   limitNotificationSent: {
     type: Boolean,
     default: false

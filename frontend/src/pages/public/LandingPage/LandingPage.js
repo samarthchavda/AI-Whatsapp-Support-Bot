@@ -633,6 +633,7 @@ function LandingPage() {
                 <li><FaCheck style={{ color: '#10b981', marginRight: '8px' }} /> Max 1 PDF document Knowledge Base upload</li>
                 <li><FaCheck style={{ color: '#10b981', marginRight: '8px' }} /> 1 Store Integration (Shopify OR WooCommerce)</li>
                 <li><FaCheck style={{ color: '#10b981', marginRight: '8px' }} /> Knowledge Base Retrieval & Live Chat CRM</li>
+                <li style={{ opacity: 0.5 }}><FaTimes style={{ color: '#ef4444', marginRight: '8px' }} /> <span style={{ textDecoration: 'line-through' }}>WhatsApp Broadcasting (0 Messages, 0 Campaigns)</span></li>
                 <li style={{ opacity: 0.5 }}><FaTimes style={{ color: '#ef4444', marginRight: '8px' }} /> <span style={{ textDecoration: 'line-through' }}>Advanced Analytics Dashboard</span></li>
                 <li style={{ opacity: 0.5 }}><FaTimes style={{ color: '#ef4444', marginRight: '8px' }} /> <span style={{ textDecoration: 'line-through' }}>Live Chat Handoff Escalations</span></li>
                 <li style={{ opacity: 0.5 }}><FaTimes style={{ color: '#ef4444', marginRight: '8px' }} /> <span style={{ textDecoration: 'line-through' }}>Automated Order Cancellations</span></li>
@@ -655,6 +656,7 @@ function LandingPage() {
                 <li><FaCheck style={{ color: '#10b981', marginRight: '8px' }} /> Max 3 PDF document Knowledge Base uploads</li>
                 <li><FaCheck style={{ color: '#10b981', marginRight: '8px' }} /> 1 Store Integration (Shopify OR WooCommerce)</li>
                 <li><FaCheck style={{ color: '#10b981', marginRight: '8px' }} /> Knowledge Base Retrieval & Live Chat CRM</li>
+                <li><FaCheck style={{ color: '#10b981', marginRight: '8px' }} /> WhatsApp Broadcasting (5,000 Messages & 10 Campaigns/mo)</li>
                 <li><FaCheck style={{ color: '#10b981', marginRight: '8px' }} /> Advanced Analytics Dashboard (view metrics & logs)</li>
                 <li><FaCheck style={{ color: '#10b981', marginRight: '8px' }} /> Live Chat Handoff Escalations (automatic takeover)</li>
                 <li><FaCheck style={{ color: '#10b981', marginRight: '8px' }} /> Automated Order Cancellations via WhatsApp</li>
@@ -675,12 +677,13 @@ function LandingPage() {
                 <li><FaCheck style={{ color: '#10b981', marginRight: '8px' }} /> Unlimited PDF document Knowledge Base uploads</li>
                 <li><FaCheck style={{ color: '#10b981', marginRight: '8px' }} /> Multiple Integrations (Shopify & WooCommerce both)</li>
                 <li><FaCheck style={{ color: '#10b981', marginRight: '8px' }} /> Knowledge Base Retrieval & Live Chat CRM</li>
+                <li><FaCheck style={{ color: '#10b981', marginRight: '8px' }} /> WhatsApp Broadcasting (25,000 Messages & Unlimited Campaigns/mo)</li>
                 <li><FaCheck style={{ color: '#10b981', marginRight: '8px' }} /> Advanced Analytics Dashboard (view metrics & logs)</li>
                 <li><FaCheck style={{ color: '#10b981', marginRight: '8px' }} /> Live Chat Handoff Escalations (automatic takeover)</li>
                 <li><FaCheck style={{ color: '#10b981', marginRight: '8px' }} /> Automated Order Cancellations via WhatsApp</li>
                 <li><FaCheck style={{ color: '#10b981', marginRight: '8px' }} /> Custom Branding (rebrand console with logo & name)</li>
                 <li><FaCheck style={{ color: '#10b981', marginRight: '8px' }} /> Developer API & Webhooks Access</li>
-                <li><FaCheck style={{ color: '#10b981', marginRight: '8px' }} /> Dedicated Account Manager & 24/7 Slack Support</li>
+                <li><FaCheck style={{ color: '#10b981', marginRight: '8px' }} /> Premium Support</li>
               </ul>
               <button onClick={() => navigate('/book-demo')}>Talk to sales</button>
             </article>

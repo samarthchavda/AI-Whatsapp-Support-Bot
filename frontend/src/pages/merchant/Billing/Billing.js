@@ -277,20 +277,26 @@ function Billing() {
           </div>
 
           <div className="plan-limits-section" style={{ marginTop: '20px', borderTop: '1px solid rgba(255, 255, 255, 0.1)', paddingTop: '16px' }}>
-            <h4 style={{ margin: '0 0 10px 0', fontSize: '12px', color: 'var(--primary-color, #6366f1)', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: '700' }}>Plan Limits</h4>
+            <h4 style={{ margin: '0 0 10px 0', fontSize: '12px', color: 'var(--primary-color, #6366f1)', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: '700' }}>Plan & Feature Limits</h4>
             <div className="plan-limits-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '10px 16px' }}>
               <div style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>
-                Conversations (Unique Chats): <strong style={{ color: 'var(--text-primary)' }}>{currentFeatures.maxConversations === -1 ? 'Unlimited' : currentFeatures.maxConversations}</strong>
+                Conversations: <strong style={{ color: 'var(--text-primary)' }}>{(profile?.monthlyConversationsCount || 0).toLocaleString()} / {currentFeatures.maxConversations === -1 ? 'Unlimited' : currentFeatures.maxConversations}</strong>
               </div>
               <div style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>
-                Messages (Text Bubbles): <strong style={{ color: 'var(--text-primary)' }}>{currentFeatures.maxMessages === -1 ? 'Unlimited' : currentFeatures.maxMessages}</strong>
+                Support Messages: <strong style={{ color: 'var(--text-primary)' }}>{(profile?.totalMessagesProcessed || 0).toLocaleString()} / {currentFeatures.maxMessages === -1 ? 'Unlimited' : (currentFeatures.maxMessages || 2000).toLocaleString()}</strong>
               </div>
               <div style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>
-                WhatsApp Connections: <strong style={{ color: 'var(--text-primary)' }}>{currentFeatures.maxWhatsAppConnections} max</strong>
+                Broadcast Messages: <strong style={{ color: 'var(--text-primary)' }}>{(profile?.broadcastMessagesUsed || 0).toLocaleString()} / {currentFeatures.maxBroadcastMessages === -1 ? '25,000' : (currentFeatures.maxBroadcastMessages || 0).toLocaleString()}</strong>
               </div>
               <div style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>
-                AI Response Units: <strong style={{ color: 'var(--text-primary)' }}>
-                  {profile?.geminiTokensLimit === -1 || currentFeatures.geminiTokensPerMonth === -1
+                Broadcast Campaigns: <strong style={{ color: 'var(--text-primary)' }}>{(profile?.broadcastCampaignsUsed || 0).toLocaleString()} / {currentFeatures.maxBroadcastCampaigns === -1 ? 'Unlimited' : (currentFeatures.maxBroadcastCampaigns || 0).toLocaleString()}</strong>
+              </div>
+              <div style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>
+                WhatsApp Connections: <strong style={{ color: 'var(--text-primary)' }}>{currentFeatures.maxWhatsAppConnections || 1} max</strong>
+              </div>
+              <div style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>
+                AI Processing Tokens: <strong style={{ color: 'var(--text-primary)' }}>
+                  {(profile?.geminiTokensUsed || 0).toLocaleString()} / {profile?.geminiTokensLimit === -1 || currentFeatures.geminiTokensPerMonth === -1
                     ? 'Unlimited'
                     : (profile?.geminiTokensLimit || currentFeatures.geminiTokensPerMonth || 50000).toLocaleString()}
                 </strong>
@@ -553,16 +559,29 @@ function Billing() {
                     )}
                   </li>
 
+                  {/* WhatsApp Broadcasting */}
+                  <li style={{ opacity: (plan.name !== 'starter') ? 1 : 0.5 }}>
+                    {plan.name === 'starter' && (
+                      <><FaTimes style={{ color: '#ef4444', marginRight: '8px' }} /> <span style={{ textDecoration: 'line-through' }}>WhatsApp Broadcasting (0 Messages, 0 Campaigns)</span></>
+                    )}
+                    {(plan.name === 'growth' || plan.name === 'professional') && (
+                      <><FaCheck style={{ color: '#1677FF' }} /> WhatsApp Broadcasting (5,000 Messages & 10 Campaigns/mo)</>
+                    )}
+                    {(plan.name === 'scale' || plan.name === 'enterprise') && (
+                      <><FaCheck style={{ color: '#1677FF' }} /> WhatsApp Broadcasting (25,000 Messages & Unlimited Campaigns/mo)</>
+                    )}
+                  </li>
+
                   {/* Priority Support */}
                   <li style={{ opacity: features.prioritySupport ? 1 : 0.5 }}>
                     {plan.name === 'starter' && (
-                      <><FaTimes style={{ color: '#ef4444', marginRight: '8px' }} /> <span style={{ textDecoration: 'line-through' }}>Priority Customer Support</span></>
+                      <><FaTimes style={{ color: '#ef4444', marginRight: '8px' }} /> <span style={{ textDecoration: 'line-through' }}>Priority Support</span></>
                     )}
                     {(plan.name === 'growth' || plan.name === 'professional') && (
                       <><FaCheck style={{ color: '#1677FF' }} /> Priority Email & Chat Support (under 4-hour response time)</>
                     )}
                     {(plan.name === 'scale' || plan.name === 'enterprise') && (
-                      <><FaCheck style={{ color: '#1677FF' }} /> Dedicated Account Manager & 24/7 Instant Slack Support</>
+                      <><FaCheck style={{ color: '#1677FF' }} /> Premium Support</>
                     )}
                   </li>
                 </ul>

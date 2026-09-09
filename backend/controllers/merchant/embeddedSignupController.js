@@ -287,11 +287,19 @@ exports.handleEmbeddedSignup = async (req, res) => {
     }
 
     const subscriptionService = require('../../services/subscriptionService');
-    const maxConnections = subscriptionService.getPlanLimit(admin.subscriptionPlan, 'maxWhatsAppConnections');
+    const isSuperAdmin = admin.role === 'super_admin';
+    const maxConnections = isSuperAdmin ? 1 : subscriptionService.getPlanLimit(admin.subscriptionPlan, 'maxWhatsAppConnections');
     const activeConns = (admin.whatsappConnections || []).filter(c => c.isActive !== false);
     const existingConn = activeConns.find(c => c.phoneNumberId === phoneNumberId);
 
-    if (!existingConn && maxConnections !== -1 && activeConns.length >= maxConnections) {
+    if (isSuperAdmin && !existingConn && (admin.whatsappConnected || activeConns.length >= 1)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Super Admin is allowed exactly ONE WhatsApp connection. Please disconnect your active WhatsApp connection before connecting a new phone number.'
+      });
+    }
+
+    if (!isSuperAdmin && !existingConn && maxConnections !== -1 && activeConns.length >= maxConnections) {
       const planName = subscriptionService.normalizePlanName(admin.subscriptionPlan);
       const displayPlan = planName.charAt(0).toUpperCase() + planName.slice(1);
       return res.status(403).json({
@@ -336,7 +344,31 @@ exports.handleEmbeddedSignup = async (req, res) => {
     }
 
     await admin.save();
-    console.log(`🔒 Securely stored encrypted WhatsApp credentials for Merchant Admin ID: ${admin._id}`);
+    console.log(`🔒 Securely stored encrypted WhatsApp credentials for Admin ID: ${admin._id}`);
+
+    if (isSuperAdmin) {
+      try {
+        const GlobalSettings = require('../../models/GlobalSettings');
+        await GlobalSettings.findOneAndUpdate(
+          { key: 'whatsapp_access_token' },
+          { value: accessToken },
+          { upsert: true, new: true }
+        );
+        await GlobalSettings.findOneAndUpdate(
+          { key: 'whatsapp_phone_number_id' },
+          { value: phoneNumberId },
+          { upsert: true, new: true }
+        );
+        await GlobalSettings.findOneAndUpdate(
+          { key: 'whatsapp_business_account_id' },
+          { value: targetWabaId },
+          { upsert: true, new: true }
+        );
+        console.log('✅ Synchronized GlobalSettings with Super Admin Meta credentials');
+      } catch (gsErr) {
+        console.error('Error syncing GlobalSettings for Super Admin:', gsErr.message);
+      }
+    }
 
     // 5. Automatically register phone number with Meta Cloud API if needed
     try {

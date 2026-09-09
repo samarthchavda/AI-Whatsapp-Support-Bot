@@ -47,6 +47,21 @@ const knowledgeBaseSchema = new mongoose.Schema({
     type: Boolean,
     default: true
   },
+  checksum: {
+    type: String,
+    default: null,
+    index: true
+  },
+  status: {
+    type: String,
+    enum: ['processing', 'ready', 'failed'],
+    default: 'ready',
+    index: true
+  },
+  errorMessage: {
+    type: String,
+    default: null
+  },
   uploadedBy: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Admin',
@@ -67,7 +82,8 @@ const knowledgeBaseSchema = new mongoose.Schema({
 });
 
 // Index for faster queries
-knowledgeBaseSchema.index({ isActive: 1 });
+knowledgeBaseSchema.index({ isActive: 1, status: 1 });
+knowledgeBaseSchema.index({ uploadedBy: 1, checksum: 1 });
 knowledgeBaseSchema.index({ createdAt: -1 });
 
 // Update the updatedAt timestamp before saving

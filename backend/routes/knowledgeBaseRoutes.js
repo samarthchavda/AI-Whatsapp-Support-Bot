@@ -2,8 +2,40 @@ const express = require('express');
 const router = express.Router();
 const knowledgeBaseController = require('../controllers/merchant/knowledgeBaseController');
 const { verifyToken } = require('../middleware/auth');
+const { MAX_KB_FILE_SIZE } = require('../config/kbConstants');
 const multer = require('multer');
-const upload = multer({ dest: 'uploads/' });
+
+const upload = multer({
+  dest: 'uploads/',
+  limits: { fileSize: MAX_KB_FILE_SIZE },
+  fileFilter: (req, file, cb) => {
+    const ext = file.originalname ? file.originalname.split('.').pop().toLowerCase() : '';
+    if (ext === 'pdf' && (file.mimetype === 'application/pdf' || file.mimetype === 'application/x-pdf' || file.mimetype === 'application/octet-stream')) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only PDF files (.pdf) are allowed in Knowledge Base.'));
+    }
+  }
+});
+
+// Middleware wrapper to catch Multer file limit and file filter errors
+const handleUploadMiddleware = (req, res, next) => {
+  upload.single('file')(req, res, (err) => {
+    if (err) {
+      if (err.code === 'LIMIT_FILE_SIZE') {
+        return res.status(400).json({
+          success: false,
+          error: 'File size exceeds maximum limit of 10MB per PDF.'
+        });
+      }
+      return res.status(400).json({
+        success: false,
+        error: err.message ? err.message.replace(/^Error:\s*/, '') : 'Invalid file upload.'
+      });
+    }
+    next();
+  });
+};
 
 /**
  * @openapi
@@ -37,7 +69,7 @@ const upload = multer({ dest: 'uploads/' });
  *         description: Document uploaded and ingested into AI
  */
 router.get('/', verifyToken, knowledgeBaseController.getAllKnowledgeBases);
-router.post('/', verifyToken, upload.single('file'), knowledgeBaseController.uploadKnowledgeBase);
+router.post('/', verifyToken, handleUploadMiddleware, knowledgeBaseController.uploadKnowledgeBase);
 
 /**
  * @openapi

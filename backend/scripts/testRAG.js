@@ -92,9 +92,11 @@ async function runQuery(question) {
     }
 
     console.log(`🔍 Searching relevant vector chunks for Admin: ${adminDoc.email} (${adminDoc._id})...`);
-    const searchResults = await knowledgeBaseService.searchChunks(question, adminDoc._id, 3);
+    const searchOutput = await knowledgeBaseService.searchChunks(question, adminDoc._id, 3);
+    const searchResults = Array.isArray(searchOutput) ? searchOutput : (searchOutput.results || []);
+    const searchMetadata = searchOutput.metadata || {};
     
-    console.log(`\n📋 Semantic Search Results (Top 3):`);
+    console.log(`\n📋 Semantic Search Results (Threshold: ${searchMetadata.similarityThreshold || 0.65}, Passed: ${searchMetadata.passedThreshold}):`);
     searchResults.forEach((r, idx) => {
       console.log(`\nMatch #${idx + 1} (Similarity Score: ${r.score.toFixed(4)}):`);
       console.log(`"${r.text.substring(0, 250)}..."`);

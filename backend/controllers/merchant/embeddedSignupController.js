@@ -277,12 +277,26 @@ exports.handleEmbeddedSignup = async (req, res) => {
 
     console.log(`✅ Found Phone Number: ${displayPhoneNumber} (ID: ${phoneNumberId})`);
 
-    // 4. Save credentials securely to the Admin profile
+    // 4. Save credentials securely to the Admin profile with plan connection limit check
     const admin = await Admin.findById(req.admin._id);
     if (!admin) {
       return res.status(404).json({
         success: false,
         error: 'Merchant admin user not found'
+      });
+    }
+
+    const subscriptionService = require('../../services/subscriptionService');
+    const maxConnections = subscriptionService.getPlanLimit(admin.subscriptionPlan, 'maxWhatsAppConnections');
+    const activeConns = (admin.whatsappConnections || []).filter(c => c.isActive !== false);
+    const existingConn = activeConns.find(c => c.phoneNumberId === phoneNumberId);
+
+    if (!existingConn && maxConnections !== -1 && activeConns.length >= maxConnections) {
+      const planName = subscriptionService.normalizePlanName(admin.subscriptionPlan);
+      const displayPlan = planName.charAt(0).toUpperCase() + planName.slice(1);
+      return res.status(403).json({
+        success: false,
+        error: `Your ${displayPlan} plan allows a maximum of ${maxConnections} active WhatsApp connection(s). Please upgrade your subscription to connect additional numbers.`
       });
     }
 
@@ -296,6 +310,30 @@ exports.handleEmbeddedSignup = async (req, res) => {
     admin.whatsappStatus = 'connected';
     admin.whatsappConnected = true;
     admin.whatsappConnectedAt = new Date();
+
+    admin.whatsappConnections = admin.whatsappConnections || [];
+    const existingIdx = admin.whatsappConnections.findIndex(c => c.phoneNumberId === phoneNumberId);
+    if (existingIdx >= 0) {
+      admin.whatsappConnections[existingIdx] = {
+        phoneNumberId,
+        accessToken,
+        businessAccountId: targetWabaId,
+        displayPhoneNumber,
+        businessName: verifiedName || wabaName,
+        isActive: true,
+        connectedAt: new Date()
+      };
+    } else {
+      admin.whatsappConnections.push({
+        phoneNumberId,
+        accessToken,
+        businessAccountId: targetWabaId,
+        displayPhoneNumber,
+        businessName: verifiedName || wabaName,
+        isActive: true,
+        connectedAt: new Date()
+      });
+    }
 
     await admin.save();
     console.log(`🔒 Securely stored encrypted WhatsApp credentials for Merchant Admin ID: ${admin._id}`);

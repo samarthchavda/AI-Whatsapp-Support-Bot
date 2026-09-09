@@ -2,8 +2,9 @@ const KnowledgeBase = require('../../models/KnowledgeBase');
 const knowledgeBaseService = require('../../services/knowledgeBaseService');
 const fs = require('fs').promises;
 
-// Upload knowledge base file
+// Upload knowledge base file (PDF ONLY)
 exports.uploadKnowledgeBase = async (req, res) => {
+  let createdKbDoc = null;
   try {
     if (!req.file) {
       return res.status(400).json({
@@ -14,100 +15,170 @@ exports.uploadKnowledgeBase = async (req, res) => {
 
     const { title, description } = req.body;
 
-    if (!title) {
-      // Delete uploaded file
-      await fs.unlink(req.file.path);
+    if (!title || !title.trim()) {
+      if (req.file.path) await fs.unlink(req.file.path).catch(() => {});
       return res.status(400).json({
         success: false,
         error: 'Title is required'
       });
     }
 
-    // Fetch user's subscription plan details to check limits
-    const Admin = require('../../models/Admin');
-    const PricingPlan = require('../../models/PricingPlan');
-    const adminDoc = await Admin.findById(req.admin._id);
-    const planName = (adminDoc.subscriptionPlan || 'starter').toLowerCase();
+    const { MAX_KB_FILE_SIZE } = require('../../config/kbConstants');
 
-    // Default limit mappings
-    const DEFAULT_KB_LIMITS = {
-      starter: 1,
-      professional: 3,
-      enterprise: -1,
-      custom: -1
-    };
-
-    let limitVal = DEFAULT_KB_LIMITS[planName] || 1;
-
-    // Check if there is a pricing plan features block in database
-    const pricingPlan = await PricingPlan.findOne({ name: planName, isActive: true });
-    if (pricingPlan && pricingPlan.features && typeof pricingPlan.features.maxKbUploads !== 'undefined') {
-      limitVal = pricingPlan.features.maxKbUploads;
+    // 1. File Extension Validation (PDF ONLY)
+    const fileExtension = req.file.originalname ? req.file.originalname.split('.').pop().toLowerCase() : '';
+    if (fileExtension !== 'pdf') {
+      if (req.file.path) await fs.unlink(req.file.path).catch(() => {});
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid file type. Only PDF (.pdf) documents are allowed in Knowledge Base.'
+      });
     }
 
-    if (limitVal !== -1) {
-      const existingCount = await KnowledgeBase.countDocuments({ uploadedBy: req.admin._id });
-      if (existingCount >= limitVal) {
-        // Delete uploaded temp file
-        await fs.unlink(req.file.path);
+    // 2. File Size Validation (Max 10MB)
+    if (req.file.size > MAX_KB_FILE_SIZE) {
+      if (req.file.path) await fs.unlink(req.file.path).catch(() => {});
+      return res.status(400).json({
+        success: false,
+        error: 'File size exceeds maximum limit of 10MB per PDF.'
+      });
+    }
+
+    // 3. MIME Type Validation
+    const allowedMimeTypes = ['application/pdf', 'application/x-pdf', 'application/octet-stream'];
+    if (!allowedMimeTypes.includes(req.file.mimetype)) {
+      if (req.file.path) await fs.unlink(req.file.path).catch(() => {});
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid MIME type. Only valid PDF files (application/pdf) are allowed.'
+      });
+    }
+
+    // 4. PDF Magic Bytes Validation (%PDF-)
+    try {
+      const fd = await fs.open(req.file.path, 'r');
+      const buffer = Buffer.alloc(5);
+      await fd.read(buffer, 0, 5, 0);
+      await fd.close();
+      const magicHeader = buffer.toString('utf-8');
+      if (!magicHeader.startsWith('%PDF-')) {
+        await fs.unlink(req.file.path).catch(() => {});
+        return res.status(400).json({
+          success: false,
+          error: 'Invalid PDF content. Renamed non-PDF or corrupted files are not allowed.'
+        });
+      }
+    } catch (headerErr) {
+      if (req.file.path) await fs.unlink(req.file.path).catch(() => {});
+      return res.status(400).json({
+        success: false,
+        error: 'Failed to validate PDF file content.'
+      });
+    }
+
+    // 5. SHA-256 Checksum & Duplicate PDF Protection
+    const crypto = require('crypto');
+    const fileBuffer = await fs.readFile(req.file.path);
+    const checksum = crypto.createHash('sha256').update(fileBuffer).digest('hex');
+
+    const existingDuplicate = await KnowledgeBase.findOne({
+      uploadedBy: req.admin._id,
+      checksum: checksum,
+      isActive: true,
+      status: 'ready'
+    });
+
+    if (existingDuplicate) {
+      await fs.unlink(req.file.path).catch(() => {});
+      return res.status(400).json({
+        success: false,
+        error: 'Duplicate PDF detected. You have already uploaded this document.'
+      });
+    }
+
+    // 6. Dynamic Pricing Plan Limit Check (Starter: 1, Growth: 3, Scale: Unlimited)
+    const subscriptionService = require('../../services/subscriptionService');
+    const adminDoc = await Admin.findById(req.admin._id);
+    const limitVal = subscriptionService.getPlanLimit(adminDoc?.subscriptionPlan, 'maxKbUploads');
+
+    // Count ONLY active & ready documents towards the limit
+    if (limitVal !== -1 && limitVal !== Infinity) {
+      const activeCount = await KnowledgeBase.countDocuments({
+        uploadedBy: req.admin._id,
+        isActive: true,
+        status: 'ready'
+      });
+
+      if (activeCount >= limitVal) {
+        await fs.unlink(req.file.path).catch(() => {});
+        const normPlan = subscriptionService.normalizePlanName(adminDoc?.subscriptionPlan);
+        const displayPlanName = normPlan.charAt(0).toUpperCase() + normPlan.slice(1);
         return res.status(403).json({
           success: false,
-          error: `Your ${planName.toUpperCase()} plan only allows a maximum of ${limitVal} Knowledge Base document(s). Please upgrade your subscription to upload more documents.`
+          error: `Your ${displayPlanName} plan allows a maximum of ${limitVal} Knowledge Base PDF document(s). Upgrade your plan to add more documents.`
         });
       }
     }
 
-    // Process the file and extract text
+    // 7. Process File & Extract Text
     const { text, length, fileType } = await knowledgeBaseService.processFile(req.file);
 
-    // Create knowledge base entry
-    const knowledgeBase = new KnowledgeBase({
-      title,
-      description: description || '',
-      fileType,
+    // Create KnowledgeBase document in 'processing' status
+    createdKbDoc = new KnowledgeBase({
+      title: title.trim(),
+      description: (description || '').trim(),
+      fileType: 'pdf',
       fileName: req.file.originalname,
       filePath: req.file.path,
       fileSize: req.file.size,
       extractedText: text,
       textLength: length,
       uploadedBy: req.admin._id,
-      uploadedByName: req.admin.name
+      uploadedByName: req.admin.name || 'Merchant',
+      checksum: checksum,
+      status: 'processing',
+      isActive: true
     });
 
-    await knowledgeBase.save();
+    await createdKbDoc.save();
 
-    // Chunk and save embeddings for RAG
-    try {
-      await knowledgeBaseService.processAndSaveChunks(knowledgeBase);
-    } catch (chunkError) {
-      console.error('Failed to chunk and embed document:', chunkError);
-    }
+    // 8. Chunk and Save Vector Embeddings (Gemini RAG)
+    await knowledgeBaseService.processAndSaveChunks(createdKbDoc);
+
+    // Mark status as ready
+    createdKbDoc.status = 'ready';
+    await createdKbDoc.save();
 
     res.status(201).json({
       success: true,
-      message: 'Knowledge base uploaded successfully',
+      message: 'Knowledge Base PDF uploaded and processed successfully',
       data: {
-        id: knowledgeBase._id,
-        title: knowledgeBase.title,
-        fileType: knowledgeBase.fileType,
-        textLength: knowledgeBase.textLength,
-        isActive: knowledgeBase.isActive
+        id: createdKbDoc._id,
+        title: createdKbDoc.title,
+        fileType: createdKbDoc.fileType,
+        textLength: createdKbDoc.textLength,
+        status: createdKbDoc.status,
+        isActive: createdKbDoc.isActive
       }
     });
   } catch (error) {
-    // Delete uploaded file if processing failed
-    if (req.file) {
-      try {
-        await fs.unlink(req.file.path);
-      } catch (unlinkError) {
-        console.error('Error deleting file:', unlinkError);
-      }
+    console.error('Error uploading knowledge base PDF:', error.message);
+
+    // Clean up temporary physical file
+    if (req.file && req.file.path) {
+      await fs.unlink(req.file.path).catch(() => {});
     }
 
-    console.error('Error uploading knowledge base:', error);
-    res.status(500).json({
+    // Clean up DB document & chunks if created
+    if (createdKbDoc && createdKbDoc._id) {
+      const KnowledgeBaseChunk = require('../../models/KnowledgeBaseChunk');
+      await KnowledgeBaseChunk.deleteMany({ knowledgeBaseId: createdKbDoc._id }).catch(() => {});
+      await KnowledgeBase.findByIdAndDelete(createdKbDoc._id).catch(() => {});
+    }
+
+    res.status(400).json({
       success: false,
-      error: error.message || 'Failed to upload knowledge base'
+      error: error.message || 'Failed to upload Knowledge Base PDF'
     });
   }
 };
@@ -140,13 +211,47 @@ exports.getAllKnowledgeBases = async (req, res) => {
     const realLeadsCount = (req && req.admin && req.admin._id) ? 
       await MerchantProductLead.countDocuments({ adminId: req.admin._id }) : 0;
 
+    // Calculate merchant plan limits and active PDF usage
+    let planUsage = {
+      planName: 'Starter',
+      rawPlanName: 'starter',
+      activePdfCount: 0,
+      maxKbUploads: 1,
+      isLimitReached: false
+    };
+
+    if (req && req.admin && req.admin._id) {
+      const subscriptionService = require('../../services/subscriptionService');
+      const Admin = require('../../models/Admin');
+      const adminDoc = await Admin.findById(req.admin._id);
+      const normPlan = subscriptionService.normalizePlanName(adminDoc?.subscriptionPlan);
+      const limitVal = subscriptionService.getPlanLimit(normPlan, 'maxKbUploads');
+
+      const activePdfCount = await KnowledgeBase.countDocuments({
+        uploadedBy: req.admin._id,
+        isActive: true,
+        status: 'ready'
+      });
+
+      const displayPlanName = normPlan.charAt(0).toUpperCase() + normPlan.slice(1);
+
+      planUsage = {
+        planName: displayPlanName,
+        rawPlanName: normPlan,
+        activePdfCount: activePdfCount,
+        maxKbUploads: limitVal,
+        isLimitReached: limitVal !== -1 && limitVal !== Infinity && activePdfCount >= limitVal
+      };
+    }
+
     res.json({
       success: true,
       data: knowledgeBases,
       totalPages: Math.ceil(count / limit),
       currentPage: page,
       total: count,
-      productLeadsCount: realLeadsCount
+      productLeadsCount: realLeadsCount,
+      planUsage: planUsage
     });
   } catch (error) {
     console.error('Error fetching knowledge bases:', error);

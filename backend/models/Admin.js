@@ -56,7 +56,7 @@ const adminSchema = new mongoose.Schema({
   // Subscription fields
   subscriptionPlan: {
     type: String,
-    enum: ['starter', 'professional', 'enterprise', 'custom'],
+    enum: ['starter', 'growth', 'scale', 'custom'],
     default: 'starter'
   },
   subscriptionStatus: {
@@ -88,6 +88,10 @@ const adminSchema = new mongoose.Schema({
     type: Number,
     default: 0
   },
+  monthlyConversationsCount: {
+    type: Number,
+    default: 0
+  },
   limitNotificationSent: {
     type: Boolean,
     default: false
@@ -109,6 +113,17 @@ const adminSchema = new mongoose.Schema({
   whatsappConnectedAt: {
     type: Date
   },
+  whatsappConnections: [
+    {
+      phoneNumberId: { type: String, required: true },
+      accessToken: { type: String },
+      businessAccountId: { type: String },
+      displayPhoneNumber: { type: String },
+      businessName: { type: String },
+      isActive: { type: Boolean, default: true },
+      connectedAt: { type: Date, default: Date.now }
+    }
+  ],
   // Profile completion status
   profileCompleted: {
     type: Boolean,

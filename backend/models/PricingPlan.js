@@ -4,7 +4,7 @@ const pricingPlanSchema = new mongoose.Schema({
   name: {
     type: String,
     required: true,
-    enum: ['starter', 'professional', 'enterprise', 'custom']
+    enum: ['starter', 'growth', 'scale', 'custom']
   },
   displayName: {
     type: String,

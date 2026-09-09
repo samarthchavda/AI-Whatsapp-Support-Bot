@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import api from '../../../services/api';
-import { FaUpload, FaTrash, FaEye, FaToggleOn, FaToggleOff, FaFileAlt, FaFilePdf, FaFileCsv, FaGlobe, FaRobot } from 'react-icons/fa';
+import { FaUpload, FaTrash, FaEye, FaToggleOn, FaToggleOff, FaFileAlt, FaFilePdf, FaGlobe, FaRobot } from 'react-icons/fa';
 
 function KnowledgeBase() {
   const [knowledgeBases, setKnowledgeBases] = useState([]);
+  const [planUsage, setPlanUsage] = useState(null);
   const [loading, setLoading] = useState(true);
   const [showUploadForm, setShowUploadForm] = useState(false);
   const [showTestQuery, setShowTestQuery] = useState(false);
@@ -21,6 +22,9 @@ function KnowledgeBase() {
       setLoading(true);
       const response = await api.get('/knowledge-base');
       setKnowledgeBases(response.data.data);
+      if (response.data.planUsage) {
+        setPlanUsage(response.data.planUsage);
+      }
     } catch (error) {
       console.error('Error fetching knowledge bases:', error);
       alert('Failed to load knowledge bases');
@@ -31,10 +35,16 @@ function KnowledgeBase() {
 
   const handleUpload = async (e) => {
     e.preventDefault();
+
+    if (planUsage && planUsage.isLimitReached) {
+      alert(`Your ${planUsage.planName} plan limit has been reached (${planUsage.activePdfCount} / ${planUsage.maxKbUploads} PDFs used). Please delete an existing document or upgrade your plan to upload more.`);
+      return;
+    }
+
     const formData = new FormData(e.target);
 
     try {
-      setUploadProgress('Uploading and processing...');
+      setUploadProgress('Uploading and processing PDF...');
       
       const response = await api.post('/knowledge-base', formData, {
         headers: {
@@ -46,12 +56,12 @@ function KnowledgeBase() {
         setShowUploadForm(false);
         setUploadProgress(null);
         fetchKnowledgeBases();
-        alert('Knowledge base uploaded successfully!');
+        alert('Knowledge Base PDF uploaded and processed successfully!');
         e.target.reset();
       }
     } catch (error) {
       setUploadProgress(null);
-      alert(error.response?.data?.error || 'Failed to upload file');
+      alert(error.response?.data?.error || 'Failed to upload PDF file');
     }
   };
 
@@ -68,14 +78,14 @@ function KnowledgeBase() {
   };
 
   const handleDelete = async (id) => {
-    if (!window.confirm('Are you sure you want to delete this knowledge base?')) {
+    if (!window.confirm('Are you sure you want to delete this knowledge base document?')) {
       return;
     }
     
     try {
       await api.delete(`/knowledge-base/${id}`);
       fetchKnowledgeBases();
-      alert('Knowledge base deleted successfully');
+      alert('Knowledge base document deleted successfully');
     } catch (error) {
       alert('Failed to delete knowledge base');
     }
@@ -102,6 +112,7 @@ function KnowledgeBase() {
   };
 
   const formatFileSize = (bytes) => {
+    if (!bytes) return '0 B';
     if (bytes < 1024) return bytes + ' B';
     if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(2) + ' KB';
     return (bytes / (1024 * 1024)).toFixed(2) + ' MB';
@@ -112,7 +123,7 @@ function KnowledgeBase() {
       <div className="page-header">
         <div className="page-header-info">
           <h1 className="page-title">AI Knowledge Base</h1>
-          <p className="page-subtitle">Upload FAQs and documents for AI-powered responses</p>
+          <p className="page-subtitle">Upload PDF documents and FAQs for AI-powered responses</p>
         </div>
         <div className="page-header-actions">
           <button 
@@ -126,11 +137,49 @@ function KnowledgeBase() {
             className="btn btn-primary" 
             onClick={() => setShowUploadForm(!showUploadForm)}
             style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
+            disabled={planUsage?.isLimitReached}
+            title={planUsage?.isLimitReached ? `Plan limit reached (${planUsage.activePdfCount} / ${planUsage.maxKbUploads} PDFs)` : 'Upload PDF'}
           >
-            <FaUpload /> Upload Document
+            <FaUpload /> Upload PDF
           </button>
         </div>
       </div>
+
+      {/* Plan Usage & Limits Banner */}
+      {planUsage && (
+        <div style={{
+          background: planUsage.isLimitReached ? 'rgba(239, 68, 68, 0.08)' : 'rgba(99, 102, 241, 0.08)',
+          border: `1px solid ${planUsage.isLimitReached ? 'rgba(239, 68, 68, 0.25)' : 'rgba(99, 102, 241, 0.25)'}`,
+          borderRadius: '16px',
+          padding: '16px 20px',
+          marginBottom: '20px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: '16px',
+          flexWrap: 'wrap'
+        }}>
+          <div>
+            <span style={{ fontSize: '13px', fontWeight: '600', color: 'var(--text-secondary)' }}>
+              Plan Allowance ({planUsage.planName} Plan):
+            </span>
+            <span style={{
+              marginLeft: '8px',
+              fontSize: '14px',
+              fontWeight: '700',
+              color: planUsage.isLimitReached ? '#ef4444' : 'var(--text-primary)'
+            }}>
+              {planUsage.maxKbUploads === -1 ? 'Unlimited PDFs' : `${planUsage.activePdfCount} / ${planUsage.maxKbUploads} PDFs used`}
+            </span>
+          </div>
+
+          {planUsage.isLimitReached && (
+            <div style={{ fontSize: '13px', color: '#ef4444', fontWeight: '500' }}>
+              ⚠️ Plan limit reached. Delete an active PDF document or upgrade your plan to upload more.
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Premium Onboarding FAQ Template Banner */}
       <div style={{
@@ -175,9 +224,9 @@ function KnowledgeBase() {
       {/* Test Query Form */}
       {showTestQuery && (
         <div className="table-container" style={{ marginBottom: '28px', background: 'rgba(16, 185, 129, 0.05)' }}>
-          <div className="table-header" style={{ background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.2) 0%, rgba(5, 150, 105, 0.2) 100%)' }}>
+          {/* <div className="table-header" style={{ background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.2) 0%, rgba(5, 150, 105, 0.2) 100%)' }}>
             <h2>🤖 Test Knowledge Base Query</h2>
-          </div>
+          </div> */}
           <form onSubmit={handleTestQuery} style={{ padding: '28px' }}>
             <div className="filter-group" style={{ marginBottom: '20px' }}>
               <label>Ask a Question</label>
@@ -239,7 +288,7 @@ function KnowledgeBase() {
       {showUploadForm && (
         <div className="table-container" style={{ marginBottom: '28px' }}>
           <div className="table-header">
-            <h2>📤 Upload Knowledge Base Document</h2>
+            <h2>📤 Upload Knowledge Base PDF</h2>
           </div>
           <form onSubmit={handleUpload} style={{ padding: '28px' }} encType="multipart/form-data">
             <div style={{ 
@@ -250,14 +299,12 @@ function KnowledgeBase() {
               marginBottom: '24px'
             }}>
               <h3 style={{ color: '#a5b4fc', fontSize: '14px', fontWeight: '600', marginBottom: '12px' }}>
-                📋 Supported Formats:
+                📋 Supported Format:
               </h3>
               <ul style={{ color: '#a1a1aa', fontSize: '13px', lineHeight: '1.8', paddingLeft: '20px', margin: 0 }}>
-                <li><strong>PDF files:</strong> Business FAQs, policies, product catalogs</li>
-                <li><strong>TXT files:</strong> Plain text documents with Q&A</li>
-                <li><strong>CSV files:</strong> Tabular Q&A data or product lists</li>
-                <li><strong>Max size:</strong> 10MB per file</li>
-                <li><strong>Best practice:</strong> Use clear, structured content with questions and answers</li>
+                <li><strong>PDF files only (.pdf):</strong> Business FAQs, policies, product catalogs</li>
+                <li><strong>Maximum size:</strong> 10MB per PDF</li>
+                <li><strong>Best practice:</strong> Use clear, structured PDF text with questions and answers</li>
               </ul>
             </div>
 
@@ -292,11 +339,11 @@ function KnowledgeBase() {
             </div>
 
             <div className="filter-group" style={{ marginBottom: '24px' }}>
-              <label>Select File *</label>
+              <label>Select PDF File *</label>
               <input 
                 type="file" 
                 name="file" 
-                accept=".pdf,.txt,.csv"
+                accept=".pdf,application/pdf"
                 required
                 style={{
                   width: '100%',
@@ -330,9 +377,9 @@ function KnowledgeBase() {
               <button 
                 type="submit" 
                 className="btn-primary"
-                disabled={uploadProgress !== null}
+                disabled={uploadProgress !== null || planUsage?.isLimitReached}
               >
-                {uploadProgress ? 'Processing...' : 'Upload & Process'}
+                {uploadProgress ? 'Processing...' : 'Upload & Process PDF'}
               </button>
               <button 
                 type="button" 
@@ -360,13 +407,14 @@ function KnowledgeBase() {
         ) : knowledgeBases.length === 0 ? (
           <div style={{ padding: '60px 20px', textAlign: 'center', color: 'var(--text-secondary)' }}>
             <div style={{ fontSize: '48px', marginBottom: '16px' }}>📚</div>
-            <h3 style={{ fontSize: '18px', fontWeight: '700', color: 'var(--text-primary)', marginBottom: '8px' }}>No Knowledge Base</h3>
-            <p style={{ fontSize: '14px', marginBottom: '20px' }}>Upload FAQs or documentation to train your WhatsApp AI assistant.</p>
+            <h3 style={{ fontSize: '18px', fontWeight: '700', color: 'var(--text-primary)', marginBottom: '8px' }}>No Knowledge Base Documents</h3>
+            <p style={{ fontSize: '14px', marginBottom: '20px' }}>Upload PDF FAQs or documentation to train your WhatsApp AI assistant.</p>
             <button 
               className="btn btn-primary"
               onClick={() => setShowUploadForm(true)}
+              disabled={planUsage?.isLimitReached}
             >
-              Upload Document
+              Upload PDF Document
             </button>
           </div>
         ) : (
@@ -390,8 +438,6 @@ function KnowledgeBase() {
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                       {kb.fileType === 'pdf' ? (
                         <FaFilePdf color="#ef4444" />
-                      ) : kb.fileType === 'csv' ? (
-                        <FaFileCsv color="var(--brand)" />
                       ) : kb.fileType === 'url' ? (
                         <FaGlobe color="#3b82f6" />
                       ) : (
@@ -408,15 +454,15 @@ function KnowledgeBase() {
                     </div>
                   </td>
                   <td>
-                    <span className={`badge badge-${kb.fileType === 'pdf' ? 'urgent' : kb.fileType === 'csv' ? 'active' : kb.fileType === 'url' ? 'low' : 'cancelled'}`}>
+                    <span className={`badge badge-${kb.fileType === 'pdf' ? 'urgent' : kb.fileType === 'url' ? 'low' : 'cancelled'}`}>
                       {kb.fileType.toUpperCase()}
                     </span>
                   </td>
                   <td>{formatFileSize(kb.fileSize)}</td>
                   <td>{kb.textLength.toLocaleString()} chars</td>
                   <td>
-                    <span className={`badge ${kb.isActive ? 'badge-active' : 'badge-cancelled'}`}>
-                      {kb.isActive ? 'Active' : 'Inactive'}
+                    <span className={`badge ${kb.status === 'failed' ? 'badge-cancelled' : kb.isActive ? 'badge-active' : 'badge-cancelled'}`}>
+                      {kb.status === 'failed' ? 'Failed' : kb.isActive ? 'Active' : 'Inactive'}
                     </span>
                   </td>
                   <td>{kb.uploadedByName}</td>

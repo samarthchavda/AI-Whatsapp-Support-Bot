@@ -1,24 +1,11 @@
 const express = require('express');
 const router = express.Router();
-const { verifyToken } = require('../middleware/auth');
+const { verifyToken, requireFeature } = require('../middleware/auth');
 const analyticsController = require('../controllers/merchant/analyticsController');
 
-// All routes require authentication
+// All routes require authentication & Advanced Analytics feature entitlement
 router.use(verifyToken);
-
-// Plan restriction: Advanced Analytics is not available on the Starter plan
-const verifyAdvancedAnalytics = (req, res, next) => {
-  const plan = (req.admin.subscriptionPlan || 'starter').toLowerCase();
-  if (plan === 'starter') {
-    return res.status(403).json({
-      success: false,
-      error: 'Advanced Analytics is not available on your current plan. Please upgrade to Professional or Enterprise to unlock.'
-    });
-  }
-  next();
-};
-
-router.use(verifyAdvancedAnalytics);
+router.use(requireFeature('advancedAnalytics'));
 
 // Get conversations per day (last 7 days)
 router.get('/conversations-per-day', analyticsController.getConversationsPerDay);

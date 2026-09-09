@@ -96,32 +96,17 @@ exports.createIntegration = async (req, res) => {
       });
     }
 
-    // Fetch user's subscription plan details to check limits
-    const PricingPlan = require('../../models/PricingPlan');
-    const planName = (adminDoc.subscriptionPlan || 'starter').toLowerCase();
+    const subscriptionService = require('../../services/subscriptionService');
+    const limitVal = subscriptionService.getPlanLimit(adminDoc.subscriptionPlan, 'maxIntegrations');
 
-    // Default limit mappings
-    const DEFAULT_INTEGRATION_LIMITS = {
-      starter: 1,
-      professional: 1,
-      enterprise: -1,
-      custom: -1
-    };
-
-    let limitVal = DEFAULT_INTEGRATION_LIMITS[planName] || 1;
-
-    // Check if there is a pricing plan features block in database
-    const pricingPlan = await PricingPlan.findOne({ name: planName, isActive: true });
-    if (pricingPlan && pricingPlan.features && typeof pricingPlan.features.maxIntegrations !== 'undefined') {
-      limitVal = pricingPlan.features.maxIntegrations;
-    }
-
-    if (limitVal !== -1) {
+    if (limitVal !== -1 && limitVal !== Infinity) {
       const existingCount = await Integration.countDocuments({ adminId: req.admin.id });
       if (existingCount >= limitVal) {
+        const normName = subscriptionService.normalizePlanName(adminDoc.subscriptionPlan);
+        const displayPlan = normName.charAt(0).toUpperCase() + normName.slice(1);
         return res.status(403).json({
           success: false,
-          error: `Your ${planName.toUpperCase()} plan only allows a maximum of ${limitVal} active e-commerce integration. Please upgrade your subscription to connect multiple platforms.`
+          error: `Your ${displayPlan} plan only allows a maximum of ${limitVal} active e-commerce integration. Please upgrade your subscription to connect multiple platforms.`
         });
       }
     }

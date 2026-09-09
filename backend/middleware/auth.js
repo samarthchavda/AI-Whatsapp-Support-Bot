@@ -97,6 +97,45 @@ const verifyToken = async (req, res, next) => {
   }
 };
 
+// Middleware to enforce subscription feature entitlement
+const requireFeature = (featureName) => {
+  return (req, res, next) => {
+    if (!req.admin) {
+      return res.status(401).json({
+        success: false,
+        error: 'Authentication required'
+      });
+    }
+
+    const subscriptionService = require('../services/subscriptionService');
+    const statusCheck = subscriptionService.validateSubscriptionStatus(req.admin);
+    if (!statusCheck.valid) {
+      return res.status(403).json({
+        success: false,
+        error: statusCheck.reason
+      });
+    }
+
+    const isAllowed = subscriptionService.isFeatureAllowed(req.admin.subscriptionPlan, featureName);
+    if (!isAllowed) {
+      const planName = subscriptionService.normalizePlanName(req.admin.subscriptionPlan);
+      const displayPlan = planName.charAt(0).toUpperCase() + planName.slice(1);
+      
+      let requiredPlan = 'Growth or Scale';
+      if (['customBranding', 'developerApi'].includes(featureName)) {
+        requiredPlan = 'Scale';
+      }
+
+      return res.status(403).json({
+        success: false,
+        error: `The requested feature (${featureName}) is not included in your ${displayPlan} plan. Please upgrade to the ${requiredPlan} plan to unlock access.`
+      });
+    }
+
+    next();
+  };
+};
+
 // Optional auth - doesn't fail if no token
 const optionalAuth = async (req, res, next) => {
   try {
@@ -123,5 +162,6 @@ module.exports = {
   hashToken,
   verifyRefreshToken,
   verifyToken,
+  requireFeature,
   optionalAuth
 };

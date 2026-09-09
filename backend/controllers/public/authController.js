@@ -379,15 +379,19 @@ exports.getPlans = async (req, res) => {
             maxKbUploads: 1,
             maxIntegrations: 1,
             advancedAnalytics: false,
+            escalations: false,
+            orderCancellation: false,
+            customBranding: false,
+            developerApi: false,
             liveChat: true,
             knowledgeBase: true,
             integrations: true
           }
         },
         {
-          name: 'professional',
-          displayName: 'Professional Plan',
-          description: 'Great for growing businesses looking for premium support.',
+          name: 'growth',
+          displayName: 'Growth Plan',
+          description: 'Great for growing businesses looking for premium AI support and automation.',
           monthlyPrice: 2999,
           badge: 'POPULAR',
           features: {
@@ -398,6 +402,10 @@ exports.getPlans = async (req, res) => {
             maxKbUploads: 3,
             maxIntegrations: 1,
             advancedAnalytics: true,
+            escalations: true,
+            orderCancellation: true,
+            customBranding: false,
+            developerApi: false,
             liveChat: true,
             knowledgeBase: true,
             integrations: true,
@@ -405,9 +413,9 @@ exports.getPlans = async (req, res) => {
           }
         },
         {
-          name: 'enterprise',
-          displayName: 'Enterprise Plan',
-          description: 'For large-scale operations requiring maximum power and volume.',
+          name: 'scale',
+          displayName: 'Scale Plan',
+          description: 'For large-scale operations requiring maximum power, volume, and customization.',
           monthlyPrice: 9999,
           badge: 'BEST VALUE',
           features: {
@@ -418,11 +426,13 @@ exports.getPlans = async (req, res) => {
             maxKbUploads: -1,
             maxIntegrations: -1,
             advancedAnalytics: true,
+            escalations: true,
+            orderCancellation: true,
             customBranding: true,
+            developerApi: true,
             liveChat: true,
             knowledgeBase: true,
             integrations: true,
-            apiAccess: true,
             prioritySupport: true
           }
         }
@@ -457,7 +467,7 @@ exports.getPlans = async (req, res) => {
 exports.upgradePlan = async (req, res) => {
   try {
     const { planName, couponCode } = req.body;
-    const allowedPlans = ['starter', 'professional', 'enterprise'];
+    const allowedPlans = ['starter', 'growth', 'scale'];
     if (!allowedPlans.includes(planName)) {
       return res.status(400).json({ success: false, error: 'Invalid plan selected' });
     }
@@ -487,12 +497,12 @@ exports.upgradePlan = async (req, res) => {
     const PricingPlan = require('../../models/PricingPlan');
     const planDetails = await PricingPlan.findOne({ name: planName, isActive: true });
 
-    let originalPrice = 29;
+    let originalPrice = 1499;
     if (!planDetails) {
       const fallbacks = {
         starter: { price: 1499, limit: 50000 },
-        professional: { price: 2999, limit: 200000 },
-        enterprise: { price: 9999, limit: -1 }
+        growth: { price: 2999, limit: 200000 },
+        scale: { price: 9999, limit: -1 }
       };
       
       const fallback = fallbacks[planName];
@@ -554,11 +564,12 @@ exports.updateProfile = async (req, res) => {
     if (aiDraftMode !== undefined) admin.aiDraftMode = aiDraftMode;
 
     if (customBranding !== undefined) {
-      const plan = (admin.subscriptionPlan || 'starter').toLowerCase();
-      if (plan !== 'enterprise' && plan !== 'custom') {
+      const subscriptionService = require('../../services/subscriptionService');
+      const isAllowed = subscriptionService.isFeatureAllowed(admin.subscriptionPlan, 'customBranding');
+      if (!isAllowed) {
         return res.status(403).json({
           success: false,
-          error: 'Custom Branding (White-Labeling) is only available on Enterprise and Custom plans. Please upgrade to unlock.'
+          error: 'Custom Branding (White-Labeling) is only available on the Scale plan. Please upgrade your subscription to unlock this feature.'
         });
       }
       admin.customBranding = {
@@ -808,7 +819,7 @@ exports.verifyCoupon = async (req, res) => {
 exports.createRazorpayOrder = async (req, res) => {
   try {
     const { planName, couponCode } = req.body;
-    const allowedPlans = ['starter', 'professional', 'enterprise'];
+    const allowedPlans = ['starter', 'growth', 'scale'];
     if (!allowedPlans.includes(planName)) {
       return res.status(400).json({ success: false, error: 'Invalid plan selected' });
     }
@@ -828,8 +839,8 @@ exports.createRazorpayOrder = async (req, res) => {
     } else {
       const fallbacks = {
         starter: 1499,
-        professional: 2999,
-        enterprise: 9999
+        growth: 2999,
+        scale: 9999
       };
       originalPrice = fallbacks[planName];
     }
@@ -951,9 +962,9 @@ exports.verifyRazorpayPayment = async (req, res) => {
       tokensLimit = planDetails.features?.geminiTokensPerMonth || 10000;
     } else {
       const fallbacks = {
-        starter: { price: 1499, limit: 10000 },
-        professional: { price: 2999, limit: 50000 },
-        enterprise: { price: 9999, limit: 200000 }
+        starter: { price: 1499, limit: 50000 },
+        growth: { price: 2999, limit: 200000 },
+        scale: { price: 9999, limit: -1 }
       };
       const fallback = fallbacks[planName];
       originalPrice = fallback.price;

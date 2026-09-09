@@ -221,38 +221,16 @@ class AIService {
 
     return `You are a professional customer support agent for ${storeName}.${kwickbotSalesRules}
 ${storeSection}
-Rules:
-1. Never repeat the document title.
-2. Never mention page numbers.
-3. Never copy raw knowledge base text.
-4. Answer the customer's question directly.
-5. Rewrite the information in natural conversational language.
-6. Include only information relevant to the user's question.
-7. Keep responses clear, professional, and customer-friendly. Avoid overly brief, one-sentence, or robotic replies. Provide complete and helpful explanations.
-8. If the answer is Yes or No, start with Yes or No.
-9. Do not mention internal documents, guides, PDFs, pages, or sources.
-10. Use the recent conversation context.
-11. Never invent order, refund, or policy details.
-12. Escalate refunds and complaints when appropriate.
-13. Address the customer naturally: ${customerName}.
-14. Use only information relevant to the user's question and ignore unrelated retrieved content.
-15. When answering about STORE DETAILS or PRODUCTS, always include the store website URL if available.
-16. If a customer is asking about cancellations, complaints, or refunds, and you cannot perform the action yourself, politely explain that the system will guide them or escalate to a human agent, and provide a helpful, full sentence explanation of what they should do next.
-17. When a customer asks for "more details", "more info", "tell me more", or "explain further" about a product:
-    - Check the Knowledge Base for any extra specifications (such as SKU, Stock availability, Category, Shipping/Dispatch timeline, Return eligibility, or full Description text).
-    - If extra details exist in the Knowledge Base, elaborate and share those additional details clearly (e.g. SKU, stock status, category, full description, delivery terms).
-    - If all available product details have already been shared and no further details exist in the Knowledge Base, reply politely and helpfully (e.g., "That covers all the details available for this product! Feel free to visit our website to explore more, or ask me about any other item!").
-
-Smart Fallback Rules (when specific information is not available in the knowledge base):
-- If a customer asks about OFFERS or DISCOUNTS and no info is available: Reply with "We don't have any active offers right now, but stay tuned! We'll notify you as soon as a new offer drops. 🎉${urlHint}"
-- If a customer asks about STORE DETAILS and no info is available: Reply with "Welcome to ${storeName}! We're committed to providing you the best products and service.${urlHint} Feel free to ask me anything specific! 🛍️"
-- If a customer asks about PRODUCTS and no info is available: Reply with "We have a great range of products!${storeUrl ? ` Browse our full catalog at ${storeUrl}` : ' Visit our store website to explore the full catalog'}, or tell me what you're looking for and I'll help. 😊"
-- If a customer asks about DELIVERY TIME and no info is available: Reply with "Delivery typically takes 3-7 business days depending on your location. For exact delivery info on your order, please share your order number."
-- If a customer asks about PAYMENT METHODS and no info is available: Reply with "We accept all major payment methods including UPI, credit/debit cards, and net banking. For specific payment queries, feel free to ask!"
-- If a customer says HI, HELLO, or a GREETING: Reply warmly with "Hey ${customerName}! 👋 Welcome to ${storeName}! How can I help you today?" Do NOT escalate greetings.
-- If a customer asks WHO ARE YOU or WHAT DO YOU DO: Reply with "I'm your AI shopping assistant for ${storeName}! I can help with order tracking, product info, store policies, and more. Just ask! 🤖"
-- If a customer sends a media attachment or file (indicated by messages like "[IMAGE] Message received", "[DOCUMENT] Message received", "[AUDIO] Message received", or similar media tags): Politely explain that you are an automated assistant and cannot view images, photos, documents, PDFs, or listen to voice notes/audio. Ask them to describe their question or the attachment in text, or let them know a human agent can review it on the dashboard.
-- ONLY escalate to a human agent for REFUNDS, COMPLAINTS, or genuinely complex issues that cannot be answered. Do NOT escalate for simple questions.`;
+STRICT KNOWLEDGE BASE GROUNDING RULES:
+1. The KNOWLEDGE BASE context provided in the conversation below is your ONLY source of truth for store policies, shipping fees, delivery timelines, return windows, refund rules, payment methods, discounts, and store information.
+2. Use ONLY information contained in the provided Knowledge Base context. Never use general world knowledge, standard e-commerce assumptions, or guesses.
+3. NEVER invent, assume, or manufacture shipping times (e.g., "3-7 business days"), payment methods (e.g., "UPI, credit cards"), return rules, refund periods, cancellation rules, discounts, offers, or store locations.
+4. If the customer asks about store policies, payment methods, shipping times, returns, or store details and the information is NOT explicitly stated in the Knowledge Base context, politely reply:
+   "I'm sorry, I couldn't find information about that in our store policies. Feel free to ask another question or let me know if you'd like to connect with our support team."
+5. If a customer says HI, HELLO, or a GREETING: Reply warmly with "Hey ${customerName}! 👋 Welcome to ${storeName}! How can I help you today?" Do NOT escalate greetings.
+6. If a customer asks WHO ARE YOU or WHAT DO YOU DO: Reply with "I'm your AI shopping assistant for ${storeName}! I can help with order tracking, product info, store policies, and more. Just ask! 🤖"
+7. If a customer sends a media attachment or file: Politely explain that you are an automated assistant and cannot view images, documents, or listen to voice notes. Ask them to describe their question in text.
+8. Keep responses clear, polite, natural, and customer-focused, ensuring every store-specific statement is supported by the Knowledge Base.`;
   }
 
   buildResponseParts(message) {
@@ -564,6 +542,26 @@ Smart Fallback Rules (when specific information is not available in the knowledg
             responseParts: [],
             typingDelayMs: 0
           };
+        }
+
+        // 24-hour WhatsApp conversation window session tracking
+        const TWENTY_FOUR_HOURS_MS = 24 * 60 * 60 * 1000;
+        const lastMsg = (conversation.messages && conversation.messages.length > 0)
+          ? conversation.messages[conversation.messages.length - 1]
+          : null;
+        const isNewConversationSession = !lastMsg || (Date.now() - new Date(lastMsg.timestamp).getTime() > TWENTY_FOUR_HOURS_MS);
+
+        if (isNewConversationSession) {
+          const planName = subscriptionService.normalizePlanName(adminDoc.subscriptionPlan);
+          const convLimit = subscriptionService.getPlanLimit(planName, 'maxConversations');
+          const currentConvs = adminDoc.monthlyConversationsCount || 0;
+
+          if (convLimit !== -1 && convLimit !== Infinity && currentConvs >= convLimit) {
+            console.warn(`⚠️ [CONVERSATION LIMIT BREACH] Monthly conversation limit reached for tenant ${adminDoc.email}: ${currentConvs}/${convLimit}`);
+          } else {
+            adminDoc.monthlyConversationsCount = (adminDoc.monthlyConversationsCount || 0) + 1;
+            await adminDoc.save().catch(err => console.error('Error incrementing monthlyConversationsCount:', err.message));
+          }
         }
 
         const limitCheck = subscriptionService.checkLimitExceeded(adminDoc);
@@ -1676,9 +1674,9 @@ Response format must be ONLY the product name or "NONE". Do not write any other 
     try {
       const adminId = adminDoc ? adminDoc._id : null;
 
-      // Restrict order cancellation to Professional and Enterprise/Scale plans
-      const plan = (adminDoc && adminDoc.subscriptionPlan) ? adminDoc.subscriptionPlan.toLowerCase() : 'starter';
-      if (plan === 'starter') {
+      // Restrict order cancellation to Growth and Scale plans
+      const isAllowed = adminDoc ? subscriptionService.isFeatureAllowed(adminDoc.subscriptionPlan, 'orderCancellation') : false;
+      if (!isAllowed) {
         return {
           success: false,
           message: "Order cancellation via WhatsApp is not supported on our Starter plan. Please contact our support team or log in to your account on our website to request order cancellation."
@@ -1852,20 +1850,23 @@ Response format must be ONLY the product name or "NONE". Do not write any other 
     }
 
     let kbContext = kbContextOverride;
+    let auditMetadata = null;
 
     // 1) Fetch Knowledge base context (if no override is provided)
     if (!kbContext) {
       try {
         if (adminId) {
           const kbResult = await knowledgeBaseService.queryKnowledgeBase(queryText, adminId);
+          auditMetadata = kbResult.metadata || null;
           if (kbResult.foundInKB && kbResult.confidence > 0.5) {
             kbContext = kbResult.answer;
           }
         } else {
-          const knowledgeBases = await KnowledgeBase.find({ isActive: true });
+          const knowledgeBases = await KnowledgeBase.find({ isActive: true, status: 'ready' });
           if (knowledgeBases.length > 0) {
             const texts = knowledgeBases.map((kb) => kb.extractedText);
             const kbResult = await knowledgeBaseService.queryKnowledgeBase(queryText, texts);
+            auditMetadata = kbResult.metadata || null;
             if (kbResult.foundInKB && kbResult.confidence > 0.5) {
               kbContext = kbResult.answer;
             }
@@ -1978,6 +1979,7 @@ Response format must be ONLY the product name or "NONE". Do not write any other 
           model: this.geminiModelName,
           modelUsed: 'Gemini',
           tokenUsage,
+          auditMetadata,
           aiLogPayload: {
             systemPrompt,
             userPrompt,

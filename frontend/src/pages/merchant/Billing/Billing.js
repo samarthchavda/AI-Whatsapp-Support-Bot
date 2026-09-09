@@ -211,17 +211,17 @@ function Billing() {
   if (isUsageDanger) progressColor = '#ef4444'; // Red
   else if (isUsageWarning) progressColor = '#f59e0b'; // Amber
 
-  const currentPlanDetails = plans.find(p => p.name === profile?.subscriptionPlan);
+  const currentPlanDetails = plans.find(p => p.name === (profile?.subscriptionPlan === 'professional' ? 'growth' : profile?.subscriptionPlan === 'enterprise' ? 'scale' : profile?.subscriptionPlan));
   const currentFeatures = currentPlanDetails?.features || (profile?.subscriptionPlan === 'custom' ? {
     maxConversations: -1,
     maxMessages: -1,
     geminiTokensPerMonth: profile?.geminiTokensLimit || -1,
     maxWhatsAppConnections: 5
   } : {
-    maxConversations: profile?.subscriptionPlan === 'professional' ? 3000 : profile?.subscriptionPlan === 'enterprise' ? -1 : 500,
-    maxMessages: profile?.subscriptionPlan === 'professional' ? 15000 : profile?.subscriptionPlan === 'enterprise' ? -1 : 2000,
-    geminiTokensPerMonth: profile?.geminiTokensLimit || (profile?.subscriptionPlan === 'professional' ? 200000 : profile?.subscriptionPlan === 'enterprise' ? -1 : 50000),
-    maxWhatsAppConnections: profile?.subscriptionPlan === 'professional' ? 2 : profile?.subscriptionPlan === 'enterprise' ? 5 : 1
+    maxConversations: (profile?.subscriptionPlan === 'growth' || profile?.subscriptionPlan === 'professional') ? 3000 : (profile?.subscriptionPlan === 'scale' || profile?.subscriptionPlan === 'enterprise') ? -1 : 500,
+    maxMessages: (profile?.subscriptionPlan === 'growth' || profile?.subscriptionPlan === 'professional') ? 15000 : (profile?.subscriptionPlan === 'scale' || profile?.subscriptionPlan === 'enterprise') ? -1 : 2000,
+    geminiTokensPerMonth: profile?.geminiTokensLimit || ((profile?.subscriptionPlan === 'growth' || profile?.subscriptionPlan === 'professional') ? 200000 : (profile?.subscriptionPlan === 'scale' || profile?.subscriptionPlan === 'enterprise') ? -1 : 50000),
+    maxWhatsAppConnections: (profile?.subscriptionPlan === 'growth' || profile?.subscriptionPlan === 'professional') ? 2 : (profile?.subscriptionPlan === 'scale' || profile?.subscriptionPlan === 'enterprise') ? 5 : 1
   });
 
   const mockInvoices = [
@@ -449,13 +449,14 @@ function Billing() {
 
                 <ul className="upgrade-features-list">
                   {/* Conversations */}
+                  {/* Conversations */}
                   {plan.name === 'starter' && (
                     <li><FaCheck style={{ color: '#1677FF' }} /> Up to 500 WhatsApp Conversations/mo (new customer chat sessions)</li>
                   )}
-                  {plan.name === 'professional' && (
+                  {(plan.name === 'growth' || plan.name === 'professional') && (
                     <li><FaCheck style={{ color: '#1677FF' }} /> Up to 3,000 WhatsApp Conversations/mo (ideal for active marketing & sales)</li>
                   )}
-                  {plan.name === 'enterprise' && (
+                  {(plan.name === 'scale' || plan.name === 'enterprise') && (
                     <li><FaCheck style={{ color: '#1677FF' }} /> Unlimited WhatsApp Conversations/mo (no support volume restrictions)</li>
                   )}
                   
@@ -463,22 +464,21 @@ function Billing() {
                   {plan.name === 'starter' && (
                     <li><FaCheck style={{ color: '#1677FF' }} /> Up to 2,000 incoming & outgoing messages/mo (individual text bubbles)</li>
                   )}
-                  {plan.name === 'professional' && (
+                  {(plan.name === 'growth' || plan.name === 'professional') && (
                     <li><FaCheck style={{ color: '#1677FF' }} /> Up to 15,000 incoming & outgoing messages/mo (individual text bubbles)</li>
                   )}
-                  {plan.name === 'enterprise' && (
+                  {(plan.name === 'scale' || plan.name === 'enterprise') && (
                     <li><FaCheck style={{ color: '#1677FF' }} /> Unlimited incoming & outgoing messages/mo (individual text bubbles)</li>
                   )}
-
 
                   {/* WhatsApp Connections */}
                   {plan.name === 'starter' && (
                     <li><FaCheck style={{ color: '#1677FF' }} /> 1 Active WhatsApp Phone Number connection</li>
                   )}
-                  {plan.name === 'professional' && (
+                  {(plan.name === 'growth' || plan.name === 'professional') && (
                     <li><FaCheck style={{ color: '#1677FF' }} /> Up to 2 Active WhatsApp Phone Number connections</li>
                   )}
-                  {plan.name === 'enterprise' && (
+                  {(plan.name === 'scale' || plan.name === 'enterprise') && (
                     <li><FaCheck style={{ color: '#1677FF' }} /> Up to 5 Active WhatsApp Connections simultaneously</li>
                   )}
                   
@@ -486,10 +486,10 @@ function Billing() {
                   {plan.name === 'starter' && (
                     <li><FaCheck style={{ color: '#1677FF' }} /> Max 1 PDF Upload (for training the AI bot on your basic FAQs)</li>
                   )}
-                  {plan.name === 'professional' && (
+                  {(plan.name === 'growth' || plan.name === 'professional') && (
                     <li><FaCheck style={{ color: '#1677FF' }} /> Max 3 PDF Uploads (train AI on detailed shipping, refund, & FAQ catalogs)</li>
                   )}
-                  {plan.name === 'enterprise' && (
+                  {(plan.name === 'scale' || plan.name === 'enterprise') && (
                     <li><FaCheck style={{ color: '#1677FF' }} /> Unlimited PDF Uploads (train AI on entire store documents and manuals)</li>
                   )}
 
@@ -497,10 +497,10 @@ function Billing() {
                   {plan.name === 'starter' && (
                     <li><FaCheck style={{ color: '#1677FF' }} /> 1 Active Integration (connect either your Shopify OR WooCommerce store)</li>
                   )}
-                  {plan.name === 'professional' && (
+                  {(plan.name === 'growth' || plan.name === 'professional') && (
                     <li><FaCheck style={{ color: '#1677FF' }} /> 1 Active Integration (connect either your Shopify OR WooCommerce store)</li>
                   )}
-                  {plan.name === 'enterprise' && (
+                  {(plan.name === 'scale' || plan.name === 'enterprise') && (
                     <li><FaCheck style={{ color: '#1677FF' }} /> Multiple Integrations (connect both Shopify & WooCommerce simultaneously)</li>
                   )}
 
@@ -545,8 +545,8 @@ function Billing() {
                   </li>
 
                   {/* API Access */}
-                  <li style={{ opacity: features.apiAccess ? 1 : 0.5 }}>
-                    {features.apiAccess ? (
+                  <li style={{ opacity: features.developerApi || features.apiAccess ? 1 : 0.5 }}>
+                    {features.developerApi || features.apiAccess ? (
                       <><FaCheck style={{ color: '#1677FF' }} /> Developer API & Webhooks (for custom websites)</>
                     ) : (
                       <><FaTimes style={{ color: '#ef4444', marginRight: '8px' }} /> <span style={{ textDecoration: 'line-through' }}>Developer API & Webhooks Access</span></>
@@ -558,10 +558,10 @@ function Billing() {
                     {plan.name === 'starter' && (
                       <><FaTimes style={{ color: '#ef4444', marginRight: '8px' }} /> <span style={{ textDecoration: 'line-through' }}>Priority Customer Support</span></>
                     )}
-                    {plan.name === 'professional' && (
+                    {(plan.name === 'growth' || plan.name === 'professional') && (
                       <><FaCheck style={{ color: '#1677FF' }} /> Priority Email & Chat Support (under 4-hour response time)</>
                     )}
-                    {plan.name === 'enterprise' && (
+                    {(plan.name === 'scale' || plan.name === 'enterprise') && (
                       <><FaCheck style={{ color: '#1677FF' }} /> Dedicated Account Manager & 24/7 Instant Slack Support</>
                     )}
                   </li>

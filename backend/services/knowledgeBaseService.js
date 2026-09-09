@@ -115,18 +115,17 @@ class KnowledgeBaseService {
   /**
    * Process uploaded file and extract text
    */
+  /**
+   * Process uploaded file and extract text (PDF ONLY)
+   */
   async processFile(file) {
-    const fileExtension = file.originalname.split('.').pop().toLowerCase();
+    const fileExtension = file.originalname ? file.originalname.split('.').pop().toLowerCase() : '';
     let extractedText = '';
 
     if (fileExtension === 'pdf') {
       extractedText = await this.extractTextFromPDF(file.path);
-    } else if (fileExtension === 'txt') {
-      extractedText = await this.extractTextFromTXT(file.path);
-    } else if (fileExtension === 'csv') {
-      extractedText = await this.extractTextFromCSV(file.path);
     } else {
-      throw new Error('Unsupported file type. Only PDF, TXT, and CSV files are allowed.');
+      throw new Error('Unsupported file type. Only PDF (.pdf) files are allowed.');
     }
 
     // Clean up the text
@@ -136,7 +135,7 @@ class KnowledgeBaseService {
       .trim();
 
     if (!extractedText || extractedText.length < 10) {
-      throw new Error('No text could be extracted from the file');
+      throw new Error('No readable text could be extracted from the PDF file');
     }
 
     return {
@@ -147,7 +146,8 @@ class KnowledgeBaseService {
   }
 
   /**
-   * Generate vector embedding for a block of text
+   * Generate vector embedding for a block of text using Gemini API.
+   * Note: Fake/fallback embeddings are strictly disabled per system requirements.
    */
   async generateEmbedding(text) {
     try {
@@ -161,27 +161,10 @@ class KnowledgeBaseService {
       if (result && result.embedding && result.embedding.values) {
         return result.embedding.values;
       }
-      throw new Error('Invalid embedding response structure');
+      throw new Error('Invalid embedding response structure from Gemini API');
     } catch (error) {
-      console.warn('⚠️ Gemini embedding failed, generating fallback representation:', error.message);
-      // Fallback: Generate a deterministic pseudo-random vector of 768 dimensions based on string hash
-      const dims = 768;
-      const embedding = new Array(dims);
-      
-      // Compute simple hash of text
-      let hash = 0;
-      for (let i = 0; i < text.length; i++) {
-        hash = (hash << 5) - hash + text.charCodeAt(i);
-        hash |= 0;
-      }
-      
-      // Generate deterministic numbers
-      for (let i = 0; i < dims; i++) {
-        const seed = Math.sin(hash + i) * 10000;
-        embedding[i] = seed - Math.floor(seed);
-      }
-      
-      return embedding;
+      console.error('❌ Gemini embedding generation failed:', error.message);
+      throw new Error(`Embedding generation failed: ${error.message}`);
     }
   }
 
@@ -234,20 +217,23 @@ class KnowledgeBaseService {
       console.log(`✅ Stored ${chunkDocs.length} chunks for "${kbDoc.title}"`);
       return chunkDocs;
     } catch (error) {
-      console.error('Error saving chunks:', error);
+      console.error('Error saving chunks, cleaning up partial chunks:', error.message);
+      await KnowledgeBaseChunk.deleteMany({ knowledgeBaseId: kbDoc._id }).catch(e => console.error('Chunk cleanup error:', e));
       throw new Error(`Failed to chunk and embed knowledge base: ${error.message}`);
     }
   }
 
   /**
-   * Perform vector similarity search on knowledge base chunks
+   * Perform vector similarity search on active & ready knowledge base chunks
+   * Enforces minimum similarity threshold (MIN_SIMILARITY_THRESHOLD = 0.65)
    */
   async searchChunks(queryText, adminId, limit = 3) {
     try {
+      const { MIN_SIMILARITY_THRESHOLD } = require('../config/kbConstants');
       const queryEmbedding = await this.generateEmbedding(queryText);
       
       const KnowledgeBase = require('../models/KnowledgeBase');
-      const kbQuery = { isActive: true };
+      const kbQuery = { isActive: true, status: 'ready' };
       if (adminId) {
         kbQuery.uploadedBy = adminId;
       }
@@ -255,7 +241,16 @@ class KnowledgeBaseService {
       const activeKBIds = activeKBs.map(kb => kb._id);
       
       if (activeKBIds.length === 0) {
-        return [];
+        return {
+          results: [],
+          metadata: {
+            retrievedKbIds: [],
+            retrievedChunkIds: [],
+            similarityScores: [],
+            similarityThreshold: MIN_SIMILARITY_THRESHOLD,
+            passedThreshold: false
+          }
+        };
       }
       
       const chunkQuery = { knowledgeBaseId: { $in: activeKBIds } };
@@ -271,79 +266,106 @@ class KnowledgeBaseService {
       });
       
       matches.sort((a, b) => b.score - a.score);
-      const topMatches = matches.slice(0, limit);
-      
-      return topMatches.map(m => ({
+
+      // Filter matches using the configured minimum similarity threshold (0.65)
+      const thresholdMatches = matches.filter(m => m.score >= MIN_SIMILARITY_THRESHOLD);
+      const topMatches = thresholdMatches.slice(0, limit);
+
+      const auditMetadata = {
+        retrievedKbIds: [...new Set(topMatches.map(m => m.chunk.knowledgeBaseId.toString()))],
+        retrievedChunkIds: topMatches.map(m => m.chunk._id.toString()),
+        similarityScores: topMatches.map(m => Number(m.score.toFixed(4))),
+        similarityThreshold: MIN_SIMILARITY_THRESHOLD,
+        passedThreshold: topMatches.length > 0
+      };
+
+      const results = topMatches.map(m => ({
         text: m.chunk.text,
         score: m.score,
-        knowledgeBaseId: m.chunk.knowledgeBaseId
+        knowledgeBaseId: m.chunk.knowledgeBaseId,
+        chunkId: m.chunk._id
       }));
+
+      return {
+        results,
+        metadata: auditMetadata
+      };
     } catch (error) {
-      console.error('Error searching vector chunks:', error);
-      return [];
+      console.error('Error searching vector chunks:', error.message);
+      return {
+        results: [],
+        metadata: {
+          retrievedKbIds: [],
+          retrievedChunkIds: [],
+          similarityScores: [],
+          similarityThreshold: 0.65,
+          passedThreshold: false
+        }
+      };
     }
   }
 
   /**
-   * Query the knowledge base using Gemini API (with RAG vector context support)
-   */
-  /**
-   * Query the knowledge base using Gemini API (with RAG vector context support)
+   * Query the knowledge base using Gemini API (with strict RAG vector context support)
    */
   async queryKnowledgeBase(question, contextOrAdminId) {
     try {
       let relevantTexts = [];
+      let searchMetadata = null;
       let isRAG = false;
 
       if (Array.isArray(contextOrAdminId)) {
         relevantTexts = contextOrAdminId;
       } else if (contextOrAdminId) {
         // Retrieve relevant chunks via RAG vector search
-        const searchResults = await this.searchChunks(question, contextOrAdminId, 3);
+        const searchOutput = await this.searchChunks(question, contextOrAdminId, 3);
+        const searchResults = Array.isArray(searchOutput) ? searchOutput : (searchOutput.results || []);
+        searchMetadata = searchOutput.metadata || null;
+        
         relevantTexts = searchResults.map(r => r.text);
         isRAG = true;
-        console.log(`🔍 RAG Search returned ${searchResults.length} matching contexts`);
+        console.log(`🔍 RAG Search returned ${searchResults.length} matching contexts above threshold (0.65)`);
       }
 
       if (relevantTexts.length === 0) {
-        console.log('🔍 RAG Search returned empty, running local keyword fallback search...');
+        console.log('🔍 RAG Search returned 0 chunks above threshold. Running local fallback...');
         const localRes = await this.queryLocalFallback(question, contextOrAdminId);
         if (localRes.foundInKB) {
+          localRes.metadata = searchMetadata;
           return localRes;
         }
         return {
-          answer: null,
+          answer: "I'm sorry, I couldn't find information about that in our store policies. Feel free to ask another question or let me know if you'd like to connect with our support team.",
           foundInKB: false,
-          confidence: 0
+          confidence: 0,
+          metadata: searchMetadata
         };
       }
 
       // Combine all knowledge base texts
       const combinedKB = relevantTexts.join('\n\n---\n\n');
 
-      // Create a prompt for Gemini
+      // Create a strictly grounded prompt for Gemini
       const systemInstruction = `You are a professional AI customer support agent for an e-commerce store.
 
-Rules:
-1. When a customer asks about a product (e.g., iPhone, shoes, watch, hoodie), search the KNOWLEDGE BASE below for matching or closely related items (e.g., iPhone 16 Pro Max 256GB). State the exact product title, price, and key details from the Knowledge Base.
-2. If the product IS in the Knowledge Base below, answer directly with its title, price, and features (e.g. "The iPhone 16 Pro Max 256GB is available for $1299.99...").
-3. When a customer asks for "more details" or "more info" about a product:
-   - Check the KNOWLEDGE BASE for additional specifications (such as SKU, Stock availability, Category, Shipping/Dispatch timeline, Return eligibility, or full Description text) and share them clearly.
-   - If no further details exist in the Knowledge Base beyond what was already stated, reply politely (e.g., "That covers all the details available for this product! Feel free to explore our website or ask me about any other item!").
-4. Do not copy raw knowledge base text. Rewrite answers in natural, friendly, conversational customer-support language.
-5. Keep responses concise, polite, and customer-focused. Never invent order, refund, or policy details.
-6. If the product is genuinely NOT in the store knowledge base, politely inform the customer and direct them to browse the full catalog at our store website.
+STRICT GROUNDING RULES:
+1. The KNOWLEDGE BASE context provided below is your ONLY source of truth for store policies, shipping details, prices, delivery timelines, return rules, payment methods, and product specifications.
+2. Use ONLY information contained in the provided KNOWLEDGE BASE below. Never use general world knowledge, standard e-commerce assumptions, or guesses.
+3. NEVER invent, assume, or manufacture shipping times, shipping fees, payment methods, return windows, refund periods, cancellation rules, discounts, offers, or store locations.
+4. If the customer's question is NOT explicitly answered or supported by the KNOWLEDGE BASE below, politely reply:
+   "I'm sorry, I couldn't find information about that in our store policies. Feel free to ask another question or let me know if you'd like to connect with our support team."
+5. Rewrite information in natural, friendly, conversational customer-support language while maintaining 100% factual accuracy to the Knowledge Base.
 
 KNOWLEDGE BASE:
 ${combinedKB}
 
-Now answer the following customer question accurately using the Knowledge Base above.`;
+Now answer the customer's question accurately using ONLY the Knowledge Base above.`;
 
       const model = this.genAI.getGenerativeModel({
         model: process.env.GEMINI_MODEL || 'gemini-2.5-flash',
         systemInstruction: systemInstruction,
         generationConfig: {
-          temperature: 0.3, // Lower temperature for more factual responses
+          temperature: 0.2, // Low temperature for high factual precision
           topP: 0.95,
           topK: 40,
           maxOutputTokens: 1000,
@@ -358,6 +380,7 @@ Now answer the following customer question accurately using the Knowledge Base a
         'not in the knowledge base',
         'not in my knowledge base',
         "don't have that information",
+        'couldn\'t find information',
         'not mentioned',
         'not available',
         'connect you to a human agent',
@@ -371,12 +394,13 @@ Now answer the following customer question accurately using the Knowledge Base a
       return {
         answer: answer,
         foundInKB: foundInKB,
-        confidence: foundInKB ? 0.8 : 0.2,
+        confidence: foundInKB ? 0.9 : 0.1,
         usedKnowledgeBase: true,
-        isRAG
+        isRAG,
+        metadata: searchMetadata
       };
     } catch (error) {
-      console.error('Error querying knowledge base, falling back to local text search:', error);
+      console.error('Error querying knowledge base, executing local search fallback:', error.message);
       return this.queryLocalFallback(question, contextOrAdminId);
     }
   }
@@ -708,17 +732,19 @@ Now answer the following customer question accurately using the Knowledge Base a
       const randomClosing = closings[Math.floor(Math.random() * closings.length)];
 
       let bodyText = "";
-      if (formattedSentences.length === 1) {
+      if (formattedSentences.length > 0) {
+        // Select the single top-ranked paragraph to prevent stitching together unrelated policy sections
         bodyText = formattedSentences[0];
-      } else if (formattedSentences.length === 2) {
-        const first = formattedSentences[0];
-        let second = formattedSentences[1];
-        if (second.charAt(0) === second.charAt(0).toUpperCase() && !/^[A-Z]{2,}/.test(second.split(/\s+/)[0])) {
-          second = second.charAt(0).toLowerCase() + second.slice(1);
-        }
-        bodyText = `${first} Additionally, ${second}`;
-      } else {
-        bodyText = formattedSentences.join(" Also, ");
+      }
+
+      if (!bodyText) {
+        return {
+          answer: "I'm sorry, I couldn't find information about that in our store policies. Feel free to ask another question or let me know if you'd like to connect with our support team.",
+          foundInKB: false,
+          confidence: 0,
+          usedKnowledgeBase: true,
+          localFallback: true
+        };
       }
 
       if (bodyText && !/[.!?]$/.test(bodyText)) {

@@ -1807,8 +1807,9 @@
 
 .customer-msg {
   align-self: flex-end;
-  background: #1677FF;
+  background: #7babef;
   color: #FFFFFF;
+  font-weight: bold;
   border-top-right-radius: 3px;
   max-width: 86%;
   margin-left: auto;

@@ -89,7 +89,8 @@ const faqs = [
 
 function LandingPage() {
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState('inbox');
+  const [heroTab, setHeroTab] = useState('support'); // 'support' | 'escalation' | 'broadcast' | 'analytics'
+  const [heroStep, setHeroStep] = useState('resolved'); // 'customer' | 'typing' | 'ai' | 'resolved'
   const [openFaqIndex, setOpenFaqIndex] = useState(null);
 
   const [isChatOpen, setIsChatOpen] = useState(false);
@@ -112,30 +113,28 @@ function LandingPage() {
     "Book a demo"
   ];
 
-  // Hero Real-time Live Demo Animation State
-  // States: 'customer-typing' | 'customer-sent' | 'ai-typing' | 'ai-sent' | 'note-sent' | 'reset'
-  const [animState, setAnimState] = useState('customer-typing');
-
+  // Hero Preview Animation Sequence per tab
   useEffect(() => {
-    if (activeTab !== 'inbox') return;
-
-    let timer;
-    if (animState === 'customer-typing') {
-      timer = setTimeout(() => setAnimState('customer-sent'), 2200);
-    } else if (animState === 'customer-sent') {
-      timer = setTimeout(() => setAnimState('ai-typing'), 1200);
-    } else if (animState === 'ai-typing') {
-      timer = setTimeout(() => setAnimState('ai-sent'), 1800);
-    } else if (animState === 'ai-sent') {
-      timer = setTimeout(() => setAnimState('note-sent'), 1200);
-    } else if (animState === 'note-sent') {
-      timer = setTimeout(() => setAnimState('reset'), 4500);
-    } else if (animState === 'reset') {
-      timer = setTimeout(() => setAnimState('customer-typing'), 400);
+    if (heroTab === 'support' || heroTab === 'escalation') {
+      setHeroStep('customer');
+      const t1 = setTimeout(() => setHeroStep('typing'), 1000);
+      const t2 = setTimeout(() => setHeroStep('ai'), 2400);
+      const t3 = setTimeout(() => setHeroStep('resolved'), 4000);
+      return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); };
     }
+  }, [heroTab]);
 
-    return () => clearTimeout(timer);
-  }, [animState, activeTab]);
+  // Tab auto-rotator (every 6 seconds)
+  useEffect(() => {
+    const tabs = ['support', 'escalation', 'broadcast', 'analytics'];
+    const interval = setInterval(() => {
+      setHeroTab(prev => {
+        const nextIdx = (tabs.indexOf(prev) + 1) % tabs.length;
+        return tabs[nextIdx];
+      });
+    }, 6200);
+    return () => clearInterval(interval);
+  }, []);
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -241,183 +240,176 @@ function LandingPage() {
             </div>
           </div>
 
-          <div className="product-preview" aria-label="Product dashboard preview">
-            <div className="preview-toolbar">
-              <div>
-                <span className="preview-label">Live inbox</span>
-                <strong>WhatsApp Operations</strong>
+          <div className="hero-product-preview-container" aria-label="Kwickbot AI WhatsApp Operations Product Preview">
+            <div className="hero-product-card">
+              {/* Card Header */}
+              <div className="hero-card-header">
+                <div className="hero-header-brand">
+                  <img src="/app-icon.png" alt="Kwickbot App Icon" className="hero-brand-logo" onError={(e) => { e.target.src = '/logo.png'; }} />
+                  <div className="hero-brand-text">
+                    <span className="hero-brand-title">KWICKBOT AI</span>
+                    <span className="hero-brand-sub">WhatsApp Operations</span>
+                  </div>
+                </div>
+                <div className="hero-header-status">
+                  <span className="status-dot pulsing"></span>
+                  <span>AI Online</span>
+                </div>
               </div>
-              <span className="preview-status">AI online</span>
-            </div>
 
-            <div className="preview-grid">
-              <aside className="preview-sidebar">
+              {/* Scenario Tab Bar */}
+              <div className="hero-tab-bar">
                 <button
-                  className={`preview-tab ${activeTab === 'inbox' ? 'active' : ''}`}
-                  onClick={() => setActiveTab('inbox')}
+                  className={`hero-tab-btn ${heroTab === 'support' ? 'active' : ''}`}
+                  onClick={() => setHeroTab('support')}
                 >
-                  <FaComments /> Inbox <span>18</span>
+                  <FaComments /> AI Support
                 </button>
                 <button
-                  className={`preview-tab ${activeTab === 'orders' ? 'active' : ''}`}
-                  onClick={() => setActiveTab('orders')}
+                  className={`hero-tab-btn ${heroTab === 'escalation' ? 'active' : ''}`}
+                  onClick={() => setHeroTab('escalation')}
                 >
-                  <FaBox /> Orders <span>42</span>
+                  <FaHeadset /> Escalation
                 </button>
                 <button
-                  className={`preview-tab alert ${activeTab === 'escalations' ? 'active' : ''}`}
-                  onClick={() => setActiveTab('escalations')}
+                  className={`hero-tab-btn ${heroTab === 'broadcast' ? 'active' : ''}`}
+                  onClick={() => setHeroTab('broadcast')}
                 >
-                  <FaHeadset /> Escalations <span>5</span>
+                  <FaBroadcastTower /> Broadcast
                 </button>
                 <button
-                  className={`preview-tab ${activeTab === 'analytics' ? 'active' : ''}`}
-                  onClick={() => setActiveTab('analytics')}
+                  className={`hero-tab-btn ${heroTab === 'analytics' ? 'active' : ''}`}
+                  onClick={() => setHeroTab('analytics')}
                 >
                   <FaChartLine /> Analytics
                 </button>
-              </aside>
+              </div>
 
-              {activeTab === 'inbox' && (
-                <div className="preview-conversation" style={{ minHeight: '300px' }}>
-                  {/* Status pill header inside conversation box */}
-                  <div className="preview-live-indicator">
-                    <span className="live-dot animate-pulse"></span>
-                    <span>
-                      {animState === 'customer-typing' && 'Live Customer (Typing...)'}
-                      {animState === 'customer-sent' && 'Live Customer (Online)'}
-                      {animState === 'ai-typing' && 'AI Assistant (Typing...)'}
-                      {animState === 'ai-sent' && 'AI Assistant (Online)'}
-                      {animState === 'note-sent' && 'AI Resolved'}
-                      {animState === 'reset' && 'Waiting for customer...'}
-                    </span>
-                  </div>
-
-                  {/* Customer Message */}
-                  {(animState !== 'customer-typing' && animState !== 'reset') && (
-                    <div className="preview-message customer fade-in-slide">
-                      <span>Customer</span>
-                      Is my order arriving today?
+              {/* Card Content Area */}
+              <div className="hero-card-body">
+                {/* SCENARIO 1: AI SUPPORT & ORDER TRACKING */}
+                {heroTab === 'support' && (
+                  <div className="hero-scenario-view fade-in-panel">
+                    <div className="chat-msg customer-msg">
+                      <span className="msg-author">CUSTOMER</span>
+                      <p>Where is my order #ORD-1024?</p>
                     </div>
-                  )}
 
-                  {/* Customer Typing Dot Indicator */}
-                  {animState === 'customer-typing' && (
-                    <div className="typing-indicator customer">
-                      <span>Customer</span>
-                      <div className="dot-flashing"></div>
-                    </div>
-                  )}
-
-                  {/* AI Typing Dot Indicator */}
-                  {animState === 'ai-typing' && (
-                    <div className="typing-indicator bot">
-                      <span>AI assistant</span>
-                      <div className="dot-flashing"></div>
-                    </div>
-                  )}
-
-                  {/* AI Message & Reply Time stats */}
-                  {(animState === 'ai-sent' || animState === 'note-sent') && (
-                    <div className="preview-message bot fade-in-slide">
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                        <span>AI assistant</span>
-                        <span className="reply-speed-tag">⚡ AI Reply in 1.3 sec</span>
+                    {heroStep === 'typing' && (
+                      <div className="chat-msg typing-msg">
+                        <div className="typing-dots-hero">
+                          <span></span><span></span><span></span>
+                        </div>
+                        <span className="typing-text-hero">Kwickbot AI is fetching order status...</span>
                       </div>
-                      Yes. Order #ORD-1017 is out for delivery and should arrive between 4-7 PM.
-                    </div>
-                  )}
+                    )}
 
-                  {/* Note message */}
-                  {animState === 'note-sent' && (
-                    <div className="preview-message note fade-in-slide">
-                      <FaCheck />
-                      Tracking link sent. No agent needed.
-                    </div>
-                  )}
-                </div>
-              )}
+                    {(heroStep === 'ai' || heroStep === 'resolved') && (
+                      <div className="chat-msg ai-msg fade-in-slide">
+                        <div className="ai-msg-header">
+                          <span className="msg-author">KWICKBOT AI</span>
+                          <span className="speed-tag">⚡ 1.2s reply</span>
+                        </div>
+                        <p>Your order #ORD-1024 is out for delivery and is expected to arrive today by 5:00 PM.</p>
+                      </div>
+                    )}
 
-              {activeTab === 'orders' && (
-                <div className="preview-conversation scrollable-preview">
-                  <div className="mock-order-row">
-                    <div>
-                      <strong>Order #ORD-1017</strong>
-                      <span>Premium Leather Boots</span>
-                    </div>
-                    <span className="mock-badge success">Delivered</span>
-                    <strong>$142.00</strong>
+                    {heroStep === 'resolved' && (
+                      <div className="hero-context-badge success fade-in-slide">
+                        <FaCheck className="badge-icon" />
+                        <span>Order #ORD-1024 • Out for Delivery • AI Resolved</span>
+                      </div>
+                    )}
                   </div>
-                  <div className="mock-order-row">
-                    <div>
-                      <strong>Order #ORD-1016</strong>
-                      <span>Wireless Headphones</span>
-                    </div>
-                    <span className="mock-badge info">Shipped</span>
-                    <strong>$89.50</strong>
-                  </div>
-                  <div className="mock-order-row">
-                    <div>
-                      <strong>Order #ORD-1015</strong>
-                      <span>Smart Fitness Watch</span>
-                    </div>
-                    <span className="mock-badge warning">Processing</span>
-                    <strong>$210.00</strong>
-                  </div>
-                </div>
-              )}
+                )}
 
-              {activeTab === 'escalations' && (
-                <div className="preview-conversation">
-                  <div className="mock-escalation-alert">
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                      <span className="mock-badge urgent">URGENT ESCALATION</span>
-                      <span style={{ fontSize: '11px', color: '#a1a1aa' }}>Just now</span>
+                {/* SCENARIO 2: HUMAN ESCALATION */}
+                {heroTab === 'escalation' && (
+                  <div className="hero-scenario-view fade-in-panel">
+                    <div className="chat-msg customer-msg">
+                      <span className="msg-author">CUSTOMER</span>
+                      <p>I need urgent help with a damaged product.</p>
                     </div>
-                    <p style={{ margin: '0 0 12px 0', fontSize: '13px', color: '#e4e4e7', textAlign: 'left' }}>
-                      Customer **917777777777** triggered high-priority keyword: *"I want a refund immediately, my order is late."*
-                    </p>
-                    <div style={{ display: 'flex', gap: '8px' }}>
-                      <button className="preview-btn-success" onClick={() => navigate('/login')}>Pause AI & Takeover</button>
-                      <button className="preview-btn-secondary" onClick={() => navigate('/login')}>View Logs</button>
+
+                    {(heroStep === 'typing' || heroStep === 'ai' || heroStep === 'resolved') && (
+                      <div className="hero-alert-badge warning fade-in-slide">
+                        <span>⚠️ AI DETECTED: Keyword "damaged product"</span>
+                      </div>
+                    )}
+
+                    {(heroStep === 'ai' || heroStep === 'resolved') && (
+                      <div className="chat-msg ai-msg fade-in-slide">
+                        <div className="ai-msg-header">
+                          <span className="msg-author">KWICKBOT CRM</span>
+                        </div>
+                        <p>I've paused the AI and connected you directly to a live support agent with full chat context.</p>
+                      </div>
+                    )}
+
+                    {heroStep === 'resolved' && (
+                      <div className="hero-context-badge urgent fade-in-slide">
+                        <FaHeadset className="badge-icon" />
+                        <span>Escalated to Live Human Agent in CRM</span>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* SCENARIO 3: WHATSAPP BROADCAST */}
+                {heroTab === 'broadcast' && (
+                  <div className="hero-scenario-view fade-in-panel">
+                    <div className="hero-broadcast-card">
+                      <div className="broadcast-header">
+                        <FaBroadcastTower className="broadcast-icon" />
+                        <div>
+                          <strong>WhatsApp Broadcast Campaign</strong>
+                          <span>Target: 2,480 Active Customers</span>
+                        </div>
+                      </div>
+                      <div className="broadcast-preview-bubble">
+                        <p style={{ margin: 0 }}>
+                          🎉 <strong>Weekend Flash Sale Launch!</strong><br />
+                          Get 20% off all new arrivals today. Use code <strong>WEEKEND20</strong> on checkout.
+                        </p>
+                      </div>
+                      <div className="hero-context-badge broadcast-badge fade-in-slide">
+                        <FaCheck className="badge-icon" />
+                        <span>Campaign Scheduled • 98.4% Est. Delivery</span>
+                      </div>
                     </div>
                   </div>
-                </div>
-              )}
+                )}
 
-              {activeTab === 'analytics' && (
-                <div className="preview-conversation grid-analytics">
-                  <div className="analytics-preview-card">
-                    <span>AI Resolution Rate</span>
-                    <strong>84.2%</strong>
-                    <span className="percent-up">+2.4% this week</span>
+                {/* SCENARIO 4: ANALYTICS */}
+                {heroTab === 'analytics' && (
+                  <div className="hero-scenario-view fade-in-panel">
+                    <div className="hero-analytics-grid">
+                      <div className="hero-analytic-card">
+                        <span>AI Resolution Rate</span>
+                        <strong>84%</strong>
+                        <span className="analytic-sub">Automated 24/7</span>
+                      </div>
+                      <div className="hero-analytic-card">
+                        <span>Open Conversations</span>
+                        <strong>18</strong>
+                        <span className="analytic-sub">Live in CRM</span>
+                      </div>
+                      <div className="hero-analytic-card">
+                        <span>Broadcast Replies</span>
+                        <strong>214</strong>
+                        <span className="analytic-sub">Campaign responses</span>
+                      </div>
+                    </div>
+                    <div className="analytics-demo-note">
+                      * Illustrative Product Demo Preview
+                    </div>
                   </div>
-                  <div className="analytics-preview-card">
-                    <span>Avg Response Time</span>
-                    <strong>1.2s</strong>
-                    <span className="percent-down">-0.6s faster</span>
-                  </div>
-                  <div className="analytics-preview-card">
-                    <span>Active Conversations</span>
-                    <strong>248</strong>
-                    <span className="percent-up">24/7 coverage</span>
-                  </div>
-                </div>
-              )}
+                )}
+              </div>
 
-              <div className="preview-insights">
-                <div>
-                  <span>Resolution rate</span>
-                  <strong>84.2%</strong>
-                </div>
-                <div>
-                  <span>Urgent queue</span>
-                  <strong>5</strong>
-                </div>
-                <div>
-                  <span>Broadcast replies</span>
-                  <strong>214</strong>
-                </div>
+              {/* Card Footer Bar */}
+              <div className="hero-card-footer">
+                <span>WhatsApp Cloud API • E-commerce AI Automation</span>
               </div>
             </div>
           </div>
@@ -830,9 +822,9 @@ function LandingPage() {
             className="chat-trigger-button"
             onClick={() => setIsChatOpen(true)}
             aria-label="Open Kwickbot AI Assistant"
+            title="Ask Kwickbot AI Assistant"
           >
             <FaWhatsapp />
-            <span className="pulse-notification">1</span>
           </button>
         ) : (
           <div className="widget-chat-window">

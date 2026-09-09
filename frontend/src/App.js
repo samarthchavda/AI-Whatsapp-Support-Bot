@@ -336,6 +336,12 @@ function Sidebar({ admin, onLogout, isOpen, onToggle, pendingDemoRequestsCount }
                     </Link>
                   </li>
                   <li>
+                    <Link to="/dashboard/live-chat" className={isActive('/dashboard/live-chat')} title="Live Chat">
+                      <FaCommentDots />
+                      <span className="nav-label">Live Chat</span>
+                    </Link>
+                  </li>
+                  <li>
                     <Link to="/dashboard/orders" className={isActive('/dashboard/orders')} title="Orders">
                       <FaBox />
                       <span className="nav-label">Orders</span>
@@ -944,6 +950,7 @@ function App() {
                     />
                     <Route path="/analytics" element={<Analytics admin={admin} />} />
                     <Route path="/conversations" element={<Conversations />} />
+                    <Route path="/live-chat" element={<LiveChat admin={admin} />} />
                     <Route path="/orders" element={<Orders admin={admin} />} />
                     <Route path="/products" element={<Products admin={admin} />} />
                     <Route path="/leads" element={<MerchantLeads admin={admin} />} />

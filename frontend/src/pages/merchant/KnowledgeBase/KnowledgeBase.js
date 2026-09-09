@@ -126,13 +126,13 @@ function KnowledgeBase() {
           <p className="page-subtitle">Upload PDF documents and FAQs for AI-powered responses</p>
         </div>
         <div className="page-header-actions">
-          <button 
+          {/* <button 
             className="btn btn-secondary" 
             onClick={() => setShowTestQuery(!showTestQuery)}
             style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
           >
             <FaRobot /> Test Knowledge
-          </button>
+          </button> */}
           <button 
             className="btn btn-primary" 
             onClick={() => setShowUploadForm(!showUploadForm)}

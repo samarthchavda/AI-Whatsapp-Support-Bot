@@ -107,6 +107,11 @@ const requireFeature = (featureName) => {
       });
     }
 
+    // Super Admin accounts bypass all subscription feature restrictions
+    if (req.admin.role === 'super_admin') {
+      return next();
+    }
+
     const subscriptionService = require('../services/subscriptionService');
     const statusCheck = subscriptionService.validateSubscriptionStatus(req.admin);
     if (!statusCheck.valid) {

@@ -17,6 +17,7 @@ const PLAN_LIMITS = {
 function validateSubscriptionStatus(admin) {
   if (!admin) return { valid: false, reason: 'Account record not found' };
   if (!admin.isActive) return { valid: false, reason: 'Your account has been disabled' };
+  if (admin.role === 'super_admin') return { valid: true, reason: null };
 
   const status = (admin.subscriptionStatus || 'trial').toLowerCase();
   if (['inactive', 'cancelled', 'suspended'].includes(status)) {

@@ -56,7 +56,7 @@ const adminSchema = new mongoose.Schema({
   // Subscription fields
   subscriptionPlan: {
     type: String,
-    enum: ['starter', 'growth', 'scale', 'custom'],
+    enum: ['starter', 'growth', 'scale', 'custom', 'enterprise', 'professional', 'pro', 'free'],
     default: 'starter'
   },
   subscriptionStatus: {

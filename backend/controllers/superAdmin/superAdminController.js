@@ -13,6 +13,7 @@ const WebhookLog = require('../../models/WebhookLog');
 const os = require('os');
 const whatsappCloudAPI = require('../../services/whatsappCloudAPI');
 const crypto = require('crypto');
+const { normalizePlanName } = require('../../config/planConstants');
 
 // Middleware to check super admin role
 exports.requireSuperAdmin = (req, res, next) => {
@@ -196,7 +197,7 @@ exports.updateUserSubscription = async (req, res) => {
     }
 
     // Update subscription fields
-    if (subscriptionPlan) user.subscriptionPlan = subscriptionPlan;
+    if (subscriptionPlan) user.subscriptionPlan = normalizePlanName(subscriptionPlan);
     if (subscriptionStatus) user.subscriptionStatus = subscriptionStatus;
     if (monthlyPrice !== undefined) user.monthlyPrice = monthlyPrice;
     if (customDiscount !== undefined) user.customDiscount = customDiscount;

@@ -46,7 +46,7 @@ async function runTests() {
   console.log('5️⃣ Testing Feature Entitlements Matrix...');
   // Starter Gated Features
   assert.strictEqual(isFeatureAllowed('starter', 'advancedAnalytics'), false);
-  assert.strictEqual(isFeatureAllowed('starter', 'escalations'), false);
+  assert.strictEqual(isFeatureAllowed('starter', 'escalations'), true);
   assert.strictEqual(isFeatureAllowed('starter', 'orderCancellation'), false);
   assert.strictEqual(isFeatureAllowed('starter', 'customBranding'), false);
   assert.strictEqual(isFeatureAllowed('starter', 'developerApi'), false);

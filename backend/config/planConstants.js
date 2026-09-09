@@ -26,7 +26,7 @@ const PLAN_DEFINITIONS = {
       audienceSegmentation: false,
       broadcastAnalytics: 'none',
       advancedAnalytics: false,
-      escalations: false,
+      escalations: true,
       orderCancellation: false,
       customBranding: false,
       developerApi: false,

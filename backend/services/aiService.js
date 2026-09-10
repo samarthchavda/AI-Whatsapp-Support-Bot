@@ -1108,9 +1108,9 @@ STRICT KNOWLEDGE BASE GROUNDING RULES:
 
       // Determine if we should attach interactive buttons
       let buttons = [];
-      const lowerMsg = message.toLowerCase().trim();
-      const greetings = ['hi', 'hello', 'hey', 'yo', 'hola', 'namaste', 'help', 'menu', 'options', 'support', 'start'];
-      const isGreeting = greetings.includes(lowerMsg) || lowerMsg.length <= 4;
+      const lowerMsg = message.toLowerCase().trim().replace(/[^\w\s]/g, '');
+      const greetingRegex = /^(h+i+|h+e+l+l+o+|h+e+y+|y+o+|h+o+l+a+|n+a+m+a+s+t+e+|help|menu|options|support|start)$/i;
+      const isGreeting = greetingRegex.test(lowerMsg) || lowerMsg.length <= 4;
       const isNewConversation = conversation && conversation.messages && conversation.messages.filter(m => m.role === 'assistant').length === 0;
 
       if ((isGreeting || isNewConversation) && !escalated && intent === 'general_inquiry') {

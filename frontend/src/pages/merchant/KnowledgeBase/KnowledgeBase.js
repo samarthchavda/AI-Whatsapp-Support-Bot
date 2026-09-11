@@ -426,7 +426,7 @@ function KnowledgeBase() {
                 <th>Size</th>
                 <th>Character Count</th>
                 <th>Status</th>
-                <th>Uploaded By</th>
+                {/* <th>Uploaded By</th> */}
                 <th>Date</th>
                 <th>Actions</th>
               </tr>
@@ -465,7 +465,7 @@ function KnowledgeBase() {
                       {kb.status === 'failed' ? 'Failed' : kb.isActive ? 'Active' : 'Inactive'}
                     </span>
                   </td>
-                  <td>{kb.uploadedByName}</td>
+                  {/* <td>{kb.uploadedByName}</td> */}
                   <td>{new Date(kb.createdAt).toLocaleDateString()}</td>
                   <td>
                     <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>

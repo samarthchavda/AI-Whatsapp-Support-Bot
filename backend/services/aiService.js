@@ -227,10 +227,11 @@ STRICT KNOWLEDGE BASE GROUNDING RULES:
 3. NEVER invent, assume, or manufacture shipping times (e.g., "3-7 business days"), payment methods (e.g., "UPI, credit cards"), return rules, refund periods, cancellation rules, discounts, offers, or store locations.
 4. If the customer asks about store policies, payment methods, shipping times, returns, or store details and the information is NOT explicitly stated in the Knowledge Base context, politely reply:
    "I'm sorry, I couldn't find information about that in our store policies. Feel free to ask another question or let me know if you'd like to connect with our support team."
-5. If a customer says HI, HELLO, or a GREETING: Reply warmly with "Hey ${customerName}! 👋 Welcome to ${storeName}! How can I help you today?" Do NOT escalate greetings.
-6. If a customer asks WHO ARE YOU or WHAT DO YOU DO: Reply with "I'm your AI shopping assistant for ${storeName}! I can help with order tracking, product info, store policies, and more. Just ask! 🤖"
+5. If a customer says HI, HELLO, or a GREETING: Reply warmly with "Hey ${customerName}! Welcome to ${storeName}! How can I help you today?" Do NOT escalate greetings.
+6. If a customer asks WHO ARE YOU or WHAT DO YOU DO: Reply with "I'm your AI shopping assistant for ${storeName}! I can help with order tracking, product info, store policies, and more. Just ask!"
 7. If a customer sends a media attachment or file: Politely explain that you are an automated assistant and cannot view images, documents, or listen to voice notes. Ask them to describe their question in text.
-8. Keep responses clear, polite, natural, and customer-focused, ensuring every store-specific statement is supported by the Knowledge Base.`;
+8. Keep responses clear, polite, natural, and customer-focused, ensuring every store-specific statement is supported by the Knowledge Base.
+9. STRICT EMOJI RULE: Do NOT use any emojis in your responses under any circumstances. Keep all text plain, clean, professional, and completely emoji-free.`;
   }
 
   buildResponseParts(message) {
@@ -257,6 +258,11 @@ STRICT KNOWLEDGE BASE GROUNDING RULES:
       responseParts,
       shouldSplit: responseParts.length > 1
     };
+  }
+
+  stripEmojis(text) {
+    if (!text || typeof text !== 'string') return text;
+    return text.replace(/[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F700}-\u{1F77F}\u{1F780}-\u{1F7FF}\u{1F800}-\u{1F8FF}\u{1F900}-\u{1F9FF}\u{1FA00}-\u{1FA6F}\u{1FA70}-\u{1FAFF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{2300}-\u{23FF}\u{2B05}\u{2B06}\u{2B07}\u{2B1B}\u{2B1C}\u{2B50}\u{2B55}\u{3030}\u{303D}\u{3297}\u{3299}]/gu, '').replace(/\s\s+/g, ' ').trim();
   }
 
   buildAiLogPayload({ conversationId, customerPhone, intent, userMessage, assistantMessage, aiModel, structuredOutput, duration, error, systemPrompt = null, userPrompt = null, temperature = 0.6 }) {
@@ -830,6 +836,10 @@ STRICT KNOWLEDGE BASE GROUNDING RULES:
 
       // Process based on intent
       switch (intent) {
+        case 'store_faqs':
+          response = await this.handleStoreFaqs(message, adminDoc ? adminDoc._id : null);
+          break;
+
         case 'new_order_inquiry':
           response = await this.handleNewOrderInquiry(adminDoc);
           break;
@@ -950,12 +960,15 @@ STRICT KNOWLEDGE BASE GROUNDING RULES:
         typingDelayMs = this.getTypingDelayMs();
       }
 
+      // Strip emojis from outgoing response to enforce no-emoji policy
+      response = this.stripEmojis(response);
+
       // Check if Kwickbot branding should be removed
       const isBrandingAllowed = adminDoc && (adminDoc.subscriptionPlan === 'enterprise' || adminDoc.subscriptionPlan === 'custom');
       const removeCredits = isBrandingAllowed && adminDoc.customBranding?.removeCredits === true;
       
-      if (!removeCredits && response && typeof response === 'string' && !response.includes('⚡ Powered by Kwickbot AI')) {
-        response = `${response}\n\n⚡ Powered by Kwickbot AI`;
+      if (!removeCredits && response && typeof response === 'string' && !response.includes('Powered by Kwickbot AI')) {
+        response = `${response}\n\nPowered by Kwickbot AI`;
       }
 
       if (!responseParts || responseParts.length === 0) {
@@ -1208,6 +1221,11 @@ Response format must be ONLY the product name or "NONE". Do not write any other 
 
   detectIntent(message) {
     const lowerMessage = message.toLowerCase().trim();
+
+    // Store FAQs button click / query
+    if (/^(store\s*faqs?|faqs?|f\.a\.q\.s?|store\s*policies|policies)$/i.test(lowerMessage) || lowerMessage === 'store faqs') {
+      return 'store_faqs';
+    }
 
     // 1. Direct order ID lookup (e.g., ORD-013 or #1008)
     if (/^\s*ord-\d+\s*$/i.test(lowerMessage) || /^\s*#\d+\s*$/.test(lowerMessage)) {
@@ -2386,10 +2404,32 @@ Response format must be ONLY the product name or "NONE". Do not write any other 
     let storeLinkText = '';
     
     if (publicUrl) {
-      storeLinkText = `\n👉 ${publicUrl}`;
+      storeLinkText = `\n${publicUrl}`;
     }
     
-    return `I cannot place new orders directly here on WhatsApp. 🛍️\n\nPlease place your order directly on our website here:${storeLinkText || ' our online store.'}\n\nIf you have any queries, feel free to send them here, and I will be happy to assist you!`;
+    return `I cannot place new orders directly here on WhatsApp.\n\nPlease place your order directly on our website here:${storeLinkText || ' our online store.'}\n\nIf you have any queries, feel free to send them here, and I will be happy to assist you!`;
+  }
+
+  async handleStoreFaqs(message, adminId = null) {
+    let kbDocs = [];
+    if (adminId) {
+      try {
+        kbDocs = await KnowledgeBase.find({ uploadedBy: adminId, isActive: true, status: 'ready' }).select('title description fileType').lean();
+      } catch (err) {
+        console.error('Error fetching KB docs for store_faqs:', err.message);
+      }
+    }
+
+    let policyListText = '';
+    if (kbDocs && kbDocs.length > 0) {
+      policyListText = kbDocs.map((doc, idx) => `${idx + 1}. *${doc.title}*${doc.description ? ' - ' + doc.description : ''}`).join('\n');
+    }
+
+    if (policyListText) {
+      return `Here are our store policies and FAQs:\n\n${policyListText}\n\nFeel free to ask any specific question about shipping, returns, products, or orders!`;
+    }
+
+    return `Here are our Store FAQs & Policies:\n\n1. *Shipping & Delivery* (Free shipping thresholds, delivery timelines)\n2. *Returns & Refunds* (Return window, refund policy)\n3. *Order Tracking & Cancellations*\n4. *Payment Methods*\n\nWhat would you like to know? Feel free to type your question directly!`;
   }
 }
 

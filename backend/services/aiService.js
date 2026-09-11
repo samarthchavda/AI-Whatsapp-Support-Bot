@@ -2414,7 +2414,7 @@ Response format must be ONLY the product name or "NONE". Do not write any other 
     let kbDocs = [];
     if (adminId) {
       try {
-        kbDocs = await KnowledgeBase.find({ uploadedBy: adminId, isActive: true, status: 'ready' }).select('title description fileType').lean();
+        kbDocs = await KnowledgeBase.find({ uploadedBy: adminId, isActive: true, status: 'ready', fileType: { $ne: 'product' } }).select('title description fileType').lean();
       } catch (err) {
         console.error('Error fetching KB docs for store_faqs:', err.message);
       }

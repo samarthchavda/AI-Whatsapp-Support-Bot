@@ -832,6 +832,7 @@ STRICT KNOWLEDGE BASE GROUNDING RULES:
       let responseParts = [];
       let systemPrompt = null;
       let userPrompt = null;
+      let temperature = 0.6;
       let listMessage = null;
       let buttons = [];
 

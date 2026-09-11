@@ -153,7 +153,13 @@ async function handleIncomingMessage(message, contactName, matchedAdmin, request
     } else if (message.type === 'button') {
       messageContent = message.button.text;
     } else if (message.type === 'interactive') {
-      messageContent = message.interactive.button_reply.title;
+      if (message.interactive.button_reply) {
+        messageContent = message.interactive.button_reply.title;
+      } else if (message.interactive.list_reply) {
+        messageContent = message.interactive.list_reply.title;
+      } else {
+        messageContent = '[INTERACTIVE] Choice selected';
+      }
     } else {
       messageContent = `[${message.type.toUpperCase()}] Message received`;
     }
@@ -226,7 +232,18 @@ async function handleIncomingMessage(message, contactName, matchedAdmin, request
 
     // Send reply (using custom credentials if matched)
     let sendResult;
-    if (aiResponse.buttons && aiResponse.buttons.length > 0) {
+    if (aiResponse.listMessage) {
+      console.log(`📋 Sending interactive list message response to ${customerPhone}`);
+      sendResult = await whatsappCloudAPI.sendInteractiveListMessage(
+        customerPhone,
+        aiResponse.listMessage.header,
+        aiResponse.message || aiResponse.listMessage.body,
+        aiResponse.listMessage.footer || 'Select an option below:',
+        aiResponse.listMessage.buttonLabel || 'View Options',
+        aiResponse.listMessage.sections,
+        customCredentials
+      );
+    } else if (aiResponse.buttons && aiResponse.buttons.length > 0) {
       console.log(`🔘 Sending interactive button response to ${customerPhone} with buttons: ${aiResponse.buttons.join(', ')}`);
       sendResult = await whatsappCloudAPI.sendInteractiveMessage(
         customerPhone,

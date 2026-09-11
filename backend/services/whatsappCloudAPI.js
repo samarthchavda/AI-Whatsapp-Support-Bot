@@ -350,6 +350,83 @@ class WhatsAppCloudAPI {
     }
   }
 
+  // Send interactive list message
+  async sendInteractiveListMessage(phoneNumber, headerText, bodyText, footerText, buttonLabel, sections, customCredentials = null) {
+    const accessToken = customCredentials?.accessToken || this.accessToken;
+    const phoneNumberId = customCredentials?.phoneNumberId || this.phoneNumberId;
+    const isConfig = (customCredentials?.accessToken && customCredentials?.phoneNumberId) || this.isConfigured;
+
+    if (!isConfig) {
+      console.log(`⚠️ WhatsApp Cloud API not configured. Simulating list message dispatch:`);
+      console.log(`   To: ${phoneNumber}`);
+      console.log(`   Body: ${bodyText}`);
+      console.log(`   Button: ${buttonLabel}`);
+      console.log(`   Sections:`, JSON.stringify(sections, null, 2));
+      return { 
+        success: true, 
+        messageId: 'mock_list_wamid_' + Math.random().toString(36).substr(2, 9) 
+      };
+    }
+
+    try {
+      const url = `${this.baseUrl}/${phoneNumberId}/messages`;
+
+      const interactive = {
+        type: 'list',
+        body: {
+          text: bodyText
+        },
+        action: {
+          button: (buttonLabel || 'Select Topic').substring(0, 20),
+          sections: sections.map(sec => ({
+            title: (sec.title || 'Options').substring(0, 24),
+            rows: (sec.rows || []).slice(0, 10).map((row, rIdx) => ({
+              id: row.id || `row_${rIdx}_${Date.now()}`,
+              title: row.title.substring(0, 24),
+              description: row.description ? row.description.substring(0, 72) : undefined
+            }))
+          }))
+        }
+      };
+
+      if (headerText) {
+        interactive.header = {
+          type: 'text',
+          text: headerText.substring(0, 60)
+        };
+      }
+
+      if (footerText) {
+        interactive.footer = {
+          text: footerText.substring(0, 60)
+        };
+      }
+
+      const data = {
+        messaging_product: 'whatsapp',
+        recipient_type: 'individual',
+        to: phoneNumber.replace(/\D/g, ''),
+        type: 'interactive',
+        interactive
+      };
+
+      const config = {
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'application/json'
+        }
+      };
+
+      const response = await axios.post(url, data, config);
+      console.log(`✅ Interactive list message sent to ${phoneNumber}`);
+      return { success: true, messageId: response.data.messages[0].id };
+
+    } catch (error) {
+      console.error('❌ Error sending interactive list message:', error.response?.data || error.message);
+      return { success: false, error: error.response?.data || error.message };
+    }
+  }
+
   // Get business phone number details
   async getPhoneNumberDetails(customCredentials = null) {
     const accessToken = customCredentials?.accessToken || this.accessToken;

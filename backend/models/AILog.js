@@ -13,7 +13,7 @@ const aiLogSchema = new mongoose.Schema({
   },
   intent: {
     type: String,
-    enum: ['order_status', 'cancel_order', 'return_policy', 'refund_request', 'complaint', 'general_inquiry', 'new_order_inquiry', 'store_faqs', 'other'],
+    enum: ['order_status', 'cancel_order', 'return_policy', 'refund_request', 'complaint', 'general_inquiry', 'new_order_inquiry', 'store_faqs', 'faq_shipping', 'faq_returns', 'faq_payments', 'faq_products', 'faq_products_all', 'faq_offers', 'other'],
     required: true
   },
   // Input

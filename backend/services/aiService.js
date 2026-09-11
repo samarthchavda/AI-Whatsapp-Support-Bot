@@ -832,12 +832,52 @@ STRICT KNOWLEDGE BASE GROUNDING RULES:
       let responseParts = [];
       let systemPrompt = null;
       let userPrompt = null;
-      let temperature = 0.6;
+      let listMessage = null;
+      let buttons = [];
 
       // Process based on intent
       switch (intent) {
         case 'store_faqs':
-          response = await this.handleStoreFaqs(message, adminDoc ? adminDoc._id : null);
+          const storeFaqResult = this.handleStoreFaqsMenu();
+          response = storeFaqResult.message;
+          listMessage = storeFaqResult.listMessage;
+          buttons = storeFaqResult.buttons;
+          break;
+
+        case 'faq_shipping':
+        case 'faq_returns':
+        case 'faq_payments':
+        case 'faq_offers':
+          const categoryKey = intent.replace('faq_', '');
+          const faqCategoryResult = await this.handleFaqCategory(categoryKey, message, customerName, conversation, adminDoc);
+          response = faqCategoryResult.message;
+          buttons = faqCategoryResult.buttons || [];
+          usedAI = faqCategoryResult.usedAI || false;
+          aiModel = faqCategoryResult.model || null;
+          modelUsed = faqCategoryResult.modelUsed || 'KnowledgeBase';
+          tokenUsage = faqCategoryResult.tokenUsage || tokenUsage;
+          if (faqCategoryResult.aiLogPayload) {
+            systemPrompt = faqCategoryResult.aiLogPayload.systemPrompt;
+            userPrompt = faqCategoryResult.aiLogPayload.userPrompt;
+          }
+          break;
+
+        case 'faq_products':
+          const prodOverviewResult = await this.handleFaqProductsOverview(adminDoc);
+          response = prodOverviewResult.message;
+          buttons = prodOverviewResult.buttons || [];
+          break;
+
+        case 'faq_products_all':
+          const allProdResult = await this.handleFaqAllProducts(message, adminDoc, 1);
+          response = allProdResult.message;
+          buttons = allProdResult.buttons || [];
+          break;
+
+        case 'agent_handoff':
+          response = await this.handleEscalation(customerPhone, customerName, message, 'user_requested');
+          escalated = true;
+          escalationReason = 'user_requested';
           break;
 
         case 'new_order_inquiry':
@@ -1119,14 +1159,12 @@ STRICT KNOWLEDGE BASE GROUNDING RULES:
         console.log(`📊 Updated usage for admin ${adminDoc.email}: tokensUsed=${adminDoc.geminiTokensUsed}, messages=${adminDoc.totalMessagesProcessed}`);
       }
 
-      // Determine if we should attach interactive buttons
-      let buttons = [];
       const lowerMsg = message.toLowerCase().trim().replace(/[^\w\s]/g, '');
       const greetingRegex = /^(h+i+|h+e+l+l+o+|h+e+y+|y+o+|h+o+l+a+|n+a+m+a+s+t+e+|help|menu|options|support|start)$/i;
       const isGreeting = greetingRegex.test(lowerMsg) || lowerMsg.length <= 4;
       const isNewConversation = conversation && conversation.messages && conversation.messages.filter(m => m.role === 'assistant').length === 0;
 
-      if ((isGreeting || isNewConversation) && !escalated && intent === 'general_inquiry') {
+      if ((isGreeting || isNewConversation) && !escalated && intent === 'general_inquiry' && (!buttons || buttons.length === 0)) {
         buttons = ['Check Order Status', 'Talk to Agent', 'Store FAQs'];
       }
 
@@ -1139,7 +1177,8 @@ STRICT KNOWLEDGE BASE GROUNDING RULES:
         structuredOutput,
         responseParts,
         typingDelayMs,
-        buttons: buttons.length > 0 ? buttons : undefined,
+        buttons: (buttons && buttons.length > 0) ? buttons : undefined,
+        listMessage: listMessage || undefined,
         botPaused: false,
         aiDraftMode: false
       };
@@ -1222,20 +1261,55 @@ Response format must be ONLY the product name or "NONE". Do not write any other 
   detectIntent(message) {
     const lowerMessage = message.toLowerCase().trim();
 
-    // Store FAQs button click / query
-    if (/^(store\s*faqs?|faqs?|f\.a\.q\.s?|store\s*policies|policies)$/i.test(lowerMessage) || lowerMessage === 'store faqs') {
+    // 1. FAQ Menu / Store FAQs triggers
+    if (/^(store\s*faqs?|faqs?|f\.a\.q\.s?|more\s*faqs?|faq\s*menu|policies|menu|\? store faqs|\u2753 store faqs|\ud83d\udccb more faqs)$/i.test(lowerMessage) || lowerMessage === 'store faqs' || lowerMessage === 'more faqs' || lowerMessage === '📋 more faqs' || lowerMessage === '❓ store faqs') {
       return 'store_faqs';
     }
 
-    // 1. Direct order ID lookup (e.g., ORD-013 or #1008)
+    // 2. FAQ Categories (Buttons/List selections or targeted questions)
+    // Shipping & Delivery
+    if (/^(shipping\s*&\s*delivery|\ud83d\ude90 shipping & delivery|shipping|delivery|shipping\s*policy|delivery\s*time|delivery\s*days|how long does delivery take|what is your shipping policy)$/i.test(lowerMessage) || (/\b(shipping|delivery|dispatch|courier|transit|carrier)\b/i.test(lowerMessage) && /\b(policy|time|days|cost|fee|charge|how long|when|take)\b/i.test(lowerMessage))) {
+      return 'faq_shipping';
+    }
+
+    // Returns & Refunds
+    if (/^(returns?\s*&\s*refunds?|\u21a9\ufe0f returns & refunds|returns?|refunds?|return\s*policy|refund\s*policy|how to return|can i return)\b/i.test(lowerMessage) || (/\b(return|refund|exchange|reimburse)\b/i.test(lowerMessage) && /\b(policy|process|window|days|how|money back|can i)\b/i.test(lowerMessage))) {
+      return 'faq_returns';
+    }
+
+    // Payments
+    if (/^(payments?|\ud83d\udcb3 payments|billing|payment\s*methods?|payment\s*options?|do you accept upi|cod available)\b/i.test(lowerMessage) || (/\b(payment|pay|upi|card|cod|cash on delivery|net banking)\b/i.test(lowerMessage) && /\b(method|options|accept|available|support|type)\b/i.test(lowerMessage))) {
+      return 'faq_payments';
+    }
+
+    // Products (Show All Products / Paginated Products)
+    if (/^(show\s*all\s*products|show\s*more\s*products|view\s*all\s*products|all\s*products)\b/i.test(lowerMessage)) {
+      return 'faq_products_all';
+    }
+
+    // Products Overview
+    if (/^(products?|\ud83d\udecd\ufe0f products|our\s*products|what products do you sell|what do you sell)\b/i.test(lowerMessage)) {
+      return 'faq_products';
+    }
+
+    // Offers & Discounts
+    if (/^(offers?\s*&\s*discounts?|\ud83c\udff7\ufe0f offers & discounts|offers?|discounts?|coupons?|promo\s*codes?|any offers|do you have any offers)\b/i.test(lowerMessage)) {
+      return 'faq_offers';
+    }
+
+    // Talk to Agent
+    if (/^(talk\s*to\s*agent|agent|\ud83d\udc64 talk to agent|human support|customer executive)\b/i.test(lowerMessage)) {
+      return 'agent_handoff';
+    }
+
+    // 3. Direct order ID lookup (e.g., ORD-013 or #1008)
     if (/^\s*ord-\d+\s*$/i.test(lowerMessage) || /^\s*#\d+\s*$/.test(lowerMessage)) {
       return 'order_status';
     }
 
-    // Check if there is an order identifier in the message
     const hasOrderIdentifier = this.extractOrderId(message) !== null;
 
-    // Explicit tracking patterns (e.g. "where is my order", "track order", "order status")
+    // Explicit tracking patterns
     const explicitTrackingPatterns = [
       /where is my order/i,
       /where's my order/i,
@@ -1260,20 +1334,7 @@ Response format must be ONLY the product name or "NONE". Do not write any other 
     ];
     const isExplicitTracking = explicitTrackingPatterns.some(pattern => pattern.test(lowerMessage));
 
-    // Shipping, delivery, processing, courier, and general policy keywords
-    const isPolicyOrGeneralQuestion = /\b(policy|policies|polices|rule|rules|offer|options|rates|cost|expense|how much|charges|method|methods|carrier|courier|partner|processing|cutoff|cut-off|1 pm|1pm|time|timeline|time line|days|duration|how long|window|eligibility|condition)\b/i.test(lowerMessage);
-
-    // If it's a shipping/delivery/policy question and NO order identifier is provided,
-    // we must prioritize Knowledge Base (return_policy or general_inquiry)
-    if (isPolicyOrGeneralQuestion && !hasOrderIdentifier) {
-      const returnPatterns = /return|exchange|policy|policies|polices|rule|rules|send back|give back|return policy|how to return/i;
-      if (returnPatterns.test(lowerMessage)) {
-        return 'return_policy';
-      }
-      return 'general_inquiry';
-    }
-
-    // Cancel order patterns (only route to cancel_order flow if order ID is provided)
+    // Cancel order patterns
     const cancelPatterns = /cancel|cancle|cacel|cancell|cancelling|canceling/i;
     if (cancelPatterns.test(lowerMessage)) {
       if (hasOrderIdentifier) {
@@ -1283,50 +1344,9 @@ Response format must be ONLY the product name or "NONE". Do not write any other 
       }
     }
 
-    // Return policy patterns (highest priority for policy/rules terms)
-    const returnPatterns = /return|exchange|policy|policies|polices|rule|rules|send back|give back|return policy|how to return/i;
-    if (returnPatterns.test(lowerMessage)) {
-      return 'return_policy';
-    }
-
-    // Refund request patterns (only route to refund_request if order ID is provided)
-    const refundPatterns = /refund|money back|reimburse|get refund|request refund/i;
-    if (refundPatterns.test(lowerMessage)) {
-      if (hasOrderIdentifier) {
-        return 'refund_request';
-      } else {
-        return 'general_inquiry';
-      }
-    }
-
     // Trigger Order Tracking only for explicit tracking questions OR if it has an order ID
     if (isExplicitTracking || (hasOrderIdentifier && /\b(order|track|status|where|when|shipped|package|delivery|shipment)\b/i.test(lowerMessage))) {
       return 'order_status';
-    }
-
-    // New order/purchase patterns
-    const newOrderKeywords = [
-      'new order',
-      'place order',
-      'place an order',
-      'place a new order',
-      'want to buy',
-      'want to order',
-      'can i order',
-      'can you take order',
-      'can you take my order',
-      'how to buy',
-      'how to order',
-      'order online',
-      'buy now',
-      'shop now',
-      'create order',
-      'create new order'
-    ];
-    const isNewOrder = newOrderKeywords.some(kw => lowerMessage.includes(kw)) ||
-                       (/\b(buy|order|purchase)\b/i.test(lowerMessage) && /\b(new|take|place|make|want to|how to|web|link|online)\b/i.test(lowerMessage));
-    if (isNewOrder) {
-      return 'new_order_inquiry';
     }
 
     // Complaint patterns
@@ -2410,26 +2430,163 @@ Response format must be ONLY the product name or "NONE". Do not write any other 
     return `I cannot place new orders directly here on WhatsApp.\n\nPlease place your order directly on our website here:${storeLinkText || ' our online store.'}\n\nIf you have any queries, feel free to send them here, and I will be happy to assist you!`;
   }
 
-  async handleStoreFaqs(message, adminId = null) {
-    let kbDocs = [];
-    if (adminId) {
+  handleStoreFaqsMenu() {
+    const listMessage = {
+      header: "Store FAQs",
+      body: "Sure! What would you like to know about?",
+      footer: "Select a topic below:",
+      buttonLabel: "View FAQ Topics",
+      sections: [
+        {
+          title: "Common Topics",
+          rows: [
+            { id: "row_shipping", title: "🚚 Shipping & Delivery", description: "Delivery times, rates & cutoff times" },
+            { id: "row_returns", title: "↩️ Returns & Refunds", description: "Return window & refund policy" },
+            { id: "row_payments", title: "💳 Payments", description: "Accepted payment options & COD" },
+            { id: "row_products", title: "🛍️ Products", description: "Product overview & catalog search" },
+            { id: "row_offers", title: "🏷️ Offers & Discounts", description: "Promotions, deals & coupons" }
+          ]
+        }
+      ]
+    };
+
+    return {
+      message: "Sure! What would you like to know about?",
+      listMessage,
+      buttons: ['Shipping & Delivery', 'Returns & Refunds', 'Payments']
+    };
+  }
+
+  async handleFaqCategory(categoryKey, userMessage, customerName, conversation, adminDoc) {
+    const categoryLabels = {
+      shipping: 'Shipping & Delivery',
+      returns: 'Returns & Refunds',
+      payments: 'Payments',
+      offers: 'Offers & Discounts'
+    };
+    const categoryIcons = {
+      shipping: '🚚',
+      returns: '↩️',
+      payments: '💳',
+      offers: '🏷️'
+    };
+
+    const label = categoryLabels[categoryKey] || 'Store Policy';
+    const icon = categoryIcons[categoryKey] || '📋';
+
+    let kbContext = '';
+    if (adminDoc && adminDoc._id) {
       try {
-        kbDocs = await KnowledgeBase.find({ uploadedBy: adminId, isActive: true, status: 'ready', fileType: { $ne: 'product' } }).select('title description fileType').lean();
+        const queryText = `${label} policy details rates duration ${userMessage}`;
+        kbContext = await knowledgeBaseService.searchRelevantChunks(adminDoc._id, queryText, 3);
       } catch (err) {
-        console.error('Error fetching KB docs for store_faqs:', err.message);
+        console.error(`Error searching KB for ${categoryKey}:`, err.message);
       }
     }
 
-    let policyListText = '';
-    if (kbDocs && kbDocs.length > 0) {
-      policyListText = kbDocs.map((doc, idx) => `${idx + 1}. *${doc.title}*${doc.description ? ' - ' + doc.description : ''}`).join('\n');
+    if (!kbContext || kbContext.trim().length === 0) {
+      return {
+        message: `${icon} *${label}*\n\nI couldn't find the exact ${label.toLowerCase()} policy in the store information. Would you like me to connect you with a support agent?`,
+        buttons: ['📋 More FAQs', '👤 Talk to Agent']
+      };
     }
 
-    if (policyListText) {
-      return `Here are our store policies and FAQs:\n\n${policyListText}\n\nFeel free to ask any specific question about shipping, returns, products, or orders!`;
+    const recentMsgList = this.getRecentConversationMessages(conversation, this.maxRecentMessages);
+    const aiResult = await this.handleGeneralInquiry(
+      `Customer asked about ${label}: "${userMessage}". Provide a concise summary (2-5 sentences or 3-6 bullet points) strictly from the context. Start response with "${icon} *${label}*" header.`,
+      customerName,
+      recentMsgList,
+      adminDoc ? adminDoc._id : null,
+      kbContext
+    );
+
+    let finalMessage = aiResult.message;
+    if (!finalMessage.includes(label)) {
+      finalMessage = `${icon} *${label}*\n\n${finalMessage}`;
     }
 
-    return `Here are our Store FAQs & Policies:\n\n1. *Shipping & Delivery* (Free shipping thresholds, delivery timelines)\n2. *Returns & Refunds* (Return window, refund policy)\n3. *Order Tracking & Cancellations*\n4. *Payment Methods*\n\nWhat would you like to know? Feel free to type your question directly!`;
+    return {
+      message: finalMessage,
+      usedAI: aiResult.usedAI,
+      model: aiResult.model,
+      modelUsed: aiResult.modelUsed,
+      tokenUsage: aiResult.tokenUsage,
+      aiLogPayload: aiResult.aiLogPayload,
+      buttons: ['📋 More FAQs', '👤 Talk to Agent']
+    };
+  }
+
+  async handleFaqProductsOverview(adminDoc) {
+    let categoriesList = [];
+    if (adminDoc && adminDoc._id) {
+      try {
+        const productKbs = await KnowledgeBase.find({ uploadedBy: adminDoc._id, fileType: 'product', isActive: true })
+          .select('title productData')
+          .limit(20)
+          .lean();
+        
+        if (productKbs && productKbs.length > 0) {
+          const categories = new Set(productKbs.map(p => p.productData?.category).filter(Boolean));
+          categoriesList = Array.from(categories);
+        }
+      } catch (err) {
+        console.error('Error fetching product overview:', err.message);
+      }
+    }
+
+    let messageText = "🛍️ *Store Products*\n\nWe offer a range of products. If you're looking for a specific item, type its name (e.g. \"t-shirt\" or \"camera\") and I'll help you find the details!";
+    if (categoriesList.length > 0) {
+      messageText += `\n\n*Featured Categories:*\n• ${categoriesList.slice(0, 5).join('\n• ')}`;
+    }
+
+    return {
+      message: messageText,
+      buttons: ['Show All Products', '📋 More FAQs', '👤 Talk to Agent']
+    };
+  }
+
+  async handleFaqAllProducts(message, adminDoc, page = 1) {
+    const pageSize = 10;
+    let productKbs = [];
+    let totalCount = 0;
+
+    if (adminDoc && adminDoc._id) {
+      try {
+        totalCount = await KnowledgeBase.countDocuments({ uploadedBy: adminDoc._id, fileType: 'product', isActive: true });
+        productKbs = await KnowledgeBase.find({ uploadedBy: adminDoc._id, fileType: 'product', isActive: true })
+          .select('title productData')
+          .skip((page - 1) * pageSize)
+          .limit(pageSize)
+          .lean();
+      } catch (err) {
+        console.error('Error fetching paginated products:', err.message);
+      }
+    }
+
+    if (!productKbs || productKbs.length === 0) {
+      return {
+        message: "🛍️ *Store Products*\n\nNo product catalog is currently registered for this store. Feel free to ask any question or connect with our support team!",
+        buttons: ['📋 More FAQs', '👤 Talk to Agent']
+      };
+    }
+
+    const itemsText = productKbs.map((p, idx) => {
+      const priceStr = p.productData?.price ? ` - ${p.productData.price}` : '';
+      return `${(page - 1) * pageSize + idx + 1}. *${p.title}*${priceStr}`;
+    }).join('\n');
+
+    let responseMessage = `🛍️ *Store Products (${(page - 1) * pageSize + 1}-${Math.min(page * pageSize, totalCount)} of ${totalCount})*\n\n${itemsText}\n\nReply with a product name for full details!`;
+
+    const buttons = [];
+    if (page * pageSize < totalCount) {
+      buttons.push('Show More Products');
+    }
+    buttons.push('📋 More FAQs', '👤 Talk to Agent');
+
+    return {
+      message: responseMessage,
+      buttons: buttons.slice(0, 3)
+    };
   }
 }
 

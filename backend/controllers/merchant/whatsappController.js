@@ -21,8 +21,30 @@ exports.getTemplates = async (req, res) => {
 // Sync templates with Meta WhatsApp Graph API
 exports.syncTemplates = async (req, res) => {
   try {
-    const adminId = req.admin._id;
-    const metaTemplates = await whatsappCloudAPI.fetchTemplates();
+    const admin = req.admin;
+    const adminId = admin._id;
+
+    let customCredentials = null;
+    if (admin && admin.whatsappAccessToken && admin.whatsappBusinessAccountId) {
+      customCredentials = {
+        accessToken: admin.whatsappAccessToken,
+        businessAccountId: admin.whatsappBusinessAccountId
+      };
+    }
+
+    const metaTemplates = await whatsappCloudAPI.fetchTemplates(customCredentials);
+
+    // Extract valid template names returned from Meta Graph API
+    const metaNames = metaTemplates.map(t => t.name);
+
+    // Remove legacy mock templates AND any deleted templates no longer present on Meta Graph API
+    await Template.deleteMany({
+      adminId,
+      $or: [
+        { metaTemplateId: /^mock_/ },
+        { name: { $nin: metaNames } }
+      ]
+    });
 
     const syncedTemplates = [];
 
@@ -45,9 +67,9 @@ exports.syncTemplates = async (req, res) => {
         // Create new template
         const newTemplate = new Template({
           adminId,
-          metaTemplateId: tpl.id || 'mock_id_' + Math.random().toString(36).substr(2, 9),
+          metaTemplateId: tpl.id,
           name: tpl.name,
-          category: tpl.category,
+          category: tpl.category || 'UTILITY',
           language: tpl.language || 'en_US',
           status: tpl.status || 'APPROVED',
           components: components
@@ -59,14 +81,41 @@ exports.syncTemplates = async (req, res) => {
 
     res.json({
       success: true,
-      message: `Successfully synced ${syncedTemplates.length} templates`,
+      message: `Successfully synced ${syncedTemplates.length} real templates from Meta API`,
       data: syncedTemplates
     });
   } catch (error) {
     console.error('Error syncing templates:', error);
     res.status(500).json({
       success: false,
-      error: 'Failed to sync templates with Meta API'
+      error: error.response?.data?.error?.message || error.message || 'Failed to sync templates with Meta API'
+    });
+  }
+};
+
+// Delete template
+exports.deleteTemplate = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const adminId = req.admin._id;
+
+    const template = await Template.findOneAndDelete({ _id: id, adminId });
+    if (!template) {
+      return res.status(404).json({
+        success: false,
+        error: 'Template not found'
+      });
+    }
+
+    res.json({
+      success: true,
+      message: 'Template record deleted successfully'
+    });
+  } catch (error) {
+    console.error('Error deleting template:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to delete template'
     });
   }
 };

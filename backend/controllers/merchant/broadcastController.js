@@ -128,19 +128,33 @@ exports.createBroadcast = async (req, res) => {
         recipients.push({ phone, name });
       });
 
+    } else if (recipientSource === 'reuse' || req.body.reuseFromId) {
+      if (req.file) await fs.unlink(req.file.path).catch(() => {});
+      const sourceId = req.body.reuseFromId;
+      const sourceBroadcast = await Broadcast.findOne({ _id: sourceId, admin: req.admin._id });
+      if (!sourceBroadcast || !sourceBroadcast.recipients || sourceBroadcast.recipients.length === 0) {
+        return res.status(404).json({
+          success: false,
+          error: 'Original broadcast or recipients not found to reuse'
+        });
+      }
+      recipients = sourceBroadcast.recipients.map(r => ({ phone: r.phone, name: r.name || '' }));
+      csvFileName = `Reused from: ${sourceBroadcast.title}`;
+
     } else {
       // Parse CSV file if uploaded
-      if (req.file) {
-        recipients = await parseCSVFile(req.file.path);
+      const targetCsv = (req.files && req.files.csvFile && req.files.csvFile[0]) ? req.files.csvFile[0] : (req.file || null);
+      if (targetCsv) {
+        recipients = await parseCSVFile(targetCsv.path);
         
         if (recipients.length === 0) {
-          await fs.unlink(req.file.path).catch(() => {});
+          await fs.unlink(targetCsv.path).catch(() => {});
           return res.status(400).json({
             success: false,
             error: 'No valid recipients found in CSV file'
           });
         }
-        csvFileName = req.file.originalname;
+        csvFileName = targetCsv.originalname;
       } else {
         return res.status(400).json({
           success: false,
@@ -160,10 +174,59 @@ exports.createBroadcast = async (req, res) => {
       });
     }
 
+    let finalTemplateName = req.body.templateName || null;
+    let finalTemplateLanguage = req.body.templateLanguage || 'en';
+    let finalTemplateParams = req.body.templateParams ? (Array.isArray(req.body.templateParams) ? req.body.templateParams : [req.body.templateParams]) : [];
+
+    const Template = require('../../models/Template');
+    if (req.body.templateId) {
+      const foundTpl = await Template.findById(req.body.templateId).catch(() => null);
+      if (foundTpl) {
+        finalTemplateName = foundTpl.name;
+        finalTemplateLanguage = foundTpl.language || 'en';
+      }
+    }
+
+    if (!finalTemplateName) {
+      const approvedTemplates = await Template.find({ adminId: req.admin._id, status: 'APPROVED' }).catch(() => []);
+      const getKeywords = (txt) => (txt || '').toLowerCase().replace(/\{\{[^}]+\}\}/g, ' ').replace(/[^a-z0-9]/g, ' ').split(/\s+/).filter(w => w.length > 3);
+      const msgWords = new Set(getKeywords(message));
+      let maxScore = 0;
+
+      for (const tpl of approvedTemplates) {
+        const bodyComp = (tpl.components || []).find(c => c.type === 'BODY');
+        if (bodyComp && bodyComp.text) {
+          const tplWords = getKeywords(bodyComp.text);
+          let score = 0;
+          for (const w of tplWords) {
+            if (msgWords.has(w)) score++;
+          }
+          if (score >= 3 && score > maxScore) {
+            maxScore = score;
+            finalTemplateName = tpl.name;
+            finalTemplateLanguage = tpl.language || 'en';
+          }
+        }
+      }
+      if (finalTemplateName) {
+        console.log(`✨ Auto-matched message to approved template "${finalTemplateName}" (score: ${maxScore})`);
+      }
+    }
+
+    let headerImageUrl = req.body.headerImageUrl || null;
+    const uploadedHeaderImg = req.files && req.files.headerImage ? req.files.headerImage[0] : null;
+    const uploadedCsvFile = req.files && req.files.csvFile ? req.files.csvFile[0] : (req.file || null);
+
+    if (uploadedHeaderImg) {
+      const domain = process.env.BACKEND_URL || (req.protocol + '://' + req.get('host'));
+      headerImageUrl = `${domain}/uploads/${uploadedHeaderImg.filename}`;
+    }
+
     // Create broadcast
     const broadcast = new Broadcast({
       title,
       message,
+      headerImageUrl,
       recipients: recipients.map(r => ({
         phone: r.phone,
         name: r.name || '',
@@ -173,7 +236,10 @@ exports.createBroadcast = async (req, res) => {
       createdBy: req.admin._id,
       createdByName: req.admin.name,
       admin: req.admin._id,
-      csvFileName: csvFileName
+      csvFileName: csvFileName,
+      templateName: finalTemplateName,
+      templateLanguage: finalTemplateLanguage,
+      templateParams: finalTemplateParams
     });
 
     // Increment merchant broadcastCampaignsUsed
@@ -313,14 +379,33 @@ exports.getAllBroadcasts = async (req, res) => {
       .sort({ createdAt: -1 })
       .limit(limit * 1)
       .skip((page - 1) * limit)
-      .select('-recipients') // Don't send full recipient list
       .exec();
+
+    // Auto-correct any out-of-sync counts in database
+    for (const b of broadcasts) {
+      if (b.recipients && b.recipients.length > 0) {
+        const realSent = b.recipients.filter(r => r.status === 'sent' || r.status === 'delivered' || r.status === 'read').length;
+        const realFailed = b.recipients.filter(r => r.status === 'failed').length;
+        if (b.sentCount !== realSent || b.failedCount !== realFailed) {
+          b.sentCount = realSent;
+          b.failedCount = realFailed;
+          await b.save();
+        }
+      }
+    }
 
     const count = await Broadcast.countDocuments(query);
 
+    // Sanitize response to omit full recipients array for listing
+    const sanitizedData = broadcasts.map(b => {
+      const obj = b.toObject();
+      delete obj.recipients;
+      return obj;
+    });
+
     res.json({
       success: true,
-      data: broadcasts,
+      data: sanitizedData,
       totalPages: Math.ceil(count / limit),
       currentPage: page,
       total: count
@@ -347,6 +432,16 @@ exports.getBroadcastById = async (req, res) => {
         success: false,
         error: 'Broadcast not found'
       });
+    }
+
+    if (broadcast.recipients && broadcast.recipients.length > 0) {
+      const realSent = broadcast.recipients.filter(r => r.status === 'sent' || r.status === 'delivered' || r.status === 'read').length;
+      const realFailed = broadcast.recipients.filter(r => r.status === 'failed').length;
+      if (broadcast.sentCount !== realSent || broadcast.failedCount !== realFailed) {
+        broadcast.sentCount = realSent;
+        broadcast.failedCount = realFailed;
+        await broadcast.save();
+      }
     }
 
     res.json({
@@ -527,6 +622,40 @@ exports.getBroadcastStats = async (req, res) => {
     res.status(500).json({
       success: false,
       error: 'Failed to fetch statistics'
+    });
+  }
+};
+
+// Reuse / fetch broadcast recipients for re-sending
+exports.reuseBroadcast = async (req, res) => {
+  try {
+    const broadcast = await Broadcast.findOne({
+      _id: req.params.id,
+      admin: req.admin._id
+    });
+
+    if (!broadcast) {
+      return res.status(404).json({
+        success: false,
+        error: 'Broadcast not found'
+      });
+    }
+
+    res.json({
+      success: true,
+      data: {
+        id: broadcast._id,
+        title: broadcast.title,
+        csvFileName: broadcast.csvFileName,
+        totalRecipients: broadcast.recipients ? broadcast.recipients.length : 0,
+        recipients: (broadcast.recipients || []).map(r => ({ phone: r.phone, name: r.name || '' }))
+      }
+    });
+  } catch (error) {
+    console.error('Error reusing broadcast recipients:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch broadcast recipients for reuse'
     });
   }
 };

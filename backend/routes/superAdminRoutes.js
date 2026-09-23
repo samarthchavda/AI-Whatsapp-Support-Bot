@@ -21,6 +21,7 @@ router.post('/users/:id/toggle-shopify', superAdminController.toggleUserShopify)
 router.post('/users/:id/toggle-woocommerce', superAdminController.toggleUserWooCommerce);
 router.post('/users/:id/apply-discount', superAdminController.applyDiscount);
 router.post('/users/:id/impersonate', superAdminController.impersonateUser);
+router.put('/users/:id/allowed-pages', superAdminController.updateAllowedPages);
 router.delete('/users/:id', superAdminController.deleteUser);
 
 // Plan management

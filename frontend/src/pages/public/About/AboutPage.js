@@ -1,6 +1,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FaCommentDots, FaArrowRight, FaBrain, FaUsers, FaShieldAlt, FaRocket, FaChartBar, FaSmile } from 'react-icons/fa';
+import SEO from '../../../components/SEO';
 import './AboutPage.css';
 
 function AboutPage() {
@@ -8,6 +9,13 @@ function AboutPage() {
 
   return (
     <div className="about-page">
+      <SEO 
+        title="About Us — Kwickbot AI Customer Support Platform"
+        description="Learn about Kwickbot's mission to revolutionize e-commerce customer support through intelligent 24/7 WhatsApp AI automation, Shopify & WooCommerce integrations, and zero-latency response."
+        keywords="About Kwickbot, WhatsApp AI company, e-commerce AI support team, automated customer service platform, Kwickbot story"
+        ogTitle="About Us — Kwickbot AI Customer Support Platform"
+        ogDescription="Learn about Kwickbot's mission to revolutionize e-commerce customer support through intelligent 24/7 WhatsApp AI automation."
+      />
       {/* Navigation */}
       <nav className="about-nav">
         <div className="about-nav-inner">

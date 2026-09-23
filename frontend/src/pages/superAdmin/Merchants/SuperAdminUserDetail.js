@@ -32,6 +32,29 @@ const getRoleBadgeStyle = (role) => {
   return styles[role] || { background: 'rgba(113, 113, 122, 0.1)', color: '#71717a' };
 };
 
+const ALL_PAGES = [
+  { key: 'dashboard', label: 'Dashboard', group: 'Main' },
+  { key: 'conversations', label: 'Conversations', group: 'Main' },
+  { key: 'live_chat', label: 'Live Chat', group: 'Main' },
+  { key: 'orders', label: 'Orders (Shopify)', group: 'Main' },
+  { key: 'products', label: 'Products (Shopify)', group: 'Main' },
+  { key: 'leads', label: 'WhatsApp Leads', group: 'Main' },
+  { key: 'abandoned_carts', label: 'Abandoned Carts (Shopify)', group: 'Main' },
+  { key: 'escalations', label: 'Escalations (Shopify)', group: 'Main' },
+  { key: 'broadcast', label: 'Broadcast Campaign', group: 'Messaging' },
+  { key: 'templates', label: 'Message Templates', group: 'Messaging' },
+  { key: 'knowledge_base', label: 'AI Knowledge Base', group: 'AI' },
+  { key: 'integrations', label: 'Shopify / App Integrations', group: 'Integrations' },
+  { key: 'wa_connect', label: 'WhatsApp Connect (API)', group: 'Integrations' },
+  { key: 'analytics', label: 'Analytics & Reports', group: 'Insights' },
+  { key: 'billing', label: 'Billing & Subscription', group: 'Account' },
+  { key: 'profile', label: 'Profile & Settings', group: 'Account' }
+];
+
+const SHOPIFY_SUITE = ['integrations', 'orders', 'products', 'abandoned_carts', 'escalations'];
+const WHATSAPP_SUITE = ['wa_connect', 'broadcast', 'templates', 'live_chat', 'conversations', 'leads'];
+const AI_SUITE = ['knowledge_base', 'live_chat', 'conversations'];
+
 function SuperAdminUserDetail() {
   const { userId } = useParams();
   const navigate = useNavigate();
@@ -48,6 +71,9 @@ function SuperAdminUserDetail() {
     monthlyPrice: 0,
     geminiTokensLimit: 0
   });
+
+  const [allowedPages, setAllowedPages] = useState(ALL_PAGES.map(p => p.key));
+  const [savingPermissions, setSavingPermissions] = useState(false);
 
   useEffect(() => {
     fetchUserDetails();
@@ -69,11 +95,70 @@ function SuperAdminUserDetail() {
         geminiTokensLimit: user.geminiTokensLimit
       });
       setDiscountValue(user.customDiscount || 0);
+
+      if (Array.isArray(user.allowedPages) && user.allowedPages.length > 0) {
+        setAllowedPages(user.allowedPages);
+      } else {
+        setAllowedPages(ALL_PAGES.map(p => p.key));
+      }
     } catch (error) {
       console.error('Error fetching merchant details:', error);
       alert('Failed to load merchant details');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleTogglePage = (key) => {
+    let updated = [...allowedPages];
+    const isChecked = updated.includes(key);
+
+    if (isChecked) {
+      if (key === 'integrations') {
+        updated = updated.filter(p => !SHOPIFY_SUITE.includes(p));
+      } else if (key === 'wa_connect') {
+        updated = updated.filter(p => !WHATSAPP_SUITE.includes(p));
+      } else if (key === 'knowledge_base') {
+        updated = updated.filter(p => p !== 'knowledge_base');
+      } else {
+        updated = updated.filter(p => p !== key);
+      }
+    } else {
+      if (key === 'integrations') {
+        SHOPIFY_SUITE.forEach(p => { if (!updated.includes(p)) updated.push(p); });
+      } else if (key === 'wa_connect') {
+        WHATSAPP_SUITE.forEach(p => { if (!updated.includes(p)) updated.push(p); });
+      } else if (key === 'knowledge_base') {
+        AI_SUITE.forEach(p => { if (!updated.includes(p)) updated.push(p); });
+      } else {
+        updated.push(key);
+      }
+    }
+
+    setAllowedPages(updated);
+  };
+
+  const handleApplyPreset = (presetType) => {
+    if (presetType === 'all') {
+      setAllowedPages(ALL_PAGES.map(p => p.key));
+    } else if (presetType === 'wa_only') {
+      setAllowedPages(['dashboard', 'wa_connect', 'broadcast', 'templates', 'live_chat', 'conversations', 'leads', 'analytics', 'profile', 'billing']);
+    } else if (presetType === 'support_only') {
+      setAllowedPages(['dashboard', 'wa_connect', 'knowledge_base', 'live_chat', 'conversations', 'analytics', 'profile', 'billing']);
+    }
+  };
+
+  const handleSavePagePermissions = async () => {
+    try {
+      setSavingPermissions(true);
+      await api.put(`/super-admin/users/${userId}/allowed-pages`, { allowedPages });
+      alert('Page permissions updated successfully!');
+      fetchUserDetails();
+    } catch (error) {
+      console.error('Error saving permissions:', error);
+      alert('Failed to save page permissions');
+    } finally {
+      setSavingPermissions(false);
     }
   };
 
@@ -265,6 +350,7 @@ function SuperAdminUserDetail() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
               {[
                 { id: 'overview', label: 'Overview', icon: <FaInfoCircle /> },
+                { id: 'permissions', label: 'Page Permissions', icon: <FaToggleOn /> },
                 { id: 'whatsapp', label: 'WhatsApp', icon: <FaWhatsapp /> },
                 { id: 'integrations', label: 'Integrations', icon: <FaPlug /> },
                 { id: 'ai-usage', label: 'AI Usage', icon: <FaBrain /> },
@@ -380,6 +466,105 @@ function SuperAdminUserDetail() {
                   <strong>{user.timezone || 'UTC'}</strong>
                 </div>
               </div>
+            </div>
+          )}
+
+          {activeTab === 'permissions' && (
+            <div className="detail-card" style={{ margin: 0 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '12px' }}>
+                <div>
+                  <h3 style={{ margin: 0 }}><FaToggleOn /> Page Visibility & Access Permissions</h3>
+                  <p style={{ margin: '4px 0 0', fontSize: '13px', color: 'var(--text-secondary)' }}>
+                    Control which sidebar pages and feature suites are visible to this merchant account.
+                  </p>
+                </div>
+                <button
+                  onClick={handleSavePagePermissions}
+                  disabled={savingPermissions}
+                  className="btn-primary"
+                  style={{ padding: '8px 16px', fontSize: '14px', cursor: 'pointer' }}
+                >
+                  {savingPermissions ? 'Saving...' : 'Save Page Permissions'}
+                </button>
+              </div>
+
+              {/* Preset Buttons */}
+              <div style={{ background: 'var(--bg-secondary, #f8fafc)', padding: '12px 16px', borderRadius: '8px', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+                <span style={{ fontSize: '13px', fontWeight: '600', color: 'var(--text-secondary)' }}>Quick Presets:</span>
+                <button
+                  type="button"
+                  onClick={() => handleApplyPreset('all')}
+                  className="btn-secondary"
+                  style={{ padding: '6px 12px', fontSize: '12px', borderRadius: '6px' }}
+                >
+                  ✨ Full Access (All Pages)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleApplyPreset('wa_only')}
+                  className="btn-secondary"
+                  style={{ padding: '6px 12px', fontSize: '12px', borderRadius: '6px' }}
+                >
+                  📢 Broadcasting Only (No Shopify)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleApplyPreset('support_only')}
+                  className="btn-secondary"
+                  style={{ padding: '6px 12px', fontSize: '12px', borderRadius: '6px' }}
+                >
+                  🤖 Support & AI Chat Only
+                </button>
+              </div>
+
+              {/* Master Suites Info Banner */}
+              <div style={{ padding: '12px', background: 'rgba(59, 130, 246, 0.08)', borderRadius: '8px', marginBottom: '20px', fontSize: '13px', borderLeft: '4px solid #3b82f6' }}>
+                💡 <strong>Smart Dependency Rule:</strong> Checking <strong>Shopify / App Integrations</strong> auto-enables order, product, abandoned cart, and escalation pages. Checking <strong>WhatsApp Connect</strong> auto-enables broadcast, template, live chat, conversation, and lead pages.
+              </div>
+
+              {/* Page Checkboxes Grouped by Category */}
+              {['Main', 'Messaging', 'AI', 'Integrations', 'Insights', 'Account'].map((groupName) => {
+                const groupPages = ALL_PAGES.filter(p => p.group === groupName);
+                if (groupPages.length === 0) return null;
+                return (
+                  <div key={groupName} style={{ marginBottom: '20px' }}>
+                    <h4 style={{ margin: '0 0 10px', fontSize: '14px', color: 'var(--text-primary)', borderBottom: '1px solid var(--border-color, #e2e8f0)', paddingBottom: '6px' }}>
+                      {groupName} Suite
+                    </h4>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '12px' }}>
+                      {groupPages.map((page) => {
+                        const isChecked = allowedPages.includes(page.key);
+                        return (
+                          <label
+                            key={page.key}
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '10px',
+                              padding: '10px 12px',
+                              borderRadius: '8px',
+                              border: `1px solid ${isChecked ? '#3b82f6' : 'var(--border-color, #e2e8f0)'}`,
+                              background: isChecked ? 'rgba(59, 130, 246, 0.05)' : 'transparent',
+                              cursor: 'pointer',
+                              transition: 'all 0.2s ease',
+                              fontSize: '13px',
+                              fontWeight: isChecked ? '600' : '400'
+                            }}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={isChecked}
+                              onChange={() => handleTogglePage(page.key)}
+                              style={{ width: '16px', height: '16px', cursor: 'pointer' }}
+                            />
+                            <span>{page.label}</span>
+                          </label>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           )}
 

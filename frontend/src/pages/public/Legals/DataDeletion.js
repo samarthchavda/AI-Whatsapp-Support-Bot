@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FaTrashAlt, FaUserShield, FaChevronLeft, FaEnvelope } from 'react-icons/fa';
+import SEO from '../../../components/SEO';
 import './PrivacyPolicy.css'; // Re-use the clean policy layout styling
 
 function DataDeletion() {
@@ -12,6 +13,11 @@ function DataDeletion() {
 
   return (
     <div className="privacy-container">
+      <SEO 
+        title="User Data Deletion Instructions — Kwickbot"
+        description="Learn how to request deletion of your account data, chat logs, and WhatsApp integration details from Kwickbot."
+        keywords="Kwickbot data deletion, delete account data, Meta data deletion compliance"
+      />
       <header className="privacy-header">
         <button className="back-btn" onClick={() => navigate('/')}>
           <FaChevronLeft /> Back to Home

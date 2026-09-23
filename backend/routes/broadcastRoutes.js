@@ -3,7 +3,25 @@ const router = express.Router();
 const broadcastController = require('../controllers/merchant/broadcastController');
 const { verifyToken, requireFeature } = require('../middleware/auth');
 const multer = require('multer');
-const upload = multer({ dest: 'uploads/' });
+const path = require('path');
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, 'uploads/');
+  },
+  filename: (req, file, cb) => {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    let ext = path.extname(file.originalname);
+    if (!ext) {
+      if (file.mimetype === 'image/jpeg') ext = '.jpg';
+      else if (file.mimetype === 'image/png') ext = '.png';
+      else if (file.mimetype === 'image/webp') ext = '.webp';
+      else if (file.mimetype === 'text/csv') ext = '.csv';
+      else ext = '.png';
+    }
+    cb(null, file.fieldname + '-' + uniqueSuffix + ext);
+  }
+});
+const upload = multer({ storage });
 
 // All broadcast endpoints require authentication and broadcastingAccess entitlement
 router.use(verifyToken);
@@ -49,7 +67,7 @@ router.use(requireFeature('broadcastingAccess'));
  *         description: Campaign created
  */
 router.get('/', broadcastController.getAllBroadcasts);
-router.post('/', upload.single('csvFile'), broadcastController.createBroadcast);
+router.post('/', upload.fields([{ name: 'csvFile', maxCount: 1 }, { name: 'headerImage', maxCount: 1 }]), broadcastController.createBroadcast);
 
 /**
  * @openapi
@@ -86,5 +104,9 @@ router.get('/stats', broadcastController.getBroadcastStats);
  *         description: Campaign triggered
  */
 router.post('/:id/send', broadcastController.sendBroadcastNow);
+router.get('/:id', broadcastController.getBroadcastById);
+router.post('/:id/reuse', broadcastController.reuseBroadcast);
+router.post('/:id/cancel', broadcastController.cancelBroadcast);
+router.delete('/:id', broadcastController.deleteBroadcast);
 
 module.exports = router;

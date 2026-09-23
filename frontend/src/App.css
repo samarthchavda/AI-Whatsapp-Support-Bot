@@ -217,6 +217,19 @@ body {
   padding: 16px 0;
 }
 
+.sidebar:not(.sidebar-expanded) .sidebar-logo {
+  justify-content: center;
+  width: 100%;
+}
+
+.sidebar:not(.sidebar-expanded) .logo-img {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  object-fit: contain;
+  margin: 0 auto;
+}
+
 .sidebar-brand-name {
   font-size: 15px;
   font-weight: 800;

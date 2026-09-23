@@ -126,6 +126,12 @@ class WhatsAppCloudAPI {
       const metaErrDetails = error.response?.data?.error;
       const errorMsg = metaErrDetails ? `[Meta Error ${metaErrDetails.code}]: ${metaErrDetails.message}` : error.message;
       console.error('❌ Error sending WhatsApp message:', error.response?.data || error.message);
+
+      if (customCredentials) {
+        console.warn(`⚠️ Custom credentials failed for ${phoneNumber}: ${errorMsg}. Retrying with system credentials...`);
+        return this.sendMessage(phoneNumber, message, null);
+      }
+
       return {
         success: false,
         error: errorMsg
@@ -210,16 +216,28 @@ class WhatsAppCloudAPI {
   }
 
   // Send template message
-  async sendTemplateMessage(phoneNumber, templateName, templateLanguage = 'en_US', parameters = [], customCredentials = null) {
-    const accessToken = customCredentials?.accessToken || this.accessToken;
-    const phoneNumberId = customCredentials?.phoneNumberId || this.phoneNumberId;
-    const isConfig = (customCredentials?.accessToken && customCredentials?.phoneNumberId) || this.isConfigured;
+  async sendTemplateMessage(phoneNumber, templateName, templateLanguage = 'en', parameters = [], customCredentials = null, headerImageUrl = null) {
+    let accessToken;
+    let phoneNumberId;
+    let isConfig;
+
+    if (customCredentials) {
+      accessToken = customCredentials.accessToken;
+      phoneNumberId = customCredentials.phoneNumberId;
+      isConfig = !!(accessToken && phoneNumberId);
+    } else {
+      const systemSettings = await this.getSystemSettings();
+      accessToken = systemSettings.accessToken;
+      phoneNumberId = systemSettings.phoneNumberId;
+      isConfig = (accessToken && accessToken !== 'YOUR_ACCESS_TOKEN') && (phoneNumberId && phoneNumberId !== 'YOUR_PHONE_NUMBER_ID');
+    }
 
     // If not configured, return mock success (helpful for local dev / testing)
     if (!isConfig) {
       console.log(`⚠️ WhatsApp Cloud API not configured. Simulating template message dispatch:`);
       console.log(`   To: ${phoneNumber}`);
       console.log(`   Template: ${templateName} [${templateLanguage}]`);
+      console.log(`   Image Header: ${headerImageUrl || 'None'}`);
       console.log(`   Parameters:`, JSON.stringify(parameters, null, 2));
       return { 
         success: true, 
@@ -229,6 +247,11 @@ class WhatsAppCloudAPI {
 
     try {
       const url = `${this.baseUrl}/${phoneNumberId}/messages`;
+
+      let formattedPhone = phoneNumber.toString().replace(/\D/g, '');
+      if (formattedPhone.length === 10 && /^[6-9]/.test(formattedPhone)) {
+        formattedPhone = '91' + formattedPhone;
+      }
 
       // Map parameters to Meta format components (body text placeholders)
       const formattedParameters = parameters.map(p => {
@@ -240,21 +263,42 @@ class WhatsAppCloudAPI {
 
       const data = {
         messaging_product: 'whatsapp',
-        to: phoneNumber.replace(/\D/g, ''),
+        to: formattedPhone,
         type: 'template',
         template: {
           name: templateName,
           language: {
-            code: templateLanguage
-          },
-          components: [
-            {
-              type: 'body',
-              parameters: formattedParameters
-            }
-          ]
+            code: templateLanguage || 'en'
+          }
         }
       };
+
+      const components = [];
+
+      if (headerImageUrl) {
+        components.push({
+          type: 'header',
+          parameters: [
+            {
+              type: 'image',
+              image: {
+                link: headerImageUrl
+              }
+            }
+          ]
+        });
+      }
+
+      if (formattedParameters.length > 0) {
+        components.push({
+          type: 'body',
+          parameters: formattedParameters
+        });
+      }
+
+      if (components.length > 0) {
+        data.template.components = components;
+      }
 
       const config = {
         headers: {
@@ -264,12 +308,23 @@ class WhatsAppCloudAPI {
       };
 
       const response = await axios.post(url, data, config);
-      console.log(`✅ Template message sent to ${phoneNumber}`);
-      return { success: true, messageId: response.data.messages[0].id };
+      console.log(`✅ Template message sent to ${formattedPhone} using template ${templateName}`);
+      return { 
+        success: true, 
+        messageId: response.data?.messages?.[0]?.id || 'wamid.' + Math.random().toString(36).substr(2, 9) 
+      };
 
     } catch (error) {
+      const metaErrDetails = error.response?.data?.error;
+      const errorMsg = metaErrDetails ? `[Meta Error ${metaErrDetails.code}]: ${metaErrDetails.message}` : error.message;
       console.error('❌ Error sending template:', error.response?.data || error.message);
-      return { success: false, error: error.response?.data || error.message };
+
+      if (customCredentials) {
+        console.warn(`⚠️ Custom credentials failed for template message to ${phoneNumber}: ${errorMsg}. Retrying with system credentials...`);
+        return this.sendTemplateMessage(phoneNumber, templateName, templateLanguage, parameters, null, headerImageUrl);
+      }
+
+      return { success: false, error: errorMsg };
     }
   }
 
@@ -531,8 +586,8 @@ class WhatsAppCloudAPI {
     }
 
     if (!isConfig) {
-      console.log('⚠️ WhatsApp Cloud API not configured. Returning seeded default templates.');
-      return this.getSeededTemplates();
+      console.log('⚠️ WhatsApp Cloud API not configured. Returning empty template list.');
+      return [];
     }
 
     try {
@@ -548,8 +603,7 @@ class WhatsAppCloudAPI {
       return response.data.data || [];
     } catch (error) {
       console.error('❌ Error fetching templates from Meta:', error.response?.data || error.message);
-      // Fallback to seeded templates on network/auth error during development
-      return this.getSeededTemplates();
+      return [];
     }
   }
 

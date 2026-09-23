@@ -13,9 +13,45 @@ function KnowledgeBase() {
   const [testResult, setTestResult] = useState(null);
   const [testLoading, setTestLoading] = useState(false);
 
+  const [aiBotEnabled, setAiBotEnabled] = useState(() => {
+    const adminObj = JSON.parse(localStorage.getItem('admin') || '{}');
+    return adminObj.aiBotEnabled !== false;
+  });
+  const [togglingAi, setTogglingAi] = useState(false);
+
   useEffect(() => {
     fetchKnowledgeBases();
+    fetchAdminProfile();
   }, []);
+
+  const fetchAdminProfile = async () => {
+    try {
+      const res = await api.get('/auth/profile');
+      if (res.data?.data?.admin) {
+        setAiBotEnabled(res.data.data.admin.aiBotEnabled !== false);
+        localStorage.setItem('admin', JSON.stringify(res.data.data.admin));
+      }
+    } catch (e) {}
+  };
+
+  const handleToggleAiBot = async () => {
+    try {
+      setTogglingAi(true);
+      const nextState = !aiBotEnabled;
+      const res = await api.put('/auth/profile', { aiBotEnabled: nextState });
+      if (res.data.success) {
+        setAiBotEnabled(nextState);
+        const adminObj = JSON.parse(localStorage.getItem('admin') || '{}');
+        adminObj.aiBotEnabled = nextState;
+        localStorage.setItem('admin', JSON.stringify(adminObj));
+        alert(nextState ? '🤖 AI Auto-Reply Assistant ENABLED! The bot will now answer incoming WhatsApp messages using your Knowledge Base.' : '⏸️ AI Auto-Reply Assistant STOPPED! Incoming WhatsApp messages will NOT receive AI replies, allowing manual agent responses in Live Chat.');
+      }
+    } catch (err) {
+      alert('Failed to update AI Bot status');
+    } finally {
+      setTogglingAi(false);
+    }
+  };
 
   const fetchKnowledgeBases = async () => {
     try {
@@ -126,13 +162,6 @@ function KnowledgeBase() {
           <p className="page-subtitle">Upload PDF documents and FAQs for AI-powered responses</p>
         </div>
         <div className="page-header-actions">
-          {/* <button 
-            className="btn btn-secondary" 
-            onClick={() => setShowTestQuery(!showTestQuery)}
-            style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
-          >
-            <FaRobot /> Test Knowledge
-          </button> */}
           <button 
             className="btn btn-primary" 
             onClick={() => setShowUploadForm(!showUploadForm)}
@@ -143,6 +172,70 @@ function KnowledgeBase() {
             <FaUpload /> Upload PDF
           </button>
         </div>
+      </div>
+
+      {/* AI Auto-Reply Bot Master Toggle Switch Card */}
+      <div style={{
+        background: aiBotEnabled 
+          ? 'linear-gradient(135deg, rgba(16, 185, 129, 0.12) 0%, rgba(5, 150, 105, 0.08) 100%)' 
+          : 'linear-gradient(135deg, rgba(239, 68, 68, 0.12) 0%, rgba(185, 28, 28, 0.08) 100%)',
+        border: `1px solid ${aiBotEnabled ? 'rgba(16, 185, 129, 0.35)' : 'rgba(239, 68, 68, 0.35)'}`,
+        borderRadius: '16px',
+        padding: '20px 24px',
+        marginBottom: '24px',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        gap: '20px',
+        flexWrap: 'wrap',
+        boxShadow: 'var(--shadow-md)'
+      }}>
+        <div style={{ flex: 1, minWidth: '280px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '6px' }}>
+            <span style={{ fontSize: '22px' }}>{aiBotEnabled ? '🤖' : '⏸️'}</span>
+            <h3 style={{ fontSize: '16px', fontWeight: '700', color: 'var(--text-primary)', margin: 0 }}>
+              AI Auto-Reply Support Bot Status:
+              <span style={{
+                marginLeft: '10px',
+                padding: '4px 12px',
+                borderRadius: '20px',
+                fontSize: '12px',
+                fontWeight: '800',
+                textTransform: 'uppercase',
+                background: aiBotEnabled ? 'rgba(16, 185, 129, 0.2)' : 'rgba(239, 68, 68, 0.2)',
+                color: aiBotEnabled ? '#34d399' : '#f87171',
+                border: `1px solid ${aiBotEnabled ? '#10b981' : '#ef4444'}`
+              }}>
+                {aiBotEnabled ? 'ACTIVE (START)' : 'STOPPED (PAUSED)'}
+              </span>
+            </h3>
+          </div>
+          <p style={{ fontSize: '13.5px', color: 'var(--text-secondary)', margin: 0, lineHeight: '1.5' }}>
+            {aiBotEnabled
+              ? 'The AI bot will automatically answer incoming WhatsApp queries using your uploaded PDF Knowledge Base documents.'
+              : 'AI auto-reply is currently turned OFF. Incoming WhatsApp messages will appear in Live Chat for human agent replies, without automated bot responses.'}
+          </p>
+        </div>
+        <button
+          onClick={handleToggleAiBot}
+          disabled={togglingAi}
+          className={`btn ${aiBotEnabled ? 'btn-danger' : 'btn-primary'}`}
+          style={{
+            padding: '12px 24px',
+            fontSize: '14px',
+            fontWeight: '700',
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '8px',
+            whiteSpace: 'nowrap',
+            borderRadius: '12px',
+            cursor: 'pointer',
+            boxShadow: '0 4px 12px rgba(0,0,0,0.15)'
+          }}
+        >
+          {aiBotEnabled ? <FaToggleOn style={{ fontSize: '18px' }} /> : <FaToggleOff style={{ fontSize: '18px' }} />}
+          {togglingAi ? 'Updating...' : aiBotEnabled ? 'Stop AI Auto-Reply' : 'Start AI Auto-Reply'}
+        </button>
       </div>
 
       {/* Plan Usage & Limits Banner */}

@@ -207,6 +207,11 @@ app.get('/', (req, res) => {
   });
 });
 
+// Public HTML & SEO Routes
+app.get('/sitemap.xml', require('./controllers/public/sitemapController').generateSitemap);
+app.get('/blog', require('./controllers/public/blogSeoController').renderBlogPageWithSeo);
+app.get('/blog/:slug', require('./controllers/public/blogSeoController').renderBlogPageWithSeo);
+
 // API Routes
 app.get('/api/sitemap.xml', require('./controllers/public/sitemapController').generateSitemap);
 

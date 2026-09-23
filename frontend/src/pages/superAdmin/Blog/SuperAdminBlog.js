@@ -39,6 +39,8 @@ function SuperAdminBlog() {
     content: '',
     coverImage: '',
     tags: '',
+    seoTitle: '',
+    keywords: '',
     status: 'draft',
     author: 'Kwickbot Team'
   });
@@ -88,6 +90,8 @@ function SuperAdminBlog() {
       content: '',
       coverImage: '',
       tags: '',
+      seoTitle: '',
+      keywords: '',
       status: 'draft',
       author: 'Kwickbot Team'
     });
@@ -105,6 +109,8 @@ function SuperAdminBlog() {
       content: post.content || '',
       coverImage: post.coverImage || '',
       tags: post.tags ? post.tags.join(', ') : '',
+      seoTitle: post.seoTitle || '',
+      keywords: post.keywords || '',
       status: post.status || 'draft',
       author: post.author || 'Kwickbot Team'
     });
@@ -345,6 +351,34 @@ function SuperAdminBlog() {
                     placeholder="e.g. WhatsApp, Shopify, AI, Customer Support"
                     style={{ padding: '10px 14px', background: '#09090b', border: '1px solid #27272a', borderRadius: '8px', color: '#fafafa' }}
                   />
+                </div>
+              </div>
+
+              {/* SEO Customization Section */}
+              <div style={{ borderTop: '1px solid #27272a', paddingTop: '16px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                <h4 style={{ margin: 0, fontSize: '14px', fontWeight: '700', color: '#6366f1' }}>🔍 SEO Meta Tag Customization</h4>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    <label style={{ fontSize: '13px', fontWeight: '600', color: '#a1a1aa' }}>Custom SEO Title (Optional)</label>
+                    <input
+                      type="text"
+                      value={formData.seoTitle}
+                      onChange={(e) => setFormData(prev => ({ ...prev, seoTitle: e.target.value }))}
+                      placeholder="Leave blank to use main article title..."
+                      style={{ padding: '10px 14px', background: '#09090b', border: '1px solid #27272a', borderRadius: '8px', color: '#fafafa' }}
+                    />
+                  </div>
+
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    <label style={{ fontSize: '13px', fontWeight: '600', color: '#a1a1aa' }}>SEO Meta Keywords (Comma-separated)</label>
+                    <input
+                      type="text"
+                      value={formData.keywords}
+                      onChange={(e) => setFormData(prev => ({ ...prev, keywords: e.target.value }))}
+                      placeholder="e.g. WhatsApp AI bot, CTWA ads, e-commerce automation..."
+                      style={{ padding: '10px 14px', background: '#09090b', border: '1px solid #27272a', borderRadius: '8px', color: '#fafafa' }}
+                    />
+                  </div>
                 </div>
               </div>
 

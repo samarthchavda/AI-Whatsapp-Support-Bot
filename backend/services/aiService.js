@@ -678,8 +678,12 @@ STRICT KNOWLEDGE BASE GROUNDING RULES:
         }
       }
 
-      // Check if AI Auto Response is globally enabled by Super Admin
+      // Check if AI Auto Response is enabled globally by Super Admin or disabled by Merchant
       let aiEnabled = true;
+      if (adminDoc && adminDoc.aiBotEnabled === false) {
+        aiEnabled = false;
+        console.log(`🔕 AI Auto-Response is turned OFF by Merchant ${adminDoc.email}. Skipping AI response generation.`);
+      }
       try {
         const GlobalSettings = require('../models/GlobalSettings');
         const aiFlag = await GlobalSettings.findOne({ key: 'aiAutoResponseEnabled' });

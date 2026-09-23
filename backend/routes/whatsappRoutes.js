@@ -15,4 +15,7 @@ router.post('/templates/sync', whatsappController.syncTemplates);
 // Map a specific template to a transactional event
 router.put('/templates/:id/map', whatsappController.mapTemplate);
 
+// Delete local template record
+router.delete('/templates/:id', whatsappController.deleteTemplate);
+
 module.exports = router;

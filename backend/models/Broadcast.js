@@ -22,7 +22,8 @@ const broadcastSchema = new mongoose.Schema({
       default: 'pending'
     },
     sentAt: Date,
-    error: String
+    error: String,
+    messageId: String
   }],
   totalRecipients: {
     type: Number,
@@ -66,6 +67,13 @@ const broadcastSchema = new mongoose.Schema({
     index: true
   },
   csvFileName: String,
+  headerImageUrl: String,
+  templateName: String,
+  templateLanguage: {
+    type: String,
+    default: 'en'
+  },
+  templateParams: [String],
   createdAt: {
     type: Date,
     default: Date.now

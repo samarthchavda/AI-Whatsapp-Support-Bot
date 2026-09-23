@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { FaArrowLeft, FaCalendarAlt, FaUser, FaTag, FaBlog, FaArrowRight } from 'react-icons/fa';
+import SEO from '../../../components/SEO';
 import '../../public/About/AboutPage.css'; // Reuse nav/landing page styles
 
 const API_BASE = process.env.REACT_APP_API_URL || (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' ? 'http://localhost:5001/api' : '/api');
@@ -94,6 +95,37 @@ function BlogPost() {
 
   return (
     <div className="about-page" style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', background: '#FFFFFF' }}>
+      <SEO 
+        title={post ? (post.seoTitle || `${post.title} | Kwickbot`) : 'Blog Article | Kwickbot'}
+        description={post ? (post.seoDescription || post.summary) : 'Read the latest WhatsApp AI & E-commerce Customer Support articles on Kwickbot.'}
+        keywords={post ? (post.keywords || (post.tags && post.tags.length ? post.tags.join(', ') : 'WhatsApp AI, Customer Support, E-commerce Bot, Kwickbot')) : 'WhatsApp AI, Customer Support, E-commerce Bot'}
+        ogTitle={post ? (post.seoTitle || post.title) : undefined}
+        ogDescription={post ? (post.seoDescription || post.summary) : undefined}
+        ogKeywords={post ? (post.keywords || (post.tags && post.tags.length ? post.tags.join(', ') : undefined)) : undefined}
+        ogImage={post && post.coverImage ? getImageUrl(post.coverImage) : 'https://kwickbot.in/og-image.jpg'}
+        type="article"
+        schema={post ? {
+          "@context": "https://schema.org",
+          "@type": "BlogPosting",
+          "headline": post.title,
+          "description": post.summary,
+          "image": post.coverImage ? getImageUrl(post.coverImage) : "https://kwickbot.in/og-image.jpg",
+          "author": {
+            "@type": "Organization",
+            "name": post.author || "Kwickbot Team"
+          },
+          "publisher": {
+            "@type": "Organization",
+            "name": "Kwickbot",
+            "logo": {
+              "@type": "ImageObject",
+              "url": "https://kwickbot.in/logo.png"
+            }
+          },
+          "datePublished": post.createdAt,
+          "dateModified": post.updatedAt || post.createdAt
+        } : null}
+      />
       {/* Navigation */}
       <nav className="about-nav">
         <div className="about-nav-inner">

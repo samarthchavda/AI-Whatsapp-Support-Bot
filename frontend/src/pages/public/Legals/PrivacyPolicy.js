@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FaShieldAlt, FaUserShield, FaChevronLeft, FaCommentDots } from 'react-icons/fa';
+import SEO from '../../../components/SEO';
 import './PrivacyPolicy.css';
 
 function PrivacyPolicy() {
@@ -12,6 +13,11 @@ function PrivacyPolicy() {
 
   return (
     <div className="privacy-container">
+      <SEO 
+        title="Privacy Policy — Kwickbot"
+        description="Read Kwickbot's Privacy Policy to understand how we collect, protect, process, and handle your data and WhatsApp messaging credentials."
+        keywords="Kwickbot privacy policy, data privacy, WhatsApp AI security, data processing"
+      />
       <header className="privacy-header">
         <button className="back-btn" onClick={() => navigate('/')}>
           <FaChevronLeft /> Back to Home

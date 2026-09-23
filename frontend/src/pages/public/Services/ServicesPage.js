@@ -1,6 +1,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FaCommentDots, FaArrowRight, FaBrain, FaPlug, FaCog, FaChartLine, FaRobot, FaHeadset, FaFileAlt } from 'react-icons/fa';
+import SEO from '../../../components/SEO';
 import './ServicesPage.css';
 
 const servicesList = [
@@ -41,6 +42,13 @@ function ServicesPage() {
 
   return (
     <div className="services-page">
+      <SEO 
+        title="Services & Features — Kwickbot WhatsApp AI Automation"
+        description="Discover Kwickbot's suite of e-commerce automation services: Gemini AI fine-tuning, Shopify/WooCommerce integration, live agent handoffs, abandoned cart recovery, and Meta CTWA ads automation."
+        keywords="WhatsApp bot features, automated order tracking, Shopify sync, AI customer service, WhatsApp CRM integration, CTWA ads automation, Kwickbot services"
+        ogTitle="Services & Features — Kwickbot WhatsApp AI Automation"
+        ogDescription="Discover Kwickbot's suite of features: AI automated support, Shopify/WooCommerce integration, live agent handoff, and broadcast campaigns."
+      />
       {/* Navigation */}
       <nav className="services-nav">
         <div className="services-nav-inner">

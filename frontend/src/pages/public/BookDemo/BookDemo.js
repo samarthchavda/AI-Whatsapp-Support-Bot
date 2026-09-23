@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FaArrowLeft, FaCommentDots, FaCheckCircle } from 'react-icons/fa';
 import axios from 'axios';
+import SEO from '../../../components/SEO';
 import './BookDemo.css';
 
 function BookDemo() {
@@ -82,6 +83,13 @@ function BookDemo() {
 
   return (
     <div className="book-demo-page">
+      <SEO 
+        title="Book a Live Demo — Kwickbot WhatsApp AI"
+        description="Schedule a personalized demo with our team to see how Kwickbot can automate 80%+ of your WhatsApp customer support, sync Shopify/WooCommerce orders, and cut CAC."
+        keywords="Book Kwickbot demo, schedule WhatsApp bot demo, AI customer support trial, e-commerce automation demo, Kwickbot live demo"
+        ogTitle="Book a Live Demo — Kwickbot WhatsApp AI"
+        ogDescription="Schedule a personalized demo with our team to see how Kwickbot can automate 80%+ of your WhatsApp customer support."
+      />
       <button className="back-button" onClick={() => navigate('/')}>
         <FaArrowLeft /> Back to Home
       </button>

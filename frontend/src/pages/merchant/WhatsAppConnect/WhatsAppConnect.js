@@ -211,19 +211,7 @@ function WhatsAppConnect() {
     const extrasStr = encodeURIComponent(JSON.stringify(loginOptions.extras));
     const oauthUrl = `https://www.facebook.com/v25.0/dialog/oauth?client_id=${appId}&config_id=${configId}&redirect_uri=${redirectUri}&response_type=code&extras=${extrasStr}`;
 
-    if (window.FB) {
-      window.FB.login((response) => {
-        if (response && response.authResponse && response.authResponse.code) {
-          console.log('✅ Received Auth Code from Facebook SDK');
-          exchangeAuthCode(response.authResponse.code);
-        } else {
-          console.warn('⚠️ FB.login popup closed or did not return auth code:', response);
-          setEmbeddedLoading(false);
-        }
-      }, loginOptions);
-    } else {
-      openOAuthPopup(oauthUrl);
-    }
+    openOAuthPopup(oauthUrl);
   };
 
   const openOAuthPopup = (oauthUrl) => {
@@ -692,7 +680,8 @@ function WhatsAppConnect() {
                     </div>
 
                     <div style={{
-                      display: 'grid',
+                      display: 'flex',
+                      flexDirection: 'column',
                       gap: '12px',
                       padding: '24px',
                       backgroundColor: 'rgba(24, 119, 242, 0.05)',
@@ -721,9 +710,28 @@ function WhatsAppConnect() {
                           transition: 'all 0.2s'
                         }}
                       >
-                        <FaWhatsapp style={{ fontSize: '18px' }} />
-                        {embeddedLoading ? 'Connecting via Meta...' : 'Connect with Facebook'}
+                        <FaWhatsapp style={{ fontSize: '20px' }} />
+                        {embeddedLoading ? 'Connecting via Meta...' : 'Connect via Meta WhatsApp Manager'}
                       </button>
+
+                      <a
+                        href="https://business.facebook.com/wa/manage/phone-numbers"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '6px',
+                          fontSize: '13px',
+                          fontWeight: '600',
+                          color: '#1877f2',
+                          textDecoration: 'none',
+                          marginTop: '4px'
+                        }}
+                      >
+                        <FaExternalLinkAlt style={{ fontSize: '11px' }} /> Open Meta WhatsApp Business Manager (Direct)
+                      </a>
                     </div>
 
                     {cloudStatus.isConfigured && (

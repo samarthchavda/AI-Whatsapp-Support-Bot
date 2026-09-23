@@ -68,12 +68,14 @@ const buildAdminPayload = (admin) => ({
   timezone: admin.timezone || 'UTC',
   theme: admin.theme || 'light',
   webBotEnabled: admin.webBotEnabled === true,
+  aiBotEnabled: admin.aiBotEnabled !== false,
   aiDraftMode: admin.aiDraftMode === true,
   shopifyEnabled: admin.shopifyEnabled !== false,
   woocommerceEnabled: admin.woocommerceEnabled !== false,
   profileCompleted: admin.profileCompleted === true,
   profileCompletedAt: admin.profileCompletedAt,
   trialStartedAt: admin.trialStartedAt,
+  allowedPages: Array.isArray(admin.allowedPages) ? admin.allowedPages : null,
   customBranding: admin.customBranding || { logoUrl: null, brandName: null, removeCredits: false }
 });
 
@@ -545,7 +547,7 @@ exports.upgradePlan = async (req, res) => {
  */
 exports.updateProfile = async (req, res) => {
   try {
-    const { name, businessName, businessPhone, storeUrl, storeCategory, supportEmail, currency, timezone, theme, aiDraftMode, customBranding } = req.body;
+    const { name, businessName, businessPhone, storeUrl, storeCategory, supportEmail, currency, timezone, theme, aiBotEnabled, aiDraftMode, customBranding } = req.body;
     
     const admin = await Admin.findById(req.admin._id);
     if (!admin) {
@@ -561,6 +563,7 @@ exports.updateProfile = async (req, res) => {
     if (currency !== undefined) admin.currency = currency;
     if (timezone !== undefined) admin.timezone = timezone;
     if (theme !== undefined) admin.theme = theme;
+    if (aiBotEnabled !== undefined) admin.aiBotEnabled = aiBotEnabled;
     if (aiDraftMode !== undefined) admin.aiDraftMode = aiDraftMode;
 
     if (customBranding !== undefined) {

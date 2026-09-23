@@ -193,6 +193,10 @@ const adminSchema = new mongoose.Schema({
     type: Boolean,
     default: false
   },
+  aiBotEnabled: {
+    type: Boolean,
+    default: true
+  },
   aiDraftMode: {
     type: Boolean,
     default: false
@@ -246,6 +250,10 @@ const adminSchema = new mongoose.Schema({
   },
   resetPasswordExpires: {
     type: Date,
+    default: null
+  },
+  allowedPages: {
+    type: [String],
     default: null
   }
 }, {

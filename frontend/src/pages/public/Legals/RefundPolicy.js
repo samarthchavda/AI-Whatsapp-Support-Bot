@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FaUndo, FaChevronLeft, FaRegHandshake } from 'react-icons/fa';
+import SEO from '../../../components/SEO';
 import './PrivacyPolicy.css'; // Re-use privacy policy layout styling
 
 function RefundPolicy() {
@@ -12,6 +13,11 @@ function RefundPolicy() {
 
   return (
     <div className="privacy-container">
+      <SEO 
+        title="Refund Policy — Kwickbot"
+        description="Learn about Kwickbot's refund, subscription cancellation, and billing policies."
+        keywords="Kwickbot refund policy, cancellation policy, subscription refund terms"
+      />
       <header className="privacy-header">
         <button className="back-btn" onClick={() => navigate('/')}>
           <FaChevronLeft /> Back to Home

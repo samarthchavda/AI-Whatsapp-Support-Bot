@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { FaBlog, FaArrowRight, FaCalendarAlt, FaUser, FaTag } from 'react-icons/fa';
+import SEO from '../../../components/SEO';
 import '../../public/About/AboutPage.css'; // Reuse nav/landing page styles
 
 const API_BASE = process.env.REACT_APP_API_URL || (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' ? 'http://localhost:5001/api' : '/api');
@@ -64,6 +65,14 @@ function Blog() {
 
   return (
     <div className="about-page" style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', background: '#FFFFFF' }}>
+      <SEO 
+        title="WhatsApp AI & E-commerce Customer Support Blog | Kwickbot"
+        description="Explore Kwickbot's latest guides, tutorials, and insights on WhatsApp AI customer support, e-commerce automation, abandoned cart recovery, and slashing CAC."
+        keywords="WhatsApp AI blog, customer support articles, e-commerce automation guides, Shopify WhatsApp chatbot, WooCommerce support AI, Kwickbot insights, CTWA ads strategy"
+        ogTitle="WhatsApp AI & E-commerce Customer Support Blog | Kwickbot"
+        ogDescription="Explore Kwickbot's latest guides, tutorials, and insights on WhatsApp AI customer support, e-commerce automation, and slashing CAC."
+        ogKeywords="WhatsApp AI blog, customer support articles, e-commerce automation guides, Shopify WhatsApp chatbot, WooCommerce support AI, Kwickbot insights"
+      />
       {/* Navigation */}
       <nav className="about-nav">
         <div className="about-nav-inner">

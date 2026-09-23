@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import api from '../../../services/api';
-import { FaSync, FaSearch, FaFilter, FaCheckCircle, FaExclamationCircle, FaProjectDiagram, FaInfoCircle, FaFileAlt } from 'react-icons/fa';
+import { FaSync, FaSearch, FaFilter, FaCheckCircle, FaExclamationCircle, FaProjectDiagram, FaInfoCircle, FaFileAlt, FaPlus, FaExternalLinkAlt } from 'react-icons/fa';
 import './Templates.css';
 
 function Templates() {
@@ -32,7 +32,7 @@ function Templates() {
     try {
       setSyncing(true);
       const response = await api.post('/whatsapp/templates/sync');
-      alert(response.data.message || 'Templates synced successfully!');
+      alert(response.data.message || 'Real Meta templates synced successfully!');
       fetchTemplates();
     } catch (error) {
       console.error('Error syncing templates:', error);
@@ -116,15 +116,26 @@ function Templates() {
       <div className="page-header">
         <div className="page-header-info">
           <h1 className="page-title">WhatsApp Templates</h1>
-          <p className="page-subtitle">Manage Meta-approved message templates and automation triggers.</p>
+          <p className="page-subtitle">Fetch real Meta-approved templates and map automation triggers.</p>
         </div>
-        <button
-          onClick={handleSync}
-          className="btn btn-primary sync-btn"
-          disabled={syncing}
-        >
-          <FaSync className={syncing ? 'spinning' : ''} /> {syncing ? 'Syncing...' : 'Sync with Meta'}
-        </button>
+        <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+          <a
+            href="https://business.facebook.com/wa/manage/message-templates"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="btn btn-secondary"
+            style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', textDecoration: 'none', fontWeight: '600' }}
+          >
+            <FaPlus /> Create Template on Meta <FaExternalLinkAlt style={{ fontSize: '11px' }} />
+          </a>
+          <button
+            onClick={handleSync}
+            className="btn btn-primary sync-btn"
+            disabled={syncing}
+          >
+            <FaSync className={syncing ? 'spinning' : ''} /> {syncing ? 'Syncing...' : 'Sync with Meta'}
+          </button>
+        </div>
       </div>
 
       {/* Filter and Search Bar */}
@@ -174,16 +185,27 @@ function Templates() {
       {loading ? (
         <div style={{ padding: '60px', textAlign: 'center', color: '#71717a' }}>
           <div className="spinner" style={{ margin: '0 auto 16px' }}></div>
-          Retrieving template records...
+          Retrieving template records from Meta API...
         </div>
       ) : filteredTemplates.length === 0 ? (
         <div className="empty-state">
           <FaFileAlt style={{ fontSize: '48px', color: '#a1a1aa', marginBottom: '16px' }} />
-          <h3>No Templates Found</h3>
-          <p>We couldn't find any templates matching your criteria. Try syncing with Meta to import templates.</p>
-          <button onClick={handleSync} className="btn-secondary" style={{ marginTop: '12px' }}>
-            <FaSync /> Sync Live Templates
-          </button>
+          <h3>No Real Templates Found</h3>
+          <p>You have no approved message templates on Meta WhatsApp Business Manager yet. Click below to create your first template on Meta or sync existing templates.</p>
+          <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', marginTop: '16px' }}>
+            <a
+              href="https://business.facebook.com/wa/manage/message-templates"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="btn btn-primary"
+              style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', textDecoration: 'none' }}
+            >
+              <FaPlus /> Create Template on Meta WhatsApp Manager <FaExternalLinkAlt style={{ fontSize: '11px' }} />
+            </a>
+            <button onClick={handleSync} className="btn btn-secondary">
+              <FaSync /> Sync Real Templates
+            </button>
+          </div>
         </div>
       ) : (
         <div className="templates-grid">

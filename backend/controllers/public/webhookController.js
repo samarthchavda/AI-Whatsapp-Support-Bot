@@ -293,14 +293,66 @@ async function handleStatusUpdate(status) {
   try {
     const messageId = status.id;
     const statusType = status.status; // sent, delivered, read, failed
+    const recipientId = status.recipient_id;
 
-    console.log(`📊 Message ${messageId} - Status: ${statusType}`);
+    console.log(`📊 Message ${messageId} (Recipient: ${recipientId || 'N/A'}) - Status: ${statusType}`);
 
     // Update conversation message status using messageId
     await Conversation.updateOne(
       { 'messages.messageId': messageId },
       { $set: { 'messages.$.status': statusType } }
     );
+
+    // Update Broadcast recipient status if matching messageId or phone number
+    const Broadcast = require('../../models/Broadcast');
+    const queryConditions = [];
+    if (messageId) queryConditions.push({ 'recipients.messageId': messageId });
+    if (recipientId) queryConditions.push({ 'recipients.phone': recipientId });
+
+    if (queryConditions.length > 0) {
+      const broadcast = await Broadcast.findOne({ $or: queryConditions }).sort({ createdAt: -1 });
+
+      if (broadcast) {
+        let recipientIndex = -1;
+        if (messageId) {
+          recipientIndex = broadcast.recipients.findIndex(r => r.messageId === messageId);
+        }
+        if (recipientIndex === -1 && recipientId) {
+          const normRecipient = recipientId.toString().replace(/\D/g, '');
+          recipientIndex = broadcast.recipients.findIndex(r => (r.phone || '').replace(/\D/g, '') === normRecipient);
+        }
+
+        if (recipientIndex !== -1) {
+          const recipient = broadcast.recipients[recipientIndex];
+          const oldStatus = recipient.status;
+
+          if (statusType === 'failed') {
+            let errorMsg = 'Delivery failed by WhatsApp / Meta';
+            if (status.errors && status.errors.length > 0) {
+              const errObj = status.errors[0];
+              const metaCode = errObj.code;
+              const metaMsg = errObj.message || errObj.title || '';
+              if (metaCode === 131047 || metaCode === 131026) {
+                errorMsg = `Outside 24-hour window: Approved Meta template required. (${metaMsg})`;
+              } else {
+                errorMsg = `[Meta Error ${metaCode}]: ${metaMsg}`;
+              }
+            }
+            recipient.status = 'failed';
+            recipient.error = errorMsg;
+          } else if (statusType === 'delivered' || statusType === 'read') {
+            recipient.status = 'sent';
+          }
+
+          // Recalculate exact sentCount and failedCount from recipients array
+          broadcast.sentCount = broadcast.recipients.filter(r => r.status === 'sent' || r.status === 'delivered' || r.status === 'read').length;
+          broadcast.failedCount = broadcast.recipients.filter(r => r.status === 'failed').length;
+
+          await broadcast.save();
+          console.log(`📌 Updated Broadcast ${broadcast._id} recipient ${recipient.phone} status to ${statusType}`);
+        }
+      }
+    }
 
     return { messageId, status: statusType };
   } catch (error) {

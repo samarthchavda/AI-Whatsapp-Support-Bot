@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import SEO from '../../../components/SEO';
 import {
   FaArrowRight,
   FaBolt,
@@ -188,6 +189,13 @@ function LandingPage() {
 
   return (
     <div className="landing-page">
+      <SEO 
+        title="Kwickbot — WhatsApp AI Customer Support & Chatbot Automation"
+        description="Kwickbot is an AI-powered WhatsApp customer support and chatbot automation platform for e-commerce. Automate customer queries, track orders, sync Shopify & WooCommerce, and manage live human handoffs 24/7."
+        keywords="WhatsApp AI, WhatsApp Chatbot, E-commerce Support, Customer Service Automation, Shopify WhatsApp Bot, WooCommerce Bot, Kwickbot, CTWA Ads, Abandoned Cart WhatsApp"
+        ogTitle="Kwickbot — WhatsApp AI Customer Support & Chatbot Automation"
+        ogDescription="Kwickbot is an AI-powered WhatsApp customer support and chatbot automation platform for e-commerce. Automate customer queries, track orders, sync Shopify & WooCommerce 24/7."
+      />
 
       <nav className="landing-nav">
         <div className="landing-nav-inner">

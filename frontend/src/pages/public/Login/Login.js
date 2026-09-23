@@ -1,12 +1,14 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FaArrowLeft, FaCommentDots, FaCheckCircle } from 'react-icons/fa';
+import { FaArrowLeft, FaCommentDots, FaCheckCircle, FaEye, FaEyeSlash } from 'react-icons/fa';
 import api from '../../../services/api';
+import SEO from '../../../components/SEO';
 import './Login.css';
 
 function Login({ onLogin }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
@@ -40,6 +42,12 @@ function Login({ onLogin }) {
 
   return (
     <div className="login-page">
+      <SEO 
+        title="Merchant Login — Kwickbot"
+        description="Sign in to your Kwickbot merchant dashboard to manage WhatsApp AI conversations, view order analytics, and configure knowledge base settings."
+        keywords="Kwickbot login, merchant dashboard, WhatsApp bot admin, e-commerce support login"
+        ogTitle="Merchant Login — Kwickbot"
+      />
       <div className="login-brand-panel">
         <button className="login-back-btn" onClick={() => navigate('/')}>
           <FaArrowLeft /> Back to Home
@@ -99,15 +107,44 @@ function Login({ onLogin }) {
 
             <div className="login-field">
               <label htmlFor="password">Password</label>
-              <input
-                id="password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                placeholder="Enter your password"
-                autoComplete="current-password"
-              />
+              <div className="password-input-wrapper" style={{ position: 'relative' }}>
+                <input
+                  id="password"
+                  type={showPassword ? 'text' : 'password'}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  placeholder="Enter your password"
+                  autoComplete="current-password"
+                  style={{ paddingRight: '44px' }}
+                />
+                <button
+                  type="button"
+                  className="password-toggle-btn"
+                  onClick={() => setShowPassword(!showPassword)}
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                  title={showPassword ? 'Hide password' : 'Show password'}
+                  style={{
+                    position: 'absolute',
+                    right: '12px',
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    background: 'none',
+                    border: 'none',
+                    color: 'var(--text-secondary, #64748b)',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    padding: '6px',
+                    fontSize: '16px',
+                    borderRadius: '4px',
+                    transition: 'color 0.2s ease'
+                  }}
+                >
+                  {showPassword ? <FaEyeSlash /> : <FaEye />}
+                </button>
+              </div>
               <div className="login-forgot-wrapper">
                 <button
                   type="button"

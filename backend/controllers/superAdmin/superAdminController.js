@@ -2713,3 +2713,43 @@ exports.toggleFeatureFlag = async (req, res) => {
     });
   }
 };
+
+// Update merchant allowed pages
+exports.updateAllowedPages = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { allowedPages } = req.body;
+
+    const user = await Admin.findById(id);
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        error: 'User not found'
+      });
+    }
+
+    if (Array.isArray(allowedPages)) {
+      user.allowedPages = allowedPages;
+    } else {
+      user.allowedPages = null;
+    }
+
+    await user.save();
+
+    res.json({
+      success: true,
+      message: 'Page permissions updated successfully',
+      data: {
+        id: user._id,
+        allowedPages: user.allowedPages
+      }
+    });
+  } catch (error) {
+    console.error('Error updating allowed pages:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to update page permissions'
+    });
+  }
+};
+

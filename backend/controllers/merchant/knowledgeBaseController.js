@@ -1,4 +1,5 @@
 const KnowledgeBase = require('../../models/KnowledgeBase');
+const Admin = require('../../models/Admin');
 const knowledgeBaseService = require('../../services/knowledgeBaseService');
 const fs = require('fs').promises;
 

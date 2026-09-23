@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FaFileSignature, FaChevronLeft, FaBalanceScale } from 'react-icons/fa';
+import SEO from '../../../components/SEO';
 import './PrivacyPolicy.css'; // Re-use privacy policy layout styling
 
 function TermsOfService() {
@@ -12,6 +13,11 @@ function TermsOfService() {
 
   return (
     <div className="privacy-container">
+      <SEO 
+        title="Terms of Service — Kwickbot"
+        description="Review the terms and conditions governing the use of Kwickbot's WhatsApp AI customer support platform and services."
+        keywords="Kwickbot terms of service, terms and conditions, platform service agreement"
+      />
       <header className="privacy-header">
         <button className="back-btn" onClick={() => navigate('/')}>
           <FaChevronLeft /> Back to Home

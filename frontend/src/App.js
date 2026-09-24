@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route, Link, useLocation, useNavigate, Navigate } from 'react-router-dom';
-import { FaHome, FaComments, FaBox, FaExclamationTriangle, FaPlug, FaRobot, FaSearch, FaBell, FaPlus, FaSignOutAlt, FaUser, FaBrain, FaCommentDots, FaBroadcastTower, FaChartLine, FaCog, FaCrown, FaFileAlt, FaShoppingCart, FaCoins, FaUserSecret, FaHeartbeat, FaBullhorn, FaBlog, FaBars, FaSun, FaMoon, FaWhatsapp, FaShieldAlt, FaToggleOn, FaTimes, FaTags, FaUserTag } from 'react-icons/fa';
+import { BrowserRouter as Router, Routes, Route, Link, useLocation, Navigate } from 'react-router-dom';
+import { FaHome, FaComments, FaBox, FaExclamationTriangle, FaPlug, FaSearch, FaBell, FaSignOutAlt, FaUser, FaBrain, FaCommentDots, FaBroadcastTower, FaChartLine, FaCog, FaCrown, FaFileAlt, FaShoppingCart, FaCoins, FaUserSecret, FaHeartbeat, FaBullhorn, FaBlog, FaBars, FaWhatsapp, FaShieldAlt, FaToggleOn, FaTimes, FaTags, FaUserTag } from 'react-icons/fa';
 import api, { clearAuthState, refreshAuth } from './services/api';
 import io from 'socket.io-client';
 import Dashboard from './pages/merchant/Dashboard/Dashboard';
@@ -9,9 +9,6 @@ import Conversations from './pages/merchant/Conversations/Conversations';
 import Orders from './pages/merchant/Orders/Orders';
 import Escalations from './pages/merchant/Escalations/Escalations';
 import WhatsAppConnect from './pages/merchant/WhatsAppConnect/WhatsAppConnect';
-import Login from './pages/public/Login/Login';
-import LandingPage from './pages/public/LandingPage/LandingPage';
-import BookDemo from './pages/public/BookDemo/BookDemo';
 import KnowledgeBase from './pages/merchant/KnowledgeBase/KnowledgeBase';
 import LiveChat from './pages/merchant/LiveChat/LiveChat';
 import Broadcast from './pages/merchant/Broadcast/Broadcast';
@@ -36,46 +33,11 @@ import SuperAdminSettings from './pages/superAdmin/Settings/SuperAdminSettings';
 import Billing from './pages/merchant/Billing/Billing';
 import Templates from './pages/merchant/Templates/Templates';
 import AbandonedCarts from './pages/merchant/AbandonedCarts/AbandonedCarts';
-import AboutPage from './pages/public/About/AboutPage';
-import ServicesPage from './pages/public/Services/ServicesPage';
-import ForgotPassword from './pages/public/Login/ForgotPassword';
-import ResetPassword from './pages/public/Login/ResetPassword';
-import PrivacyPolicy from './pages/public/Legals/PrivacyPolicy';
-import TermsOfService from './pages/public/Legals/TermsOfService';
-import RefundPolicy from './pages/public/Legals/RefundPolicy';
-import DataDeletion from './pages/public/Legals/DataDeletion';
-import Blog from './pages/merchant/Blog/Blog';
-import BlogPost from './pages/merchant/Blog/BlogPost';
 import SuperAdminBlog from './pages/superAdmin/Blog/SuperAdminBlog';
 import Products from './pages/merchant/Products/Products';
 import MerchantLeads from './pages/merchant/Leads/MerchantLeads';
 import NotificationDropdown from './components/NotificationDropdown/NotificationDropdown';
-import axios from 'axios';
 import './App.css';
-
-function TrafficTracker() {
-  const location = useLocation();
-
-  useEffect(() => {
-    // Only track public page visits (not dashboard/internal pages)
-    if (!location.pathname.startsWith('/dashboard') && !location.pathname.startsWith('/login')) {
-      const trackVisit = async () => {
-        try {
-          const API_BASE = process.env.REACT_APP_API_URL || (window.location.hostname === 'localhost' ? 'http://localhost:5001/api' : '/api');
-          await axios.post(`${API_BASE}/traffic/track`, {
-            pagePath: location.pathname,
-            referrer: document.referrer || 'Direct'
-          });
-        } catch (err) {
-          // Silent catch
-        }
-      };
-      trackVisit();
-    }
-  }, [location]);
-
-  return null;
-}
 
 function Sidebar({ admin, onLogout, isOpen, onToggle, pendingDemoRequestsCount }) {
   const location = useLocation();
@@ -540,7 +502,6 @@ function Sidebar({ admin, onLogout, isOpen, onToggle, pendingDemoRequestsCount }
 }
 
 function TopBar({ admin, onUpdateAdmin, isImpersonated, onToggleSidebar, theme, onToggleTheme }) {
-  const navigate = useNavigate();
   const greeting = () => {
     const hour = new Date().getHours();
     if (hour < 12) return 'Good morning';
@@ -582,8 +543,16 @@ function TopBar({ admin, onUpdateAdmin, isImpersonated, onToggleSidebar, theme, 
 }
 
 // Protected Route Component
+function ExternalRedirect({ to }) {
+  useEffect(() => {
+    window.location.replace(to);
+  }, [to]);
+
+  return null;
+}
+
 function ProtectedRoute({ children, isAuthenticated }) {
-  return isAuthenticated ? children : <Navigate to="/login" replace />;
+  return isAuthenticated ? children : <ExternalRedirect to="/login" />;
 }
 
 const ACCESS_TOKEN_KEY = 'accessToken';
@@ -728,11 +697,6 @@ function App() {
     localStorage.setItem('admin', JSON.stringify(updatedAdmin));
   };
 
-  const handleLogin = (adminData) => {
-    setIsAuthenticated(true);
-    setAdmin(adminData);
-  };
-
   // Real-time subscription sync & profile refresh from Super Admin
   useEffect(() => {
     if (!isAuthenticated) return;
@@ -840,8 +804,7 @@ function App() {
     localStorage.removeItem('isImpersonated');
     localStorage.removeItem('impersonatedUserEmail');
     localStorage.removeItem('impersonatedUserName');
-    setIsAuthenticated(false);
-    setAdmin(null);
+    window.location.replace('/login');
   };
 
   useEffect(() => {
@@ -892,31 +855,7 @@ function App() {
   return (
     <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
       <ThemeHandler admin={admin} theme={theme} />
-      <TrafficTracker />
       <Routes>
-        {/* Public Routes */}
-        <Route path="/" element={<LandingPage />} />
-        <Route path="/book-demo" element={<BookDemo />} />
-        <Route path="/about" element={<AboutPage />} />
-        <Route path="/services" element={<ServicesPage />} />
-        <Route path="/forgot-password" element={<ForgotPassword />} />
-        <Route path="/reset-password/:token" element={<ResetPassword />} />
-        <Route path="/privacy" element={<PrivacyPolicy />} />
-        <Route path="/terms" element={<TermsOfService />} />
-        <Route path="/refund-policy" element={<RefundPolicy />} />
-        <Route path="/data-deletion" element={<DataDeletion />} />
-        <Route path="/blog" element={<Blog />} />
-        <Route path="/blog/:slug" element={<BlogPost />} />
-        
-        <Route 
-          path="/login" 
-          element={
-            isAuthenticated ? 
-              <Navigate to="/dashboard" replace /> : 
-              <Login onLogin={handleLogin} />
-          } 
-        />
-        
         {/* Protected Routes */}
         <Route
           path="/dashboard/*"
@@ -1039,6 +978,7 @@ function App() {
             </ProtectedRoute>
           }
         />
+        <Route path="*" element={<ExternalRedirect to="/" />} />
       </Routes>
     </Router>
   );

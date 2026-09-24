@@ -53,8 +53,31 @@ export default function BookDemo() {
     }
   };
 
+  const breadcrumbSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      {
+        '@type': 'ListItem',
+        position: 1,
+        name: 'Home',
+        item: 'https://kwickbot.in'
+      },
+      {
+        '@type': 'ListItem',
+        position: 2,
+        name: 'Book Live Demo',
+        item: 'https://kwickbot.in/demo'
+      }
+    ]
+  };
+
   return (
     <div className="retro-page-container">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }}
+      />
       <div className="bg-video-wrapper">
         <video className="bg-video" autoPlay muted loop playsInline>
           <source

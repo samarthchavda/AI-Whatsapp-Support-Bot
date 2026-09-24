@@ -84,7 +84,25 @@ export async function generateMetadata({ params }) {
 
   return {
     title: `${post.title} | Kwickbot Blog`,
-    description: post.summary
+    description: post.summary,
+    alternates: {
+      canonical: `https://kwickbot.in/blog/${params.slug}`,
+    },
+    openGraph: {
+      title: `${post.title} | Kwickbot Blog`,
+      description: post.summary,
+      url: `https://kwickbot.in/blog/${params.slug}`,
+      type: 'article',
+      publishedTime: post.createdAt,
+      authors: [post.author || 'Kwickbot Team'],
+      images: post.coverImage ? [{ url: post.coverImage }] : ['https://kwickbot.in/og-image.jpg']
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: `${post.title} | Kwickbot Blog`,
+      description: post.summary,
+      images: post.coverImage ? [post.coverImage] : ['https://kwickbot.in/og-image.jpg']
+    }
   };
 }
 
@@ -95,8 +113,50 @@ export default async function BlogPostPage({ params }) {
     notFound();
   }
 
+  const blogPostingSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'BlogPosting',
+    headline: post.title,
+    description: post.summary,
+    image: post.coverImage || 'https://kwickbot.in/og-image.jpg',
+    author: {
+      '@type': 'Organization',
+      name: post.author || 'Kwickbot Team',
+      url: 'https://kwickbot.in'
+    },
+    publisher: {
+      '@type': 'Organization',
+      name: 'Kwickbot AI',
+      logo: {
+        '@type': 'ImageObject',
+        url: 'https://kwickbot.in/logo.png'
+      }
+    },
+    datePublished: post.createdAt,
+    dateModified: post.updatedAt || post.createdAt,
+    mainEntityOfPage: `https://kwickbot.in/blog/${post.slug}`
+  };
+
+  const breadcrumbSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://kwickbot.in' },
+      { '@type': 'ListItem', position: 2, name: 'Blog', item: 'https://kwickbot.in/blog' },
+      { '@type': 'ListItem', position: 3, name: post.title, item: `https://kwickbot.in/blog/${post.slug}` }
+    ]
+  };
+
   return (
     <div className="retro-page-container">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(blogPostingSchema) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }}
+      />
       <div className="bg-video-wrapper">
         <video className="bg-video" autoPlay muted loop playsInline>
           <source

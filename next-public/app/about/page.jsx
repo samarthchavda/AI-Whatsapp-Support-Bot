@@ -5,8 +5,31 @@ import Link from 'next/link';
 import { FaArrowRight, FaBrain, FaUsers, FaShieldAlt, FaRocket, FaChartBar, FaSmile } from 'react-icons/fa';
 
 export default function AboutPage() {
+  const breadcrumbSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      {
+        '@type': 'ListItem',
+        position: 1,
+        name: 'Home',
+        item: 'https://kwickbot.in'
+      },
+      {
+        '@type': 'ListItem',
+        position: 2,
+        name: 'About Us',
+        item: 'https://kwickbot.in/about'
+      }
+    ]
+  };
+
   return (
     <div className="retro-page-container">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }}
+      />
       <div className="bg-video-wrapper">
         <video className="bg-video" autoPlay muted loop playsInline>
           <source

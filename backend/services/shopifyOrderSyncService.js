@@ -307,9 +307,16 @@ class ShopifyOrderSyncService {
 
   async syncAllShopifyIntegrations() {
     const integrations = await Integration.find({ platform: 'shopify', isActive: true });
+    const Admin = require('../models/Admin');
+    const validAdmins = await Admin.find({}).select('_id');
+    const validAdminIds = new Set(validAdmins.map(a => a._id.toString()));
+
     const results = [];
 
     for (const integration of integrations) {
+      if (!integration.adminId || !validAdminIds.has(integration.adminId.toString())) {
+        continue;
+      }
       try {
         const result = await this.syncIntegrationOrders(integration);
         results.push({

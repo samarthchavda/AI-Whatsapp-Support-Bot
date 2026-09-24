@@ -2100,11 +2100,12 @@ exports.getIntegrationHealthStatus = async (req, res) => {
       };
     });
 
-    // 4. Summarize global stats
-    const totalShopify = integrations.filter(i => i.platform === 'shopify').length;
-    const totalWoo = integrations.filter(i => i.platform === 'woocommerce').length;
-    const activeIntegrations = integrations.filter(i => i.isActive).length;
-    const failedIntegrations = integrations.length - activeIntegrations;
+    // 4. Summarize global stats (only count integrations for existing valid merchants)
+    const validIntegrations = integrations.filter(i => integrationsMap[i.adminId.toString()]);
+    const totalShopify = validIntegrations.filter(i => i.platform === 'shopify').length;
+    const totalWoo = validIntegrations.filter(i => i.platform === 'woocommerce').length;
+    const activeIntegrations = validIntegrations.filter(i => i.isActive).length;
+    const failedIntegrations = validIntegrations.length - activeIntegrations;
 
     res.json({
       success: true,

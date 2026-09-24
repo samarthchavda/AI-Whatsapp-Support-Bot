@@ -33,7 +33,7 @@ export default function Header() {
         </div>
 
         <div className="nav-pill-actions">
-          <a href="https://kwickbot.in/login" className="sign-in-pill">
+          <a href="/login" className="sign-in-pill">
             Sign in
           </a>
           <Link href="/demo" className="cta-pill-small">

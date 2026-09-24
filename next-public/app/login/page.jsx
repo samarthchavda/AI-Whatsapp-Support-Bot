@@ -121,12 +121,7 @@ export default function LoginPage() {
             </div>
 
             <div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                <label style={{ color: '#d4d4d8', fontSize: '13px', fontWeight: '600' }}>Password</label>
-                <Link href="/forgot-password" style={{ color: '#38bdf8', fontSize: '12.5px', textDecoration: 'none' }}>
-                  Forgot password?
-                </Link>
-              </div>
+              <label style={{ display: 'block', color: '#d4d4d8', fontSize: '13px', fontWeight: '600', marginBottom: '6px' }}>Password</label>
               <div style={{ position: 'relative' }}>
                 <input
                   type={showPassword ? 'text' : 'password'}
@@ -179,6 +174,12 @@ export default function LoginPage() {
             >
               {loading ? 'Signing in...' : 'Sign in to Dashboard'}
             </button>
+
+            <div style={{ textAlign: 'center', marginTop: '4px' }}>
+              <Link href="/forgot-password" style={{ color: '#38bdf8', fontSize: '13.5px', textDecoration: 'none' }}>
+                Forgot password?
+              </Link>
+            </div>
           </form>
 
           <div style={{ marginTop: '24px', paddingTop: '20px', borderTop: '1px solid rgba(255,255,255,0.1)', display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '13px', color: '#a1a1aa' }}>

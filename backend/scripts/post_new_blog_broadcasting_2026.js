@@ -52,7 +52,7 @@ async function createBroadcastingBlogPost() {
 <h3>2. Rich Multimedia Headers (Images, Banners & Videos)</h3>
 <p>Capture customer attention immediately with high-resolution promo banners, product photos, or short video teasers attached to your broadcast message headers. Visual messages yield 3x higher engagement compared to plain text.</p>
 
-<h3>3. Interactive Action Buttons (`Shop Now`, `Claim Discount`)</h3>
+<h3>3. Interactive Action Buttons ("Shop Now", "Claim Discount")</h3>
 <p>Ditch boring URLs! Include interactive quick reply buttons and call-to-action buttons (e.g. <i>"Claim 20% Off"</i>, <i>"Track Order"</i>, <i>"Talk to Agent"</i>). Customers can tap a single button to buy or ask questions instantly.</p>
 
 <div style="text-align: center; margin: 30px 0;">

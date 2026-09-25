@@ -12,6 +12,16 @@ export const metadata = {
 
 const FALLBACK_POSTS = [
   {
+    _id: 'broadcasting-1',
+    slug: 'whatsapp-broadcasting-meta-approved-campaigns-guide-2026',
+    title: 'WhatsApp Broadcasting Guide (2026): How D2C Brands Run Meta-Approved Campaigns, Segment Audiences, and Achieve 45%+ Conversion Rates with Kwickbot',
+    summary: 'Learn how to launch high-converting WhatsApp broadcast campaigns using Meta Cloud API templates, rich media image headers, dynamic customer segmentation, and automated Gemini AI response handling with Kwickbot.',
+    tags: ['WhatsApp Broadcasting', 'Meta Cloud API', 'Campaign Marketing', 'D2C Growth'],
+    author: 'Kwickbot Growth Team',
+    createdAt: '2026-09-25T10:00:00.000Z',
+    coverImage: 'https://images.unsplash.com/photo-1611162617213-7d7a39e9b1d7?auto=format&fit=crop&w=1200&q=80'
+  },
+  {
     _id: '1',
     slug: 'whatsapp-business-api-pricing-meta-messaging-costs-2026-guide',
     title: 'WhatsApp Business API Pricing 2026: Complete Meta Messaging Costs Guide for E-Commerce',

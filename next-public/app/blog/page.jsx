@@ -74,8 +74,18 @@ async function getPublishedPosts() {
   }
 }
 
-export default async function BlogIndexPage() {
+export default async function BlogIndexPage({ searchParams }) {
   const posts = await getPublishedPosts();
+  const pageParam = searchParams?.page;
+  const currentPage = Math.max(1, parseInt(Array.isArray(pageParam) ? pageParam[0] : pageParam || '1', 10));
+  const POSTS_PER_PAGE = 12;
+
+  const totalPosts = posts.length;
+  const totalPages = Math.ceil(totalPosts / POSTS_PER_PAGE) || 1;
+  const validPage = Math.min(currentPage, totalPages);
+  
+  const startIndex = (validPage - 1) * POSTS_PER_PAGE;
+  const paginatedPosts = posts.slice(startIndex, startIndex + POSTS_PER_PAGE);
 
   return (
     <div className="retro-page-container">
@@ -92,7 +102,7 @@ export default async function BlogIndexPage() {
       <main style={{ position: 'relative', zIndex: 1, padding: '40px 20px 80px' }}>
         <section className="dark-section-card">
           <div className="dark-heading-center">
-            <span>KWIICKBOT INSIGHTS</span>
+            <span>KWICKBOT INSIGHTS</span>
             <h1 className="retro-dot-headline" style={{ fontSize: 'clamp(28px, 5vw, 56px)', margin: '16px auto' }}>
               Blog &amp; E-Commerce Guides
             </h1>
@@ -108,7 +118,7 @@ export default async function BlogIndexPage() {
             maxWidth: '1120px',
             margin: '40px auto 0'
           }}>
-            {posts.map((post) => (
+            {paginatedPosts.map((post) => (
               <article key={post._id || post.slug} className="dark-pricing-card" style={{ padding: 0, overflow: 'hidden', height: '100%' }}>
                 {post.coverImage && (
                   <img 
@@ -144,6 +154,59 @@ export default async function BlogIndexPage() {
               </article>
             ))}
           </div>
+
+          {totalPages > 1 && (
+            <div style={{
+              display: 'flex',
+              justifyContent: 'center',
+              alignItems: 'center',
+              gap: '12px',
+              marginTop: '48px',
+              flexWrap: 'wrap'
+            }}>
+              {validPage > 1 ? (
+                <Link href={`/blog?page=${validPage - 1}`} className="glowing-btn-white small" style={{ fontSize: '14px', textDecoration: 'none' }}>
+                  ← Previous
+                </Link>
+              ) : (
+                <span style={{ padding: '8px 16px', color: '#52525b', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '100px', fontSize: '14px' }}>
+                  ← Previous
+                </span>
+              )}
+
+              <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map((pageNum) => (
+                  <Link
+                    key={pageNum}
+                    href={`/blog?page=${pageNum}`}
+                    style={{
+                      padding: '8px 14px',
+                      borderRadius: '100px',
+                      background: pageNum === validPage ? '#ffffff' : 'rgba(255, 255, 255, 0.05)',
+                      color: pageNum === validPage ? '#09090b' : '#a1a1aa',
+                      fontWeight: pageNum === validPage ? '700' : '500',
+                      textDecoration: 'none',
+                      fontSize: '14px',
+                      border: pageNum === validPage ? 'none' : '1px solid rgba(255, 255, 255, 0.1)',
+                      transition: 'all 0.2s ease'
+                    }}
+                  >
+                    {pageNum}
+                  </Link>
+                ))}
+              </div>
+
+              {validPage < totalPages ? (
+                <Link href={`/blog?page=${validPage + 1}`} className="glowing-btn-white small" style={{ fontSize: '14px', textDecoration: 'none' }}>
+                  Next →
+                </Link>
+              ) : (
+                <span style={{ padding: '8px 16px', color: '#52525b', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '100px', fontSize: '14px' }}>
+                  Next →
+                </span>
+              )}
+            </div>
+          )}
         </section>
       </main>
     </div>

@@ -824,7 +824,69 @@ exports.deleteUser = async (req, res) => {
 exports.getAllPlans = async (req, res) => {
   try {
     const PricingPlan = require('../../models/PricingPlan');
-    const plans = await PricingPlan.find({ isActive: true }).sort({ monthlyPrice: 1 });
+    let plans = await PricingPlan.find({ isActive: true }).sort({ monthlyPrice: 1 });
+
+    if (!plans || plans.length === 0) {
+      const defaultPlans = [
+        {
+          name: 'starter',
+          displayName: 'Starter Plan',
+          description: 'Ideal for small businesses launching WhatsApp automation',
+          monthlyPrice: 1499,
+          yearlyPrice: 14990,
+          badge: 'BASIC',
+          features: {
+            maxConversations: 1000,
+            maxMessages: 5000,
+            geminiTokensPerMonth: 50000,
+            maxWhatsAppConnections: 1,
+            liveChat: true,
+            knowledgeBase: true,
+            integrations: false,
+            apiAccess: false
+          }
+        },
+        {
+          name: 'growth',
+          displayName: 'Growth Plan',
+          description: 'Best for growing e-commerce brands needing Shopify & CRM webhooks',
+          monthlyPrice: 2999,
+          yearlyPrice: 29990,
+          badge: 'POPULAR',
+          features: {
+            maxConversations: 5000,
+            maxMessages: 25000,
+            geminiTokensPerMonth: 200000,
+            maxWhatsAppConnections: 2,
+            liveChat: true,
+            knowledgeBase: true,
+            integrations: true,
+            apiAccess: true
+          }
+        },
+        {
+          name: 'scale',
+          displayName: 'Scale Enterprise Plan',
+          description: 'Unlimited capacity with full Developer API & Webhooks Access',
+          monthlyPrice: 5999,
+          yearlyPrice: 59990,
+          badge: 'ENTERPRISE',
+          features: {
+            maxConversations: -1,
+            maxMessages: -1,
+            geminiTokensPerMonth: 1000000,
+            maxWhatsAppConnections: 5,
+            liveChat: true,
+            knowledgeBase: true,
+            integrations: true,
+            apiAccess: true,
+            advancedAnalytics: true,
+            prioritySupport: true
+          }
+        }
+      ];
+      plans = await PricingPlan.insertMany(defaultPlans);
+    }
 
     res.json({
       success: true,

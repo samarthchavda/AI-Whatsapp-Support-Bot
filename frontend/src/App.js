@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Link, useLocation, Navigate } from 'react-router-dom';
-import { FaHome, FaComments, FaBox, FaExclamationTriangle, FaPlug, FaSearch, FaBell, FaSignOutAlt, FaUser, FaBrain, FaCommentDots, FaBroadcastTower, FaChartLine, FaCog, FaCrown, FaFileAlt, FaShoppingCart, FaCoins, FaUserSecret, FaHeartbeat, FaBullhorn, FaBlog, FaBars, FaWhatsapp, FaShieldAlt, FaToggleOn, FaTimes, FaTags, FaUserTag } from 'react-icons/fa';
+import { FaHome, FaComments, FaBox, FaExclamationTriangle, FaPlug, FaSearch, FaBell, FaSignOutAlt, FaUser, FaBrain, FaCommentDots, FaBroadcastTower, FaChartLine, FaCog, FaCrown, FaFileAlt, FaShoppingCart, FaCoins, FaUserSecret, FaHeartbeat, FaBullhorn, FaBlog, FaBars, FaWhatsapp, FaShieldAlt, FaToggleOn, FaTimes, FaTags, FaUserTag, FaCode } from 'react-icons/fa';
 import api, { clearAuthState, refreshAuth } from './services/api';
 import io from 'socket.io-client';
 import Dashboard from './pages/merchant/Dashboard/Dashboard';
@@ -14,6 +14,7 @@ import LiveChat from './pages/merchant/LiveChat/LiveChat';
 import Broadcast from './pages/merchant/Broadcast/Broadcast';
 import Analytics from './pages/Analytics';
 import Integrations from './pages/merchant/Integrations/Integrations';
+import DeveloperApi from './pages/merchant/DeveloperApi/DeveloperApi';
 import SuperAdmin from './pages/superAdmin/Dashboard/SuperAdmin';
 import LeadsCRM from './pages/superAdmin/LeadsCRM/LeadsCRM';
 import SuperAdminHealth from './pages/superAdmin/SystemHealth/SuperAdminHealth';
@@ -428,6 +429,12 @@ function Sidebar({ admin, onLogout, isOpen, onToggle, pendingDemoRequestsCount }
                         </Link>
                       </li>
                     )}
+                    <li>
+                      <Link to="/dashboard/developer-api" className={isActive('/dashboard/developer-api')} title="Developer API Hub">
+                        <FaCode />
+                        <span className="nav-label">Developer API</span>
+                      </Link>
+                    </li>
                   </ul>
                 </div>
               )}
@@ -938,6 +945,7 @@ function App() {
                     <Route path="/broadcast" element={<Broadcast />} />
                     <Route path="/knowledge-base" element={<KnowledgeBase />} />
                     <Route path="/integrations" element={<Integrations admin={admin} />} />
+                    <Route path="/developer-api" element={<DeveloperApi admin={admin} />} />
                     <Route path="/whatsapp-connect" element={<WhatsAppConnect />} />
                     <Route path="/templates" element={<Templates />} />
                     <Route path="/abandoned-carts" element={<AbandonedCarts admin={admin} />} />
@@ -961,6 +969,7 @@ function App() {
                         <Route path="/demo-requests" element={<DemoRequests />} />
                         <Route path="/super-admin/user/:userId" element={<SuperAdminUserDetail />} />
                         <Route path="/super-admin/plans" element={<PlanManager />} />
+                        <Route path="/super-admin/developer-api" element={<DeveloperApi admin={admin} />} />
                         <Route path="/super-admin/budget" element={<SuperAdminBudget />} />
                         <Route path="/super-admin/blog" element={<SuperAdminBlog />} />
                         <Route path="/super-admin/settings" element={<SuperAdminSettings />} />

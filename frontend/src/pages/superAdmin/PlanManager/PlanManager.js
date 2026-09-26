@@ -293,66 +293,101 @@ function PlanManager() {
       </div>
 
       {activeTab === 'plans' && (
-        <div className="plans-grid">
-        {plans.map((plan) => (
-          <div key={plan._id} className="plan-card">
-            <div className="plan-badge">
-              {plan.badge && <span className="badge-text">{plan.badge}</span>}
-            </div>
-
-            <h2 className="plan-name">{plan.displayName}</h2>
-            <p className="plan-description">{plan.description}</p>
-
-            <div className="plan-price">
-              <span className="price">${plan.monthlyPrice}</span>
-              <span className="period">/month</span>
-            </div>
-
-            {plan.yearlyPrice && (
-              <div className="yearly-price">
-                ${plan.yearlyPrice}/year (Save {Math.round((1 - plan.yearlyPrice / (plan.monthlyPrice * 12)) * 100)}%)
-              </div>
-            )}
-
-            <div className="plan-features">
-              <h3>Features</h3>
-              <ul>
-                {plan.features.maxConversations === -1 ? (
-                  <li><FaCheck /> Unlimited Conversations</li>
-                ) : (
-                  <li>Up to {plan.features.maxConversations} Conversations</li>
-                )}
-                
-                {plan.features.maxMessages === -1 ? (
-                  <li><FaCheck /> Unlimited Messages</li>
-                ) : (
-                  <li>Up to {plan.features.maxMessages} Messages</li>
-                )}
-
-                <li><FaCheck /> {plan.features.geminiTokensPerMonth === -1 ? 'Unlimited' : plan.features.geminiTokensPerMonth.toLocaleString()} Gemini Tokens/month</li>
-                <li><FaCheck /> {plan.features.maxWhatsAppConnections} WhatsApp Connection{plan.features.maxWhatsAppConnections > 1 ? 's' : ''}</li>
-
-                {plan.features.advancedAnalytics && <li><FaCheck /> Advanced Analytics</li>}
-                {plan.features.customBranding && <li><FaCheck /> Custom Branding</li>}
-                {plan.features.liveChat && <li><FaCheck /> Live Chat Support</li>}
-                {plan.features.knowledgeBase && <li><FaCheck /> Knowledge Base</li>}
-                {plan.features.integrations && <li><FaCheck /> E-commerce Integrations</li>}
-                {plan.features.apiAccess && <li><FaCheck /> API Access</li>}
-                {plan.features.prioritySupport && <li><FaCheck /> Priority Support</li>}
-              </ul>
-            </div>
-
-            <div className="plan-actions">
-              <button onClick={() => handleOpenModal(plan)} className="btn-icon-edit">
-                <FaEdit /> Edit
-              </button>
-              <button onClick={() => handleDeletePlan(plan._id)} className="btn-icon-delete">
-                <FaTrash /> Delete
-              </button>
-            </div>
+        plans.length === 0 ? (
+          <div style={{
+            background: 'var(--bg-secondary)',
+            border: '1px dashed var(--border-color)',
+            borderRadius: '16px',
+            padding: '48px 24px',
+            textAlign: 'center',
+            marginTop: '24px'
+          }}>
+            <FaCog style={{ fontSize: '48px', color: 'var(--accent)', marginBottom: '16px', opacity: 0.8 }} />
+            <h3 style={{ color: 'var(--text-primary)', fontSize: '20px', fontWeight: '600', marginBottom: '8px' }}>No Pricing Plans Found</h3>
+            <p style={{ color: 'var(--text-secondary)', fontSize: '14px', maxWidth: '480px', margin: '0 auto 24px' }}>
+              Create subscription plans to offer your merchants Starter, Growth, or Enterprise scale packages.
+            </p>
+            <button 
+              onClick={() => handleOpenModal()} 
+              className="btn-primary"
+              style={{
+                background: 'linear-gradient(135deg, #1677ff 0%, #0958d9 100%)',
+                color: '#ffffff',
+                border: 'none',
+                padding: '10px 24px',
+                borderRadius: '8px',
+                fontWeight: '600',
+                cursor: 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '8px'
+              }}
+            >
+              <FaPlus /> Create First Plan
+            </button>
           </div>
-        ))}
-      </div>
+        ) : (
+          <div className="plans-grid">
+            {plans.map((plan) => (
+              <div key={plan._id} className="plan-card">
+                <div className="plan-badge">
+                  {plan.badge && <span className="badge-text">{plan.badge}</span>}
+                </div>
+
+                <h2 className="plan-name">{plan.displayName}</h2>
+                <p className="plan-description">{plan.description}</p>
+
+                <div className="plan-price">
+                  <span className="price">₹{plan.monthlyPrice}</span>
+                  <span className="period">/month</span>
+                </div>
+
+                {plan.yearlyPrice && (
+                  <div className="yearly-price">
+                    ₹{plan.yearlyPrice}/year (Save {Math.round((1 - plan.yearlyPrice / (plan.monthlyPrice * 12)) * 100)}%)
+                  </div>
+                )}
+
+                <div className="plan-features">
+                  <h3>Features</h3>
+                  <ul>
+                    {plan.features.maxConversations === -1 ? (
+                      <li><FaCheck /> Unlimited Conversations</li>
+                    ) : (
+                      <li>Up to {plan.features.maxConversations} Conversations</li>
+                    )}
+                    
+                    {plan.features.maxMessages === -1 ? (
+                      <li><FaCheck /> Unlimited Messages</li>
+                    ) : (
+                      <li>Up to {plan.features.maxMessages} Messages</li>
+                    )}
+
+                    <li><FaCheck /> {plan.features.geminiTokensPerMonth === -1 ? 'Unlimited' : plan.features.geminiTokensPerMonth.toLocaleString()} Gemini Tokens/month</li>
+                    <li><FaCheck /> {plan.features.maxWhatsAppConnections} WhatsApp Connection{plan.features.maxWhatsAppConnections > 1 ? 's' : ''}</li>
+
+                    {plan.features.advancedAnalytics && <li><FaCheck /> Advanced Analytics</li>}
+                    {plan.features.customBranding && <li><FaCheck /> Custom Branding</li>}
+                    {plan.features.liveChat && <li><FaCheck /> Live Chat Support</li>}
+                    {plan.features.knowledgeBase && <li><FaCheck /> Knowledge Base</li>}
+                    {plan.features.integrations && <li><FaCheck /> E-commerce Integrations</li>}
+                    {plan.features.apiAccess && <li><FaCheck /> API Access</li>}
+                    {plan.features.prioritySupport && <li><FaCheck /> Priority Support</li>}
+                  </ul>
+                </div>
+
+                <div className="plan-actions">
+                  <button onClick={() => handleOpenModal(plan)} className="btn-icon-edit">
+                    <FaEdit /> Edit
+                  </button>
+                  <button onClick={() => handleDeletePlan(plan._id)} className="btn-icon-delete">
+                    <FaTrash /> Delete
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )
       )}
 
       {/* Create/Edit Plan Modal */}

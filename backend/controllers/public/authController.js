@@ -1125,3 +1125,56 @@ Best regards,
     res.status(500).json({ success: false, error: 'Failed to verify payment' });
   }
 };
+
+// Get Merchant API Key
+exports.getApiKey = async (req, res) => {
+  try {
+    const crypto = require('crypto');
+    const admin = await Admin.findById(req.admin._id);
+    if (!admin) {
+      return res.status(404).json({ success: false, error: 'Merchant not found' });
+    }
+
+    if (!admin.apiKey) {
+      admin.apiKey = 'kw_live_' + crypto.randomBytes(16).toString('hex');
+      await admin.save();
+    }
+
+    res.json({
+      success: true,
+      apiKey: admin.apiKey
+    });
+  } catch (error) {
+    console.error('Error fetching API key:', error);
+    res.status(500).json({ success: false, error: 'Failed to fetch API key' });
+  }
+};
+
+// Regenerate or Custom Set Merchant API Key
+exports.regenerateApiKey = async (req, res) => {
+  try {
+    const crypto = require('crypto');
+    const admin = await Admin.findById(req.admin._id);
+    if (!admin) {
+      return res.status(404).json({ success: false, error: 'Merchant not found' });
+    }
+
+    const { customKey } = req.body;
+    if (customKey && typeof customKey === 'string' && customKey.trim().length > 0) {
+      admin.apiKey = customKey.trim();
+    } else {
+      admin.apiKey = 'kw_live_' + crypto.randomBytes(16).toString('hex');
+    }
+
+    await admin.save();
+
+    res.json({
+      success: true,
+      message: 'API Key updated successfully!',
+      apiKey: admin.apiKey
+    });
+  } catch (error) {
+    console.error('Error updating API key:', error);
+    res.status(500).json({ success: false, error: 'Failed to update API key' });
+  }
+};

@@ -53,6 +53,11 @@ const adminSchema = new mongoose.Schema({
   lastLogin: {
     type: Date
   },
+  apiKey: {
+    type: String,
+    unique: true,
+    sparse: true
+  },
   // Subscription fields
   subscriptionPlan: {
     type: String,

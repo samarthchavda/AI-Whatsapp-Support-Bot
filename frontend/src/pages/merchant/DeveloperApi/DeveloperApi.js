@@ -1,17 +1,18 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   FaCode, 
   FaKey, 
   FaCopy, 
   FaCheck, 
   FaExternalLinkAlt, 
-  FaPaperPlane, 
   FaBookOpen, 
-  FaCloudDownloadAlt, 
   FaTerminal, 
   FaServer,
-  FaSearch
+  FaSearch,
+  FaSync,
+  FaEdit
 } from 'react-icons/fa';
+import api from '../../../services/api';
 import './DeveloperApi.css';
 
 const API_LIST = [
@@ -321,8 +322,44 @@ function DeveloperApi() {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedLanguage, setSelectedLanguage] = useState({});
   const [copiedId, setCopiedId] = useState(null);
-  const [apiKey, setApiKey] = useState('kw_live_98a7f6e5d4c3b2a1_kwickbot_secret_token');
+  const [apiKey, setApiKey] = useState('Loading...');
   const [showApiKey, setShowApiKey] = useState(false);
+  const [showKeyModal, setShowKeyModal] = useState(false);
+  const [customKeyInput, setCustomKeyInput] = useState('');
+  const [keyLoading, setKeyLoading] = useState(false);
+
+  useEffect(() => {
+    fetchApiKey();
+  }, []);
+
+  const fetchApiKey = async () => {
+    try {
+      const res = await api.get('/auth/api-key');
+      if (res.data.success && res.data.apiKey) {
+        setApiKey(res.data.apiKey);
+      }
+    } catch (err) {
+      console.error('Error fetching API key:', err);
+    }
+  };
+
+  const handleUpdateApiKey = async (newKey = null) => {
+    try {
+      setKeyLoading(true);
+      const payload = newKey ? { customKey: newKey } : {};
+      const res = await api.post('/auth/api-key/regenerate', payload);
+      if (res.data.success && res.data.apiKey) {
+        setApiKey(res.data.apiKey);
+        alert(res.data.message || 'API Key updated successfully!');
+        setShowKeyModal(false);
+        setCustomKeyInput('');
+      }
+    } catch (err) {
+      alert(err.response?.data?.error || 'Failed to update API Key');
+    } finally {
+      setKeyLoading(false);
+    }
+  };
 
   const handleCopy = (text, id) => {
     navigator.clipboard.writeText(text);
@@ -357,7 +394,7 @@ function DeveloperApi() {
             <div className="api-key-box">
               <span className="key-label"><FaKey /> Your API Secret Key:</span>
               <code className="key-value">
-                {showApiKey ? apiKey : '••••••••••••••••••••••••••••••••••••••••••••'}
+                {showApiKey ? apiKey : (apiKey === 'Loading...' ? 'Loading...' : '••••••••••••••••••••••••••••••••••••••••••••')}
               </code>
               <button 
                 className="btn-toggle-key"
@@ -371,6 +408,13 @@ function DeveloperApi() {
               >
                 {copiedId === 'main_api_key' ? <FaCheck style={{ color: '#10b981' }} /> : <FaCopy />}
                 {copiedId === 'main_api_key' ? 'Copied!' : 'Copy Key'}
+              </button>
+              <button 
+                className="btn-toggle-key"
+                style={{ background: '#0284c7' }}
+                onClick={() => setShowKeyModal(true)}
+              >
+                <FaEdit /> Change / Set Key
               </button>
             </div>
 
@@ -547,6 +591,90 @@ function DeveloperApi() {
           })
         )}
       </div>
+
+      {/* Change / Set Custom Key Modal */}
+      {showKeyModal && (
+        <div className="modal-overlay" onClick={() => setShowKeyModal(false)}>
+          <div className="modal-content-small" onClick={(e) => e.stopPropagation()} style={{
+            background: 'var(--bg-secondary, #0f172a)',
+            border: '1px solid #334155',
+            borderRadius: '16px',
+            padding: '24px',
+            maxWidth: '480px',
+            width: '90%',
+            color: '#f8fafc'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '700' }}><FaKey style={{ color: '#0284c7' }} /> Update Secret API Key</h3>
+              <button onClick={() => setShowKeyModal(false)} style={{ background: 'none', border: 'none', color: '#94a3b8', fontSize: '18px', cursor: 'pointer' }}>✕</button>
+            </div>
+
+            <p style={{ color: '#94a3b8', fontSize: '13.5px', marginBottom: '20px' }}>
+              તમારો કસ્ટમ **API Key** ટાઈપ કરો અથવા આપમેળે નવો સિક્રેટ કી (Random Secret Key) જનરેટ કરો:
+            </p>
+
+            <div style={{ marginBottom: '20px' }}>
+              <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: '#cbd5e1', marginBottom: '6px' }}>Custom API Key Value (Optional)</label>
+              <input 
+                type="text" 
+                placeholder="e.g. kw_live_my_custom_secret_key_123" 
+                value={customKeyInput}
+                onChange={(e) => setCustomKeyInput(e.target.value)}
+                style={{
+                  width: '100%',
+                  padding: '10px 14px',
+                  background: '#020617',
+                  border: '1px solid #334155',
+                  borderRadius: '8px',
+                  color: '#10b981',
+                  fontFamily: 'monospace',
+                  fontSize: '13px',
+                  outline: 'none'
+                }}
+              />
+            </div>
+
+            <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+              <button 
+                disabled={keyLoading}
+                onClick={() => handleUpdateApiKey()}
+                style={{
+                  background: '#334155',
+                  color: '#ffffff',
+                  border: 'none',
+                  padding: '10px 16px',
+                  borderRadius: '8px',
+                  fontWeight: '600',
+                  fontSize: '13px',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px'
+                }}
+              >
+                <FaSync /> Auto-Generate Random Key
+              </button>
+
+              <button 
+                disabled={keyLoading || !customKeyInput.trim()}
+                onClick={() => handleUpdateApiKey(customKeyInput)}
+                style={{
+                  background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                  color: '#ffffff',
+                  border: 'none',
+                  padding: '10px 18px',
+                  borderRadius: '8px',
+                  fontWeight: '600',
+                  fontSize: '13px',
+                  cursor: 'pointer'
+                }}
+              >
+                Save Custom Key
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

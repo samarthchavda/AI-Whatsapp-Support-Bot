@@ -306,4 +306,8 @@ router.post('/razorpay/create-order', verifyToken, authController.createRazorpay
  */
 router.post('/razorpay/verify-payment', verifyToken, authController.verifyRazorpayPayment);
 
+// API Key Management Routes
+router.get('/api-key', verifyToken, authController.getApiKey);
+router.post('/api-key/regenerate', verifyToken, authController.regenerateApiKey);
+
 module.exports = router;

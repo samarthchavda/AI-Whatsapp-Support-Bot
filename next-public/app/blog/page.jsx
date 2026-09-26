@@ -12,6 +12,16 @@ export const metadata = {
 
 const FALLBACK_POSTS = [
   {
+    _id: 'meta-templates-simple-1',
+    slug: 'what-are-whatsapp-meta-templates-simple-guide-2026',
+    title: 'Understanding WhatsApp Meta Templates (2026): A Simple Guide for Store Owners (No Coding Required)',
+    summary: 'A simple, non-technical guide explaining what WhatsApp Meta message templates are, why Meta requires pre-approved messages, how the 24-hour rule works, and how Kwickbot automates them for your store.',
+    tags: ['Meta Templates', 'Beginners Guide', 'WhatsApp API', 'Store Automation'],
+    author: 'Kwickbot Customer Success Team',
+    createdAt: '2026-09-26T10:00:00.000Z',
+    coverImage: 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&w=1200&q=80'
+  },
+  {
     _id: 'broadcasting-1',
     slug: 'whatsapp-broadcasting-meta-approved-campaigns-guide-2026',
     title: 'WhatsApp Broadcasting Guide (2026): How D2C Brands Run Meta-Approved Campaigns, Segment Audiences, and Achieve 45%+ Conversion Rates with Kwickbot',

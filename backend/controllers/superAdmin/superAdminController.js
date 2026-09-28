@@ -827,17 +827,45 @@ exports.deleteUser = async (req, res) => {
 exports.getAllPlans = async (req, res) => {
   try {
     const PricingPlan = require('../../models/PricingPlan');
-    let plans = await PricingPlan.find().sort({ category: 1, displayOrder: 1 });
+    const { runMigration } = require('../../scripts/migratePlansToStandard');
 
-    if (!plans || plans.length === 0) {
-      const { runMigration } = require('../../scripts/migratePlansToStandard');
-      await runMigration().catch(() => {});
-      plans = await PricingPlan.find().sort({ category: 1, displayOrder: 1 });
-    }
+    // Run quiet idempotent migration check to ensure all standard draft plans exist
+    await runMigration({ quiet: true }).catch(err => console.error('Idempotent migration check error:', err.message));
+
+    const plans = await PricingPlan.find().sort({ displayOrder: 1, createdAt: 1 });
+
+    // Calculate active subscriber counts per plan for UI display & subscriber-protected deletion
+    const subscriberCounts = await Admin.aggregate([
+      {
+        $match: {
+          role: { $ne: 'super_admin' },
+          subscriptionStatus: 'active'
+        }
+      },
+      {
+        $group: {
+          _id: { $ifNull: ['$pricingPlanId', '$subscriptionPlan'] },
+          count: { $sum: 1 }
+        }
+      }
+    ]);
+
+    const subCountMap = {};
+    subscriberCounts.forEach(sc => {
+      if (sc._id) subCountMap[sc._id.toString()] = sc.count;
+    });
+
+    const enrichedPlans = plans.map(p => {
+      const pObj = p.toObject();
+      const byId = subCountMap[p._id.toString()] || 0;
+      const byName = subCountMap[p.name] || 0;
+      pObj.activeSubscribersCount = Math.max(byId, byName);
+      return pObj;
+    });
 
     res.json({
       success: true,
-      data: plans
+      data: enrichedPlans
     });
   } catch (error) {
     console.error('Error fetching super admin plans:', error);

@@ -1,9 +1,20 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
-import { FaCog, FaPlus, FaEdit, FaTrash, FaCheck, FaTicketAlt, FaCopy, FaEye, FaEyeSlash, FaArrowUp, FaArrowDown, FaInfoCircle } from 'react-icons/fa';
-import '../Dashboard/SuperAdmin.css';
+import {
+  FaCog, FaPlus, FaEdit, FaTrash, FaTicketAlt, FaCopy, FaEye, FaEyeSlash,
+  FaArrowUp, FaArrowDown, FaExclamationTriangle, FaLayerGroup,
+  FaUsers, FaCheckCircle, FaFileAlt, FaTimes
+} from 'react-icons/fa';
+import './PlanManager.css';
 
 const API_BASE = process.env.REACT_APP_API_URL || (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' ? 'http://localhost:5001/api' : '/api');
+
+const CATEGORY_MAP = {
+  kwickbot_crm: { label: 'Kwickbot CRM', className: 'kwickbot_crm' },
+  crm_integration: { label: 'CRM Integration', className: 'crm_integration' },
+  whatsapp_api: { label: 'WhatsApp API', className: 'whatsapp_api' },
+  enterprise_custom: { label: 'Enterprise Custom', className: 'enterprise_custom' }
+};
 
 const CATEGORY_OPTIONS = [
   { id: 'kwickbot_crm', name: 'Kwickbot CRM' },
@@ -86,7 +97,7 @@ const DEFAULT_FORM_DATA = {
   isActive: true,
   isPublished: true,
   allowedBillingCycles: ['monthly', 'yearly'],
-  permissionProfile: 'default',
+  permissionProfile: 'starter',
   allowedPages: ['dashboard', 'conversations', 'knowledge-base', 'integrations', 'profile', 'billing'],
   features: FEATURE_KEYS.reduce((acc, f) => ({ ...acc, [f.key]: false }), { dashboardAccess: true, conversations: true }),
   usageLimits: {
@@ -107,12 +118,31 @@ const DEFAULT_FORM_DATA = {
   sla: 'Best Effort'
 };
 
+const formatCurrency = (val, currency = 'INR') => {
+  if (val === undefined || val === null) return '₹0';
+  try {
+    return new Intl.NumberFormat('en-IN', {
+      style: 'currency',
+      currency: currency || 'INR',
+      maximumFractionDigits: 0
+    }).format(val);
+  } catch (e) {
+    return `₹${val}`;
+  }
+};
+
 function PlanManager() {
   const [plans, setPlans] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('plans'); // 'plans' or 'coupons'
+
+  // Toolbar Filter & Search states
+  const [searchTerm, setSearchTerm] = useState('');
   const [filterCategory, setFilterCategory] = useState('all');
-  
+  const [filterStatus, setFilterStatus] = useState('all');
+  const [filterBilling, setFilterBilling] = useState('all');
+  const [sortBy, setSortBy] = useState('order');
+
   // Coupon States
   const [coupons, setCoupons] = useState([]);
   const [showCouponModal, setShowCouponModal] = useState(false);
@@ -122,46 +152,58 @@ function PlanManager() {
   // Plan Form & Modal States
   const [showModal, setShowModal] = useState(false);
   const [editingPlan, setEditingPlan] = useState(null);
-  const [formSection, setFormSection] = useState(1); // 1 to 9
+  const [formSection, setFormSection] = useState(1); // 1 to 10
   const [formData, setFormData] = useState(DEFAULT_FORM_DATA);
+  const [isSaving, setIsSaving] = useState(false);
+  const [isDirty, setIsDirty] = useState(false);
 
-  useEffect(() => {
-    fetchPlans();
-    fetchCoupons();
-  }, []);
+  // Toast System
+  const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
 
-  const fetchPlans = async () => {
+  const showToast = (message, type = 'success') => {
+    setToast({ show: true, message, type });
+    setTimeout(() => {
+      setToast({ show: false, message: '', type: 'success' });
+    }, 4000);
+  };
+
+  const fetchPlans = useCallback(async () => {
     try {
       setLoading(true);
       const token = localStorage.getItem('token') || localStorage.getItem('accessToken');
       const response = await axios.get(`${API_BASE}/super-admin/plans`, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      setPlans(response.data.data);
+      setPlans(response.data.data || []);
     } catch (error) {
       console.error('Error fetching plans:', error);
-      alert('Failed to load pricing plans');
+      showToast('Failed to load pricing plans', 'error');
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  const fetchCoupons = async () => {
+  const fetchCoupons = useCallback(async () => {
     try {
       const token = localStorage.getItem('token') || localStorage.getItem('accessToken');
       const response = await axios.get(`${API_BASE}/super-admin/coupons`, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      setCoupons(response.data.data);
+      setCoupons(response.data.data || []);
     } catch (error) {
       console.error('Error fetching coupons:', error);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    fetchPlans();
+    fetchCoupons();
+  }, [fetchPlans, fetchCoupons]);
 
   const handleCreateCoupon = async (e) => {
     e.preventDefault();
     if (!newCoupon.code.trim() || !newCoupon.discountPercent) {
-      alert('Please fill code and discount percentage');
+      showToast('Please enter code and discount percentage', 'error');
       return;
     }
 
@@ -175,13 +217,13 @@ function PlanManager() {
       );
 
       if (response.data.success) {
-        alert('Discount code created successfully!');
+        showToast('Promo code created successfully!', 'success');
         setNewCoupon({ code: '', discountPercent: 10, expiresAt: '' });
         setShowCouponModal(false);
         fetchCoupons();
       }
     } catch (err) {
-      alert(err.response?.data?.error || 'Failed to create coupon');
+      showToast(err.response?.data?.error || 'Failed to create coupon', 'error');
     } finally {
       setCouponLoading(false);
     }
@@ -195,9 +237,10 @@ function PlanManager() {
         {},
         { headers: { Authorization: `Bearer ${token}` } }
       );
+      showToast('Coupon status updated', 'success');
       fetchCoupons();
     } catch (err) {
-      alert('Failed to update coupon status');
+      showToast('Failed to update coupon status', 'error');
     }
   };
 
@@ -208,14 +251,16 @@ function PlanManager() {
       await axios.delete(`${API_BASE}/super-admin/coupons/${couponId}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
+      showToast('Coupon deleted', 'success');
       fetchCoupons();
     } catch (err) {
-      alert('Failed to delete coupon');
+      showToast('Failed to delete coupon', 'error');
     }
   };
 
-  const handleOpenModal = (plan = null) => {
-    setFormSection(1);
+  const handleOpenModal = (plan = null, targetSection = 1) => {
+    setFormSection(targetSection);
+    setIsDirty(false);
     if (plan) {
       setEditingPlan(plan);
       setFormData({
@@ -237,60 +282,114 @@ function PlanManager() {
     setShowModal(true);
   };
 
+  const handleCloseModal = () => {
+    if (isDirty) {
+      if (!window.confirm('You have unsaved changes. Are you sure you want to close?')) return;
+    }
+    setShowModal(false);
+    setIsDirty(false);
+  };
+
+  const handleInputChange = (field, value) => {
+    setIsDirty(true);
+    setFormData(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
+  const handleFeatureToggle = (key) => {
+    setIsDirty(true);
+    setFormData(prev => ({
+      ...prev,
+      features: {
+        ...prev.features,
+        [key]: !prev.features[key]
+      }
+    }));
+  };
+
+  const handleLimitChange = (key, value) => {
+    setIsDirty(true);
+    setFormData(prev => ({
+      ...prev,
+      usageLimits: {
+        ...prev.usageLimits,
+        [key]: Number(value)
+      }
+    }));
+  };
+
+  const handlePageToggle = (pageKey) => {
+    setIsDirty(true);
+    setFormData(prev => {
+      const currentPages = prev.allowedPages || [];
+      const updated = currentPages.includes(pageKey)
+        ? currentPages.filter(p => p !== pageKey)
+        : [...currentPages, pageKey];
+      return { ...prev, allowedPages: updated };
+    });
+  };
+
   const handleSavePlan = async () => {
     if (!formData.name.trim() || !formData.displayName.trim()) {
-      alert('Plan Name and Display Name are required');
+      showToast('Plan Name and Display Name are required', 'error');
       return;
     }
 
-    if (Number(formData.monthlyPrice) < 0 || Number(formData.yearlyPrice) < 0) {
-      alert('Prices cannot be negative');
-      return;
-    }
-
-    if (!formData.contactSales && (!formData.allowedBillingCycles || formData.allowedBillingCycles.length === 0)) {
-      alert('At least one billing cycle must be enabled unless Contact Sales is checked');
-      return;
+    if (!formData.contactSales) {
+      if (Number(formData.monthlyPrice) < 0 || Number(formData.yearlyPrice) < 0) {
+        showToast('Prices cannot be negative', 'error');
+        return;
+      }
+      if (!formData.allowedBillingCycles || formData.allowedBillingCycles.length === 0) {
+        showToast('At least one billing cycle must be enabled unless Contact Sales is checked', 'error');
+        return;
+      }
     }
 
     const token = localStorage.getItem('token') || localStorage.getItem('accessToken');
     try {
+      setIsSaving(true);
       if (editingPlan) {
         await axios.put(
           `${API_BASE}/super-admin/plans/${editingPlan._id}`,
           formData,
           { headers: { Authorization: `Bearer ${token}` } }
         );
-        alert('Plan updated successfully!');
+        showToast(`Plan "${formData.displayName}" updated successfully!`, 'success');
       } else {
         await axios.post(
           `${API_BASE}/super-admin/plans`,
           formData,
           { headers: { Authorization: `Bearer ${token}` } }
         );
-        alert('Plan created successfully!');
+        showToast(`Plan "${formData.displayName}" created successfully!`, 'success');
       }
       setShowModal(false);
+      setIsDirty(false);
       fetchPlans();
     } catch (error) {
-      alert(error.response?.data?.error || 'Failed to save plan');
+      showToast(error.response?.data?.error || 'Failed to save plan', 'error');
+    } finally {
+      setIsSaving(false);
     }
   };
 
-  const handleDuplicatePlan = async (planId) => {
+  const handleDuplicatePlan = async (planId, planName) => {
     const token = localStorage.getItem('token') || localStorage.getItem('accessToken');
     try {
       await axios.post(`${API_BASE}/super-admin/plans/${planId}/duplicate`, {}, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      alert('Plan duplicated cleanly as draft!');
+      showToast(`Duplicated "${planName}" cleanly as draft!`, 'success');
       fetchPlans();
     } catch (error) {
-      alert(error.response?.data?.error || 'Failed to duplicate plan');
+      showToast(error.response?.data?.error || 'Failed to duplicate plan', 'error');
     }
   };
 
-  const handleTogglePublish = async (planId, currentPublishStatus) => {
+  const handleTogglePublish = async (planId, currentPublishStatus, planName) => {
     const token = localStorage.getItem('token') || localStorage.getItem('accessToken');
     try {
       await axios.post(`${API_BASE}/super-admin/plans/${planId}/toggle-publish`, {
@@ -298,34 +397,45 @@ function PlanManager() {
       }, {
         headers: { Authorization: `Bearer ${token}` }
       });
+      showToast(`"${planName}" is now ${!currentPublishStatus ? 'published' : 'draft/unpublished'}`, 'info');
       fetchPlans();
     } catch (error) {
-      alert(error.response?.data?.error || 'Failed to toggle publish status');
+      showToast(error.response?.data?.error || 'Failed to update publish status', 'error');
     }
   };
 
-  const handleDeletePlan = async (planId) => {
-    if (!window.confirm('Are you sure you want to delete this pricing plan?')) return;
+  const handleDeletePlan = async (plan, e) => {
+    e.stopPropagation();
+    if (plan.activeSubscribersCount > 0) {
+      showToast(`Cannot delete "${plan.displayName}" because it has ${plan.activeSubscribersCount} active customer subscriber(s). Unpublish or archive it instead.`, 'error');
+      return;
+    }
+
+    if (!window.confirm(`Are you sure you want to permanently delete "${plan.displayName}"?`)) return;
     const token = localStorage.getItem('token') || localStorage.getItem('accessToken');
     try {
-      await axios.delete(`${API_BASE}/super-admin/plans/${planId}`, {
+      await axios.delete(`${API_BASE}/super-admin/plans/${plan._id}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      alert('Plan deleted successfully');
+      showToast(`Plan "${plan.displayName}" deleted successfully`, 'success');
       fetchPlans();
     } catch (error) {
-      alert(error.response?.data?.error || 'Failed to delete plan');
+      showToast(error.response?.data?.error || 'Failed to delete plan', 'error');
     }
   };
 
   const handleMoveOrder = async (index, direction) => {
+    const previousPlans = [...plans];
     const newPlans = [...plans];
     const targetIndex = direction === 'up' ? index - 1 : index + 1;
     if (targetIndex < 0 || targetIndex >= newPlans.length) return;
 
-    const temp = newPlans[index].displayOrder;
+    // Optimistic reorder update
+    const tempOrder = newPlans[index].displayOrder;
     newPlans[index].displayOrder = newPlans[targetIndex].displayOrder;
-    newPlans[targetIndex].displayOrder = temp;
+    newPlans[targetIndex].displayOrder = tempOrder;
+
+    setPlans(newPlans);
 
     const planOrders = newPlans.map(p => ({ id: p._id, displayOrder: p.displayOrder }));
     const token = localStorage.getItem('token') || localStorage.getItem('accessToken');
@@ -334,631 +444,949 @@ function PlanManager() {
       await axios.post(`${API_BASE}/super-admin/plans/reorder`, { planOrders }, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      fetchPlans();
+      showToast('Plan order updated', 'success');
     } catch (err) {
-      alert('Failed to reorder plans');
+      setPlans(previousPlans); // Rollback on error
+      showToast('Failed to reorder plans. Reverting...', 'error');
     }
   };
 
-  const displayedPlans = filterCategory === 'all'
-    ? plans
-    : plans.filter(p => p.category === filterCategory);
+  // Filter & Search Logic
+  const filteredPlans = plans.filter(p => {
+    // 1. Search term match
+    if (searchTerm.trim()) {
+      const q = searchTerm.toLowerCase();
+      const matchName = (p.displayName || '').toLowerCase().includes(q) || (p.name || '').toLowerCase().includes(q);
+      const matchSlug = (p.slug || '').toLowerCase().includes(q);
+      const matchBadge = (p.badge || '').toLowerCase().includes(q);
+      const matchCat = (CATEGORY_MAP[p.category]?.label || '').toLowerCase().includes(q);
+      if (!matchName && !matchSlug && !matchBadge && !matchCat) return false;
+    }
+
+    // 2. Category Filter
+    if (filterCategory !== 'all' && p.category !== filterCategory) {
+      return false;
+    }
+
+    // 3. Status Filter
+    if (filterStatus === 'published' && !p.isPublished) return false;
+    if (filterStatus === 'draft' && p.isPublished) return false;
+    if (filterStatus === 'active' && !p.isActive) return false;
+    if (filterStatus === 'inactive' && p.isActive) return false;
+
+    // 4. Billing Filter
+    if (filterBilling === 'contact_sales' && !p.contactSales) return false;
+    if (filterBilling === 'monthly_only' && (p.contactSales || !p.allowedBillingCycles?.includes('monthly') || p.allowedBillingCycles?.includes('yearly'))) return false;
+    if (filterBilling === 'yearly_only' && (p.contactSales || !p.allowedBillingCycles?.includes('yearly') || p.allowedBillingCycles?.includes('monthly'))) return false;
+
+    return true;
+  }).sort((a, b) => {
+    if (sortBy === 'price_asc') return (a.monthlyPrice || 0) - (b.monthlyPrice || 0);
+    if (sortBy === 'price_desc') return (b.monthlyPrice || 0) - (a.monthlyPrice || 0);
+    if (sortBy === 'name_asc') return (a.displayName || '').localeCompare(b.displayName || '');
+    return (a.displayOrder || 0) - (b.displayOrder || 0);
+  });
+
+  // Summary Metrics
+  const publishedCount = plans.filter(p => p.isPublished).length;
+  const draftCount = plans.filter(p => !p.isPublished).length;
+  const totalSubscribers = plans.reduce((sum, p) => sum + (p.activeSubscribersCount || 0), 0);
 
   if (loading) {
-    return <div className="container"><div style={{ padding: '40px', textAlign: 'center', color: '#71717a' }}>Loading plans...</div></div>;
+    return (
+      <div className="plan-manager-container">
+        <div style={{ padding: '60px', textAlign: 'center', color: 'var(--text-secondary)' }}>
+          <div className="spinner" style={{ marginBottom: '16px' }} />
+          Loading dynamic pricing plans and promo coupons...
+        </div>
+      </div>
+    );
   }
 
   return (
-    <div className="container">
-      <div className="page-header">
+    <div className="plan-manager-container">
+      {/* HEADER */}
+      <div className="plan-manager-header">
         <div>
-          <h1 className="page-title">
-            <FaCog style={{ color: '#f59e0b', marginRight: '12px' }} />
-            Dynamic Pricing Plan & Coupon Manager
+          <h1 className="plan-header-title">
+            <FaCog style={{ color: '#f59e0b' }} />
+            Pricing Plans & Coupons
           </h1>
-          <p className="page-subtitle">Configure subscription tiers, monthly/yearly pricing, features, limits, and permissions</p>
+          <p className="plan-header-subtitle">
+            Configure subscription tiers, monthly/yearly pricing, features, usage limits, and page permissions
+          </p>
         </div>
-        {activeTab === 'plans' ? (
-          <button onClick={() => handleOpenModal()} className="btn-primary">
-            <FaPlus /> Create New Plan
-          </button>
-        ) : (
-          <button onClick={() => setShowCouponModal(true)} className="btn-primary">
-            <FaPlus /> Create Promo Code
-          </button>
-        )}
+        <div>
+          {activeTab === 'plans' ? (
+            <button onClick={() => handleOpenModal()} className="btn-primary" style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 20px', borderRadius: '10px', background: '#1677ff', color: '#fff', border: 'none', fontWeight: 600, cursor: 'pointer' }}>
+              <FaPlus /> Create New Plan
+            </button>
+          ) : (
+            <button onClick={() => setShowCouponModal(true)} className="btn-primary" style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 20px', borderRadius: '10px', background: '#1677ff', color: '#fff', border: 'none', fontWeight: 600, cursor: 'pointer' }}>
+              <FaPlus /> Create Promo Code
+            </button>
+          )}
+        </div>
       </div>
 
-      {/* TABS & CATEGORY FILTER */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', flexWrap: 'wrap', gap: '12px' }}>
-        <div style={{ display: 'flex', gap: '8px' }}>
+      {/* SUMMARY METRIC CARDS */}
+      <div className="plan-summary-grid">
+        <div className="plan-summary-card">
+          <div className="plan-summary-icon total">
+            <FaLayerGroup />
+          </div>
+          <div>
+            <div className="plan-summary-val">{plans.length}</div>
+            <div className="plan-summary-lbl">Total Tiers</div>
+          </div>
+        </div>
+
+        <div className="plan-summary-card">
+          <div className="plan-summary-icon published">
+            <FaCheckCircle />
+          </div>
+          <div>
+            <div className="plan-summary-val">{publishedCount}</div>
+            <div className="plan-summary-lbl">Published Plans</div>
+          </div>
+        </div>
+
+        <div className="plan-summary-card">
+          <div className="plan-summary-icon draft">
+            <FaFileAlt />
+          </div>
+          <div>
+            <div className="plan-summary-val">{draftCount}</div>
+            <div className="plan-summary-lbl">Draft / Unpublished</div>
+          </div>
+        </div>
+
+        <div className="plan-summary-card">
+          <div className="plan-summary-icon subscribers">
+            <FaUsers />
+          </div>
+          <div>
+            <div className="plan-summary-val">{totalSubscribers}</div>
+            <div className="plan-summary-lbl">Active Customer Subs</div>
+          </div>
+        </div>
+      </div>
+
+      {/* MANAGEMENT TOOLBAR */}
+      <div className="plan-toolbar">
+        <div className="plan-tabs">
           <button
             onClick={() => setActiveTab('plans')}
-            style={{
-              padding: '10px 20px',
-              borderRadius: '8px',
-              border: 'none',
-              background: activeTab === 'plans' ? '#6366f1' : 'rgba(255,255,255,0.06)',
-              color: '#ffffff',
-              fontWeight: '600',
-              cursor: 'pointer'
-            }}
+            className={`plan-tab-btn ${activeTab === 'plans' ? 'active' : ''}`}
           >
             Pricing Plans ({plans.length})
           </button>
           <button
             onClick={() => setActiveTab('coupons')}
-            style={{
-              padding: '10px 20px',
-              borderRadius: '8px',
-              border: 'none',
-              background: activeTab === 'coupons' ? '#6366f1' : 'rgba(255,255,255,0.06)',
-              color: '#ffffff',
-              fontWeight: '600',
-              cursor: 'pointer'
-            }}
+            className={`plan-tab-btn ${activeTab === 'coupons' ? 'active' : ''}`}
           >
-            <FaTicketAlt style={{ marginRight: '6px' }} />
+            <FaTicketAlt />
             Promo Coupons ({coupons.length})
           </button>
         </div>
 
         {activeTab === 'plans' && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span style={{ fontSize: '13px', color: '#a1a1aa' }}>Category:</span>
+          <div className="plan-filters">
+            <div style={{ position: 'relative' }}>
+              <input
+                type="text"
+                placeholder="Search plans or slugs..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="plan-search-input"
+              />
+            </div>
+
             <select
               value={filterCategory}
               onChange={(e) => setFilterCategory(e.target.value)}
-              style={{
-                background: 'rgba(24,24,27,0.9)',
-                border: '1px solid rgba(255,255,255,0.15)',
-                color: '#ffffff',
-                padding: '6px 12px',
-                borderRadius: '6px',
-                fontSize: '13px'
-              }}
+              className="plan-select-filter"
             >
               <option value="all">All Categories</option>
               {CATEGORY_OPTIONS.map(c => (
                 <option key={c.id} value={c.id}>{c.name}</option>
               ))}
             </select>
+
+            <select
+              value={filterStatus}
+              onChange={(e) => setFilterStatus(e.target.value)}
+              className="plan-select-filter"
+            >
+              <option value="all">All Statuses</option>
+              <option value="published">Published</option>
+              <option value="draft">Draft / Unpublished</option>
+              <option value="active">Active Tiers</option>
+              <option value="inactive">Inactive Tiers</option>
+            </select>
+
+            <select
+              value={filterBilling}
+              onChange={(e) => setFilterBilling(e.target.value)}
+              className="plan-select-filter"
+            >
+              <option value="all">All Billing Types</option>
+              <option value="monthly_only">Monthly Only</option>
+              <option value="yearly_only">Yearly Only</option>
+              <option value="contact_sales">Contact Sales</option>
+            </select>
+
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value)}
+              className="plan-select-filter"
+            >
+              <option value="order">Display Order</option>
+              <option value="price_asc">Price: Low to High</option>
+              <option value="price_desc">Price: High to Low</option>
+              <option value="name_asc">Name: A to Z</option>
+            </select>
           </div>
         )}
       </div>
 
+      {/* PRICING PLANS TAB CONTENT */}
       {activeTab === 'plans' ? (
-        <div className="table-responsive" style={{ background: 'rgba(24, 24, 27, 0.8)', borderRadius: '12px', border: '1px solid rgba(255, 255, 255, 0.1)' }}>
-          <table className="data-table">
-            <thead>
-              <tr>
-                <th>Order</th>
-                <th>Plan Name</th>
-                <th>Category</th>
-                <th>Monthly Price</th>
-                <th>Yearly Price</th>
-                <th>Status</th>
-                <th>Pages</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {displayedPlans.map((plan, index) => (
-                <tr key={plan._id || plan.name}>
-                  <td>
-                    <div style={{ display: 'flex', gap: '4px' }}>
-                      <button onClick={() => handleMoveOrder(index, 'up')} style={{ background: 'transparent', border: 'none', color: '#a1a1aa', cursor: 'pointer' }}><FaArrowUp /></button>
-                      <button onClick={() => handleMoveOrder(index, 'down')} style={{ background: 'transparent', border: 'none', color: '#a1a1aa', cursor: 'pointer' }}><FaArrowDown /></button>
+        <>
+          {filteredPlans.length === 0 ? (
+            <div className="plan-table-container" style={{ padding: '48px', textAlign: 'center' }}>
+              <FaLayerGroup style={{ fontSize: '32px', color: 'var(--text-muted)', marginBottom: '12px' }} />
+              <h3 style={{ margin: '0 0 6px 0', color: 'var(--text-primary)' }}>No matching pricing plans found</h3>
+              <p style={{ color: 'var(--text-secondary)', margin: 0 }}>Try clearing your search query or filters.</p>
+            </div>
+          ) : (
+            <>
+              {/* DESKTOP TABLE */}
+              <div className="plan-table-container">
+                <table className="plan-table">
+                  <thead>
+                    <tr>
+                      <th style={{ width: '60px' }}>Order</th>
+                      <th>Plan Tiers</th>
+                      <th>Category</th>
+                      <th>Monthly</th>
+                      <th>Yearly</th>
+                      <th>Billing</th>
+                      <th>Status</th>
+                      <th>Permissions</th>
+                      <th>Subscribers</th>
+                      <th style={{ textAlign: 'right' }}>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredPlans.map((plan, index) => {
+                      const catInfo = CATEGORY_MAP[plan.category] || { label: plan.category || 'Kwickbot CRM', className: 'kwickbot_crm' };
+                      const pageCount = plan.allowedPages ? plan.allowedPages.length : 0;
+                      const hasSubscribers = (plan.activeSubscribersCount || 0) > 0;
+
+                      return (
+                        <tr key={plan._id || plan.name}>
+                          <td>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                              <button
+                                onClick={() => handleMoveOrder(index, 'up')}
+                                disabled={index === 0}
+                                className="btn-reorder"
+                                title="Move plan up"
+                              >
+                                <FaArrowUp />
+                              </button>
+                              <button
+                                onClick={() => handleMoveOrder(index, 'down')}
+                                disabled={index === filteredPlans.length - 1}
+                                className="btn-reorder"
+                                title="Move plan down"
+                              >
+                                <FaArrowDown />
+                              </button>
+                            </div>
+                          </td>
+
+                          <td>
+                            <div style={{ fontWeight: 700, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                              {plan.displayName}
+                              {plan.badge && (
+                                <span style={{ fontSize: '10px', padding: '2px 6px', borderRadius: '4px', background: 'rgba(22, 119, 255, 0.12)', color: '#1677ff', fontWeight: 700 }}>
+                                  {plan.badge}
+                                </span>
+                              )}
+                              {!plan.isPublished && (
+                                <span className="badge-status badge-draft" title="Draft tier not published on public site">
+                                  Draft
+                                </span>
+                              )}
+                            </div>
+                            <div style={{ fontSize: '12px', color: 'var(--text-muted)', fontFamily: 'monospace', marginTop: '2px' }}>
+                              slug: {plan.slug || plan.name}
+                            </div>
+                          </td>
+
+                          <td>
+                            <span className={`badge-category ${catInfo.className}`}>
+                              {catInfo.label}
+                            </span>
+                          </td>
+
+                          <td>
+                            {plan.contactSales ? (
+                              <span style={{ fontWeight: 600, color: '#f59e0b' }}>Contact Sales</span>
+                            ) : (
+                              <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>
+                                {formatCurrency(plan.monthlyPrice, plan.currency)}/mo
+                              </span>
+                            )}
+                          </td>
+
+                          <td>
+                            {plan.contactSales ? (
+                              <span style={{ fontWeight: 600, color: '#f59e0b' }}>Custom Quote</span>
+                            ) : (
+                              <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>
+                                {formatCurrency(plan.yearlyPrice, plan.currency)}/yr
+                              </span>
+                            )}
+                          </td>
+
+                          <td>
+                            <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
+                              {plan.contactSales ? (
+                                <span style={{ fontSize: '11px', padding: '2px 6px', borderRadius: '4px', background: 'var(--bg-input)', color: 'var(--text-secondary)' }}>Custom</span>
+                              ) : (
+                                (plan.allowedBillingCycles || ['monthly', 'yearly']).map(b => (
+                                  <span key={b} style={{ fontSize: '11px', padding: '2px 6px', borderRadius: '4px', background: 'var(--bg-input)', color: 'var(--text-secondary)', textTransform: 'capitalize' }}>
+                                    {b}
+                                  </span>
+                                ))
+                              )}
+                            </div>
+                          </td>
+
+                          <td>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                              <span className={`badge-status ${plan.isPublished ? 'badge-published' : 'badge-draft'}`}>
+                                {plan.isPublished ? 'Published' : 'Draft'}
+                              </span>
+                              <span className={`badge-status ${plan.isActive ? 'badge-active-tier' : 'badge-inactive-tier'}`}>
+                                {plan.isActive ? 'Active' : 'Inactive'}
+                              </span>
+                            </div>
+                          </td>
+
+                          <td>
+                            {pageCount > 0 ? (
+                              <button
+                                onClick={() => handleOpenModal(plan, 8)}
+                                className="badge-permissions"
+                                title="Click to view/edit allowed pages"
+                              >
+                                {pageCount} pages ({plan.permissionProfile || 'custom'})
+                              </button>
+                            ) : (
+                              <button
+                                onClick={() => handleOpenModal(plan, 8)}
+                                className="badge-permissions warning"
+                                title="No pages assigned! Click to assign pages"
+                              >
+                                <FaExclamationTriangle /> No pages assigned
+                              </button>
+                            )}
+                          </td>
+
+                          <td>
+                            <span style={{ fontWeight: 600, color: hasSubscribers ? '#16a36a' : 'var(--text-muted)' }}>
+                              {plan.activeSubscribersCount || 0} active
+                            </span>
+                          </td>
+
+                          <td style={{ textAlign: 'right' }}>
+                            <div className="plan-actions" style={{ justifyContent: 'flex-end' }}>
+                              <button
+                                onClick={() => handleTogglePublish(plan._id, plan.isPublished, plan.displayName)}
+                                className="btn-plan-action"
+                                title={plan.isPublished ? "Unpublish plan (hide from website)" : "Publish plan (show on website)"}
+                              >
+                                {plan.isPublished ? <FaEyeSlash /> : <FaEye />}
+                              </button>
+
+                              <button
+                                onClick={() => handleOpenModal(plan)}
+                                className="btn-plan-action"
+                                title="Edit plan details"
+                              >
+                                <FaEdit />
+                              </button>
+
+                              <button
+                                onClick={() => handleDuplicatePlan(plan._id, plan.displayName)}
+                                className="btn-plan-action"
+                                title="Duplicate plan as draft"
+                              >
+                                <FaCopy />
+                              </button>
+
+                              <button
+                                onClick={(e) => handleDeletePlan(plan, e)}
+                                disabled={hasSubscribers}
+                                className="btn-plan-action danger"
+                                title={hasSubscribers ? `Cannot delete: Has ${plan.activeSubscribersCount} active subscribers` : "Delete plan"}
+                              >
+                                <FaTrash />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* MOBILE CARDS LIST (< 768px) */}
+              <div className="plan-mobile-list">
+                {filteredPlans.map(plan => {
+                  const catInfo = CATEGORY_MAP[plan.category] || { label: plan.category || 'Kwickbot CRM', className: 'kwickbot_crm' };
+                  const hasSubscribers = (plan.activeSubscribersCount || 0) > 0;
+
+                  return (
+                    <div key={plan._id || plan.name} className="plan-mobile-card">
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
+                        <div>
+                          <div style={{ fontWeight: 700, fontSize: '16px', color: 'var(--text-primary)' }}>
+                            {plan.displayName}
+                          </div>
+                          <div style={{ fontSize: '12px', color: 'var(--text-muted)', fontFamily: 'monospace' }}>
+                            {plan.slug || plan.name}
+                          </div>
+                        </div>
+                        <span className={`badge-category ${catInfo.className}`}>
+                          {catInfo.label}
+                        </span>
+                      </div>
+
+                      <div style={{ display: 'flex', gap: '12px', margin: '12px 0', fontSize: '14px' }}>
+                        <div>
+                          <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Monthly</div>
+                          <div style={{ fontWeight: 600, color: 'var(--text-primary)' }}>
+                            {plan.contactSales ? 'Contact Sales' : `${formatCurrency(plan.monthlyPrice, plan.currency)}/mo`}
+                          </div>
+                        </div>
+                        <div>
+                          <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Yearly</div>
+                          <div style={{ fontWeight: 600, color: 'var(--text-primary)' }}>
+                            {plan.contactSales ? 'Custom Quote' : `${formatCurrency(plan.yearlyPrice, plan.currency)}/yr`}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '12px', borderTop: '1px solid var(--border-subtle)' }}>
+                        <div style={{ display: 'flex', gap: '6px' }}>
+                          <span className={`badge-status ${plan.isPublished ? 'badge-published' : 'badge-draft'}`}>
+                            {plan.isPublished ? 'Published' : 'Draft'}
+                          </span>
+                        </div>
+                        <div className="plan-actions">
+                          <button onClick={() => handleTogglePublish(plan._id, plan.isPublished, plan.displayName)} className="btn-plan-action">
+                            {plan.isPublished ? <FaEyeSlash /> : <FaEye />}
+                          </button>
+                          <button onClick={() => handleOpenModal(plan)} className="btn-plan-action">
+                            <FaEdit />
+                          </button>
+                          <button onClick={() => handleDuplicatePlan(plan._id, plan.displayName)} className="btn-plan-action">
+                            <FaCopy />
+                          </button>
+                          <button onClick={(e) => handleDeletePlan(plan, e)} disabled={hasSubscribers} className="btn-plan-action danger">
+                            <FaTrash />
+                          </button>
+                        </div>
+                      </div>
                     </div>
-                  </td>
-                  <td>
-                    <div style={{ fontWeight: '600', color: '#ffffff' }}>{plan.displayName}</div>
-                    <div style={{ fontSize: '11px', color: '#71717a' }}>{plan.name}</div>
-                    {plan.badge && <span className="badge badge-info" style={{ fontSize: '10px', marginTop: '2px' }}>{plan.badge}</span>}
-                  </td>
-                  <td>
-                    <span className="badge badge-secondary">{plan.category}</span>
-                  </td>
-                  <td>
-                    {plan.contactSales ? 'Contact Sales' : `${plan.currency || 'INR'} ${plan.monthlyPrice}`}
-                    {plan.setupFee > 0 && <div style={{ fontSize: '10px', color: '#f59e0b' }}>+{plan.currency || 'INR'}{plan.setupFee} setup</div>}
-                  </td>
-                  <td>
-                    {plan.contactSales ? 'Contact Sales' : (plan.yearlyPrice ? `${plan.currency || 'INR'} ${plan.yearlyPrice}` : 'N/A')}
-                  </td>
-                  <td>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                      <span className={`badge ${plan.isPublished ? 'badge-success' : 'badge-warning'}`}>
-                        {plan.isPublished ? 'Published' : 'Draft / Unpublished'}
-                      </span>
-                      <span className={`badge ${plan.isActive ? 'badge-info' : 'badge-danger'}`} style={{ fontSize: '10px' }}>
-                        {plan.isActive ? 'Active' : 'Inactive'}
-                      </span>
-                    </div>
-                  </td>
-                  <td>
-                    <span style={{ fontSize: '12px', color: '#38bdf8' }}>{plan.allowedPages?.length || 0} pages</span>
-                  </td>
-                  <td>
-                    <div style={{ display: 'flex', gap: '6px' }}>
-                      <button onClick={() => handleTogglePublish(plan._id, plan.isPublished)} title={plan.isPublished ? "Unpublish" : "Publish"} className="btn-icon" style={{ color: plan.isPublished ? '#f59e0b' : '#22c55e' }}>
-                        {plan.isPublished ? <FaEyeSlash /> : <FaEye />}
-                      </button>
-                      <button onClick={() => handleOpenModal(plan)} title="Edit Plan" className="btn-icon"><FaEdit /></button>
-                      <button onClick={() => handleDuplicatePlan(plan._id)} title="Duplicate Plan" className="btn-icon" style={{ color: '#38bdf8' }}><FaCopy /></button>
-                      <button onClick={() => handleDeletePlan(plan._id)} title="Delete Plan" className="btn-icon btn-danger"><FaTrash /></button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+                  );
+                })}
+              </div>
+            </>
+          )}
+        </>
       ) : (
-        /* PROMO COUPONS TABLE */
-        <div className="table-responsive" style={{ background: 'rgba(24, 24, 27, 0.8)', borderRadius: '12px', border: '1px solid rgba(255, 255, 255, 0.1)' }}>
-          <table className="data-table">
-            <thead>
-              <tr>
-                <th>Code</th>
-                <th>Discount</th>
-                <th>Status</th>
-                <th>Expires</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {coupons.map((coupon) => (
-                <tr key={coupon._id}>
-                  <td style={{ fontWeight: '700', color: '#6366f1' }}>{coupon.code}</td>
-                  <td>{coupon.discountPercent}% OFF</td>
-                  <td><span className={`badge ${coupon.isActive ? 'badge-success' : 'badge-secondary'}`}>{coupon.isActive ? 'Active' : 'Inactive'}</span></td>
-                  <td>{coupon.expiresAt ? new Date(coupon.expiresAt).toLocaleDateString() : 'Never'}</td>
-                  <td>
-                    <div style={{ display: 'flex', gap: '6px' }}>
-                      <button onClick={() => handleToggleCoupon(coupon._id)} className="btn-secondary" style={{ padding: '4px 8px', fontSize: '11px' }}>Toggle</button>
-                      <button onClick={() => handleDeleteCoupon(coupon._id)} className="btn-icon btn-danger"><FaTrash /></button>
-                    </div>
-                  </td>
+        /* PROMO COUPONS TAB CONTENT */
+        <div className="plan-table-container" style={{ padding: '24px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+            <div>
+              <h3 style={{ margin: 0, color: 'var(--text-primary)' }}>Active Promotional Coupons</h3>
+              <p style={{ margin: '4px 0 0 0', fontSize: '13px', color: 'var(--text-secondary)' }}>Discount codes applied during merchant checkout</p>
+            </div>
+            <button onClick={() => setShowCouponModal(true)} className="btn-primary" style={{ padding: '8px 16px', borderRadius: '8px', background: '#1677ff', color: '#fff', border: 'none', fontWeight: 600, cursor: 'pointer' }}>
+              <FaPlus /> Create Promo Code
+            </button>
+          </div>
+
+          {coupons.length === 0 ? (
+            <div style={{ padding: '40px', textAlign: 'center', color: 'var(--text-secondary)' }}>
+              No active promo coupons found. Click "Create Promo Code" to generate one.
+            </div>
+          ) : (
+            <table className="plan-table">
+              <thead>
+                <tr>
+                  <th>Coupon Code</th>
+                  <th>Discount Percentage</th>
+                  <th>Expiration Date</th>
+                  <th>Status</th>
+                  <th style={{ textAlign: 'right' }}>Actions</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {coupons.map(coupon => (
+                  <tr key={coupon._id}>
+                    <td style={{ fontWeight: 700, fontFamily: 'monospace', fontSize: '15px', color: '#1677ff' }}>
+                      {coupon.code}
+                    </td>
+                    <td style={{ fontWeight: 600, color: 'var(--text-primary)' }}>
+                      {coupon.discountPercent}% OFF
+                    </td>
+                    <td>
+                      {coupon.expiresAt ? new Date(coupon.expiresAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : 'Never Expires'}
+                    </td>
+                    <td>
+                      <span className={`badge-status ${coupon.isActive ? 'badge-published' : 'badge-draft'}`}>
+                        {coupon.isActive ? 'Active' : 'Disabled'}
+                      </span>
+                    </td>
+                    <td style={{ textAlign: 'right' }}>
+                      <div className="plan-actions" style={{ justifyContent: 'flex-end' }}>
+                        <button onClick={() => handleToggleCoupon(coupon._id)} className="btn-plan-action">
+                          {coupon.isActive ? <FaEyeSlash /> : <FaEye />}
+                        </button>
+                        <button onClick={() => handleDeleteCoupon(coupon._id)} className="btn-plan-action danger">
+                          <FaTrash />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
         </div>
       )}
 
-      {/* PLAN FORM MODAL */}
+      {/* CREATE / EDIT PLAN MODAL */}
       {showModal && (
-        <div className="modal-overlay" style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
-          <div className="modal-content" style={{ background: '#18181b', border: '1px solid rgba(255,255,255,0.15)', borderRadius: '16px', width: '100%', maxWidth: '850px', maxHeight: '90vh', overflowY: 'auto', padding: '24px', color: '#ffffff' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(255,255,255,0.1)', pb: '16px', marginBottom: '20px' }}>
-              <h2 style={{ fontSize: '20px', fontWeight: '700' }}>{editingPlan ? 'Edit Pricing Plan' : 'Create Pricing Plan'}</h2>
-              <button onClick={() => setShowModal(false)} style={{ background: 'transparent', border: 'none', color: '#a1a1aa', fontSize: '20px', cursor: 'pointer' }}>✕</button>
+        <div className="plan-modal-backdrop">
+          <div className="plan-modal-dialog">
+            <div className="plan-modal-header">
+              <h2>{editingPlan ? `Edit Pricing Plan: ${editingPlan.displayName}` : 'Create New Pricing Tiers'}</h2>
+              <button onClick={handleCloseModal} style={{ background: 'transparent', border: 'none', fontSize: '18px', color: 'var(--text-secondary)', cursor: 'pointer' }}>
+                <FaTimes />
+              </button>
             </div>
 
-            {/* FORM STEPPER NAV */}
-            <div style={{ display: 'flex', gap: '6px', overflowX: 'auto', marginBottom: '20px', pb: '8px', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
-              {['1. Basic', '2. Category', '3. Pricing', '4. Setup Fees', '5. Features', '6. Limits', '7. Pages', '8. Support', '9. Preview'].map((stepName, idx) => (
-                <button
-                  key={idx}
-                  onClick={() => setFormSection(idx + 1)}
-                  style={{
-                    padding: '6px 12px',
-                    borderRadius: '6px',
-                    border: 'none',
-                    fontSize: '12px',
-                    fontWeight: '600',
-                    background: formSection === (idx + 1) ? '#6366f1' : 'rgba(255,255,255,0.06)',
-                    color: formSection === (idx + 1) ? '#ffffff' : '#a1a1aa',
-                    cursor: 'pointer',
-                    whiteSpace: 'nowrap'
-                  }}
-                >
-                  {stepName}
-                </button>
-              ))}
+            {/* 10-Section Navigation Stepper */}
+            <div className="plan-modal-nav">
+              <button onClick={() => setFormSection(1)} className={`plan-nav-item ${formSection === 1 ? 'active' : ''}`}>1. Basic Info</button>
+              <button onClick={() => setFormSection(2)} className={`plan-nav-item ${formSection === 2 ? 'active' : ''}`}>2. Category & Display</button>
+              <button onClick={() => setFormSection(3)} className={`plan-nav-item ${formSection === 3 ? 'active' : ''}`}>3. Pricing</button>
+              <button onClick={() => setFormSection(4)} className={`plan-nav-item ${formSection === 4 ? 'active' : ''}`}>4. Fees</button>
+              <button onClick={() => setFormSection(5)} className={`plan-nav-item ${formSection === 5 ? 'active' : ''}`}>5. Trial</button>
+              <button onClick={() => setFormSection(6)} className={`plan-nav-item ${formSection === 6 ? 'active' : ''}`}>6. Features</button>
+              <button onClick={() => setFormSection(7)} className={`plan-nav-item ${formSection === 7 ? 'active' : ''}`}>7. Limits</button>
+              <button onClick={() => setFormSection(8)} className={`plan-nav-item ${formSection === 8 ? 'active' : ''}`}>8. Permissions</button>
+              <button onClick={() => setFormSection(9)} className={`plan-nav-item ${formSection === 9 ? 'active' : ''}`}>9. Support & SLA</button>
+              <button onClick={() => setFormSection(10)} className={`plan-nav-item ${formSection === 10 ? 'active' : ''}`}>10. Preview & Publish</button>
             </div>
 
-            {/* SECTION 1: BASIC INFO */}
-            {formSection === 1 && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+            <div className="plan-modal-body">
+              {/* SECTION 1: BASIC INFORMATION */}
+              {formSection === 1 && (
                 <div>
-                  <label className="form-label">Plan Name Key (Unique machine identifier)*</label>
-                  <input
-                    type="text"
-                    value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    className="form-control"
-                    placeholder="e.g. crm_connect, api_starter, starter"
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="form-label">Display Name*</label>
-                  <input
-                    type="text"
-                    value={formData.displayName}
-                    onChange={(e) => setFormData({ ...formData, displayName: e.target.value })}
-                    className="form-control"
-                    placeholder="e.g. CRM Connect, Growth Plan"
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="form-label">URL Slug*</label>
-                  <input
-                    type="text"
-                    value={formData.slug}
-                    onChange={(e) => setFormData({ ...formData, slug: e.target.value })}
-                    className="form-control"
-                    placeholder="e.g. crm-connect, growth"
-                  />
-                </div>
-                <div>
-                  <label className="form-label">Short Description</label>
-                  <input
-                    type="text"
-                    value={formData.shortDescription}
-                    onChange={(e) => setFormData({ ...formData, shortDescription: e.target.value })}
-                    className="form-control"
-                    placeholder="Brief 1-line headline description"
-                  />
-                </div>
-                <div>
-                  <label className="form-label">Detailed Description</label>
-                  <textarea
-                    value={formData.detailedDescription}
-                    onChange={(e) => setFormData({ ...formData, detailedDescription: e.target.value })}
-                    className="form-control"
-                    rows={3}
-                    placeholder="Full plan capabilities and description"
-                  />
-                </div>
-              </div>
-            )}
+                  <div className="form-grid-2">
+                    <div className="form-group">
+                      <label>Internal Name (Identifier) *</label>
+                      <input
+                        type="text"
+                        value={formData.name}
+                        onChange={(e) => handleInputChange('name', e.target.value)}
+                        placeholder="e.g. starter, growth, crm_connect"
+                        className="form-control"
+                      />
+                      <div className="form-hint">Unique lowercase code used in DB queries</div>
+                    </div>
+                    <div className="form-group">
+                      <label>Display Name *</label>
+                      <input
+                        type="text"
+                        value={formData.displayName}
+                        onChange={(e) => handleInputChange('displayName', e.target.value)}
+                        placeholder="e.g. Starter Plan, CRM Automation"
+                        className="form-control"
+                      />
+                    </div>
+                  </div>
 
-            {/* SECTION 2: CATEGORY & DISPLAY */}
-            {formSection === 2 && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-                <div>
-                  <label className="form-label">Plan Category*</label>
-                  <select
-                    value={formData.category}
-                    onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                    className="form-control"
-                  >
-                    {CATEGORY_OPTIONS.map(c => (
-                      <option key={c.id} value={c.id}>{c.name}</option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="form-label">Badge Text (e.g. POPULAR, BEST FIT, ENTERPRISE)</label>
-                  <input
-                    type="text"
-                    value={formData.badge || ''}
-                    onChange={(e) => setFormData({ ...formData, badge: e.target.value })}
-                    className="form-control"
-                  />
-                </div>
-                <div>
-                  <label className="form-label">Display Order (Numeric sort order)</label>
-                  <input
-                    type="number"
-                    value={formData.displayOrder}
-                    onChange={(e) => setFormData({ ...formData, displayOrder: Number(e.target.value) })}
-                    className="form-control"
-                  />
-                </div>
-                <div style={{ display: 'flex', gap: '20px', marginTop: '10px' }}>
-                  <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
-                    <input
-                      type="checkbox"
-                      checked={formData.isPopular}
-                      onChange={(e) => setFormData({ ...formData, isPopular: e.target.checked })}
-                    />
-                    Highlight as Popular Plan
-                  </label>
-                  <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
-                    <input
-                      type="checkbox"
-                      checked={formData.isPublished}
-                      onChange={(e) => setFormData({ ...formData, isPublished: e.target.checked })}
-                    />
-                    Publish on Public Website
-                  </label>
-                  <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
-                    <input
-                      type="checkbox"
-                      checked={formData.isActive}
-                      onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })}
-                    />
-                    Is Active
-                  </label>
-                </div>
-              </div>
-            )}
-
-            {/* SECTION 3: PRICING */}
-            {formSection === 3 && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                  <div>
-                    <label className="form-label">Currency Code</label>
+                  <div className="form-group">
+                    <label>URL Slug *</label>
                     <input
                       type="text"
-                      value={formData.currency}
-                      onChange={(e) => setFormData({ ...formData, currency: e.target.value.toUpperCase() })}
+                      value={formData.slug}
+                      onChange={(e) => handleInputChange('slug', e.target.value)}
+                      placeholder="e.g. starter-plan, crm-connect"
                       className="form-control"
-                      placeholder="INR, USD, EUR"
                     />
                   </div>
-                  <div>
-                    <label className="form-label">Monthly Price</label>
+
+                  <div className="form-group">
+                    <label>Short Description</label>
                     <input
-                      type="number"
-                      value={formData.monthlyPrice}
-                      onChange={(e) => setFormData({ ...formData, monthlyPrice: Number(e.target.value) })}
+                      type="text"
+                      value={formData.shortDescription}
+                      onChange={(e) => handleInputChange('shortDescription', e.target.value)}
+                      placeholder="e.g. For small stores validating AI support"
                       className="form-control"
-                      disabled={formData.contactSales}
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label>Detailed Description</label>
+                    <textarea
+                      rows={3}
+                      value={formData.detailedDescription}
+                      onChange={(e) => handleInputChange('detailedDescription', e.target.value)}
+                      placeholder="Full description shown on landing page and checkout"
+                      className="form-control"
                     />
                   </div>
                 </div>
+              )}
 
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                  <div>
-                    <label className="form-label">Yearly Price (Full year charge)</label>
-                    <input
-                      type="number"
-                      value={formData.yearlyPrice || 0}
-                      onChange={(e) => setFormData({ ...formData, yearlyPrice: Number(e.target.value) })}
-                      className="form-control"
-                      disabled={formData.contactSales}
-                    />
+              {/* SECTION 2: CATEGORY & DISPLAY */}
+              {formSection === 2 && (
+                <div>
+                  <div className="form-grid-2">
+                    <div className="form-group">
+                      <label>Plan Category *</label>
+                      <select
+                        value={formData.category}
+                        onChange={(e) => handleInputChange('category', e.target.value)}
+                        className="form-control"
+                      >
+                        {CATEGORY_OPTIONS.map(c => (
+                          <option key={c.id} value={c.id}>{c.name}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div className="form-group">
+                      <label>Badge Text (Optional)</label>
+                      <input
+                        type="text"
+                        value={formData.badge || ''}
+                        onChange={(e) => handleInputChange('badge', e.target.value)}
+                        placeholder="e.g. BEST FIT, POPULAR, RECOMMENDED"
+                        className="form-control"
+                      />
+                    </div>
                   </div>
-                  <div>
-                    <label className="form-label">Supported Billing Cycles</label>
-                    <div style={{ display: 'flex', gap: '16px', marginTop: '8px' }}>
-                      <label style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+
+                  <div className="form-grid-2">
+                    <div className="form-group">
+                      <label>Display Order (Sorting Index)</label>
+                      <input
+                        type="number"
+                        value={formData.displayOrder}
+                        onChange={(e) => handleInputChange('displayOrder', e.target.value)}
+                        className="form-control"
+                      />
+                    </div>
+
+                    <div className="form-group" style={{ paddingTop: '28px' }}>
+                      <label className="checkbox-label">
                         <input
                           type="checkbox"
-                          checked={formData.allowedBillingCycles?.includes('monthly')}
-                          onChange={(e) => {
-                            const cycles = new Set(formData.allowedBillingCycles || []);
-                            if (e.target.checked) cycles.add('monthly'); else cycles.delete('monthly');
-                            setFormData({ ...formData, allowedBillingCycles: Array.from(cycles) });
-                          }}
-                        /> Monthly
-                      </label>
-                      <label style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                        <input
-                          type="checkbox"
-                          checked={formData.allowedBillingCycles?.includes('yearly')}
-                          onChange={(e) => {
-                            const cycles = new Set(formData.allowedBillingCycles || []);
-                            if (e.target.checked) cycles.add('yearly'); else cycles.delete('yearly');
-                            setFormData({ ...formData, allowedBillingCycles: Array.from(cycles) });
-                          }}
-                        /> Yearly
+                          checked={formData.isPopular}
+                          onChange={(e) => handleInputChange('isPopular', e.target.checked)}
+                        />
+                        Highlight Card as Popular / Best Fit
                       </label>
                     </div>
                   </div>
                 </div>
+              )}
 
-                <div style={{ display: 'flex', gap: '20px', marginTop: '10px' }}>
-                  <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
-                    <input
-                      type="checkbox"
-                      checked={formData.contactSales}
-                      onChange={(e) => setFormData({ ...formData, contactSales: e.target.checked })}
-                    />
-                    Contact Sales CTA (Hides ₹ price, shows Contact Sales button)
-                  </label>
-                  <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
-                    <input
-                      type="checkbox"
-                      checked={formData.customPricing}
-                      onChange={(e) => setFormData({ ...formData, customPricing: e.target.checked })}
-                    />
-                    Custom Pricing (Enterprise negotiated rate)
-                  </label>
-                </div>
-              </div>
-            )}
-
-            {/* SECTION 4: SETUP & MAINTENANCE FEES */}
-            {formSection === 4 && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              {/* SECTION 3: PRICING */}
+              {formSection === 3 && (
                 <div>
-                  <label className="form-label">Setup Fee (One-time charge)</label>
-                  <input
-                    type="number"
-                    value={formData.setupFee || 0}
-                    onChange={(e) => setFormData({ ...formData, setupFee: Number(e.target.value) })}
-                    className="form-control"
-                  />
-                </div>
-                <div>
-                  <label className="form-label">Connector Maintenance Fee (Recurring monthly maintenance)</label>
-                  <input
-                    type="number"
-                    value={formData.connectorMaintenanceFee || 0}
-                    onChange={(e) => setFormData({ ...formData, connectorMaintenanceFee: Number(e.target.value) })}
-                    className="form-control"
-                  />
-                </div>
-              </div>
-            )}
-
-            {/* SECTION 5: FEATURES */}
-            {formSection === 5 && (
-              <div>
-                <h4 style={{ fontSize: '14px', marginBottom: '12px', color: '#38bdf8' }}>Feature Entitlements (Machine-readable keys)</h4>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', maxHeight: '350px', overflowY: 'auto' }}>
-                  {FEATURE_KEYS.map(f => (
-                    <label key={f.key} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', background: 'rgba(255,255,255,0.03)', padding: '8px 12px', borderRadius: '6px' }}>
+                  <div className="form-group">
+                    <label className="checkbox-label" style={{ marginBottom: '16px' }}>
                       <input
                         type="checkbox"
-                        checked={Boolean(formData.features?.[f.key])}
-                        onChange={(e) => setFormData({
-                          ...formData,
-                          features: { ...formData.features, [f.key]: e.target.checked }
-                        })}
+                        checked={formData.contactSales}
+                        onChange={(e) => handleInputChange('contactSales', e.target.checked)}
                       />
-                      {f.label}
+                      Contact Sales / Custom Enterprise Quote (Hides standard fixed prices)
                     </label>
-                  ))}
-                </div>
-              </div>
-            )}
+                  </div>
 
-            {/* SECTION 6: USAGE LIMITS */}
-            {formSection === 6 && (
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', maxHeight: '380px', overflowY: 'auto' }}>
-                {USAGE_LIMIT_KEYS.map(u => (
-                  <div key={u.key}>
-                    <label className="form-label" style={{ fontSize: '12px' }}>{u.label}</label>
+                  {!formData.contactSales && (
+                    <div className="form-grid-3">
+                      <div className="form-group">
+                        <label>Monthly Price (INR ₹) *</label>
+                        <input
+                          type="number"
+                          value={formData.monthlyPrice}
+                          onChange={(e) => handleInputChange('monthlyPrice', e.target.value)}
+                          className="form-control"
+                        />
+                      </div>
+
+                      <div className="form-group">
+                        <label>Yearly Price (INR ₹) *</label>
+                        <input
+                          type="number"
+                          value={formData.yearlyPrice}
+                          onChange={(e) => handleInputChange('yearlyPrice', e.target.value)}
+                          className="form-control"
+                        />
+                        <div className="form-hint">Yearly discount rate compared to 12 x monthly</div>
+                      </div>
+
+                      <div className="form-group">
+                        <label>Currency</label>
+                        <input
+                          type="text"
+                          value={formData.currency}
+                          onChange={(e) => handleInputChange('currency', e.target.value)}
+                          className="form-control"
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* SECTION 4: SETUP & MAINTENANCE FEES */}
+              {formSection === 4 && (
+                <div className="form-grid-2">
+                  <div className="form-group">
+                    <label>One-Time Setup Fee (INR ₹)</label>
                     <input
                       type="number"
-                      value={formData.usageLimits?.[u.key] ?? -1}
-                      onChange={(e) => setFormData({
-                        ...formData,
-                        usageLimits: { ...formData.usageLimits, [u.key]: Number(e.target.value) }
-                      })}
+                      value={formData.setupFee}
+                      onChange={(e) => handleInputChange('setupFee', e.target.value)}
+                      className="form-control"
+                    />
+                    <div className="form-hint">Applied to first invoice upon onboarding</div>
+                  </div>
+
+                  <div className="form-group">
+                    <label>Monthly Connector Maintenance Fee (INR ₹)</label>
+                    <input
+                      type="number"
+                      value={formData.connectorMaintenanceFee}
+                      onChange={(e) => handleInputChange('connectorMaintenanceFee', e.target.value)}
                       className="form-control"
                     />
                   </div>
-                ))}
-              </div>
-            )}
-
-            {/* SECTION 7: PAGE PERMISSIONS */}
-            {formSection === 7 && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-                <div>
-                  <label className="form-label">Permission Profile</label>
-                  <input
-                    type="text"
-                    value={formData.permissionProfile || 'default'}
-                    onChange={(e) => setFormData({ ...formData, permissionProfile: e.target.value })}
-                    className="form-control"
-                    placeholder="starter, growth, scale, crm_basic, api_basic, enterprise"
-                  />
                 </div>
+              )}
+
+              {/* SECTION 5: TRIAL SETTINGS */}
+              {formSection === 5 && (
+                <div className="form-grid-2">
+                  <div className="form-group" style={{ paddingTop: '28px' }}>
+                    <label className="checkbox-label">
+                      <input
+                        type="checkbox"
+                        checked={formData.trialEnabled}
+                        onChange={(e) => handleInputChange('trialEnabled', e.target.checked)}
+                      />
+                      Enable Free Trial for New Signups
+                    </label>
+                  </div>
+
+                  {formData.trialEnabled && (
+                    <div className="form-group">
+                      <label>Trial Duration (Days)</label>
+                      <input
+                        type="number"
+                        value={formData.trialDays}
+                        onChange={(e) => handleInputChange('trialDays', e.target.value)}
+                        className="form-control"
+                      />
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* SECTION 6: CORE FEATURES */}
+              {formSection === 6 && (
                 <div>
-                  <label className="form-label">Allowed Navigation Pages (Front &amp; Backend Enforcement)</label>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px', marginTop: '8px' }}>
-                    {AVAILABLE_PAGES.map(pageKey => (
-                      <label key={pageKey} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', background: 'rgba(255,255,255,0.03)', padding: '6px 10px', borderRadius: '6px' }}>
+                  <div style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '16px' }}>
+                    Select entitlements for this pricing tier:
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '12px' }}>
+                    {FEATURE_KEYS.map(f => (
+                      <label key={f.key} className="checkbox-label" style={{ padding: '8px', borderRadius: '6px', background: 'var(--bg-input)' }}>
                         <input
                           type="checkbox"
-                          checked={formData.allowedPages?.includes(pageKey)}
-                          onChange={(e) => {
-                            const setPages = new Set(formData.allowedPages || []);
-                            if (e.target.checked) setPages.add(pageKey); else setPages.delete(pageKey);
-                            setFormData({ ...formData, allowedPages: Array.from(setPages) });
-                          }}
-                        /> {pageKey}
+                          checked={formData.features?.[f.key] || false}
+                          onChange={() => handleFeatureToggle(f.key)}
+                        />
+                        {f.label}
                       </label>
                     ))}
                   </div>
                 </div>
-              </div>
-            )}
+              )}
 
-            {/* SECTION 8: TRIAL & SUPPORT */}
-            {formSection === 8 && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-                <div style={{ display: 'flex', gap: '20px' }}>
-                  <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
-                    <input
-                      type="checkbox"
-                      checked={formData.trialEnabled}
-                      onChange={(e) => setFormData({ ...formData, trialEnabled: e.target.checked })}
-                    /> Enable Free Trial
-                  </label>
+              {/* SECTION 7: USAGE LIMITS */}
+              {formSection === 7 && (
+                <div className="form-grid-2">
+                  {USAGE_LIMIT_KEYS.map(u => (
+                    <div key={u.key} className="form-group">
+                      <label>{u.label}</label>
+                      <input
+                        type="number"
+                        value={formData.usageLimits?.[u.key] ?? -1}
+                        onChange={(e) => handleLimitChange(u.key, e.target.value)}
+                        className="form-control"
+                      />
+                    </div>
+                  ))}
                 </div>
-                {formData.trialEnabled && (
-                  <div>
-                    <label className="form-label">Trial Duration (Days)</label>
+              )}
+
+              {/* SECTION 8: PAGE PERMISSIONS */}
+              {formSection === 8 && (
+                <div>
+                  <div className="form-group">
+                    <label>Permission Profile Template</label>
+                    <select
+                      value={formData.permissionProfile || 'starter'}
+                      onChange={(e) => handleInputChange('permissionProfile', e.target.value)}
+                      className="form-control"
+                    >
+                      <option value="starter">Starter Profile</option>
+                      <option value="growth">Growth Profile</option>
+                      <option value="scale">Scale Profile</option>
+                      <option value="custom">Custom Configuration</option>
+                    </select>
+                  </div>
+
+                  <label style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)', display: 'block', margin: '16px 0 8px 0' }}>
+                    Allowed Dashboard Page Access ({formData.allowedPages?.length || 0} selected):
+                  </label>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '10px' }}>
+                    {AVAILABLE_PAGES.map(p => {
+                      const isChecked = (formData.allowedPages || []).includes(p);
+                      return (
+                        <label key={p} className="checkbox-label" style={{ padding: '8px', borderRadius: '6px', background: isChecked ? 'rgba(22, 119, 255, 0.08)' : 'var(--bg-input)' }}>
+                          <input
+                            type="checkbox"
+                            checked={isChecked}
+                            onChange={() => handlePageToggle(p)}
+                          />
+                          {p}
+                        </label>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* SECTION 9: SUPPORT & SLA */}
+              {formSection === 9 && (
+                <div className="form-grid-2">
+                  <div className="form-group">
+                    <label>Support Tier Level</label>
                     <input
-                      type="number"
-                      value={formData.trialDays}
-                      onChange={(e) => setFormData({ ...formData, trialDays: Number(e.target.value) })}
+                      type="text"
+                      value={formData.supportLevel}
+                      onChange={(e) => handleInputChange('supportLevel', e.target.value)}
+                      placeholder="e.g. Standard Email Support, 24/7 Dedicated Line"
                       className="form-control"
                     />
                   </div>
-                )}
-                <div>
-                  <label className="form-label">Support Level Description</label>
-                  <input
-                    type="text"
-                    value={formData.supportLevel}
-                    onChange={(e) => setFormData({ ...formData, supportLevel: e.target.value })}
-                    className="form-control"
-                    placeholder="Standard Email, Priority Chat, Dedicated Manager"
-                  />
-                </div>
-                <div>
-                  <label className="form-label">SLA Commitment</label>
-                  <input
-                    type="text"
-                    value={formData.sla}
-                    onChange={(e) => setFormData({ ...formData, sla: e.target.value })}
-                    className="form-control"
-                    placeholder="Best Effort, 4-hour SLA, 99.9% Uptime SLA"
-                  />
-                </div>
-              </div>
-            )}
-
-            {/* SECTION 9: PREVIEW */}
-            {formSection === 9 && (
-              <div>
-                <h4 style={{ fontSize: '14px', color: '#38bdf8', marginBottom: '12px' }}>Live Public Pricing Card Preview</h4>
-                <div style={{ maxWidth: '340px', margin: '0 auto', background: '#18181b', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '16px', padding: '24px' }}>
-                  {formData.isPopular && <div className="cta-sparkle" style={{ fontSize: '10px', marginBottom: '6px' }}>{formData.badge || 'POPULAR'}</div>}
-                  <h3 style={{ fontSize: '20px', fontWeight: '700' }}>{formData.displayName || 'Plan Name'}</h3>
-                  <div style={{ fontSize: '32px', fontWeight: '800', margin: '12px 0 4px' }}>
-                    {formData.contactSales ? 'Contact Sales' : `${formData.currency} ${formData.monthlyPrice}`}
-                    {!formData.contactSales && <span style={{ fontSize: '13px', color: '#a1a1aa' }}>/month</span>}
+                  <div className="form-group">
+                    <label>SLA Commitment</label>
+                    <input
+                      type="text"
+                      value={formData.sla}
+                      onChange={(e) => handleInputChange('sla', e.target.value)}
+                      placeholder="e.g. Best Effort, 99.9% Uptime Guarantee"
+                      className="form-control"
+                    />
                   </div>
-                  <p style={{ fontSize: '12px', color: '#a1a1aa' }}>{formData.shortDescription}</p>
-                  <ul style={{ fontSize: '12px', marginTop: '16px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                    <li><FaCheck style={{ color: '#22c55e' }} /> {formData.usageLimits?.monthlyConversations === -1 ? 'Unlimited' : formData.usageLimits?.monthlyConversations} Conversations/mo</li>
-                    <li><FaCheck style={{ color: '#22c55e' }} /> {formData.usageLimits?.maxWhatsAppConnections} Active WA Connections</li>
-                    {formData.features?.aiAutomation && <li><FaCheck style={{ color: '#22c55e' }} /> AI Knowledge Base Support</li>}
-                    {formData.features?.broadcastingAccess && <li><FaCheck style={{ color: '#22c55e' }} /> WhatsApp Broadcasting</li>}
-                  </ul>
-                  <button className="glowing-btn-white" style={{ marginTop: '20px', width: '100%', pointerEvents: 'none' }}>
-                    {formData.contactSales ? 'Talk to sales' : 'Start with demo'}
-                  </button>
                 </div>
-              </div>
-            )}
+              )}
+
+              {/* SECTION 10: PREVIEW & PUBLICATION */}
+              {formSection === 10 && (
+                <div>
+                  <div className="form-grid-2" style={{ marginBottom: '24px' }}>
+                    <div className="form-group">
+                      <label className="checkbox-label">
+                        <input
+                          type="checkbox"
+                          checked={formData.isPublished}
+                          onChange={(e) => handleInputChange('isPublished', e.target.checked)}
+                        />
+                        Publish Plan on Public Website
+                      </label>
+                      <div className="form-hint">Unpublished plans remain as Drafts visible only to Super Admin</div>
+                    </div>
+
+                    <div className="form-group">
+                      <label className="checkbox-label">
+                        <input
+                          type="checkbox"
+                          checked={formData.isActive}
+                          onChange={(e) => handleInputChange('isActive', e.target.checked)}
+                        />
+                        Active Status (Enabled for subscriptions)
+                      </label>
+                    </div>
+                  </div>
+
+                  <div style={{ padding: '20px', background: 'var(--bg-input)', borderRadius: '12px', border: '1px solid var(--border-subtle)' }}>
+                    <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '12px' }}>
+                      Live Public Pricing Card Preview
+                    </div>
+                    <div style={{ background: 'var(--bg-elevated)', padding: '24px', borderRadius: '16px', border: '1px solid var(--border-subtle)', maxWidth: '320px', margin: '0 auto' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                        <span style={{ fontWeight: 700, fontSize: '18px', color: 'var(--text-primary)' }}>{formData.displayName || 'Plan Name'}</span>
+                        {formData.badge && <span style={{ fontSize: '10px', background: '#1677ff', color: '#fff', padding: '2px 6px', borderRadius: '4px', fontWeight: 700 }}>{formData.badge}</span>}
+                      </div>
+                      <div style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '16px' }}>{formData.shortDescription || 'Short description goes here'}</div>
+                      <div style={{ fontSize: '28px', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '16px' }}>
+                        {formData.contactSales ? 'Contact Sales' : `${formatCurrency(formData.monthlyPrice, formData.currency)}/mo`}
+                      </div>
+                      <button style={{ width: '100%', padding: '10px', background: '#1677ff', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: 600 }}>
+                        {formData.contactSales ? 'Contact Us' : 'Get Started'}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
 
             {/* MODAL FOOTER */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '24px', paddingTop: '16px', borderTop: '1px solid rgba(255,255,255,0.1)' }}>
-              <button
-                type="button"
-                disabled={formSection === 1}
-                onClick={() => setFormSection(prev => Math.max(1, prev - 1))}
-                className="btn-secondary"
-              >
-                Previous Step
+            <div className="plan-modal-footer">
+              <button onClick={handleCloseModal} className="btn-secondary" style={{ padding: '8px 18px', borderRadius: '8px', background: 'transparent', color: 'var(--text-secondary)', border: '1px solid var(--border-default)', cursor: 'pointer' }}>
+                Cancel
               </button>
-              <div style={{ display: 'flex', gap: '8px' }}>
-                {formSection < 9 && (
-                  <button
-                    type="button"
-                    onClick={() => setFormSection(prev => Math.min(9, prev + 1))}
-                    className="btn-secondary"
-                  >
-                    Next Step
-                  </button>
-                )}
-                <button type="button" onClick={handleSavePlan} className="btn-primary">
-                  <FaCheck /> Save Plan
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                {isDirty && <span style={{ fontSize: '12px', color: '#f59e0b' }}>Unsaved changes</span>}
+                <button
+                  onClick={handleSavePlan}
+                  disabled={isSaving}
+                  style={{ padding: '10px 24px', borderRadius: '8px', background: '#1677ff', color: '#ffffff', border: 'none', fontWeight: 600, cursor: isSaving ? 'not-allowed' : 'pointer' }}
+                >
+                  {isSaving ? 'Saving...' : 'Save Plan'}
                 </button>
               </div>
             </div>
@@ -966,37 +1394,46 @@ function PlanManager() {
         </div>
       )}
 
-      {/* PROMO CODE MODAL */}
+      {/* CREATE PROMO COUPON MODAL */}
       {showCouponModal && (
-        <div className="modal-overlay" style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
-          <div className="modal-content" style={{ background: '#18181b', border: '1px solid rgba(255,255,255,0.15)', borderRadius: '16px', width: '100%', maxWidth: '450px', padding: '24px', color: '#ffffff' }}>
-            <h2 style={{ fontSize: '18px', fontWeight: '700', marginBottom: '16px' }}>Create Promo Code</h2>
-            <form onSubmit={handleCreateCoupon}>
-              <div style={{ marginBottom: '12px' }}>
-                <label className="form-label">Coupon Code*</label>
+        <div className="plan-modal-backdrop">
+          <div className="plan-modal-dialog" style={{ maxWidth: '480px' }}>
+            <div className="plan-modal-header">
+              <h2>Create Promotional Coupon</h2>
+              <button onClick={() => setShowCouponModal(false)} style={{ background: 'transparent', border: 'none', fontSize: '18px', color: 'var(--text-secondary)', cursor: 'pointer' }}>
+                <FaTimes />
+              </button>
+            </div>
+            <form onSubmit={handleCreateCoupon} className="plan-modal-body">
+              <div className="form-group">
+                <label>Promo Code *</label>
                 <input
                   type="text"
+                  required
+                  placeholder="e.g. FESTIVE20"
                   value={newCoupon.code}
                   onChange={(e) => setNewCoupon({ ...newCoupon, code: e.target.value.toUpperCase() })}
                   className="form-control"
-                  placeholder="e.g. KWICK10, FESTIVE20"
-                  required
+                  style={{ textTransform: 'uppercase', fontFamily: 'monospace', fontWeight: 700 }}
                 />
               </div>
-              <div style={{ marginBottom: '12px' }}>
-                <label className="form-label">Discount Percentage (%)*</label>
+
+              <div className="form-group">
+                <label>Discount Percentage (%) *</label>
                 <input
                   type="number"
-                  value={newCoupon.discountPercent}
-                  onChange={(e) => setNewCoupon({ ...newCoupon, discountPercent: Number(e.target.value) })}
-                  className="form-control"
                   min="1"
                   max="100"
                   required
+                  placeholder="15"
+                  value={newCoupon.discountPercent}
+                  onChange={(e) => setNewCoupon({ ...newCoupon, discountPercent: Number(e.target.value) })}
+                  className="form-control"
                 />
               </div>
-              <div style={{ marginBottom: '20px' }}>
-                <label className="form-label">Expiration Date (Optional)</label>
+
+              <div className="form-group">
+                <label>Expiration Date (Optional)</label>
                 <input
                   type="date"
                   value={newCoupon.expiresAt}
@@ -1004,14 +1441,26 @@ function PlanManager() {
                   className="form-control"
                 />
               </div>
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
-                <button type="button" onClick={() => setShowCouponModal(false)} className="btn-secondary">Cancel</button>
-                <button type="submit" disabled={couponLoading} className="btn-primary">
-                  {couponLoading ? 'Creating...' : 'Save Promo Code'}
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '24px' }}>
+                <button type="button" onClick={() => setShowCouponModal(false)} className="btn-secondary" style={{ padding: '8px 16px', borderRadius: '8px', background: 'transparent', border: '1px solid var(--border-default)', color: 'var(--text-secondary)', cursor: 'pointer' }}>
+                  Cancel
+                </button>
+                <button type="submit" disabled={couponLoading} style={{ padding: '8px 20px', borderRadius: '8px', background: '#1677ff', color: '#fff', border: 'none', fontWeight: 600, cursor: couponLoading ? 'not-allowed' : 'pointer' }}>
+                  {couponLoading ? 'Creating...' : 'Create Coupon'}
                 </button>
               </div>
             </form>
           </div>
+        </div>
+      )}
+
+      {/* TOAST NOTIFICATION BANNER */}
+      {toast.show && (
+        <div className={`plan-toast ${toast.type}`}>
+          {toast.type === 'success' && <FaCheckCircle />}
+          {toast.type === 'error' && <FaExclamationTriangle />}
+          {toast.message}
         </div>
       )}
     </div>

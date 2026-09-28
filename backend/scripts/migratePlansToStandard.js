@@ -572,52 +572,125 @@ const defaultPlans = [
   }
 ];
 
-async function runMigration() {
+async function runMigration(options = {}) {
+  const isDryRun = options.dryRun || process.argv.includes('--dry-run') || process.argv.includes('-d');
+  const isQuiet = options.quiet || false;
+
   try {
     const mongoUri = process.env.MONGODB_URI || 'mongodb://localhost:27017/whatsapp_ai_db';
     if (mongoose.connection.readyState === 0) {
-      console.log('🔄 Connecting to MongoDB for pricing plan migration...');
+      if (!isQuiet) console.log('🔄 Connecting to MongoDB for pricing plan migration...');
       await mongoose.connect(mongoUri);
-      console.log('✅ Connected to MongoDB.');
+      if (!isQuiet) console.log('✅ Connected to MongoDB.');
     }
 
     let createdCount = 0;
-    let updatedCount = 0;
+    let preservedCount = 0;
 
     for (const planData of defaultPlans) {
-      const existing = await PricingPlan.findOne({
-        $or: [{ name: planData.name }, { slug: planData.slug }]
-      });
+      // Primary match by stable slug, secondary fallback by name
+      let existing = await PricingPlan.findOne({ slug: planData.slug });
+      if (!existing) {
+        existing = await PricingPlan.findOne({ name: planData.name });
+      }
 
       if (!existing) {
-        await PricingPlan.create(planData);
-        console.log(`✨ Created new plan: ${planData.displayName} (${planData.category})`);
+        if (isDryRun) {
+          if (!isQuiet) console.log(`[WOULD CREATE DRAFT] ${planData.displayName} (${planData.slug}) - Cat: ${planData.category}`);
+        } else {
+          await PricingPlan.create(planData);
+          if (!isQuiet) console.log(`[CREATED DRAFT] ${planData.displayName} (${planData.slug}) - Cat: ${planData.category}`);
+        }
         createdCount++;
       } else {
-        // Update existing plan preserving current price if customized
-        existing.category = existing.category || planData.category;
-        existing.displayName = existing.displayName || planData.displayName;
-        existing.slug = existing.slug || planData.slug;
-        existing.allowedBillingCycles = existing.allowedBillingCycles?.length ? existing.allowedBillingCycles : planData.allowedBillingCycles;
-        existing.permissionProfile = existing.permissionProfile || planData.permissionProfile;
-        existing.allowedPages = (existing.allowedPages && existing.allowedPages.length > 0) ? existing.allowedPages : planData.allowedPages;
-        
-        // Merge features safely
-        existing.features = { ...planData.features, ...existing.features };
-        existing.usageLimits = { ...planData.usageLimits, ...existing.usageLimits };
+        // Record exists: preserve existing prices, features, limits, permissions, and publication status untouched
+        let needsSave = false;
 
-        if (existing.isPublished === undefined) {
-          existing.isPublished = planData.isPublished;
+        if (!existing.slug) {
+          existing.slug = planData.slug;
+          needsSave = true;
+        }
+        if (!existing.category) {
+          existing.category = planData.category;
+          needsSave = true;
+        }
+        if (!existing.permissionProfile) {
+          existing.permissionProfile = planData.permissionProfile;
+          needsSave = true;
         }
 
-        await existing.save();
-        console.log(`🔄 Updated existing plan: ${existing.name}`);
-        updatedCount++;
+        if (needsSave && !isDryRun) {
+          await existing.save();
+        }
+
+        if (!isQuiet) console.log(`[PRESERVED] ${existing.displayName} (${existing.slug}) - Published: ${existing.isPublished}`);
+        preservedCount++;
       }
     }
 
-    console.log(`\n🎉 Pricing plan migration completed! Created: ${createdCount}, Preserved/Updated: ${updatedCount}`);
-    return { createdCount, updatedCount };
+    // Post-migration stats verification & audit reporting
+    const allPlans = await PricingPlan.find({});
+    const Admin = require('../models/Admin');
+    
+    const categoryCounts = {
+      kwickbot_crm: 0,
+      crm_integration: 0,
+      whatsapp_api: 0,
+      enterprise_custom: 0
+    };
+
+    let publishedCount = 0;
+    let draftCount = 0;
+    const slugMap = {};
+    let duplicateSlugCount = 0;
+
+    allPlans.forEach(p => {
+      const cat = p.category || 'kwickbot_crm';
+      categoryCounts[cat] = (categoryCounts[cat] || 0) + 1;
+
+      if (p.isPublished) {
+        publishedCount++;
+      } else {
+        draftCount++;
+      }
+
+      if (p.slug) {
+        if (slugMap[p.slug]) {
+          duplicateSlugCount++;
+        } else {
+          slugMap[p.slug] = true;
+        }
+      }
+    });
+
+    const activeSubscribersCount = await Admin.countDocuments({
+      role: { $ne: 'super_admin' },
+      subscriptionStatus: 'active'
+    });
+
+    const report = {
+      totalPlanCount: allPlans.length,
+      categoryCounts,
+      publishedCount,
+      draftCount,
+      duplicateSlugCount,
+      createdCount,
+      preservedCount,
+      activeSubscribersCount,
+      isDryRun
+    };
+
+    if (!isQuiet) {
+      console.log(`\n🎉 Pricing plan migration completed! (${isDryRun ? 'DRY-RUN MODE' : 'LIVE MODE'})`);
+      console.log(` ── Total Plans: ${report.totalPlanCount}`);
+      console.log(` ── Published: ${report.publishedCount} | Draft/Unpublished: ${report.draftCount}`);
+      console.log(` ── Created: ${report.createdCount} | Preserved: ${report.preservedCount}`);
+      console.log(` ── Category Breakdown:`, categoryCounts);
+      console.log(` ── Duplicate Slugs: ${report.duplicateSlugCount}`);
+      console.log(` ── Active Subscriber References Valid: ${report.activeSubscribersCount} active subscribers\n`);
+    }
+
+    return report;
   } catch (error) {
     console.error('❌ Error running pricing plan migration:', error);
     throw error;

@@ -13,9 +13,19 @@ import {
   FaHistory
 } from 'react-icons/fa';
 import { getIntegrationOverview, retryIntegrationEvent } from '../../../services/api';
+import { useEffectiveAccess } from '../../../context/EffectiveAccessContext';
 import './IntegrationDashboard.css';
 
+const PROVIDERS = [
+  { id: 'odoo', mark: 'O', name: 'Odoo ERP / CRM', detail: 'Leads, contacts and sales orders', tone: 'violet' },
+  { id: 'hubspot', mark: 'H', name: 'HubSpot CRM', detail: 'Private app contacts and deals', tone: 'orange' },
+  { id: 'zoho', mark: 'Z', name: 'Zoho CRM', detail: 'Contacts, deals and workflows', tone: 'amber' },
+  { id: 'salesforce', mark: 'S', name: 'Salesforce', detail: 'REST API lead synchronization', tone: 'blue' },
+  { id: 'custom_api', mark: 'API', name: 'Custom API / Webhook', detail: 'Generic REST and webhook bridge', tone: 'cyan' }
+];
+
 function IntegrationDashboard() {
+  const { canViewPage, hasPermission, subscription, usageLimits } = useEffectiveAccess();
   const [overview, setOverview] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -66,106 +76,140 @@ function IntegrationDashboard() {
     failedEventsCount: 0
   };
 
+  const canUseAutomations = canViewPage('automation-rules');
+  const canUseFailedEvents = canViewPage('failed-events');
+  const canViewLogs = canViewPage('integration-logs');
+  const canRetryEvents = hasPermission('failedEvents.retry');
+  const recentEventCount = overview?.recentEvents?.length || 0;
+  const maxConnections = usageLimits?.maxCrmConnections;
+
+  const statCards = [
+    {
+      key: 'connections',
+      icon: <FaPlug />,
+      tone: 'blue',
+      label: 'CRM Connections',
+      value: `${summary.activeConnections} / ${summary.totalConnections}`,
+      sub: `Active / Configured${maxConnections > 0 ? ` · Limit ${maxConnections}` : ''}`
+    },
+    {
+      key: 'mappings',
+      icon: <FaExchangeAlt />,
+      tone: 'purple',
+      label: 'Field Mappings',
+      value: summary.totalFieldMappings,
+      sub: 'Active data transformations'
+    },
+    ...(canUseAutomations ? [{
+      key: 'automations',
+      icon: <FaCogs />,
+      tone: 'green',
+      label: 'Automation Rules',
+      value: `${summary.activeAutomations} / ${summary.totalAutomations}`,
+      sub: 'Active triggers running'
+    }] : []),
+    ...(canUseFailedEvents ? [{
+      key: 'failed',
+      icon: <FaExclamationTriangle />,
+      tone: 'red',
+      label: 'Failed Events Queue',
+      value: summary.failedEventsCount,
+      sub: summary.failedEventsCount > 0 ? 'Action needed' : 'All clear'
+    }] : []),
+    ...(canViewLogs && !canUseFailedEvents ? [{
+      key: 'events',
+      icon: <FaHistory />,
+      tone: 'green',
+      label: 'Recent Events',
+      value: recentEventCount,
+      sub: 'Latest sync activity loaded'
+    }] : [])
+  ];
+
+  const setupSteps = [
+    { number: 1, title: 'Connect CRM', text: 'Add endpoint and credentials', complete: summary.totalConnections > 0 },
+    { number: 2, title: 'Map Fields', text: 'Match leads, contacts and orders', complete: summary.totalFieldMappings > 0 },
+    { number: 3, title: 'Verify Sync', text: 'Test connection and review logs', complete: recentEventCount > 0 }
+  ];
+
   return (
     <div className="integration-container">
-      {/* Header */}
-      <div className="integration-header">
-        <div className="integration-header-content">
-          <div className="integration-badge">
-            <FaNetworkWired /> CRM Integration Hub
+      <section className="integration-hero">
+        <div className="integration-hero-copy">
+          <div className="integration-hero-meta">
+            <span className="integration-badge"><FaNetworkWired /> CRM Integration Hub</span>
+            <span className="integration-plan-chip">
+              <span className="integration-plan-dot" />
+              {subscription?.planName || 'CRM Integration'} · {subscription?.status || 'active'}
+            </span>
           </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
-            <div>
-              <h1>CRM & Business System Integration</h1>
-              <p>Connect your CRM (Odoo, Zoho, HubSpot, Salesforce) with Kwickbot WhatsApp automations in real-time.</p>
-            </div>
+          <h1>Connect your CRM to WhatsApp</h1>
+          <p>Sync leads, contacts and customer events between your business system and Kwickbot from one secure workspace.</p>
+          <div className="integration-hero-actions">
+            <Link to="/dashboard/integration/connections" className="quick-action-btn primary">
+              <FaPlus /> Connect New CRM
+            </Link>
             <button className="quick-action-btn" onClick={fetchOverview} disabled={loading}>
-              <FaSync className={loading ? 'spin' : ''} /> Refresh
+              <FaSync className={loading ? 'spin' : ''} /> Refresh data
             </button>
           </div>
         </div>
-      </div>
+
+        <div className="integration-setup-panel">
+          <div className="integration-setup-heading">
+            <div>
+              <span>Getting started</span>
+              <strong>Integration setup</strong>
+            </div>
+            <span className="integration-step-count">{setupSteps.filter(step => step.complete).length}/3</span>
+          </div>
+          <div className="integration-setup-list">
+            {setupSteps.map((step) => (
+              <div key={step.number} className={`integration-setup-step${step.complete ? ' complete' : ''}`}>
+                <span className="integration-step-number">{step.complete ? <FaCheckCircle /> : step.number}</span>
+                <div><strong>{step.title}</strong><span>{step.text}</span></div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
 
       {error && (
-        <div style={{
-          background: 'rgba(239, 68, 68, 0.1)',
-          border: '1px solid rgba(239, 68, 68, 0.3)',
-          color: '#ef4444',
-          padding: '12px 16px',
-          borderRadius: '10px',
-          marginBottom: '20px',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '8px'
-        }}>
+        <div className="integration-error-banner">
           <FaExclamationTriangle /> {error}
         </div>
       )}
 
       {/* Overview Stat Cards */}
       <div className="integration-stats-grid">
-        <div className="stat-card-saas">
-          <div className="stat-icon-wrapper blue">
-            <FaPlug />
+        {statCards.map((card) => (
+          <div className="stat-card-saas" key={card.key}>
+            <div className={`stat-icon-wrapper ${card.tone}`}>{card.icon}</div>
+            <div className="stat-info">
+              <span className="stat-label">{card.label}</span>
+              <span className="stat-val">{card.value}</span>
+              <span className="stat-sub">{card.sub}</span>
+            </div>
           </div>
-          <div className="stat-info">
-            <span className="stat-label">CRM Connections</span>
-            <span className="stat-val">{summary.activeConnections} / {summary.totalConnections}</span>
-            <span className="stat-sub">Active / Configured</span>
-          </div>
-        </div>
-
-        <div className="stat-card-saas">
-          <div className="stat-icon-wrapper green">
-            <FaCogs />
-          </div>
-          <div className="stat-info">
-            <span className="stat-label">Automation Rules</span>
-            <span className="stat-val">{summary.activeAutomations} / {summary.totalAutomations}</span>
-            <span className="stat-sub">Active triggers running</span>
-          </div>
-        </div>
-
-        <div className="stat-card-saas">
-          <div className="stat-icon-wrapper purple">
-            <FaExchangeAlt />
-          </div>
-          <div className="stat-info">
-            <span className="stat-label">Field Mappings</span>
-            <span className="stat-val">{summary.totalFieldMappings}</span>
-            <span className="stat-sub">Active field transformations</span>
-          </div>
-        </div>
-
-        <div className="stat-card-saas">
-          <div className="stat-icon-wrapper red">
-            <FaExclamationTriangle />
-          </div>
-          <div className="stat-info">
-            <span className="stat-label">Failed Events Queue</span>
-            <span className="stat-val">{summary.failedEventsCount}</span>
-            <span className="stat-sub">{summary.failedEventsCount > 0 ? 'Action needed' : 'All clear'}</span>
-          </div>
-        </div>
+        ))}
       </div>
 
       {/* Quick Actions */}
       <div className="integration-quick-actions">
-        <Link to="/dashboard/integration/connections" className="quick-action-btn primary">
-          <FaPlus /> Connect New CRM
-        </Link>
         <Link to="/dashboard/integration/field-mapping" className="quick-action-btn">
           <FaExchangeAlt /> Field Mapping
         </Link>
-        <Link to="/dashboard/integration/automations" className="quick-action-btn">
-          <FaCogs /> Automation Rules
-        </Link>
-        <Link to="/dashboard/integration/failed-events" className="quick-action-btn">
-          <FaExclamationTriangle style={{ color: summary.failedEventsCount > 0 ? '#ef4444' : 'inherit' }} /> Failed Events ({summary.failedEventsCount})
-        </Link>
-        <Link to="/dashboard/integration/logs" className="quick-action-btn">
-          <FaHistory /> Integration Logs
-        </Link>
+        {canUseAutomations && (
+          <Link to="/dashboard/integration/automations" className="quick-action-btn"><FaCogs /> Automation Rules</Link>
+        )}
+        {canUseFailedEvents && (
+          <Link to="/dashboard/integration/failed-events" className="quick-action-btn">
+            <FaExclamationTriangle style={{ color: summary.failedEventsCount > 0 ? '#ef4444' : 'inherit' }} /> Failed Events ({summary.failedEventsCount})
+          </Link>
+        )}
+        {canViewLogs && (
+          <Link to="/dashboard/integration/logs" className="quick-action-btn"><FaHistory /> Integration Logs</Link>
+        )}
       </div>
 
       {/* Supported Providers */}
@@ -181,31 +225,18 @@ function IntegrationDashboard() {
         </div>
 
         <div className="providers-grid">
-          <div className="provider-card">
-            <div className="provider-icon-box">🟣</div>
-            <div className="provider-name">Odoo ERP / CRM</div>
-            <span className="provider-badge ready">Supported</span>
-          </div>
-          <div className="provider-card">
-            <div className="provider-icon-box">🟠</div>
-            <div className="provider-name">HubSpot CRM</div>
-            <span className="provider-badge ready">Supported</span>
-          </div>
-          <div className="provider-card">
-            <div className="provider-icon-box">🟡</div>
-            <div className="provider-name">Zoho CRM</div>
-            <span className="provider-badge ready">Supported</span>
-          </div>
-          <div className="provider-card">
-            <div className="provider-icon-box">🔵</div>
-            <div className="provider-name">Salesforce</div>
-            <span className="provider-badge ready">Supported</span>
-          </div>
-          <div className="provider-card">
-            <div className="provider-icon-box">⚡</div>
-            <div className="provider-name">Custom API / Webhook</div>
-            <span className="provider-badge generic">Universal</span>
-          </div>
+          {PROVIDERS.map((provider) => (
+            <div className="provider-card" key={provider.id}>
+              <div className={`provider-icon-box ${provider.tone}`}>{provider.mark}</div>
+              <div className="provider-copy">
+                <div className="provider-name">{provider.name}</div>
+                <div className="provider-detail">{provider.detail}</div>
+              </div>
+              <span className={`provider-badge ${provider.id === 'custom_api' ? 'generic' : 'ready'}`}>
+                {provider.id === 'custom_api' ? 'Universal' : 'Available'}
+              </span>
+            </div>
+          ))}
         </div>
       </div>
 
@@ -265,7 +296,7 @@ function IntegrationDashboard() {
                       {evt.createdAt ? new Date(evt.createdAt).toLocaleString() : '—'}
                     </td>
                     <td>
-                      {evt.status === 'failed' || evt.status === 'dead_letter' ? (
+                      {(evt.status === 'failed' || evt.status === 'dead_letter') && canRetryEvents ? (
                         <button 
                           className="quick-action-btn" 
                           style={{ padding: '4px 10px', fontSize: '11px', color: '#ef4444', borderColor: '#ef4444' }}

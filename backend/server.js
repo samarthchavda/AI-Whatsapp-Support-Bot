@@ -35,12 +35,13 @@ const app = express();
 app.set('trust proxy', 1);
 const server = http.createServer(app);
 
-// Allow any localhost, local network IPs (e.g. 192.168.x.x, 172.x.x.x, 10.x.x.x), or configured FRONTEND_URL (supports comma-separated list)
+// Allow any kwickbot.in subdomain, localhost, local network IPs, or configured FRONTEND_URL
 const corsOriginHelper = (origin, callback) => {
   if (!origin) return callback(null, true);
 
   const allowedOrigins = (process.env.FRONTEND_URL || '').split(',').map(item => item.trim());
   const isAllowed = allowedOrigins.includes(origin) ||
+    /^https?:\/\/(.+\.)?kwickbot\.in(:\d+)?$/.test(origin) ||
     /^http:\/\/(localhost|127\.0\.0\.1|192\.168\.\d+\.\d+|172\.\d+\.\d+\.\d+|10\.\d+\.\d+\.\d+)(:\d+)?$/.test(origin);
   if (isAllowed) {
     callback(null, true);

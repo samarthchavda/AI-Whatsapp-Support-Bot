@@ -1122,20 +1122,13 @@ exports.impersonateUser = async (req, res) => {
       });
     }
 
-    // Sign a temporary access token for the target user using ACCESS_TOKEN_SECRET
-    const getAccessTokenSecret = () => process.env.JWT_ACCESS_SECRET || process.env.JWT_SECRET || 'your-secret-key-change-in-production';
+    const { generateAccessToken } = require('../../middleware/auth');
     
-    // Include isImpersonated flag in JWT payload
-    const token = jwt.sign(
-      { 
-        id: targetUser._id, 
-        tokenType: 'access', 
-        isImpersonated: true,
-        impersonatorEmail: actor.email 
-      },
-      getAccessTokenSecret(),
-      { expiresIn: '1h' } // Give impersonation 1 hour duration
-    );
+    // Include isImpersonated flag in JWT payload using central helper
+    const token = generateAccessToken(targetUser._id, {
+      isImpersonated: true,
+      impersonatorEmail: actor.email
+    });
 
     // Log this action to audit logs
     const { logAction } = require('../../services/auditLogService');

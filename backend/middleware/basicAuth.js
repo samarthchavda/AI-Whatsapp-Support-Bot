@@ -1,10 +1,15 @@
 const bcrypt = require('bcryptjs');
 
-// Pre-computed bcrypt hash of the requested password
-const DEFAULT_USER = 'samarthsanjaychavda';
-const DEFAULT_PASS_HASH = '$2a$10$IzpFmyKFRqZDqwBHY.1gkuLalXSlc.n2PlJI51SNHdoXL0JkpL..O';
-
 module.exports = (req, res, next) => {
+  const expectedUser = process.env.SWAGGER_USER;
+  const expectedPassHash = process.env.SWAGGER_PASS_HASH;
+
+  if (!expectedUser || !expectedPassHash) {
+    console.error('SWAGGER_USER or SWAGGER_PASS_HASH environment variables are not configured');
+    res.setHeader('WWW-Authenticate', 'Basic realm="Kwickbot Private API Docs"');
+    return res.status(500).send('Swagger documentation authentication is not configured on the server.');
+  }
+
   const authHeader = req.headers.authorization;
 
   if (!authHeader || !authHeader.startsWith('Basic ')) {
@@ -16,9 +21,6 @@ module.exports = (req, res, next) => {
     const auth = Buffer.from(authHeader.split(' ')[1], 'base64').toString().split(':');
     const user = auth[0];
     const pass = auth[1] || '';
-
-    const expectedUser = process.env.SWAGGER_USER || DEFAULT_USER;
-    const expectedPassHash = process.env.SWAGGER_PASS_HASH || DEFAULT_PASS_HASH;
 
     const isUserValid = user === expectedUser;
     const isPassValid = bcrypt.compareSync(pass, expectedPassHash);

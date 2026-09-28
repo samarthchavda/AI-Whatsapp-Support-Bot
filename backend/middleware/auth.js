@@ -5,11 +5,22 @@ const Admin = require('../models/Admin');
 const ACCESS_TOKEN_EXPIRES_IN = '15m';
 const REFRESH_TOKEN_EXPIRES_IN = '30d';
 
-const getAccessTokenSecret = () => process.env.JWT_ACCESS_SECRET || process.env.JWT_SECRET || 'your-secret-key-change-in-production';
-const getRefreshTokenSecret = () => process.env.JWT_REFRESH_SECRET || process.env.JWT_SECRET || 'your-refresh-secret-key-change-in-production';
+const getAccessTokenSecret = () => {
+  if (!process.env.JWT_ACCESS_SECRET) {
+    throw new Error('JWT_ACCESS_SECRET environment variable is missing');
+  }
+  return process.env.JWT_ACCESS_SECRET;
+};
 
-const generateAccessToken = (adminId) => jwt.sign(
-  { id: adminId, tokenType: 'access' },
+const getRefreshTokenSecret = () => {
+  if (!process.env.JWT_REFRESH_SECRET) {
+    throw new Error('JWT_REFRESH_SECRET environment variable is missing');
+  }
+  return process.env.JWT_REFRESH_SECRET;
+};
+
+const generateAccessToken = (adminId, extraPayload = {}) => jwt.sign(
+  { id: adminId, ...extraPayload, tokenType: 'access' },
   getAccessTokenSecret(),
   { expiresIn: ACCESS_TOKEN_EXPIRES_IN }
 );
@@ -22,7 +33,13 @@ const generateRefreshToken = (adminId) => jwt.sign(
 
 const hashToken = (token) => crypto.createHash('sha256').update(token).digest('hex');
 
-const verifyRefreshToken = (token) => jwt.verify(token, getRefreshTokenSecret());
+const verifyRefreshToken = (token) => {
+  const decoded = jwt.verify(token, getRefreshTokenSecret());
+  if (decoded.tokenType !== 'refresh') {
+    throw new jwt.JsonWebTokenError('Invalid token type for refresh token');
+  }
+  return decoded;
+};
 
 const extractBearerToken = (authorizationHeader) => {
   if (!authorizationHeader) {
@@ -51,6 +68,14 @@ const verifyToken = async (req, res, next) => {
     }
 
     const decoded = jwt.verify(token, getAccessTokenSecret());
+
+    if (decoded.tokenType !== 'access') {
+      return res.status(401).json({
+        success: false,
+        error: 'Invalid token type',
+        message: 'Access token required'
+      });
+    }
 
     const admin = await Admin.findById(decoded.id).select('-password');
 
@@ -148,10 +173,12 @@ const optionalAuth = async (req, res, next) => {
 
     if (token) {
       const decoded = jwt.verify(token, getAccessTokenSecret());
-      const admin = await Admin.findById(decoded.id).select('-password');
-      
-      if (admin && admin.isActive) {
-        req.admin = admin;
+      if (decoded.tokenType === 'access') {
+        const admin = await Admin.findById(decoded.id).select('-password');
+        
+        if (admin && admin.isActive) {
+          req.admin = admin;
+        }
       }
     }
   } catch (error) {

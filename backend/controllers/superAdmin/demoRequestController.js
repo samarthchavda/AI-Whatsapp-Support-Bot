@@ -1,6 +1,8 @@
 const DemoRequest = require('../../models/DemoRequest');
 const emailService = require('../../services/emailService');
 const { getFrontendUrl } = require('../../services/urlHelper');
+const Admin = require('../../models/Admin');
+const { resolvePlanAssignment } = require('../../services/planAssignmentService');
 
 // Create a new demo request
 exports.createDemoRequest = async (req, res) => {
@@ -305,7 +307,8 @@ exports.deleteDemoRequest = async (req, res) => {
 exports.approveDemoRequest = async (req, res) => {
   try {
     const { id } = req.params;
-    const { subscriptionPlan = 'starter', monthlyPrice = 1499, geminiTokens = 10000 } = req.body;
+    const resolvedAssignment = await resolvePlanAssignment(req.body);
+    const { plan: resolvedPlan, ...planAssignment } = resolvedAssignment;
 
     const demoRequest = await DemoRequest.findById(id);
 
@@ -324,8 +327,7 @@ exports.approveDemoRequest = async (req, res) => {
     }
 
     // Check if admin with this email already exists
-    const Admin = require('../../models/Admin');
-    const existingAdmin = await Admin.findOne({ email: demoRequest.email });
+    const existingAdmin = await Admin.findOne({ email: demoRequest.email.toLowerCase().trim() });
 
     if (existingAdmin) {
       return res.status(400).json({
@@ -341,16 +343,13 @@ exports.approveDemoRequest = async (req, res) => {
     // Create admin account
     const newAdmin = new Admin({
       name: demoRequest.name,
-      email: demoRequest.email,
+      email: demoRequest.email.toLowerCase().trim(),
       password: generatedPassword,
       phone: demoRequest.phone,
       businessName: demoRequest.businessName,
       role: 'admin',
-      subscriptionPlan: subscriptionPlan.toLowerCase(),
-      subscriptionStatus: 'trial',
-      monthlyPrice,
-      geminiTokens,
-      isActive: true
+      ...planAssignment,
+      geminiTokensUsed: 0
     });
 
     await newAdmin.save();
@@ -362,7 +361,6 @@ exports.approveDemoRequest = async (req, res) => {
     demoRequest.status = 'approved';
     demoRequest.adminCreated = true;
     demoRequest.createdAdminId = newAdmin._id;
-    demoRequest.generatedPassword = generatedPassword; // Store temporarily for email
     await demoRequest.save();
 
     // Dispatch email & WhatsApp credentials in background (non-blocking)
@@ -413,7 +411,7 @@ exports.approveDemoRequest = async (req, res) => {
                   </div>
                   <div class="credential-item">
                     <div class="credential-label">Subscription Plan</div>
-                    <div class="credential-value">${subscriptionPlan}</div>
+                    <div class="credential-value">${resolvedPlan?.displayName || planAssignment.subscriptionPlan}</div>
                   </div>
                 </div>
 
@@ -443,7 +441,7 @@ exports.approveDemoRequest = async (req, res) => {
           </html>
         `;
 
-        const emailText = `Hi ${demoRequest.name},\n\nGreat news! Your demo request has been approved. We've created your account and you can now access the Kwickbot dashboard.\n\nYour Login Credentials:\n- Email: ${demoRequest.email}\n- Password: ${generatedPassword}\n- Subscription Plan: ${subscriptionPlan}\n\nLogin here: ${getFrontendUrl(req)}/login\n\nBest regards,\nKwickbot Team`;
+        const emailText = `Hi ${demoRequest.name},\n\nGreat news! Your demo request has been approved. We've created your account and you can now access the Kwickbot dashboard.\n\nYour Login Credentials:\n- Email: ${demoRequest.email}\n- Password: ${generatedPassword}\n- Subscription Plan: ${resolvedPlan?.displayName || planAssignment.subscriptionPlan}\n\nLogin here: ${getFrontendUrl(req)}/login\n\nBest regards,\nKwickbot Team`;
 
         await emailService.sendEmail({
           to: demoRequest.email,
@@ -499,7 +497,7 @@ _Note: For security, please change your password after your first login._`;
     });
   } catch (error) {
     console.error('Error approving demo request:', error);
-    res.status(500).json({
+    res.status(error.statusCode || 500).json({
       success: false,
       message: 'Failed to approve demo request',
       error: error.message

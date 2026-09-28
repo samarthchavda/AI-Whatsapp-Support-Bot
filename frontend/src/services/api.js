@@ -131,6 +131,7 @@ export const sendConversationMessage = (data) => api.post('/conversations/send-m
 // Super Admin
 export const getSuperAdminUsers = () => api.get('/super-admin/users');
 export const getSuperAdminAnalytics = () => api.get('/super-admin/analytics');
+export const getSuperAdminPlans = () => api.get('/super-admin/plans');
 
 // Orders
 export const getOrders = (params) => api.get('/orders', { params });
@@ -215,4 +216,3 @@ export const refreshAuth = () => refreshAccessToken();
 export const clearAuthState = () => clearStoredAuth();
 
 export default api;
-

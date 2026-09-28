@@ -27,10 +27,42 @@ import {
   Tooltip,
   ResponsiveContainer
 } from 'recharts';
-import { getSuperAdminUsers, getSuperAdminAnalytics } from '../../../services/api';
+import { getSuperAdminUsers, getSuperAdminAnalytics, getSuperAdminPlans } from '../../../services/api';
 import './SuperAdmin.css';
 
 const API_BASE = process.env.REACT_APP_API_URL || (window.location.hostname === 'localhost' ? 'http://localhost:5001/api' : '/api');
+
+const CATEGORY_LABELS = {
+  kwickbot_crm: 'Kwickbot CRM',
+  crm_integration: 'CRM Integration',
+  whatsapp_api: 'WhatsApp API',
+  enterprise_custom: 'Enterprise & Custom'
+};
+
+const getPlanMonthlyEquivalent = (plan, cycle = 'monthly') => {
+  if (!plan) return 0;
+  if (cycle === 'yearly' && plan.yearlyPrice !== null && plan.yearlyPrice !== undefined && Number.isFinite(Number(plan.yearlyPrice))) {
+    return Math.round((Number(plan.yearlyPrice) / 12) * 100) / 100;
+  }
+  return Number(plan.monthlyPrice || 0);
+};
+
+const emptyMerchantForm = {
+  name: '',
+  email: '',
+  password: '',
+  role: 'admin',
+  pricingPlanId: '',
+  subscriptionPlan: 'starter',
+  billingCycle: 'monthly',
+  subscriptionStatus: 'trial',
+  monthlyPrice: 1499,
+  geminiTokensLimit: 50000,
+  customPriceEnabled: false,
+  webBotEnabled: false,
+  shopifyEnabled: true,
+  woocommerceEnabled: true
+};
 
 function SuperAdmin() {
   const [users, setUsers] = useState([]);
@@ -38,17 +70,9 @@ function SuperAdmin() {
   const [loading, setLoading] = useState(true);
   const [userSearch, setUserSearch] = useState('');
   const [showAddUserModal, setShowAddUserModal] = useState(false);
-  const [newUser, setNewUser] = useState({
-    name: '',
-    email: '',
-    password: '',
-    role: 'admin',
-    subscriptionPlan: 'starter',
-    subscriptionStatus: 'trial',
-    monthlyPrice: 1499,
-    geminiTokensLimit: 50000,
-    webBotEnabled: false,
-  });
+  const [plans, setPlans] = useState([]);
+  const [plansError, setPlansError] = useState('');
+  const [newUser, setNewUser] = useState({ ...emptyMerchantForm });
 
   const [activeTab, setActiveTab] = useState('merchants');
   const [auditLogs, setAuditLogs] = useState([]);
@@ -129,6 +153,30 @@ function SuperAdmin() {
       setUsers(usersRes.data.data);
       setAnalytics(analyticsRes.data.data);
 
+      try {
+        const plansRes = await getSuperAdminPlans();
+        const availablePlans = (plansRes.data.data || []).filter((plan) => plan.isActive !== false);
+        setPlans(availablePlans);
+        setPlansError(availablePlans.length === 0 ? 'No active pricing plans are available.' : '');
+        setNewUser((current) => {
+          if (current.pricingPlanId || availablePlans.length === 0) return current;
+          const defaultPlan = availablePlans.find((plan) => plan.name === 'starter') || availablePlans[0];
+          const defaultCycle = defaultPlan.allowedBillingCycles?.includes('monthly') ? 'monthly' : (defaultPlan.allowedBillingCycles?.[0] || 'monthly');
+          return {
+            ...current,
+            pricingPlanId: defaultPlan._id,
+            subscriptionPlan: defaultPlan.name,
+            billingCycle: defaultCycle,
+            monthlyPrice: getPlanMonthlyEquivalent(defaultPlan, defaultCycle),
+            geminiTokensLimit: defaultPlan.usageLimits?.geminiTokensPerMonth ?? 50000,
+            customPriceEnabled: Boolean(defaultPlan.contactSales || defaultPlan.customPricing)
+          };
+        });
+      } catch (plansFetchError) {
+        console.error('Error fetching pricing plans:', plansFetchError);
+        setPlansError('Plans could not be loaded. Please refresh and try again.');
+      }
+
 
 
       // Fetch audit logs
@@ -198,18 +246,16 @@ function SuperAdmin() {
       );
       alert('Merchant created successfully!');
       setShowAddUserModal(false);
+      const defaultPlan = plans.find((plan) => plan.name === 'starter') || plans[0];
+      const defaultCycle = defaultPlan?.allowedBillingCycles?.includes('monthly') ? 'monthly' : (defaultPlan?.allowedBillingCycles?.[0] || 'monthly');
       setNewUser({
-        name: '',
-        email: '',
-        password: '',
-        role: 'admin',
-        subscriptionPlan: 'starter',
-        subscriptionStatus: 'trial',
-        monthlyPrice: 1499,
-        geminiTokensLimit: 50000,
-        webBotEnabled: false,
-        shopifyEnabled: true,
-        woocommerceEnabled: true
+        ...emptyMerchantForm,
+        pricingPlanId: defaultPlan?._id || '',
+        subscriptionPlan: defaultPlan?.name || 'starter',
+        billingCycle: defaultCycle,
+        monthlyPrice: defaultPlan ? getPlanMonthlyEquivalent(defaultPlan, defaultCycle) : 1499,
+        geminiTokensLimit: defaultPlan?.usageLimits?.geminiTokensPerMonth ?? 50000,
+        customPriceEnabled: Boolean(defaultPlan?.contactSales || defaultPlan?.customPricing)
       });
       fetchData();
     } catch (error) {
@@ -327,6 +373,45 @@ function SuperAdmin() {
         u.subscriptionPlan?.toLowerCase().includes(q)
     );
   }, [users, userSearch]);
+
+  const plansByCategory = useMemo(() => plans.reduce((groups, plan) => {
+    const category = plan.category || 'kwickbot_crm';
+    if (!groups[category]) groups[category] = [];
+    groups[category].push(plan);
+    return groups;
+  }, {}), [plans]);
+
+  const selectedPlan = useMemo(
+    () => plans.find((plan) => plan._id === newUser.pricingPlanId),
+    [plans, newUser.pricingPlanId]
+  );
+
+  const applyPlanToMerchant = (planId) => {
+    const plan = plans.find((item) => item._id === planId);
+    if (!plan) return;
+    const cycle = plan.allowedBillingCycles?.includes(newUser.billingCycle)
+      ? newUser.billingCycle
+      : (plan.allowedBillingCycles?.[0] || 'monthly');
+    setNewUser((current) => ({
+      ...current,
+      pricingPlanId: plan._id,
+      subscriptionPlan: plan.name,
+      billingCycle: cycle,
+      monthlyPrice: getPlanMonthlyEquivalent(plan, cycle),
+      geminiTokensLimit: plan.usageLimits?.geminiTokensPerMonth ?? 50000,
+      customPriceEnabled: Boolean(plan.contactSales || plan.customPricing)
+    }));
+  };
+
+  const applyBillingCycle = (billingCycle) => {
+    setNewUser((current) => ({
+      ...current,
+      billingCycle,
+      monthlyPrice: current.customPriceEnabled
+        ? current.monthlyPrice
+        : getPlanMonthlyEquivalent(selectedPlan, billingCycle)
+    }));
+  };
 
   if (loading) {
     return (
@@ -1003,15 +1088,10 @@ function SuperAdmin() {
                       <div className="form-group">
                         <label>Subscription Plan</label>
                         <select
-                          value={newUser.subscriptionPlan}
-                          onChange={(e) => {
-                            const plan = e.target.value;
-                            let price = 1499;
-                            let tokens = 50000;
-                            if (plan === 'professional') { price = 2999; tokens = 200000; }
-                            if (plan === 'enterprise') { price = 9999; tokens = -1; }
-                            setNewUser({ ...newUser, subscriptionPlan: plan, monthlyPrice: price, geminiTokensLimit: tokens });
-                          }}
+                          required
+                          value={newUser.pricingPlanId}
+                          onChange={(e) => applyPlanToMerchant(e.target.value)}
+                          disabled={plans.length === 0}
                           style={{
                             width: '100%',
                             padding: '12px',
@@ -1019,11 +1099,18 @@ function SuperAdmin() {
                             fontSize: '14px'
                           }}
                         >
-                          <option value="starter">Starter</option>
-                          <option value="professional">Professional</option>
-                          <option value="enterprise">Enterprise</option>
-                          <option value="custom">Custom</option>
+                          {plans.length === 0 && <option value="">No active plans available</option>}
+                          {Object.entries(plansByCategory).map(([category, categoryPlans]) => (
+                            <optgroup key={category} label={CATEGORY_LABELS[category] || category}>
+                              {categoryPlans.map((plan) => (
+                                <option key={plan._id} value={plan._id}>
+                                  {plan.displayName}{!plan.isPublished ? ' (Draft)' : ''}
+                                </option>
+                              ))}
+                            </optgroup>
+                          ))}
                         </select>
+                        {plansError && <small style={{ color: '#ef4444' }}>{plansError}</small>}
                       </div>
 
                       <div className="form-group">
@@ -1048,28 +1135,33 @@ function SuperAdmin() {
 
                     <div className="form-row" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                       <div className="form-group">
-                        <label>Monthly Price (₹)</label>
-                        <input
-                          type="number"
-                          min="0"
-                          value={newUser.monthlyPrice}
-                          onChange={(e) => setNewUser({ ...newUser, monthlyPrice: Number(e.target.value) })}
+                        <label>Billing Cycle</label>
+                        <select
+                          value={newUser.billingCycle}
+                          onChange={(e) => applyBillingCycle(e.target.value)}
                           style={{
                             width: '100%',
                             padding: '12px',
                             borderRadius: '10px',
                             fontSize: '14px'
                           }}
-                        />
+                        >
+                          {(selectedPlan?.allowedBillingCycles || ['monthly', 'yearly']).map((cycle) => (
+                            <option key={cycle} value={cycle}>
+                              {cycle === 'yearly' ? 'Yearly' : 'Monthly'}
+                            </option>
+                          ))}
+                        </select>
                       </div>
 
                       <div className="form-group">
-                        <label>Gemini Tokens/Month</label>
+                        <label>Price (₹ / month equivalent)</label>
                         <input
                           type="number"
                           min="0"
-                          value={newUser.geminiTokensLimit}
-                          onChange={(e) => setNewUser({ ...newUser, geminiTokensLimit: Number(e.target.value) })}
+                          value={newUser.monthlyPrice}
+                          onChange={(e) => setNewUser({ ...newUser, monthlyPrice: Number(e.target.value) })}
+                          disabled={!newUser.customPriceEnabled}
                           style={{
                             width: '100%',
                             padding: '12px',
@@ -1080,7 +1172,59 @@ function SuperAdmin() {
                       </div>
                     </div>
 
+                    <div className="form-row" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                      <div className="form-group">
+                        <label>Gemini Tokens/Month</label>
+                        <input
+                          type="number"
+                          min="-1"
+                          value={newUser.geminiTokensLimit}
+                          disabled
+                          style={{
+                            width: '100%',
+                            padding: '12px',
+                            borderRadius: '10px',
+                            fontSize: '14px'
+                          }}
+                        />
+                      </div>
 
+                      <div className="form-group" style={{ display: 'flex', alignItems: 'center', gap: '10px', paddingTop: '26px' }}>
+                        <input
+                          type="checkbox"
+                          id="customPriceEnabled"
+                          checked={newUser.customPriceEnabled}
+                          onChange={(e) => setNewUser((current) => ({
+                            ...current,
+                            customPriceEnabled: e.target.checked,
+                            monthlyPrice: e.target.checked ? current.monthlyPrice : getPlanMonthlyEquivalent(selectedPlan, current.billingCycle)
+                          }))}
+                          style={{ width: '18px', height: '18px', accentColor: '#6366f1' }}
+                        />
+                        <label htmlFor="customPriceEnabled" style={{ margin: 0, cursor: 'pointer' }}>Negotiated custom price</label>
+                      </div>
+                    </div>
+
+                    {selectedPlan && (
+                      <div style={{
+                        padding: '14px 16px',
+                        borderRadius: '12px',
+                        border: '1px solid var(--border)',
+                        background: 'var(--bg-hover)',
+                        color: 'var(--text-secondary)',
+                        fontSize: '13px',
+                        lineHeight: 1.6,
+                        marginBottom: '8px'
+                      }}>
+                        <strong style={{ color: 'var(--text-primary)' }}>{selectedPlan.displayName}</strong>
+                        {' · '}{CATEGORY_LABELS[selectedPlan.category] || selectedPlan.category}
+                        {' · '}{selectedPlan.permissionProfile || 'default'} permission profile
+                        {' · '}{selectedPlan.allowedPages?.length || 0} configured pages
+                        {newUser.billingCycle === 'yearly' && selectedPlan.yearlyPrice !== null && selectedPlan.yearlyPrice !== undefined && Number.isFinite(Number(selectedPlan.yearlyPrice)) && (
+                          <> · ₹{Number(selectedPlan.yearlyPrice).toLocaleString('en-IN')} billed yearly</>
+                        )}
+                      </div>
+                    )}
 
                     <div className="form-group" style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '12px' }}>
                       <input
@@ -1121,7 +1265,7 @@ function SuperAdmin() {
                 )}
 
                 <div className="modal-actions">
-                  <button type="submit" className="btn-primary">
+                  <button type="submit" className="btn-primary" disabled={newUser.role !== 'super_admin' && !newUser.pricingPlanId}>
                     Create User
                   </button>
                   <button type="button" onClick={() => setShowAddUserModal(false)} className="btn-secondary">

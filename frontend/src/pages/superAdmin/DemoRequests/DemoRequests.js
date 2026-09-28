@@ -2,6 +2,21 @@ import React, { useState, useEffect } from 'react';
 import { FaEnvelope, FaPhone, FaBriefcase, FaCheck, FaTimes, FaEye, FaClock, FaCheckCircle, FaTimesCircle, FaTrash, FaUndo } from 'react-icons/fa';
 import api from '../../../services/api';
 
+const CATEGORY_LABELS = {
+  kwickbot_crm: 'Kwickbot CRM',
+  crm_integration: 'CRM Integration',
+  whatsapp_api: 'WhatsApp API',
+  enterprise_custom: 'Enterprise & Custom'
+};
+
+const monthlyEquivalent = (plan, cycle) => {
+  if (!plan) return 0;
+  if (cycle === 'yearly' && plan.yearlyPrice !== null && plan.yearlyPrice !== undefined && Number.isFinite(Number(plan.yearlyPrice))) {
+    return Math.round((Number(plan.yearlyPrice) / 12) * 100) / 100;
+  }
+  return Number(plan.monthlyPrice || 0);
+};
+
 function DemoRequests() {
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -9,10 +24,66 @@ function DemoRequests() {
   const [showModal, setShowModal] = useState(false);
   const [approving, setApproving] = useState(false);
   const [filter, setFilter] = useState('all');
+  const [plans, setPlans] = useState([]);
+  const [plansError, setPlansError] = useState('');
+  const [approvalConfig, setApprovalConfig] = useState({
+    pricingPlanId: '',
+    subscriptionPlan: 'starter',
+    billingCycle: 'monthly',
+    subscriptionStatus: 'trial',
+    monthlyPrice: 1499,
+    geminiTokensLimit: 50000,
+    customPriceEnabled: false
+  });
 
   useEffect(() => {
     fetchRequests();
   }, [filter]);
+
+  useEffect(() => {
+    const fetchPlans = async () => {
+      try {
+        const response = await api.get('/super-admin/plans');
+        const availablePlans = (response.data.data || []).filter((plan) => plan.isActive !== false);
+        setPlans(availablePlans);
+        setPlansError('');
+        const starter = availablePlans.find((plan) => plan.name === 'starter') || availablePlans[0];
+        if (starter) configureApprovalPlan(starter._id, 'monthly', availablePlans);
+      } catch (error) {
+        console.error('Error fetching pricing plans:', error);
+        setPlansError('Pricing plans could not be loaded. Refresh before approving this request.');
+      }
+    };
+
+    fetchPlans();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const configureApprovalPlan = (planId, preferredCycle, sourcePlans = plans) => {
+    const plan = sourcePlans.find((item) => item._id === planId);
+    if (!plan) return;
+    const cycle = plan.allowedBillingCycles?.includes(preferredCycle)
+      ? preferredCycle
+      : (plan.allowedBillingCycles?.[0] || 'monthly');
+
+    setApprovalConfig((current) => ({
+      ...current,
+      pricingPlanId: plan._id,
+      subscriptionPlan: plan.name,
+      billingCycle: cycle,
+      monthlyPrice: monthlyEquivalent(plan, cycle),
+      geminiTokensLimit: plan.usageLimits?.geminiTokensPerMonth ?? 50000,
+      customPriceEnabled: Boolean(plan.contactSales || plan.customPricing)
+    }));
+  };
+
+  const selectedPlan = plans.find((plan) => plan._id === approvalConfig.pricingPlanId);
+  const plansByCategory = plans.reduce((groups, plan) => {
+    const category = plan.category || 'kwickbot_crm';
+    if (!groups[category]) groups[category] = [];
+    groups[category].push(plan);
+    return groups;
+  }, {});
 
   const fetchRequests = async () => {
     try {
@@ -41,11 +112,7 @@ function DemoRequests() {
       
       const response = await api.post(
         `/demo-requests/${requestId}/approve`,
-        {
-          subscriptionPlan: 'starter',
-          monthlyPrice: 1499,
-          geminiTokens: 10000
-        }
+        approvalConfig
       );
 
       alert(`✅ Account created successfully!\n\nEmail: ${response.data.data.credentials.email}\nPassword: ${response.data.data.credentials.password}\n\nCredentials have been sent to the user's email.`);
@@ -300,6 +367,110 @@ function DemoRequests() {
                 {new Date(request.createdAt).toLocaleString()}
               </div>
             </div>
+
+            {!request.approved && request.status === 'pending' && (
+              <div style={{
+                background: 'rgba(99, 102, 241, 0.08)',
+                border: '1px solid rgba(99, 102, 241, 0.3)',
+                borderRadius: '14px',
+                padding: '18px'
+              }}>
+                <div style={{ color: '#fafafa', fontSize: '16px', fontWeight: '700', marginBottom: '14px' }}>
+                  Account subscription
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)', gap: '12px' }}>
+                  <div>
+                    <label style={{ color: '#a1a1aa', fontSize: '12px', fontWeight: '600' }}>Plan *</label>
+                    <select
+                      value={approvalConfig.pricingPlanId}
+                      onChange={(event) => configureApprovalPlan(event.target.value, approvalConfig.billingCycle)}
+                      disabled={plans.length === 0}
+                      style={{ width: '100%', marginTop: '6px', padding: '11px', borderRadius: '9px', background: '#27272a', color: '#fafafa', border: '1px solid #52525b' }}
+                    >
+                      {plans.length === 0 && <option value="">No active plans available</option>}
+                      {Object.entries(plansByCategory).map(([category, categoryPlans]) => (
+                        <optgroup key={category} label={CATEGORY_LABELS[category] || category}>
+                          {categoryPlans.map((plan) => (
+                            <option key={plan._id} value={plan._id}>
+                              {plan.displayName}{!plan.isPublished ? ' (Draft)' : ''}
+                            </option>
+                          ))}
+                        </optgroup>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label style={{ color: '#a1a1aa', fontSize: '12px', fontWeight: '600' }}>Billing cycle</label>
+                    <select
+                      value={approvalConfig.billingCycle}
+                      onChange={(event) => {
+                        const billingCycle = event.target.value;
+                        setApprovalConfig((current) => ({
+                          ...current,
+                          billingCycle,
+                          monthlyPrice: current.customPriceEnabled ? current.monthlyPrice : monthlyEquivalent(selectedPlan, billingCycle)
+                        }));
+                      }}
+                      style={{ width: '100%', marginTop: '6px', padding: '11px', borderRadius: '9px', background: '#27272a', color: '#fafafa', border: '1px solid #52525b' }}
+                    >
+                      {(selectedPlan?.allowedBillingCycles || ['monthly', 'yearly']).map((cycle) => (
+                        <option key={cycle} value={cycle}>{cycle === 'yearly' ? 'Yearly' : 'Monthly'}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label style={{ color: '#a1a1aa', fontSize: '12px', fontWeight: '600' }}>Initial status</label>
+                    <select
+                      value={approvalConfig.subscriptionStatus}
+                      onChange={(event) => setApprovalConfig((current) => ({ ...current, subscriptionStatus: event.target.value }))}
+                      style={{ width: '100%', marginTop: '6px', padding: '11px', borderRadius: '9px', background: '#27272a', color: '#fafafa', border: '1px solid #52525b' }}
+                    >
+                      <option value="trial">Trial</option>
+                      <option value="active">Active</option>
+                      <option value="inactive">Inactive</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label style={{ color: '#a1a1aa', fontSize: '12px', fontWeight: '600' }}>Price (₹ / month equivalent)</label>
+                    <input
+                      type="number"
+                      min="0"
+                      value={approvalConfig.monthlyPrice}
+                      disabled={!approvalConfig.customPriceEnabled}
+                      onChange={(event) => setApprovalConfig((current) => ({ ...current, monthlyPrice: Number(event.target.value) }))}
+                      style={{ width: '100%', boxSizing: 'border-box', marginTop: '6px', padding: '11px', borderRadius: '9px', background: '#27272a', color: '#fafafa', border: '1px solid #52525b' }}
+                    />
+                  </div>
+                </div>
+
+                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#d4d4d8', fontSize: '13px', marginTop: '12px', cursor: 'pointer' }}>
+                  <input
+                    type="checkbox"
+                    checked={approvalConfig.customPriceEnabled}
+                    onChange={(event) => setApprovalConfig((current) => ({
+                      ...current,
+                      customPriceEnabled: event.target.checked,
+                      monthlyPrice: event.target.checked ? current.monthlyPrice : monthlyEquivalent(selectedPlan, current.billingCycle)
+                    }))}
+                  />
+                  Use negotiated custom price
+                </label>
+
+                {selectedPlan && (
+                  <div style={{ color: '#a1a1aa', fontSize: '12px', marginTop: '12px', lineHeight: 1.6 }}>
+                    {CATEGORY_LABELS[selectedPlan.category] || selectedPlan.category}
+                    {' · '}{selectedPlan.permissionProfile || 'default'} permissions
+                    {' · '}{approvalConfig.geminiTokensLimit === -1 ? 'Unlimited' : Number(approvalConfig.geminiTokensLimit).toLocaleString('en-IN')} Gemini tokens/month
+                    {approvalConfig.billingCycle === 'yearly' && selectedPlan.yearlyPrice !== null && selectedPlan.yearlyPrice !== undefined && Number.isFinite(Number(selectedPlan.yearlyPrice)) && ` · ₹${Number(selectedPlan.yearlyPrice).toLocaleString('en-IN')} billed yearly`}
+                  </div>
+                )}
+                {plansError && <div style={{ color: '#f87171', fontSize: '12px', marginTop: '10px' }}>{plansError}</div>}
+              </div>
+            )}
           </div>
 
             <div style={{
@@ -314,7 +485,7 @@ function DemoRequests() {
                 <>
                   <button
                     onClick={() => handleApprove(request._id)}
-                    disabled={approving}
+                    disabled={approving || !approvalConfig.pricingPlanId}
                     style={{
                       flex: 1,
                       minWidth: '200px',
@@ -325,7 +496,7 @@ function DemoRequests() {
                       borderRadius: '12px',
                       fontSize: '15px',
                       fontWeight: '600',
-                      cursor: approving ? 'not-allowed' : 'pointer',
+                      cursor: approving || !approvalConfig.pricingPlanId ? 'not-allowed' : 'pointer',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
@@ -489,6 +660,8 @@ function DemoRequests() {
                         <button
                           onClick={() => {
                             setSelectedRequest(request);
+                            const starter = plans.find((plan) => plan.name === 'starter') || plans[0];
+                            if (starter) configureApprovalPlan(starter._id, 'monthly');
                             setShowModal(true);
                           }}
                           style={{
@@ -548,15 +721,13 @@ function DemoRequests() {
         )}
       </div>
 
-      {showModal && (
-        <RequestModal
-          request={selectedRequest}
-          onClose={() => {
+      {showModal && RequestModal({
+          request: selectedRequest,
+          onClose: () => {
             setShowModal(false);
             setSelectedRequest(null);
-          }}
-        />
-      )}
+          }
+        })}
     </div>
   );
 }

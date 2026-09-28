@@ -14,6 +14,7 @@ const os = require('os');
 const whatsappCloudAPI = require('../../services/whatsappCloudAPI');
 const crypto = require('crypto');
 const { normalizePlanName } = require('../../config/planConstants');
+const { resolvePlanAssignment } = require('../../services/planAssignmentService');
 
 // Middleware to check super admin role
 exports.requireSuperAdmin = (req, res, next) => {
@@ -70,10 +71,26 @@ exports.getAllUsers = async (req, res) => {
 // Create new user
 exports.createUser = async (req, res) => {
   try {
-    const { name, email, password, role, subscriptionPlan, subscriptionStatus, monthlyPrice, geminiTokensLimit, webBotEnabled, shopifyEnabled, woocommerceEnabled } = req.body;
+    const { name, email, password, role, webBotEnabled, shopifyEnabled, woocommerceEnabled } = req.body;
+
+    if (typeof name !== 'string' || !name.trim() || typeof email !== 'string' || !email.trim() || typeof password !== 'string' || !password) {
+      return res.status(400).json({
+        success: false,
+        error: 'Name, email, and password are required.'
+      });
+    }
+
+    if (password.length < 6) {
+      return res.status(400).json({
+        success: false,
+        error: 'Password must be at least 6 characters.'
+      });
+    }
+
+    const normalizedEmail = email.toLowerCase().trim();
 
     // Check if user already exists
-    const existingUser = await Admin.findOne({ email });
+    const existingUser = await Admin.findOne({ email: normalizedEmail });
     if (existingUser) {
       return res.status(400).json({
         success: false,
@@ -82,23 +99,24 @@ exports.createUser = async (req, res) => {
     }
 
     const validatedRole = ['admin', 'super_admin'].includes(role) ? role : 'admin';
+    const resolvedAssignment = validatedRole === 'admin'
+      ? await resolvePlanAssignment(req.body)
+      : {};
+    const planAssignment = { ...resolvedAssignment };
+    delete planAssignment.plan;
 
     // Create new user
     const newUser = new Admin({
-      name,
-      email,
+      name: name.trim(),
+      email: normalizedEmail,
       password, // Will be hashed by pre-save hook
       role: validatedRole,
-      subscriptionPlan: subscriptionPlan || 'starter',
-      subscriptionStatus: subscriptionStatus || 'trial',
-      monthlyPrice: monthlyPrice || 1499,
-      geminiTokensLimit: geminiTokensLimit || 50000,
+      ...planAssignment,
       geminiTokensUsed: 0,
       webBotEnabled: webBotEnabled === true || webBotEnabled === 'true',
       shopifyEnabled: shopifyEnabled !== false && shopifyEnabled !== 'false',
       woocommerceEnabled: woocommerceEnabled !== false && woocommerceEnabled !== 'false',
-      isActive: true,
-      subscriptionStartDate: new Date()
+      isActive: validatedRole === 'super_admin' ? true : planAssignment.isActive
     });
 
     await newUser.save();
@@ -114,7 +132,7 @@ exports.createUser = async (req, res) => {
     });
   } catch (error) {
     console.error('Error creating user:', error);
-    res.status(500).json({
+    res.status(error.statusCode || 500).json({
       success: false,
       error: error.message || 'Failed to create user'
     });
@@ -3218,5 +3236,3 @@ exports.revokeUserSessions = async (req, res) => {
     });
   }
 };
-
-

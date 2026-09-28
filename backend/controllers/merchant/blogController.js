@@ -1,12 +1,20 @@
 const BlogPost = require('../../models/BlogPost');
+const { sanitizeHtml } = require('../../utils/sanitizeHtml');
 
 // Get all published posts (Public)
 exports.getPublishedPosts = async (req, res) => {
   try {
     const posts = await BlogPost.find({ status: 'published' })
       .sort({ createdAt: -1 })
-      .populate('createdBy', 'name email');
-    res.json({ success: true, count: posts.length, data: posts });
+      .populate('createdBy', 'name email')
+      .lean();
+
+    const sanitizedPosts = posts.map(p => ({
+      ...p,
+      content: sanitizeHtml(p.content || '')
+    }));
+
+    res.json({ success: true, count: sanitizedPosts.length, data: sanitizedPosts });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
   }
@@ -16,10 +24,12 @@ exports.getPublishedPosts = async (req, res) => {
 exports.getPostBySlug = async (req, res) => {
   try {
     const post = await BlogPost.findOne({ slug: req.params.slug, status: 'published' })
-      .populate('createdBy', 'name email');
+      .populate('createdBy', 'name email')
+      .lean();
     if (!post) {
       return res.status(404).json({ success: false, error: 'Post not found' });
     }
+    post.content = sanitizeHtml(post.content || '');
     res.json({ success: true, data: post });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
@@ -31,8 +41,15 @@ exports.getAllPostsAdmin = async (req, res) => {
   try {
     const posts = await BlogPost.find()
       .sort({ createdAt: -1 })
-      .populate('createdBy', 'name email');
-    res.json({ success: true, count: posts.length, data: posts });
+      .populate('createdBy', 'name email')
+      .lean();
+
+    const sanitizedPosts = posts.map(p => ({
+      ...p,
+      content: sanitizeHtml(p.content || '')
+    }));
+
+    res.json({ success: true, count: sanitizedPosts.length, data: sanitizedPosts });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
   }
@@ -49,11 +66,13 @@ exports.createPost = async (req, res) => {
       return res.status(400).json({ success: false, error: 'Slug must be unique. An article with this slug already exists.' });
     }
 
+    const sanitizedContent = sanitizeHtml(content || '');
+
     const newPost = new BlogPost({
       title,
       slug,
       summary,
-      content,
+      content: sanitizedContent,
       coverImage,
       tags: tags || [],
       status: status || 'draft',
@@ -81,9 +100,14 @@ exports.updatePost = async (req, res) => {
       }
     }
 
+    const updatePayload = { title, slug, summary, coverImage, tags, status, author };
+    if (content !== undefined) {
+      updatePayload.content = sanitizeHtml(content || '');
+    }
+
     const post = await BlogPost.findByIdAndUpdate(
       req.params.id,
-      { title, slug, summary, content, coverImage, tags, status, author },
+      updatePayload,
       { new: true, runValidators: true }
     );
 

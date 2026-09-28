@@ -2,6 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
+import { safeJsonStringify } from '../../utils/jsonSanitizer';
 import { FaArrowRight, FaBrain, FaUsers, FaShieldAlt, FaRocket, FaChartBar, FaSmile } from 'react-icons/fa';
 
 export default function AboutPage() {
@@ -28,7 +29,7 @@ export default function AboutPage() {
     <div className="retro-page-container">
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }}
+        dangerouslySetInnerHTML={{ __html: safeJsonStringify(breadcrumbSchema) }}
       />
       <div className="bg-video-wrapper">
         <video className="bg-video" autoPlay muted loop playsInline>

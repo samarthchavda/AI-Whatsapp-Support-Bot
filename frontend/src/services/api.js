@@ -31,6 +31,18 @@ const clearStoredAuth = () => {
   localStorage.removeItem(ACCESS_TOKEN_KEY);
   localStorage.removeItem(LEGACY_TOKEN_KEY);
   localStorage.removeItem('admin');
+  localStorage.removeItem('originalToken');
+  localStorage.removeItem('originalAdmin');
+  localStorage.removeItem('isImpersonated');
+  localStorage.removeItem('impersonatedUserEmail');
+  localStorage.removeItem('impersonatedUserName');
+  try {
+    sessionStorage.removeItem('originalToken');
+    sessionStorage.removeItem('originalAdmin');
+    sessionStorage.removeItem('isImpersonated');
+    sessionStorage.removeItem('impersonatedUserEmail');
+    sessionStorage.removeItem('impersonatedUserName');
+  } catch (e) {}
 };
 
 let refreshPromise = null;

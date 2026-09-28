@@ -1,6 +1,7 @@
 import './globals.css';
 import Header from './components/Header';
 import Footer from './components/Footer';
+import { safeJsonStringify } from '../utils/jsonSanitizer';
 
 export const metadata = {
   metadataBase: new URL('https://kwickbot.in'),
@@ -143,15 +144,15 @@ export default function RootLayout({ children }) {
         {/* Structured Data (JSON-LD Schemas for SEO) */}
         <script
           type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationSchema) }}
+          dangerouslySetInnerHTML={{ __html: safeJsonStringify(organizationSchema) }}
         />
         <script
           type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(softwareAppSchema) }}
+          dangerouslySetInnerHTML={{ __html: safeJsonStringify(softwareAppSchema) }}
         />
         <script
           type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteSchema) }}
+          dangerouslySetInnerHTML={{ __html: safeJsonStringify(websiteSchema) }}
         />
       </head>
       <body>

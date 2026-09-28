@@ -786,13 +786,13 @@ function App() {
     setActiveAnnouncements(prev => prev.filter(ann => ann._id !== id));
   };
 
-  const isImpersonated = localStorage.getItem('isImpersonated') === 'true';
-  const impersonatedUserName = localStorage.getItem('impersonatedUserName') || '';
-  const impersonatedUserEmail = localStorage.getItem('impersonatedUserEmail') || '';
+  const isImpersonated = (typeof sessionStorage !== 'undefined' && sessionStorage.getItem('isImpersonated') === 'true') || localStorage.getItem('isImpersonated') === 'true';
+  const impersonatedUserName = (typeof sessionStorage !== 'undefined' && sessionStorage.getItem('impersonatedUserName')) || localStorage.getItem('impersonatedUserName') || '';
+  const impersonatedUserEmail = (typeof sessionStorage !== 'undefined' && sessionStorage.getItem('impersonatedUserEmail')) || localStorage.getItem('impersonatedUserEmail') || '';
 
   const handleStopImpersonating = () => {
-    const originalToken = localStorage.getItem('originalToken');
-    const originalAdmin = localStorage.getItem('originalAdmin');
+    const originalToken = (typeof sessionStorage !== 'undefined' && sessionStorage.getItem('originalToken')) || localStorage.getItem('originalToken');
+    const originalAdmin = (typeof sessionStorage !== 'undefined' && sessionStorage.getItem('originalAdmin')) || localStorage.getItem('originalAdmin');
     
     if (originalToken && originalAdmin) {
       localStorage.setItem('token', originalToken);
@@ -800,6 +800,14 @@ function App() {
       localStorage.setItem('admin', originalAdmin);
     }
     
+    try {
+      sessionStorage.removeItem('originalToken');
+      sessionStorage.removeItem('originalAdmin');
+      sessionStorage.removeItem('isImpersonated');
+      sessionStorage.removeItem('impersonatedUserEmail');
+      sessionStorage.removeItem('impersonatedUserName');
+    } catch (e) {}
+
     localStorage.removeItem('originalToken');
     localStorage.removeItem('originalAdmin');
     localStorage.removeItem('isImpersonated');
@@ -818,6 +826,10 @@ function App() {
     }
 
     clearAuthState();
+    try {
+      sessionStorage.clear();
+    } catch (e) {}
+
     localStorage.removeItem('originalToken');
     localStorage.removeItem('originalAdmin');
     localStorage.removeItem('isImpersonated');

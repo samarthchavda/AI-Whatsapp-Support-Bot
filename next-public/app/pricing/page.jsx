@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
+import { safeJsonStringify } from '../../utils/jsonSanitizer';
 import { FaCheck, FaTimes, FaChevronDown, FaChevronUp } from 'react-icons/fa';
 
 const faqs = [
@@ -67,11 +68,11 @@ export default function PricingPage() {
     <div className="retro-page-container">
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }}
+        dangerouslySetInnerHTML={{ __html: safeJsonStringify(breadcrumbSchema) }}
       />
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }}
+        dangerouslySetInnerHTML={{ __html: safeJsonStringify(faqSchema) }}
       />
       <div className="bg-video-wrapper">
         <video className="bg-video" autoPlay muted loop playsInline>

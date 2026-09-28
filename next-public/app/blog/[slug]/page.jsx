@@ -1,6 +1,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
+import { safeJsonStringify } from '../../../utils/jsonSanitizer';
 
 const FALLBACK_POSTS = {
   'what-are-whatsapp-meta-templates-simple-guide-2026': {
@@ -240,11 +241,11 @@ export default async function BlogPostPage({ params }) {
     <div className="retro-page-container">
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(blogPostingSchema) }}
+        dangerouslySetInnerHTML={{ __html: safeJsonStringify(blogPostingSchema) }}
       />
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }}
+        dangerouslySetInnerHTML={{ __html: safeJsonStringify(breadcrumbSchema) }}
       />
       <div className="bg-video-wrapper">
         <video className="bg-video" autoPlay muted loop playsInline>

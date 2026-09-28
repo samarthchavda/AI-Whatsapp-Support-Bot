@@ -2,6 +2,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
+import { safeJsonStringify } from '../utils/jsonSanitizer';
 import {
   FaArrowRight,
   FaBox,
@@ -230,7 +231,7 @@ export default function LandingPage() {
     <div className="retro-page-container">
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }}
+        dangerouslySetInnerHTML={{ __html: safeJsonStringify(faqSchema) }}
       />
       {/* Background Video */}
       <div className="bg-video-wrapper">

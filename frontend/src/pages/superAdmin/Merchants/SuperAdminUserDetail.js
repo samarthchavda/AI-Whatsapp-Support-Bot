@@ -215,10 +215,15 @@ function SuperAdminUserDetail() {
       const res = await api.post(`/super-admin/users/${user._id}/impersonate`);
       
       if (res.data.success && res.data.data.token) {
-        localStorage.setItem('originalToken', token);
-        if (originalAdmin) {
-          localStorage.setItem('originalAdmin', originalAdmin);
-        }
+        try {
+          sessionStorage.setItem('originalToken', token);
+          if (originalAdmin) {
+            sessionStorage.setItem('originalAdmin', originalAdmin);
+          }
+          sessionStorage.setItem('isImpersonated', 'true');
+          sessionStorage.setItem('impersonatedUserEmail', user.email);
+          sessionStorage.setItem('impersonatedUserName', user.name);
+        } catch (e) {}
         
         localStorage.setItem('token', res.data.data.token);
         localStorage.setItem('accessToken', res.data.data.token);

@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { FaArrowLeft, FaCheckCircle } from 'react-icons/fa';
 import axios from 'axios';
+import { safeJsonStringify } from '../../utils/jsonSanitizer';
 
 export default function BookDemo() {
   const [formData, setFormData] = useState({
@@ -76,7 +77,7 @@ export default function BookDemo() {
     <div className="retro-page-container">
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }}
+        dangerouslySetInnerHTML={{ __html: safeJsonStringify(breadcrumbSchema) }}
       />
       <div className="bg-video-wrapper">
         <video className="bg-video" autoPlay muted loop playsInline>

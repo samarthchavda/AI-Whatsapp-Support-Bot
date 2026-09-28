@@ -2,6 +2,7 @@
 
 import React, { useEffect } from 'react';
 import Link from 'next/link';
+import { safeJsonStringify } from '../../utils/jsonSanitizer';
 import {
   FaArrowRight,
   FaBrain,
@@ -117,7 +118,7 @@ export default function ServicesPage() {
     <div className="retro-page-container">
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }}
+        dangerouslySetInnerHTML={{ __html: safeJsonStringify(breadcrumbSchema) }}
       />
       <div className="bg-video-wrapper">
         <video className="bg-video" autoPlay muted loop playsInline>

@@ -529,8 +529,19 @@ const defaultPlans = [
     isActive: true,
     isPublished: false,
     allowedBillingCycles: ['monthly', 'yearly'],
-    permissionProfile: 'enterprise',
-    allowedPages: ['dashboard', 'conversations', 'api-keys', 'integrations', 'analytics', 'profile', 'billing'],
+    permissionProfile: 'api_enterprise',
+    allowedPages: [
+      'api-dashboard',
+      'api-keys',
+      'api-documentation',
+      'webhook-configuration',
+      'whatsapp-templates',
+      'api-logs',
+      'failed-webhooks',
+      'api-usage',
+      'billing',
+      'settings'
+    ],
     features: {
       dashboardAccess: true,
       conversations: true,
@@ -576,8 +587,8 @@ const defaultPlans = [
     isActive: true,
     isPublished: false,
     allowedBillingCycles: ['monthly', 'yearly'],
-    permissionProfile: 'enterprise',
-    allowedPages: ['dashboard', 'conversations', 'knowledge-base', 'broadcast', 'analytics', 'escalations', 'templates', 'integrations', 'orders', 'leads', 'api-keys', 'profile', 'billing'],
+    permissionProfile: 'custom_automation',
+    allowedPages: [],
     features: {
       dashboardAccess: true,
       conversations: true,
@@ -627,6 +638,21 @@ const defaultPlans = [
     sla: 'Custom Dedicated SLA'
   }
 ];
+
+const LEGACY_PROFILE_KEYS_BY_PLAN = {
+  crm_connect: ['crm_basic'],
+  crm_automation: ['crm_advanced'],
+  crm_enterprise: ['enterprise'],
+  api_starter: ['api_basic'],
+  api_growth: ['api_advanced'],
+  api_enterprise: ['enterprise'],
+  custom_automation: ['enterprise']
+};
+
+function requiresCanonicalAccessUpgrade(existingPlan, canonicalPlan) {
+  const legacyKeys = LEGACY_PROFILE_KEYS_BY_PLAN[canonicalPlan.name] || [];
+  return legacyKeys.includes(existingPlan.permissionProfile);
+}
 
 async function runMigration(options = {}) {
   const isDryRun = options.dryRun || process.argv.includes('--dry-run') || process.argv.includes('-d');
@@ -684,13 +710,19 @@ async function runMigration(options = {}) {
           needsSave = true;
         }
 
-        // For draft plans, sync canonical profile and allowedPages if updated
-        if (!existing.isPublished && planData.permissionProfile) {
-          if (existing.permissionProfile !== planData.permissionProfile || !existing.allowedPages || existing.allowedPages.length === 0 || existing.permissionProfile === 'crm_basic' || existing.permissionProfile === 'api_basic') {
-            existing.permissionProfile = planData.permissionProfile;
-            existing.allowedPages = planData.allowedPages;
-            needsSave = true;
-          }
+        // Upgrade known legacy access definitions even after a standard plan was published.
+        // Arbitrary Super Admin profile customizations remain untouched.
+        const legacyAccessDefinition = requiresCanonicalAccessUpgrade(existing, planData);
+        const incompleteDraftDefinition = !existing.isPublished && planData.permissionProfile && (
+          existing.permissionProfile !== planData.permissionProfile ||
+          !Array.isArray(existing.allowedPages) ||
+          ((planData.allowedPages || []).length > 0 && existing.allowedPages.length === 0)
+        );
+
+        if (legacyAccessDefinition || incompleteDraftDefinition) {
+          existing.permissionProfile = planData.permissionProfile;
+          existing.allowedPages = [...(planData.allowedPages || [])];
+          needsSave = true;
         }
 
         if (needsSave && !isDryRun) {
@@ -780,4 +812,4 @@ if (require.main === module) {
     .catch(() => process.exit(1));
 }
 
-module.exports = { defaultPlans, runMigration };
+module.exports = { defaultPlans, runMigration, requiresCanonicalAccessUpgrade };

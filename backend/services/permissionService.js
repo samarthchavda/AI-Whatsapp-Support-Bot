@@ -230,6 +230,7 @@ async function getEffectiveAccessPayload(adminDoc) {
       effectivePages: pages,
       effectivePermissions: permissions,
       permissionProfile: profile,
+      features: plan?.features?.toObject ? plan.features.toObject() : (plan?.features || {}),
       usageLimits,
       currentUsage,
       customerOverrides: {

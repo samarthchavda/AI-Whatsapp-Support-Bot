@@ -3,7 +3,7 @@ const crypto = require('crypto');
 const PricingPlan = require('../models/PricingPlan');
 const Admin = require('../models/Admin');
 const Invoice = require('../models/Invoice');
-const { defaultPlans, runMigration } = require('../scripts/migratePlansToStandard');
+const { defaultPlans, runMigration, requiresCanonicalAccessUpgrade } = require('../scripts/migratePlansToStandard');
 const subscriptionService = require('../services/subscriptionService');
 
 describe('Dynamic Pricing Plan System & Security Tests', () => {
@@ -86,6 +86,20 @@ describe('Dynamic Pricing Plan System & Security Tests', () => {
       expect(customAuto).toBeDefined();
       expect(customAuto.isPublished).toBe(false);
       expect(customAuto.contactSales).toBe(true);
+    });
+
+    test('Canonical access migration upgrades only known legacy standard-plan profiles', () => {
+      const crmConnect = defaultPlans.find(p => p.name === 'crm_connect');
+      const apiEnterprise = defaultPlans.find(p => p.name === 'api_enterprise');
+      const customAutomation = defaultPlans.find(p => p.name === 'custom_automation');
+
+      expect(requiresCanonicalAccessUpgrade({ permissionProfile: 'crm_basic' }, crmConnect)).toBe(true);
+      expect(requiresCanonicalAccessUpgrade({ permissionProfile: 'enterprise' }, apiEnterprise)).toBe(true);
+      expect(requiresCanonicalAccessUpgrade({ permissionProfile: 'enterprise' }, customAutomation)).toBe(true);
+      expect(requiresCanonicalAccessUpgrade({ permissionProfile: 'merchant_custom_profile' }, crmConnect)).toBe(false);
+      expect(apiEnterprise.permissionProfile).toBe('api_enterprise');
+      expect(customAutomation.permissionProfile).toBe('custom_automation');
+      expect(customAutomation.allowedPages).toEqual([]);
     });
   });
 

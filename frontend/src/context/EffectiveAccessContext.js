@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import api from '../services/api';
+import { extractEffectiveAccessPayload } from '../utils/effectiveAccess';
 
 const EffectiveAccessContext = createContext(null);
 
@@ -20,14 +21,9 @@ export function EffectiveAccessProvider({ children, admin }) {
     try {
       const response = await api.get('/auth/effective-access');
       if (response.data && response.data.success) {
+        const payload = extractEffectiveAccessPayload(response);
         setAccessData({
-          effectivePages: response.data.effectivePages || [],
-          effectivePermissions: response.data.effectivePermissions || [],
-          usageLimits: response.data.usageLimits || {},
-          currentUsage: response.data.currentUsage || {},
-          subscription: response.data.subscription || null,
-          features: response.data.features || {},
-          user: response.data.user || null,
+          ...payload,
           loading: false,
           error: null
         });

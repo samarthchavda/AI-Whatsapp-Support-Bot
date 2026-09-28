@@ -176,6 +176,17 @@ mongoose.connect(mongoUri, {
       // silent fallback
     }
 
+    // Keep standard plan access definitions and system permission profiles available.
+    // Both operations are idempotent and preserve non-legacy Super Admin customizations.
+    try {
+      const { runMigration } = require('./scripts/migratePlansToStandard');
+      runMigration({ quiet: true }).catch(e => console.error('Plan access migration warning:', e.message));
+      const { seedProfiles } = require('./scripts/seedPermissionProfiles');
+      seedProfiles(false).catch(e => console.error('Permission profile auto-seed warning:', e.message));
+    } catch (e) {
+      console.error('Plan/profile startup initialization warning:', e.message);
+    }
+
     // Initialize WhatsApp bot after DB connection (if available and enabled)
     if (whatsappWebBot) {
       try {

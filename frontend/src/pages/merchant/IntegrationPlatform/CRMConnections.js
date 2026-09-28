@@ -409,6 +409,7 @@ function CRMConnections() {
                       placeholder="e.g. odoo_production_db" 
                       value={formData.databaseName}
                       onChange={e => setFormData({ ...formData, databaseName: e.target.value })}
+                      autoComplete="off"
                     />
                   </div>
                 )}
@@ -454,6 +455,7 @@ function CRMConnections() {
                       placeholder="Enter secret key or token..." 
                       value={formData.apiKey}
                       onChange={e => setFormData({ ...formData, apiKey: e.target.value })}
+                      autoComplete="off"
                     />
                     <span className="form-hint">Stored securely using AES-256 encryption</span>
                   </div>

@@ -121,11 +121,13 @@ function CRMConnections() {
       const credentials = {};
       if (formData.authType === 'api_key') {
         credentials.apiKey = formData.apiKey;
+        if (formData.username) credentials.username = formData.username;
       } else if (formData.authType === 'basic_auth' || formData.authType === 'username_password') {
         credentials.username = formData.username;
         credentials.password = formData.password;
       } else {
         credentials.apiKey = formData.apiKey;
+        if (formData.username) credentials.username = formData.username;
       }
 
       const payload = {
@@ -469,20 +471,38 @@ function CRMConnections() {
                     </div>
                   </>
                 ) : (
-                  <div className="form-group-saas">
-                    <label>Secret API Key / Bearer Token</label>
-                    <input 
-                      type="password" 
-                      name="crm_custom_api_key_secret"
-                      placeholder="Enter secret key or token..." 
-                      value={formData.apiKey}
-                      onChange={e => setFormData({ ...formData, apiKey: e.target.value })}
-                      autoComplete="new-password"
-                      data-lpignore="true"
-                      data-form-type="other"
-                    />
-                    <span className="form-hint">Stored securely using AES-256 encryption</span>
-                  </div>
+                  <>
+                    {formData.provider === 'odoo' && (
+                      <div className="form-group-saas">
+                        <label>Odoo User Email / Login</label>
+                        <input 
+                          type="email" 
+                          name="crm_odoo_auth_email"
+                          placeholder="e.g. hello@kwickbot.in" 
+                          value={formData.username}
+                          onChange={e => setFormData({ ...formData, username: e.target.value })}
+                          autoComplete="off"
+                          data-lpignore="true"
+                          data-form-type="other"
+                        />
+                        <span className="form-hint">The email of the Odoo user who created the API Key (e.g. hello@kwickbot.in)</span>
+                      </div>
+                    )}
+                    <div className="form-group-saas">
+                      <label>Secret API Key / Bearer Token</label>
+                      <input 
+                        type="password" 
+                        name="crm_custom_api_key_secret"
+                        placeholder="Enter secret key or token..." 
+                        value={formData.apiKey}
+                        onChange={e => setFormData({ ...formData, apiKey: e.target.value })}
+                        autoComplete="new-password"
+                        data-lpignore="true"
+                        data-form-type="other"
+                      />
+                      <span className="form-hint">Stored securely using AES-256 encryption</span>
+                    </div>
+                  </>
                 )}
               </div>
 

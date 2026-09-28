@@ -318,12 +318,15 @@ describe('Backend Foundation for CRM Integration, WhatsApp API & Custom Automati
     });
 
     test('Provider testConnection returns safe unconfigured response without fake success', async () => {
+      const axios = require('axios');
       const odoo = crmProviderRegistry.get('odoo');
       expect(odoo).toBeDefined();
 
+      jest.spyOn(axios, 'post').mockRejectedValueOnce(new Error('Network error'));
+
       const result = await odoo.testConnection({ baseUrl: 'https://odoo.corp.com', databaseName: 'db' }, { apiKey: 'key' });
       expect(result.success).toBe(false);
-      expect(result.code).toBe('ODOO_CONNECTOR_INITIALIZING');
+      expect(result.code).toBe('ODOO_SERVER_UNREACHABLE');
     });
   });
 

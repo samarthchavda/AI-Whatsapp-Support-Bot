@@ -238,7 +238,7 @@ exports.testConnection = async (req, res) => {
     }
 
     const credentials = connection.getCredentials();
-    const testResult = await providerInstance.testConnection(connection, credentials);
+    const testResult = await providerInstance.testConnection(connection, credentials, { admin: req.admin });
 
     connection.lastConnectionTestAt = new Date();
     if (testResult.success) {

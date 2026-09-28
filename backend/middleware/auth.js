@@ -25,8 +25,8 @@ const generateAccessToken = (adminId, extraPayload = {}) => jwt.sign(
   { expiresIn: ACCESS_TOKEN_EXPIRES_IN }
 );
 
-const generateRefreshToken = (adminId) => jwt.sign(
-  { id: adminId, tokenType: 'refresh' },
+const generateRefreshToken = (adminId, extraPayload = {}) => jwt.sign(
+  { id: adminId, ...extraPayload, tokenType: 'refresh' },
   getRefreshTokenSecret(),
   { expiresIn: REFRESH_TOKEN_EXPIRES_IN }
 );
@@ -53,6 +53,8 @@ const extractBearerToken = (authorizationHeader) => {
 
   return token;
 };
+
+const IDLE_TIMEOUT_MS = 2 * 60 * 60 * 1000; // 2 hours idle timeout for admin dashboard
 
 // Verify JWT token middleware
 const verifyToken = async (req, res, next) => {
@@ -93,6 +95,49 @@ const verifyToken = async (req, res, next) => {
         error: 'Account disabled',
         message: 'Your account has been disabled'
       });
+    }
+
+    // Session validation (Idle timeout, Absolute session lifetime, Session Revocation)
+    if (decoded.sessionId && Array.isArray(admin.refreshTokens)) {
+      const sessionIndex = admin.refreshTokens.findIndex(s => s.sessionId === decoded.sessionId);
+      if (sessionIndex === -1) {
+        return res.status(401).json({
+          success: false,
+          error: 'Token expired',
+          message: 'Session revoked or invalidated. Please login again'
+        });
+      }
+
+      const session = admin.refreshTokens[sessionIndex];
+      const now = Date.now();
+
+      // Absolute lifetime check
+      if (session.expiresAt && new Date(session.expiresAt).getTime() <= now) {
+        admin.refreshTokens.splice(sessionIndex, 1);
+        await admin.save().catch(() => {});
+        return res.status(401).json({
+          success: false,
+          error: 'Token expired',
+          message: 'Maximum session lifetime reached. Please login again'
+        });
+      }
+
+      // Idle timeout check
+      if (session.lastActivity && (now - new Date(session.lastActivity).getTime() > IDLE_TIMEOUT_MS)) {
+        admin.refreshTokens.splice(sessionIndex, 1);
+        await admin.save().catch(() => {});
+        return res.status(401).json({
+          success: false,
+          error: 'Token expired',
+          message: 'Session expired due to inactivity. Please login again'
+        });
+      }
+
+      // Update last activity time (throttled to avoid excessive DB writes)
+      if (!session.lastActivity || (now - new Date(session.lastActivity).getTime() > 60000)) {
+        session.lastActivity = new Date();
+        admin.save().catch(() => {});
+      }
     }
 
     // Attach admin to request

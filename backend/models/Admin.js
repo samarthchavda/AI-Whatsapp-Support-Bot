@@ -16,11 +16,24 @@ const adminSchema = new mongoose.Schema({
   },
   refreshTokens: [
     {
+      sessionId: {
+        type: String,
+        required: true
+      },
       hash: {
         type: String,
         required: true
       },
+      previousHashes: [
+        {
+          type: String
+        }
+      ],
       createdAt: {
+        type: Date,
+        default: Date.now
+      },
+      lastActivity: {
         type: Date,
         default: Date.now
       },
@@ -28,6 +41,9 @@ const adminSchema = new mongoose.Schema({
         type: Date,
         required: true,
         index: true
+      },
+      idleExpiresAt: {
+        type: Date
       },
       userAgent: {
         type: String

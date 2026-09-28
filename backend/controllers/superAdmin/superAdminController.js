@@ -370,6 +370,9 @@ exports.toggleUserStatus = async (req, res) => {
     }
 
     user.isActive = !user.isActive;
+    if (!user.isActive) {
+      user.refreshTokens = [];
+    }
     await user.save();
 
     res.json({

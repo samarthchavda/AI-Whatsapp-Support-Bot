@@ -9,7 +9,7 @@ const {
 } = require('../../middleware/auth');
 const bcrypt = require('bcryptjs');
 const mongoose = require('mongoose');
-const { logAction } = require('../../services/auditLogService');
+const auditLogService = require('../../services/auditLogService');
 const { resetRateLimitKey, incrementRateLimitKey } = require('../../middleware/mongoRateLimiter');
 
 const REFRESH_TOKEN_TTL_MS = 30 * 24 * 60 * 60 * 1000;
@@ -89,31 +89,61 @@ const buildAdminPayload = (admin) => ({
   customBranding: admin.customBranding || { logoUrl: null, brandName: null, removeCredits: false }
 });
 
+const ABSOLUTE_SESSION_LIFETIME_MS = 7 * 24 * 60 * 60 * 1000; // 7 days max absolute lifetime
+const IDLE_TIMEOUT_MS = 2 * 60 * 60 * 1000; // 2 hours idle timeout for admin dashboard
+const MAX_SIMULTANEOUS_SESSIONS = 5;
+
 const pruneExpiredRefreshTokens = (admin) => {
   const now = new Date();
-  admin.refreshTokens = (admin.refreshTokens || []).filter((session) => !session.expiresAt || session.expiresAt > now);
-};
-
-const storeRefreshToken = (admin, refreshToken, req) => {
-  const expiresAt = new Date(Date.now() + REFRESH_TOKEN_TTL_MS);
-
-  admin.refreshTokens = admin.refreshTokens || [];
-  admin.refreshTokens.push({
-    hash: hashToken(refreshToken),
-    createdAt: new Date(),
-    expiresAt,
-    userAgent: req.get('user-agent') || '',
-    ipAddress: req.ip || req.connection?.remoteAddress || ''
+  admin.refreshTokens = (admin.refreshTokens || []).filter((session) => {
+    if (!session) return false;
+    const isAbsExpired = session.expiresAt && new Date(session.expiresAt) <= now;
+    const isIdleExpired = session.lastActivity && (now.getTime() - new Date(session.lastActivity).getTime() > IDLE_TIMEOUT_MS);
+    return !isAbsExpired && !isIdleExpired;
   });
 };
 
+const storeRefreshToken = (admin, refreshToken, req, existingSessionId = null) => {
+  const crypto = require('crypto');
+  const now = new Date();
+  const expiresAt = new Date(now.getTime() + ABSOLUTE_SESSION_LIFETIME_MS);
+  const idleExpiresAt = new Date(now.getTime() + IDLE_TIMEOUT_MS);
+  const sessionId = existingSessionId || (crypto.randomUUID ? crypto.randomUUID() : crypto.randomBytes(16).toString('hex'));
+
+  admin.refreshTokens = admin.refreshTokens || [];
+  pruneExpiredRefreshTokens(admin);
+
+  if (!existingSessionId && admin.refreshTokens.length >= MAX_SIMULTANEOUS_SESSIONS) {
+    admin.refreshTokens.sort((a, b) => new Date(a.lastActivity || a.createdAt) - new Date(b.lastActivity || b.createdAt));
+    while (admin.refreshTokens.length >= MAX_SIMULTANEOUS_SESSIONS) {
+      admin.refreshTokens.shift();
+    }
+  }
+
+  admin.refreshTokens.push({
+    sessionId,
+    hash: hashToken(refreshToken),
+    previousHashes: [],
+    createdAt: now,
+    lastActivity: now,
+    expiresAt,
+    idleExpiresAt,
+    userAgent: req.get('user-agent') || '',
+    ipAddress: req.ip || req.connection?.remoteAddress || ''
+  });
+
+  return sessionId;
+};
+
 const issueSessionTokens = (admin, req) => {
-  const accessToken = generateAccessToken(admin._id);
-  const refreshToken = generateRefreshToken(admin._id);
+  const crypto = require('crypto');
+  const sessionId = crypto.randomUUID ? crypto.randomUUID() : crypto.randomBytes(16).toString('hex');
+  const accessToken = generateAccessToken(admin._id, { sessionId });
+  const refreshToken = generateRefreshToken(admin._id, { sessionId });
 
-  storeRefreshToken(admin, refreshToken, req);
+  storeRefreshToken(admin, refreshToken, req, sessionId);
 
-  return { accessToken, refreshToken };
+  return { accessToken, refreshToken, sessionId };
 };
 
 const extractRefreshToken = (req) => {
@@ -147,7 +177,7 @@ exports.login = async (req, res) => {
 
     // Check account lockout
     if (admin && admin.lockedUntil && admin.lockedUntil > new Date()) {
-      await logAction({
+      await auditLogService.logAction({
         action: 'account_lockout_attempt',
         actor: { _id: admin._id, email: admin.email },
         details: { ip: clientIp },
@@ -181,7 +211,7 @@ exports.login = async (req, res) => {
           const lockMinutes = 15 * Math.pow(2, Math.min(admin.failedLoginAttempts - 5, 6)); // 15m, 30m, 60m...
           admin.lockedUntil = new Date(Date.now() + lockMinutes * 60 * 1000);
           
-          await logAction({
+          await auditLogService.logAction({
             action: 'account_lockout',
             actor: { _id: admin._id, email: admin.email },
             details: { failedAttempts: admin.failedLoginAttempts, lockMinutes, ip: clientIp },
@@ -191,7 +221,7 @@ exports.login = async (req, res) => {
         await admin.save();
       }
 
-      await logAction({
+      await auditLogService.logAction({
         action: 'login_failure',
         actor: { _id: actorId, email: normalizedEmail },
         details: { ip: clientIp, domainMismatch: !!domainMismatch },
@@ -235,7 +265,7 @@ exports.login = async (req, res) => {
     await resetRateLimitKey(`rl:login:ip:${clientIp}`);
     await resetRateLimitKey(`rl:login:account:${normalizedEmail}`);
 
-    await logAction({
+    await auditLogService.logAction({
       action: 'login_success',
       actor: { _id: admin._id, email: admin.email },
       details: { ip: clientIp },
@@ -291,13 +321,11 @@ exports.refresh = async (req, res) => {
     }
 
     const refreshHash = hashToken(refreshToken);
-    const admin = await Admin.findOne({
-      _id: decoded.id,
-      isActive: true,
-      'refreshTokens.hash': refreshHash
-    });
+    const clientIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress || req.ip || '127.0.0.1';
 
-    if (!admin) {
+    const admin = await Admin.findById(decoded.id);
+
+    if (!admin || !admin.isActive) {
       clearRefreshCookie(res);
       return res.status(401).json({
         success: false,
@@ -306,20 +334,95 @@ exports.refresh = async (req, res) => {
       });
     }
 
-    pruneExpiredRefreshTokens(admin);
-    admin.refreshTokens = admin.refreshTokens.filter((session) => session.hash !== refreshHash);
+    // Look for matching active session
+    let session = (admin.refreshTokens || []).find(s => s.hash === refreshHash || (decoded.sessionId && s.sessionId === decoded.sessionId && s.hash === refreshHash));
 
-    const { accessToken, refreshToken: rotatedRefreshToken } = issueSessionTokens(admin, req);
+    if (!session) {
+      // Requirement 5 & 6: REUSE DETECTION for previously rotated token!
+      const reusedSession = (admin.refreshTokens || []).find(s => Array.isArray(s.previousHashes) && s.previousHashes.includes(refreshHash));
+
+      if (reusedSession) {
+        console.warn(`🚨 REFRESH TOKEN REUSE DETECTED for user ${admin.email} (Session: ${reusedSession.sessionId})`);
+        
+        // Revoke the entire session family for security
+        admin.refreshTokens = admin.refreshTokens.filter(s => s.sessionId !== reusedSession.sessionId);
+        await admin.save();
+
+        await auditLogService.logAction({
+          action: 'refresh_token_reuse_detected',
+          actor: { _id: admin._id, email: admin.email },
+          details: { sessionId: reusedSession.sessionId, ip: clientIp },
+          req
+        });
+
+        clearRefreshCookie(res);
+        return res.status(401).json({
+          success: false,
+          error: 'Security violation',
+          message: 'Refresh token reuse detected. Your session has been revoked for security.'
+        });
+      }
+
+      clearRefreshCookie(res);
+      return res.status(401).json({
+        success: false,
+        error: 'Session not found',
+        message: 'Please sign in again'
+      });
+    }
+
+    const now = Date.now();
+
+    // Check absolute session lifetime limit
+    if (session.expiresAt && new Date(session.expiresAt).getTime() <= now) {
+      admin.refreshTokens = admin.refreshTokens.filter(s => s.sessionId !== session.sessionId);
+      await admin.save();
+      clearRefreshCookie(res);
+      return res.status(401).json({
+        success: false,
+        error: 'Token expired',
+        message: 'Maximum session lifetime reached. Please login again'
+      });
+    }
+
+    // Check idle timeout limit
+    if (session.lastActivity && (now - new Date(session.lastActivity).getTime() > IDLE_TIMEOUT_MS)) {
+      admin.refreshTokens = admin.refreshTokens.filter(s => s.sessionId !== session.sessionId);
+      await admin.save();
+      clearRefreshCookie(res);
+      return res.status(401).json({
+        success: false,
+        error: 'Token expired',
+        message: 'Session expired due to inactivity. Please login again'
+      });
+    }
+
+    // ROTATE TOKEN within existing session family
+    const newAccessToken = generateAccessToken(admin._id, { sessionId: session.sessionId });
+    const newRefreshToken = generateRefreshToken(admin._id, { sessionId: session.sessionId });
+
+    session.previousHashes = session.previousHashes || [];
+    session.previousHashes.push(refreshHash);
+    if (session.previousHashes.length > 10) {
+      session.previousHashes.shift();
+    }
+
+    session.hash = hashToken(newRefreshToken);
+    session.lastActivity = new Date();
+    session.idleExpiresAt = new Date(Date.now() + IDLE_TIMEOUT_MS);
+    session.ipAddress = clientIp;
+    session.userAgent = req.get('user-agent') || session.userAgent;
+
     await admin.save();
 
-    res.cookie(getRefreshCookieName(), rotatedRefreshToken, getRefreshCookieOptions());
+    res.cookie(getRefreshCookieName(), newRefreshToken, getRefreshCookieOptions());
 
     res.json({
       success: true,
       message: 'Token refreshed successfully',
       data: {
-        accessToken,
-        token: accessToken,
+        accessToken: newAccessToken,
+        token: newAccessToken,
         expiresIn: 900,
         admin: buildAdminPayload(admin)
       }
@@ -416,10 +519,28 @@ exports.logout = async (req, res) => {
 
     if (refreshToken) {
       const refreshHash = hashToken(refreshToken);
-      const admin = await Admin.findOne({ 'refreshTokens.hash': refreshHash });
+      let decoded;
+      try {
+        decoded = verifyRefreshToken(refreshToken);
+      } catch (e) {}
+
+      const sessionId = decoded?.sessionId;
+
+      const admin = await Admin.findOne({
+        $or: [
+          { 'refreshTokens.hash': refreshHash },
+          { 'refreshTokens.previousHashes': refreshHash },
+          { 'refreshTokens.sessionId': sessionId }
+        ]
+      });
 
       if (admin) {
-        admin.refreshTokens = (admin.refreshTokens || []).filter((session) => session.hash !== refreshHash);
+        admin.refreshTokens = (admin.refreshTokens || []).filter((session) => {
+          if (sessionId && session.sessionId === sessionId) return false;
+          if (session.hash === refreshHash) return false;
+          if (Array.isArray(session.previousHashes) && session.previousHashes.includes(refreshHash)) return false;
+          return true;
+        });
         await admin.save();
       }
     }
@@ -718,7 +839,7 @@ exports.forgotPassword = async (req, res) => {
     const admin = await Admin.findOne({ email: normalizedEmail });
     const actorId = admin ? admin._id : new mongoose.Types.ObjectId();
 
-    await logAction({
+    await auditLogService.logAction({
       action: 'password_reset_request',
       actor: { _id: actorId, email: normalizedEmail },
       details: { accountExists: !!admin },
@@ -857,7 +978,7 @@ exports.resetPassword = async (req, res) => {
     admin.lockedUntil = null;
     await admin.save();
 
-    await logAction({
+    await auditLogService.logAction({
       action: 'password_reset_success',
       actor: { _id: admin._id, email: admin.email },
       req

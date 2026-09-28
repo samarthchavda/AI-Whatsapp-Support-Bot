@@ -90,13 +90,19 @@ function Sidebar({ admin, onLogout, isOpen, onToggle, pendingDemoRequestsCount }
                 <img 
                   src={isOpen ? "/logo.png" : "/app-icon.png"} 
                   className={isOpen ? "sidebar-logo-img" : "logo-img"} 
-                  alt="Kwickbot Logo" 
+                  alt="Kwickbot Logo"
+                  onError={(e) => {
+                    e.target.onerror = null;
+                    e.target.src = '/app-icon.png';
+                  }} 
                   style={{ 
-                    width: isOpen ? '120px' : '28px', 
-                    height: 'auto', 
-                    maxHeight: '34px', 
+                    height: '34px',
+                    width: 'auto', 
+                    maxHeight: '34px',
+                    maxWidth: isOpen ? '140px' : '32px', 
                     flexShrink: 0, 
-                    objectFit: 'contain' 
+                    objectFit: 'contain',
+                    display: 'block'
                   }} 
                 />
               );

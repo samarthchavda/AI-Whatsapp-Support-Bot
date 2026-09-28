@@ -221,6 +221,12 @@ function Sidebar({ admin, onLogout, isOpen, onToggle, pendingDemoRequestsCount }
                     <span className="nav-label">Integration Health</span>
                   </Link>
                 </li>
+                <li>
+                  <Link to="/dashboard/super-admin/developer-api" className={isActive('/dashboard/super-admin/developer-api')} title="Developer API Hub">
+                    <FaCode />
+                    <span className="nav-label">Developer API</span>
+                  </Link>
+                </li>
               </ul>
             </div>
           )}

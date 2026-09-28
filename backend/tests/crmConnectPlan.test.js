@@ -173,7 +173,7 @@ describe('CRM Connect Plan (₹2,499/mo) Dedicated Test Suite', () => {
   // 2. Inbound WhatsApp Enquiry Syncing to Odoo with Idempotency Protection
   // =========================================================================
   describe('2. Inbound WhatsApp enquiry syncing to Odoo as a lead with idempotency protection', () => {
-    test('creates contact and lead, and deduplicates repeated dispatches idempotently', async () => {
+    test('creates only a lead and deduplicates repeated dispatches idempotently', async () => {
       const adminId = new mongoose.Types.ObjectId();
       const connection = new CRMConnection({
         _id: new mongoose.Types.ObjectId(),
@@ -188,16 +188,11 @@ describe('CRM Connect Plan (₹2,499/mo) Dedicated Test Suite', () => {
       });
       connection.setCredentials({ apiKey: 'mock_api_key' });
 
-      let contactCreated = false;
       let leadCreatedCount = 0;
 
       jest.spyOn(odooProvider, 'executeKw').mockImplementation(async (conn, creds, model, method) => {
         if (model === 'res.partner' && method === 'search_read') {
-          return contactCreated ? [{ id: 101, name: 'Aarav Patel', phone: '+919876543210' }] : [];
-        }
-        if (model === 'res.partner' && method === 'create') {
-          contactCreated = true;
-          return 101;
+          return [];
         }
         if (model === 'crm.lead' && method === 'search_read') {
           return leadCreatedCount > 0 ? [{ id: 202, name: 'WhatsApp Enquiry: Aarav Patel' }] : [];
@@ -245,7 +240,12 @@ describe('CRM Connect Plan (₹2,499/mo) Dedicated Test Suite', () => {
       expect(syncResult1.success).toBe(true);
       expect(syncResult1.leadId).toBe(202);
       expect(syncResult1.isNewLead).toBe(true);
+      expect(syncResult1.linkedExistingContact).toBe(false);
       expect(leadCreatedCount).toBe(1);
+
+      expect(odooProvider.executeKw).not.toHaveBeenCalledWith(
+        expect.anything(), expect.anything(), 'res.partner', 'create', expect.anything(), expect.anything()
+      );
 
       // Dispatch 2: Duplicate webhook delivery with identical idempotencyKey
       const { event: event2, isDuplicate: isDup2 } = await registerEvent({

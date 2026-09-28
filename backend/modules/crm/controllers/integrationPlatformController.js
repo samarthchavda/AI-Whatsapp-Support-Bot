@@ -7,6 +7,16 @@ const { replayEvent } = require('../services/eventPipelineService');
 const { validateSSRF } = require('../../../utils/ssrfValidator');
 const { logAction } = require('../../../services/auditLogService');
 
+const isCrmConnectPlan = (admin) => String(admin?.subscriptionPlan || '').toLowerCase() === 'crm_connect';
+
+const assertSafeCrmConnectLeadMapping = (admin, entityType) => {
+  if (isCrmConnectPlan(admin) && String(entityType || '').toLowerCase() !== 'lead') {
+    const error = new Error('CRM Connect permits WhatsApp-to-CRM lead mapping only. Contact, order, quotation, invoice, and custom entity mappings require an upgraded plan.');
+    error.statusCode = 403;
+    throw error;
+  }
+};
+
 // 1. Overview Dashboard
 exports.getOverview = async (req, res) => {
   try {
@@ -331,7 +341,7 @@ exports.getFieldMappings = async (req, res) => {
         grouped[m.entityType] = {
           _id: m._id,
           entityType: m.entityType,
-          direction: 'bidirectional',
+          direction: isCrmConnectPlan(req.admin) ? 'kwickbot_to_crm' : 'bidirectional',
           mappings: []
         };
       }
@@ -377,6 +387,8 @@ exports.createFieldMapping = async (req, res) => {
     if (!entityType) {
       return res.status(400).json({ success: false, error: 'Entity type is required' });
     }
+
+    assertSafeCrmConnectLeadMapping(req.admin, entityType);
 
     // Support batch mappings from UI
     if (Array.isArray(req.body.mappings) && req.body.mappings.length > 0) {
@@ -436,6 +448,9 @@ exports.createFieldMapping = async (req, res) => {
       data: mapping
     });
   } catch (error) {
+    if (error.statusCode) {
+      return res.status(error.statusCode).json({ success: false, error: error.message });
+    }
     if (error.code === 11000) {
       return res.status(409).json({ success: false, error: 'Field mapping already exists for this source field' });
     }
@@ -448,6 +463,10 @@ exports.updateFieldMapping = async (req, res) => {
   try {
     const adminId = req.admin._id;
     const { entityType, mappings } = req.body;
+
+    if (entityType) {
+      assertSafeCrmConnectLeadMapping(req.admin, entityType);
+    }
 
     // If batch update from frontend
     if (Array.isArray(mappings) && mappings.length > 0) {
@@ -509,7 +528,10 @@ exports.updateFieldMapping = async (req, res) => {
       data: mapping
     });
   } catch (error) {
-    res.status(500).json({ success: false, error: 'Failed to update field mapping' });
+    res.status(error.statusCode || 500).json({
+      success: false,
+      error: error.statusCode ? error.message : 'Failed to update field mapping'
+    });
   }
 };
 

@@ -17,6 +17,7 @@ import {
   updateFieldMapping, 
   deleteFieldMapping 
 } from '../../../services/api';
+import { useEffectiveAccess } from '../../../context/EffectiveAccessContext';
 import './IntegrationDashboard.css';
 
 const TRANSFORMATIONS = [
@@ -38,7 +39,14 @@ const ENTITY_TYPES = [
 ];
 
 function FieldMapping() {
+  const { subscription } = useEffectiveAccess();
   const [searchParams, setSearchParams] = useSearchParams();
+  const isCrmConnectPlan = (subscription?.planSlug || JSON.parse(localStorage.getItem('admin') || '{}')?.subscriptionPlan || '')
+    .toLowerCase() === 'crm_connect';
+  const crmConnectDefaultRows = [
+    { sourceField: 'customer_phone', targetField: 'phone', transformation: 'phone_e164', defaultValue: '' },
+    { sourceField: 'customer_name', targetField: 'contact_name', transformation: 'direct', defaultValue: '' }
+  ];
   const [connections, setConnections] = useState([]);
   const [selectedConnectionId, setSelectedConnectionId] = useState(searchParams.get('connectionId') || '');
   const [mappingsList, setMappingsList] = useState([]);
@@ -48,9 +56,9 @@ function FieldMapping() {
 
   // Active editing mapping form
   const [editingMappingId, setEditingMappingId] = useState(null);
-  const [entityType, setEntityType] = useState('contact');
-  const [direction, setDirection] = useState('bidirectional');
-  const [fieldRows, setFieldRows] = useState([
+  const [entityType, setEntityType] = useState(isCrmConnectPlan ? 'lead' : 'contact');
+  const [direction, setDirection] = useState(isCrmConnectPlan ? 'kwickbot_to_crm' : 'bidirectional');
+  const [fieldRows, setFieldRows] = useState(isCrmConnectPlan ? crmConnectDefaultRows : [
     { sourceField: 'phone', targetField: 'customer_phone', transformation: 'phone_e164', defaultValue: '' },
     { sourceField: 'name', targetField: 'customer_name', transformation: 'direct', defaultValue: '' }
   ]);
@@ -132,8 +140,8 @@ function FieldMapping() {
 
   const handleSelectMappingForEdit = (mapping) => {
     setEditingMappingId(mapping._id);
-    setEntityType(mapping.entityType || 'contact');
-    setDirection(mapping.direction || 'bidirectional');
+    setEntityType(isCrmConnectPlan ? 'lead' : (mapping.entityType || 'contact'));
+    setDirection(isCrmConnectPlan ? 'kwickbot_to_crm' : (mapping.direction || 'bidirectional'));
     setFieldRows(mapping.mappings && mapping.mappings.length > 0 ? mapping.mappings : [
       { sourceField: '', targetField: '', transformation: 'direct', defaultValue: '' }
     ]);
@@ -141,9 +149,9 @@ function FieldMapping() {
 
   const handleResetForm = () => {
     setEditingMappingId(null);
-    setEntityType('contact');
-    setDirection('bidirectional');
-    setFieldRows([
+    setEntityType(isCrmConnectPlan ? 'lead' : 'contact');
+    setDirection(isCrmConnectPlan ? 'kwickbot_to_crm' : 'bidirectional');
+    setFieldRows(isCrmConnectPlan ? crmConnectDefaultRows : [
       { sourceField: 'phone', targetField: 'customer_phone', transformation: 'phone_e164', defaultValue: '' },
       { sourceField: 'name', targetField: 'customer_name', transformation: 'direct', defaultValue: '' }
     ]);
@@ -168,8 +176,8 @@ function FieldMapping() {
       setSuccessMsg(null);
 
       const payload = {
-        entityType,
-        direction,
+        entityType: isCrmConnectPlan ? 'lead' : entityType,
+        direction: isCrmConnectPlan ? 'kwickbot_to_crm' : direction,
         mappings: fieldRows
       };
 
@@ -218,8 +226,8 @@ function FieldMapping() {
           </div>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
             <div>
-              <h1>Dynamic CRM Field Transformations</h1>
-              <p>Map CRM schema fields (Odoo, Zoho, HubSpot, Salesforce) with Kwickbot WhatsApp variables and customer attributes.</p>
+              <h1>{isCrmConnectPlan ? 'Safe Odoo Lead Mapping' : 'Dynamic CRM Field Transformations'}</h1>
+              <p>{isCrmConnectPlan ? 'Map WhatsApp enquiry details to an Odoo lead. This plan cannot create contacts, orders, quotations, or invoices.' : 'Map CRM schema fields (Odoo, Zoho, HubSpot, Salesforce) with Kwickbot WhatsApp variables and customer attributes.'}</p>
             </div>
             <button className="quick-action-btn" onClick={fetchConnectionsAndMappings} disabled={loading}>
               <FaSync className={loading ? 'spin' : ''} /> Refresh
@@ -257,6 +265,16 @@ function FieldMapping() {
           gap: '8px'
         }}>
           <FaExclamationTriangle /> {error}
+        </div>
+      )}
+
+      {isCrmConnectPlan && (
+        <div style={{
+          background: 'rgba(22, 119, 255, 0.08)', border: '1px solid rgba(22, 119, 255, 0.22)',
+          color: 'var(--text-secondary, #475467)', padding: '12px 16px', borderRadius: '10px',
+          marginBottom: '20px', fontSize: '13px', lineHeight: 1.55
+        }}>
+          <strong style={{ color: 'var(--text-primary, #101828)' }}>CRM Connect safety:</strong> WhatsApp enquiry → Odoo lead only. Existing contacts can be linked, but Kwickbot never creates or edits contacts, sales orders, quotations, or invoices on this plan.
         </div>
       )}
 
@@ -301,7 +319,7 @@ function FieldMapping() {
           <div className="section-header-row">
             <div className="section-title-group">
               <h2>{editingMappingId ? 'Edit Field Mapping' : 'Create Field Mapping Schema'}</h2>
-              <p>Define bidirectional data mapping and format transformations</p>
+              <p>{isCrmConnectPlan ? 'Configure the approved WhatsApp-to-Odoo lead fields.' : 'Define bidirectional data mapping and format transformations'}</p>
             </div>
             {editingMappingId && (
               <button className="quick-action-btn" onClick={handleResetForm} style={{ fontSize: '12px' }}>
@@ -317,8 +335,9 @@ function FieldMapping() {
                 <select 
                   value={entityType} 
                   onChange={e => setEntityType(e.target.value)}
+                  disabled={isCrmConnectPlan}
                 >
-                  {ENTITY_TYPES.map(t => (
+                  {(isCrmConnectPlan ? ENTITY_TYPES.filter(t => t.id === 'lead') : ENTITY_TYPES).map(t => (
                     <option key={t.id} value={t.id}>{t.name}</option>
                   ))}
                 </select>
@@ -326,14 +345,17 @@ function FieldMapping() {
 
               <div className="form-group-saas">
                 <label>Sync Direction *</label>
-                <select 
-                  value={direction} 
-                  onChange={e => setDirection(e.target.value)}
-                >
-                  <option value="bidirectional">Bidirectional (CRM &harr; Kwickbot)</option>
-                  <option value="crm_to_kwickbot">Inbound (CRM &rarr; Kwickbot)</option>
-                  <option value="kwickbot_to_crm">Outbound (Kwickbot &rarr; CRM)</option>
-                </select>
+                {isCrmConnectPlan ? (
+                  <div style={{ padding: '10px 12px', border: '1px solid var(--border-subtle, #d9e8f7)', borderRadius: '8px', background: 'var(--bg-input, #f8fafc)', fontSize: '13px', fontWeight: '600' }}>
+                    Outbound (Kwickbot → Odoo lead only)
+                  </div>
+                ) : (
+                  <select value={direction} onChange={e => setDirection(e.target.value)}>
+                    <option value="bidirectional">Bidirectional (CRM &harr; Kwickbot)</option>
+                    <option value="crm_to_kwickbot">Inbound (CRM &rarr; Kwickbot)</option>
+                    <option value="kwickbot_to_crm">Outbound (Kwickbot &rarr; CRM)</option>
+                  </select>
+                )}
               </div>
             </div>
 
@@ -347,8 +369,8 @@ function FieldMapping() {
                 <table className="integration-table">
                   <thead>
                     <tr>
-                      <th>CRM Field (Source)</th>
-                      <th>Kwickbot Field (Target)</th>
+                      <th>{isCrmConnectPlan ? 'Kwickbot Field (Source)' : 'CRM Field (Source)'}</th>
+                      <th>{isCrmConnectPlan ? 'Odoo Lead Field (Target)' : 'Kwickbot Field (Target)'}</th>
                       <th>Transformation</th>
                       <th>Default Value</th>
                       <th style={{ width: '40px' }}></th>

@@ -898,7 +898,7 @@ STRICT KNOWLEDGE BASE GROUNDING RULES:
       }
 
       // 1. WhatsApp enquiry to lead sync flow (deduplicated & idempotent)
-      if (activeCrmConnection && activeCrmConnection.provider === 'odoo') {
+      if (isCrmConnectPlan && activeCrmConnection && activeCrmConnection.provider === 'odoo') {
         try {
           const crmProviderRegistry = require('./crmProviders/crmProviderRegistry');
           const provider = crmProviderRegistry.get('odoo');
@@ -1019,7 +1019,7 @@ STRICT KNOWLEDGE BASE GROUNDING RULES:
 
         case 'faq_products':
         case 'faq_products_all':
-          if (activeCrmConnection && activeCrmConnection.provider === 'odoo') {
+          if (isCrmConnectPlan && activeCrmConnection && activeCrmConnection.provider === 'odoo') {
             const crmProviderRegistry = require('./crmProviders/crmProviderRegistry');
             const provider = crmProviderRegistry.get('odoo');
             if (provider) {
@@ -1059,7 +1059,7 @@ STRICT KNOWLEDGE BASE GROUNDING RULES:
           break;
 
         case 'order_status':
-          if (activeCrmConnection && activeCrmConnection.provider === 'odoo') {
+          if (isCrmConnectPlan && activeCrmConnection && activeCrmConnection.provider === 'odoo') {
             const crmProviderRegistry = require('./crmProviders/crmProviderRegistry');
             const provider = crmProviderRegistry.get('odoo');
             if (provider) {

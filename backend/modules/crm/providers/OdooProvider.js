@@ -258,26 +258,10 @@ class OdooProvider extends BaseCRMProvider {
     }
   }
 
-  async createContact(connection, credentials, contactData) {
-    const payload = {
-      name: contactData.name || `WhatsApp Contact ${contactData.phone || ''}`.trim(),
-      phone: contactData.phone || false,
-      mobile: contactData.phone || false,
-      email: contactData.email || false
-    };
-
-    return await this.executeKw(
-      connection,
-      credentials,
-      'res.partner',
-      'create',
-      [payload]
-    );
-  }
-
   /**
-   * Safe WhatsApp Enquiry to Lead Sync Flow
-   * Checks or creates contact, creates or dedups crm.lead with idempotency.
+   * Safe WhatsApp Enquiry to Lead Sync Flow.
+   * CRM Connect can create a crm.lead only. It may link an existing partner,
+   * but never creates or changes res.partner, orders, quotations, or invoices.
    */
   async syncLead(connection, credentials, leadData) {
     try {
@@ -285,18 +269,10 @@ class OdooProvider extends BaseCRMProvider {
       const customerName = leadData.customerName || 'WhatsApp Customer';
       const enquiryMessage = leadData.enquiryMessage || 'Inbound inquiry from WhatsApp';
 
-      // 1. Find or create contact
-      let partner = await this.findContact(connection, credentials, customerPhone);
-      let partnerId = partner?.id;
-      let isNewContact = false;
-
-      if (!partnerId) {
-        partnerId = await this.createContact(connection, credentials, {
-          name: customerName,
-          phone: customerPhone
-        });
-        isNewContact = true;
-      }
+      // 1. An existing Odoo contact may be linked, but CRM Connect must not
+      // create a contact as a side effect of a WhatsApp enquiry.
+      const partner = await this.findContact(connection, credentials, customerPhone);
+      const partnerId = partner?.id || null;
 
       // 2. Check for existing open lead (deduplication)
       let existingLeads = [];
@@ -306,7 +282,10 @@ class OdooProvider extends BaseCRMProvider {
           credentials,
           'crm.lead',
           'search_read',
-          [[['partner_id', '=', partnerId], ['type', '=', 'lead']]],
+          [partnerId
+            ? [['partner_id', '=', partnerId], ['type', '=', 'lead']]
+            : [['phone', 'ilike', customerPhone.replace(/\D/g, '').slice(-10)], ['type', '=', 'lead']]
+          ],
           { fields: ['id', 'name', 'description'], limit: 1 }
         );
       } catch (searchLeadErr) {
@@ -319,7 +298,7 @@ class OdooProvider extends BaseCRMProvider {
           leadId: existingLeads[0].id,
           partnerId,
           isNewLead: false,
-          isNewContact,
+          linkedExistingContact: Boolean(partnerId),
           message: 'Existing lead found and linked.'
         };
       }
@@ -327,11 +306,14 @@ class OdooProvider extends BaseCRMProvider {
       // 3. Create lead in Odoo
       const leadPayload = {
         name: `WhatsApp Enquiry: ${customerName}`,
-        partner_id: partnerId,
         phone: customerPhone,
         contact_name: customerName,
         description: enquiryMessage
       };
+
+      if (partnerId) {
+        leadPayload.partner_id = partnerId;
+      }
 
       const newLeadId = await this.executeKw(
         connection,
@@ -346,7 +328,7 @@ class OdooProvider extends BaseCRMProvider {
         leadId: newLeadId,
         partnerId,
         isNewLead: true,
-        isNewContact,
+        linkedExistingContact: Boolean(partnerId),
         message: 'Lead created successfully in Odoo.'
       };
     } catch (err) {

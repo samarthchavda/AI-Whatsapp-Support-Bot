@@ -10,6 +10,13 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [isAdminPortal, setIsAdminPortal] = useState(false);
+
+  React.useEffect(() => {
+    if (typeof window !== 'undefined' && window.location.hostname.startsWith('admin.')) {
+      setIsAdminPortal(true);
+    }
+  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -79,8 +86,12 @@ export default function LoginPage() {
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px' }}>
             <img src="/app-icon.png" alt="Kwickbot" style={{ width: '40px', height: '40px', borderRadius: '10px' }} />
             <div>
-              <h2 style={{ color: '#ffffff', fontSize: '22px', fontWeight: '800', margin: 0, letterSpacing: '-0.02em' }}>Welcome back</h2>
-              <p style={{ color: '#a1a1aa', fontSize: '13.5px', margin: 0 }}>Sign in to your Kwickbot dashboard</p>
+              <h2 style={{ color: '#ffffff', fontSize: '22px', fontWeight: '800', margin: 0, letterSpacing: '-0.02em' }}>
+                {isAdminPortal ? 'Super Admin Portal' : 'Welcome back'}
+              </h2>
+              <p style={{ color: '#a1a1aa', fontSize: '13.5px', margin: 0 }}>
+                {isAdminPortal ? 'Sign in to Kwickbot Master Control' : 'Sign in to your Kwickbot dashboard'}
+              </p>
             </div>
           </div>
 

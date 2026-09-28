@@ -153,6 +153,27 @@ exports.login = async (req, res) => {
       });
     }
 
+    // Role & Domain Enforcement Check
+    const host = req.get('host') || '';
+    const origin = req.get('origin') || req.get('referer') || '';
+    const isSuperAdminDomain = host.startsWith('admin.') || origin.includes('admin.kwickbot.in');
+
+    if (isSuperAdminDomain && admin.role !== 'super_admin') {
+      return res.status(403).json({
+        success: false,
+        error: 'Access Denied',
+        message: 'Only Super Admin accounts are allowed to log in on admin.kwickbot.in.'
+      });
+    }
+
+    if (!isSuperAdminDomain && admin.role === 'super_admin') {
+      return res.status(403).json({
+        success: false,
+        error: 'Access Denied',
+        message: 'Super Admin account detected. Please log in via https://admin.kwickbot.in'
+      });
+    }
+
     admin.lastLogin = new Date();
     pruneExpiredRefreshTokens(admin);
 

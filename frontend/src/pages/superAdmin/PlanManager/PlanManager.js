@@ -3,7 +3,7 @@ import axios from 'axios';
 import {
   FaCog, FaPlus, FaEdit, FaTrash, FaTicketAlt, FaCopy, FaEye, FaEyeSlash,
   FaArrowUp, FaArrowDown, FaExclamationTriangle, FaLayerGroup,
-  FaUsers, FaCheckCircle, FaFileAlt, FaTimes
+  FaUsers, FaCheckCircle, FaFileAlt, FaTimes, FaDesktop
 } from 'react-icons/fa';
 import './PlanManager.css';
 
@@ -24,8 +24,14 @@ const CATEGORY_OPTIONS = [
 ];
 
 const AVAILABLE_PAGES = [
+  // Core / CRM Standard
   'dashboard', 'conversations', 'knowledge-base', 'broadcast', 'analytics',
-  'escalations', 'templates', 'integrations', 'orders', 'leads', 'api-keys', 'profile', 'billing'
+  'escalations', 'templates', 'integrations', 'orders', 'leads', 'api-keys', 'profile', 'billing',
+  // CRM Integration
+  'integration-dashboard', 'crm-connection', 'field-mapping', 'automation-rules',
+  'whatsapp-templates', 'integration-logs', 'failed-events', 'whatsapp-connection', 'usage', 'settings',
+  // WhatsApp API Platform
+  'api-dashboard', 'api-documentation', 'webhook-configuration', 'api-logs', 'failed-webhooks', 'api-usage'
 ];
 
 const FEATURE_KEYS = [
@@ -156,6 +162,7 @@ function PlanManager() {
   const [formData, setFormData] = useState(DEFAULT_FORM_DATA);
   const [isSaving, setIsSaving] = useState(false);
   const [isDirty, setIsDirty] = useState(false);
+  const [previewPlan, setPreviewPlan] = useState(null);
 
   // Toast System
   const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
@@ -774,6 +781,27 @@ function PlanManager() {
                               <span className={`badge-status ${plan.isActive ? 'badge-active-tier' : 'badge-inactive-tier'}`}>
                                 {plan.isActive ? 'Active' : 'Inactive'}
                               </span>
+                              {plan.validation && (
+                                <span
+                                  style={{
+                                    fontSize: '11px',
+                                    fontWeight: 700,
+                                    padding: '2px 6px',
+                                    borderRadius: '4px',
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '4px',
+                                    background: plan.validation.status === 'Ready' ? 'rgba(16, 185, 129, 0.12)' : (plan.validation.status === 'Warning' ? 'rgba(245, 158, 11, 0.12)' : 'rgba(239, 68, 68, 0.12)'),
+                                    color: plan.validation.status === 'Ready' ? '#10b981' : (plan.validation.status === 'Warning' ? '#f59e0b' : '#ef4444')
+                                  }}
+                                  title={plan.validation.issues?.join('\n') || 'Plan configuration is valid and ready'}
+                                >
+                                  {plan.validation.status === 'Ready' && <FaCheckCircle />}
+                                  {plan.validation.status === 'Warning' && <FaExclamationTriangle />}
+                                  {plan.validation.status === 'Invalid' && <FaTimes />}
+                                  {plan.validation.status}
+                                </span>
+                              )}
                             </div>
                           </td>
 
@@ -805,6 +833,14 @@ function PlanManager() {
 
                           <td style={{ textAlign: 'right' }}>
                             <div className="plan-actions" style={{ justifyContent: 'flex-end' }}>
+                              <button
+                                onClick={() => setPreviewPlan(plan)}
+                                className="btn-plan-action"
+                                title="Preview merchant navigation & access for this plan"
+                              >
+                                <FaDesktop />
+                              </button>
+
                               <button
                                 onClick={() => handleTogglePublish(plan._id, plan.isPublished, plan.displayName)}
                                 className="btn-plan-action"
@@ -1451,6 +1487,87 @@ function PlanManager() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* PREVIEW MERCHANT ACCESS MODAL */}
+      {previewPlan && (
+        <div className="plan-modal-backdrop">
+          <div className="plan-modal-dialog" style={{ maxWidth: '640px' }}>
+            <div className="plan-modal-header">
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <FaDesktop style={{ color: '#1677ff', fontSize: '20px' }} />
+                <div>
+                  <h2 style={{ margin: 0, fontSize: '18px' }}>Preview Merchant Access: {previewPlan.displayName}</h2>
+                  <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Category: {CATEGORY_MAP[previewPlan.category]?.label || previewPlan.category} | Profile: {previewPlan.permissionProfile || 'default'}</span>
+                </div>
+              </div>
+              <button onClick={() => setPreviewPlan(null)} style={{ background: 'transparent', border: 'none', fontSize: '18px', color: 'var(--text-secondary)', cursor: 'pointer' }}>
+                <FaTimes />
+              </button>
+            </div>
+            <div className="plan-modal-body" style={{ maxHeight: '70vh', overflowY: 'auto', padding: '20px' }}>
+              {/* Validation Alert */}
+              {previewPlan.validation && (
+                <div style={{
+                  padding: '12px 16px',
+                  borderRadius: '8px',
+                  marginBottom: '16px',
+                  background: previewPlan.validation.status === 'Ready' ? 'rgba(16, 185, 129, 0.1)' : (previewPlan.validation.status === 'Warning' ? 'rgba(245, 158, 11, 0.1)' : 'rgba(239, 68, 68, 0.1)'),
+                  color: previewPlan.validation.status === 'Ready' ? '#10b981' : (previewPlan.validation.status === 'Warning' ? '#f59e0b' : '#ef4444'),
+                  border: `1px solid ${previewPlan.validation.status === 'Ready' ? '#10b98140' : (previewPlan.validation.status === 'Warning' ? '#f59e0b40' : '#ef444440')}`,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '10px',
+                  fontSize: '13px'
+                }}>
+                  {previewPlan.validation.status === 'Ready' && <FaCheckCircle style={{ fontSize: '16px' }} />}
+                  {previewPlan.validation.status === 'Warning' && <FaExclamationTriangle style={{ fontSize: '16px' }} />}
+                  {previewPlan.validation.status === 'Invalid' && <FaTimes style={{ fontSize: '16px' }} />}
+                  <div>
+                    <strong>Plan Readiness: {previewPlan.validation.status}</strong>
+                    {previewPlan.validation.issues?.length > 0 && (
+                      <div style={{ marginTop: '4px', fontSize: '12px' }}>
+                        {previewPlan.validation.issues.join(' | ')}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Navigation Preview */}
+              <h4 style={{ margin: '0 0 10px 0', fontSize: '14px', color: 'var(--text-primary)' }}>Visible Merchant Navigation Modules:</h4>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '20px' }}>
+                {previewPlan.allowedPages && previewPlan.allowedPages.length > 0 ? (
+                  previewPlan.allowedPages.map(pg => (
+                    <span key={pg} style={{ padding: '5px 10px', borderRadius: '6px', background: 'var(--bg-elevated)', border: '1px solid var(--border-subtle)', fontSize: '12px', fontWeight: 600, color: 'var(--text-primary)' }}>
+                      {pg}
+                    </span>
+                  ))
+                ) : (
+                  <span style={{ color: '#ef4444', fontSize: '13px' }}>Deny by default (No pages assigned)</span>
+                )}
+              </div>
+
+              {/* Limits Preview */}
+              <h4 style={{ margin: '0 0 10px 0', fontSize: '14px', color: 'var(--text-primary)' }}>Resource Quotas & Limits:</h4>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '10px', background: 'var(--bg-subtle, #f8fafc)', padding: '14px', borderRadius: '8px', fontSize: '13px' }}>
+                <div>Conversations / mo: <strong>{previewPlan.usageLimits?.monthlyConversations ?? 'Unlimited'}</strong></div>
+                <div>Messages / mo: <strong>{previewPlan.usageLimits?.monthlyMessages ?? 'Unlimited'}</strong></div>
+                <div>API Calls / mo: <strong>{previewPlan.usageLimits?.monthlyApiRequests ?? 'N/A'}</strong></div>
+                <div>Webhooks / mo: <strong>{previewPlan.usageLimits?.monthlyWebhookDeliveries ?? 'N/A'}</strong></div>
+                <div>WhatsApp Connections: <strong>{previewPlan.usageLimits?.maxWhatsAppConnections ?? 1}</strong></div>
+                <div>CRM Connections: <strong>{previewPlan.usageLimits?.maxCrmConnections ?? 0}</strong></div>
+                <div>Active Automations: <strong>{previewPlan.usageLimits?.maxActiveAutomations ?? 0}</strong></div>
+                <div>Gemini AI Tokens: <strong>{(previewPlan.usageLimits?.geminiTokensPerMonth || 0).toLocaleString()}</strong></div>
+              </div>
+            </div>
+            <div className="plan-modal-footer" style={{ justifyContent: 'flex-end' }}>
+              <button onClick={() => setPreviewPlan(null)} className="btn-primary" style={{ padding: '8px 18px', borderRadius: '8px', background: '#1677ff', color: '#fff', border: 'none', fontWeight: 600, cursor: 'pointer' }}>
+                Close Preview
+              </button>
+            </div>
           </div>
         </div>
       )}

@@ -4,15 +4,20 @@ const multer = require('multer');
 const upload = multer({ dest: 'uploads/' });
 const { verifyToken } = require('../middleware/auth');
 const superAdminController = require('../controllers/superAdmin/superAdminController');
+const permissionProfileController = require('../controllers/superAdmin/permissionProfileController');
+const onboardingWizardController = require('../controllers/superAdmin/onboardingWizardController');
 
 // All routes require authentication and super admin role
 router.use(verifyToken);
 router.use(superAdminController.requireSuperAdmin);
 
-// User management
+// User management & Effective Access Diagnostics
 router.post('/users', superAdminController.createUser);
 router.get('/users', superAdminController.getAllUsers);
 router.get('/users/:id', superAdminController.getUserDetails);
+router.get('/users/:id/effective-access', superAdminController.getUserEffectiveAccess);
+router.put('/users/:id/effective-access', superAdminController.updateUserEffectiveAccess);
+router.post('/users/:id/revoke-sessions', superAdminController.revokeUserSessions);
 router.put('/users/:id/subscription', superAdminController.updateUserSubscription);
 router.post('/users/:id/reset-tokens', superAdminController.resetUserTokens);
 router.post('/users/:id/toggle-status', superAdminController.toggleUserStatus);
@@ -23,6 +28,18 @@ router.post('/users/:id/apply-discount', superAdminController.applyDiscount);
 router.post('/users/:id/impersonate', superAdminController.impersonateUser);
 router.put('/users/:id/allowed-pages', superAdminController.updateAllowedPages);
 router.delete('/users/:id', superAdminController.deleteUser);
+
+// Customer Onboarding Wizard
+router.post('/customers/onboard', onboardingWizardController.onboardCustomer);
+
+// Permission Profiles management
+router.get('/permission-profiles/metadata/canonical', permissionProfileController.getCanonicalMetadata);
+router.get('/permission-profiles', permissionProfileController.getAllPermissionProfiles);
+router.get('/permission-profiles/:id', permissionProfileController.getPermissionProfileById);
+router.post('/permission-profiles', permissionProfileController.createPermissionProfile);
+router.put('/permission-profiles/:id', permissionProfileController.updatePermissionProfile);
+router.post('/permission-profiles/:id/duplicate', permissionProfileController.duplicatePermissionProfile);
+router.delete('/permission-profiles/:id', permissionProfileController.archivePermissionProfile);
 
 // Plan management
 router.post('/plans/custom', superAdminController.createCustomPlan);

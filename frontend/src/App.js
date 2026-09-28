@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Link, useLocation, Navigate } from 'react-router-dom';
-import { FaHome, FaComments, FaBox, FaExclamationTriangle, FaPlug, FaSearch, FaBell, FaSignOutAlt, FaUser, FaBrain, FaCommentDots, FaBroadcastTower, FaChartLine, FaCog, FaCrown, FaFileAlt, FaShoppingCart, FaCoins, FaUserSecret, FaHeartbeat, FaBullhorn, FaBlog, FaBars, FaWhatsapp, FaShieldAlt, FaToggleOn, FaTimes, FaTags, FaUserTag, FaCode } from 'react-icons/fa';
+import { FaHome, FaComments, FaBox, FaExclamationTriangle, FaPlug, FaSearch, FaBell, FaSignOutAlt, FaUser, FaBrain, FaCommentDots, FaBroadcastTower, FaChartLine, FaCog, FaCrown, FaFileAlt, FaShoppingCart, FaCoins, FaUserSecret, FaHeartbeat, FaBullhorn, FaBlog, FaBars, FaWhatsapp, FaShieldAlt, FaToggleOn, FaTimes, FaTags, FaUserTag, FaCode, FaExchangeAlt, FaNetworkWired, FaBookOpen, FaKey, FaUserPlus } from 'react-icons/fa';
 import api, { clearAuthState, refreshAuth } from './services/api';
 import io from 'socket.io-client';
 import Dashboard from './pages/merchant/Dashboard/Dashboard';
@@ -28,6 +28,8 @@ import SuperAdminBillingRevenue from './pages/superAdmin/Finance/SuperAdminBilli
 import SuperAdminAuditLogs from './pages/superAdmin/Security/SuperAdminAuditLogs';
 import SuperAdminFeatureFlags from './pages/superAdmin/Platform/SuperAdminFeatureFlags';
 import PlanManager from './pages/superAdmin/PlanManager/PlanManager';
+import PermissionProfiles from './pages/superAdmin/PermissionProfiles/PermissionProfiles';
+import CustomerOnboardWizard from './pages/superAdmin/OnboardingWizard/CustomerOnboardWizard';
 import DemoRequests from './pages/superAdmin/DemoRequests/DemoRequests';
 import SuperAdminBudget from './pages/superAdmin/Budget/SuperAdminBudget';
 import SuperAdminSettings from './pages/superAdmin/Settings/SuperAdminSettings';
@@ -38,10 +40,34 @@ import SuperAdminBlog from './pages/superAdmin/Blog/SuperAdminBlog';
 import Products from './pages/merchant/Products/Products';
 import MerchantLeads from './pages/merchant/Leads/MerchantLeads';
 import NotificationDropdown from './components/NotificationDropdown/NotificationDropdown';
+
+// Access Control & Platform Module Imports
+import { EffectiveAccessProvider, useEffectiveAccess } from './context/EffectiveAccessContext';
+import ProtectedFeatureRoute from './components/ProtectedFeatureRoute/ProtectedFeatureRoute';
+
+// CRM Integration Platform Pages
+import IntegrationDashboard from './pages/merchant/IntegrationPlatform/IntegrationDashboard';
+import CRMConnections from './pages/merchant/IntegrationPlatform/CRMConnections';
+import CRMConnectionDetail from './pages/merchant/IntegrationPlatform/CRMConnectionDetail';
+import FieldMapping from './pages/merchant/IntegrationPlatform/FieldMapping';
+import AutomationRules from './pages/merchant/IntegrationPlatform/AutomationRules';
+import IntegrationLogs from './pages/merchant/IntegrationPlatform/IntegrationLogs';
+import FailedEvents from './pages/merchant/IntegrationPlatform/FailedEvents';
+
+// WhatsApp API / Developer Platform Pages
+import ApiDashboard from './pages/merchant/DeveloperPlatform/ApiDashboard';
+import ApiKeyManager from './pages/merchant/DeveloperPlatform/ApiKeyManager';
+import ApiDocs from './pages/merchant/DeveloperPlatform/ApiDocs';
+import WebhookConfig from './pages/merchant/DeveloperPlatform/WebhookConfig';
+import ApiLogs from './pages/merchant/DeveloperPlatform/ApiLogs';
+import FailedWebhooks from './pages/merchant/DeveloperPlatform/FailedWebhooks';
+import ApiUsage from './pages/merchant/DeveloperPlatform/ApiUsage';
+
 import './App.css';
 
 function Sidebar({ admin, onLogout, isOpen, onToggle, pendingDemoRequestsCount }) {
   const location = useLocation();
+  const { canViewPage } = useEffectiveAccess();
 
   const isActive = (path) => {
     return location.pathname === path ? 'active' : '';
@@ -49,8 +75,7 @@ function Sidebar({ admin, onLogout, isOpen, onToggle, pendingDemoRequestsCount }
 
   const isPageAllowed = (key) => {
     if (!admin || admin.role === 'super_admin') return true;
-    if (!Array.isArray(admin.allowedPages) || admin.allowedPages.length === 0) return true;
-    return admin.allowedPages.includes(key);
+    return canViewPage(key);
   };
 
   return (
@@ -162,6 +187,18 @@ function Sidebar({ admin, onLogout, isOpen, onToggle, pendingDemoRequestsCount }
                   <Link to="/dashboard/super-admin/plans" className={isActive('/dashboard/super-admin/plans')} title="Plan Manager">
                     <FaCog />
                     <span className="nav-label">Plan Manager</span>
+                  </Link>
+                </li>
+                <li>
+                  <Link to="/dashboard/super-admin/permission-profiles" className={isActive('/dashboard/super-admin/permission-profiles')} title="Permission Profiles">
+                    <FaShieldAlt />
+                    <span className="nav-label">Permission Profiles</span>
+                  </Link>
+                </li>
+                <li>
+                  <Link to="/dashboard/super-admin/customers/onboard" className={isActive('/dashboard/super-admin/customers/onboard')} title="Onboard Merchant">
+                    <FaUserPlus />
+                    <span className="nav-label">Onboard Merchant</span>
                   </Link>
                 </li>
                 <li>
@@ -402,6 +439,128 @@ function Sidebar({ admin, onLogout, isOpen, onToggle, pendingDemoRequestsCount }
                 </div>
               )}
 
+              {/* CRM Integration Section */}
+              {(isPageAllowed('integration-dashboard') || isPageAllowed('crm-connection') || isPageAllowed('field-mapping') || isPageAllowed('automation-rules') || isPageAllowed('integration-logs') || isPageAllowed('failed-events')) && (
+                <div className="nav-section">
+                  {isOpen && <div className="nav-section-title">CRM Integration</div>}
+                  <ul className="nav-links">
+                    {isPageAllowed('integration-dashboard') && (
+                      <li>
+                        <Link to="/dashboard/integration" className={isActive('/dashboard/integration')} title="Integration Dashboard">
+                          <FaNetworkWired />
+                          <span className="nav-label">Integration Hub</span>
+                        </Link>
+                      </li>
+                    )}
+                    {isPageAllowed('crm-connection') && (
+                      <li>
+                        <Link to="/dashboard/integration/connections" className={isActive('/dashboard/integration/connections')} title="CRM Connections">
+                          <FaPlug />
+                          <span className="nav-label">CRM Connections</span>
+                        </Link>
+                      </li>
+                    )}
+                    {isPageAllowed('field-mapping') && (
+                      <li>
+                        <Link to="/dashboard/integration/field-mapping" className={isActive('/dashboard/integration/field-mapping')} title="Field Mapping">
+                          <FaExchangeAlt />
+                          <span className="nav-label">Field Mapping</span>
+                        </Link>
+                      </li>
+                    )}
+                    {isPageAllowed('automation-rules') && (
+                      <li>
+                        <Link to="/dashboard/integration/automations" className={isActive('/dashboard/integration/automations')} title="Automation Rules">
+                          <FaCog />
+                          <span className="nav-label">Automations</span>
+                        </Link>
+                      </li>
+                    )}
+                    {isPageAllowed('integration-logs') && (
+                      <li>
+                        <Link to="/dashboard/integration/logs" className={isActive('/dashboard/integration/logs')} title="Integration Logs">
+                          <FaFileAlt />
+                          <span className="nav-label">Integration Logs</span>
+                        </Link>
+                      </li>
+                    )}
+                    {isPageAllowed('failed-events') && (
+                      <li>
+                        <Link to="/dashboard/integration/failed-events" className={isActive('/dashboard/integration/failed-events')} title="Failed Events">
+                          <FaExclamationTriangle />
+                          <span className="nav-label">Failed Events</span>
+                        </Link>
+                      </li>
+                    )}
+                  </ul>
+                </div>
+              )}
+
+              {/* WhatsApp API / Developer Section */}
+              {(isPageAllowed('api-dashboard') || isPageAllowed('api-keys') || isPageAllowed('api-documentation') || isPageAllowed('webhook-configuration') || isPageAllowed('api-logs') || isPageAllowed('failed-webhooks') || isPageAllowed('api-usage')) && (
+                <div className="nav-section">
+                  {isOpen && <div className="nav-section-title">WhatsApp API</div>}
+                  <ul className="nav-links">
+                    {isPageAllowed('api-dashboard') && (
+                      <li>
+                        <Link to="/dashboard/developer" className={isActive('/dashboard/developer')} title="API Dashboard">
+                          <FaCode />
+                          <span className="nav-label">API Dashboard</span>
+                        </Link>
+                      </li>
+                    )}
+                    {isPageAllowed('api-keys') && (
+                      <li>
+                        <Link to="/dashboard/developer/api-keys" className={isActive('/dashboard/developer/api-keys')} title="API Keys">
+                          <FaKey />
+                          <span className="nav-label">API Keys</span>
+                        </Link>
+                      </li>
+                    )}
+                    {isPageAllowed('api-documentation') && (
+                      <li>
+                        <Link to="/dashboard/developer/docs" className={isActive('/dashboard/developer/docs')} title="Interactive API Docs">
+                          <FaBookOpen />
+                          <span className="nav-label">API Documentation</span>
+                        </Link>
+                      </li>
+                    )}
+                    {isPageAllowed('webhook-configuration') && (
+                      <li>
+                        <Link to="/dashboard/developer/webhooks" className={isActive('/dashboard/developer/webhooks')} title="Webhooks">
+                          <FaPlug />
+                          <span className="nav-label">Webhooks</span>
+                        </Link>
+                      </li>
+                    )}
+                    {isPageAllowed('api-logs') && (
+                      <li>
+                        <Link to="/dashboard/developer/logs" className={isActive('/dashboard/developer/logs')} title="API Logs">
+                          <FaFileAlt />
+                          <span className="nav-label">API Logs</span>
+                        </Link>
+                      </li>
+                    )}
+                    {isPageAllowed('failed-webhooks') && (
+                      <li>
+                        <Link to="/dashboard/developer/failed-webhooks" className={isActive('/dashboard/developer/failed-webhooks')} title="Failed Webhooks">
+                          <FaExclamationTriangle />
+                          <span className="nav-label">Failed Webhooks</span>
+                        </Link>
+                      </li>
+                    )}
+                    {isPageAllowed('api-usage') && (
+                      <li>
+                        <Link to="/dashboard/developer/usage" className={isActive('/dashboard/developer/usage')} title="Usage & Limits">
+                          <FaChartLine />
+                          <span className="nav-label">API Usage</span>
+                        </Link>
+                      </li>
+                    )}
+                  </ul>
+                </div>
+              )}
+
               {isPageAllowed('knowledge_base') && (
                 <div className="nav-section">
                   {isOpen && <div className="nav-section-title">AI</div>}
@@ -416,19 +575,19 @@ function Sidebar({ admin, onLogout, isOpen, onToggle, pendingDemoRequestsCount }
                 </div>
               )}
 
-              {(isPageAllowed('integrations') || isPageAllowed('wa_connect')) && (
+              {(isPageAllowed('integrations') || isPageAllowed('wa_connect') || isPageAllowed('whatsapp-connection')) && (
                 <div className="nav-section">
-                  {isOpen && <div className="nav-section-title">Integrations</div>}
+                  {isOpen && <div className="nav-section-title">Store & Connect</div>}
                   <ul className="nav-links">
                     {isPageAllowed('integrations') && (
                       <li>
-                        <Link to="/dashboard/integrations" className={isActive('/dashboard/integrations')} title="Integrations">
+                        <Link to="/dashboard/integrations" className={isActive('/dashboard/integrations')} title="Store Integrations">
                           <FaCog />
                           <span className="nav-label">Integrations</span>
                         </Link>
                       </li>
                     )}
-                    {isPageAllowed('wa_connect') && (
+                    {(isPageAllowed('wa_connect') || isPageAllowed('whatsapp-connection')) && (
                       <li>
                         <Link to="/dashboard/whatsapp-connect" className={isActive('/dashboard/whatsapp-connect')} title="WhatsApp Connect">
                           <div style={{ position: 'relative', display: 'inline-flex' }}>
@@ -441,12 +600,14 @@ function Sidebar({ admin, onLogout, isOpen, onToggle, pendingDemoRequestsCount }
                         </Link>
                       </li>
                     )}
-                    <li>
-                      <Link to="/dashboard/developer-api" className={isActive('/dashboard/developer-api')} title="Developer API Hub">
-                        <FaCode />
-                        <span className="nav-label">Developer API</span>
-                      </Link>
-                    </li>
+                    {isPageAllowed('developer-api') && (
+                      <li>
+                        <Link to="/dashboard/developer-api" className={isActive('/dashboard/developer-api')} title="Developer API Hub">
+                          <FaCode />
+                          <span className="nav-label">Developer API</span>
+                        </Link>
+                      </li>
+                    )}
                   </ul>
                 </div>
               )}
@@ -608,6 +769,44 @@ function ThemeHandler() {
   }, [location.pathname]);
 
   return null;
+}
+
+function DefaultDashboardLanding({ admin }) {
+  const { canViewPage, loading } = useEffectiveAccess();
+
+  if (admin && admin.role === 'super_admin') {
+    return <Navigate to="/dashboard/super-admin" replace />;
+  }
+
+  if (loading) {
+    return (
+      <div style={{ minHeight: '60vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div className="spinner"></div>
+      </div>
+    );
+  }
+
+  if (canViewPage('dashboard')) {
+    return <Dashboard />;
+  }
+
+  if (canViewPage('integration-dashboard')) {
+    return <Navigate to="/dashboard/integration" replace />;
+  }
+
+  if (canViewPage('api-dashboard')) {
+    return <Navigate to="/dashboard/developer" replace />;
+  }
+
+  if (canViewPage('whatsapp-connection') || canViewPage('wa_connect')) {
+    return <Navigate to="/dashboard/whatsapp-connect" replace />;
+  }
+
+  if (canViewPage('conversations')) {
+    return <Navigate to="/dashboard/conversations" replace />;
+  }
+
+  return <Dashboard />;
 }
 
 function App() {
@@ -892,7 +1091,8 @@ function App() {
           path="/dashboard/*"
           element={
             <ProtectedRoute isAuthenticated={isAuthenticated}>
-              <div className="App">
+              <EffectiveAccessProvider admin={admin}>
+                <div className="App">
                   <Sidebar 
                     admin={admin} 
                     onLogout={handleLogout} 
@@ -950,14 +1150,10 @@ function App() {
 
                   <div className="page-content">
                   <Routes>
-                    {/* Default route - redirect based on role */}
+                    {/* Default route - redirect based on role or effective access */}
                     <Route 
                       path="/" 
-                      element={
-                        admin && admin.role === 'super_admin' ? 
-                          <Navigate to="/dashboard/super-admin" replace /> : 
-                          <Dashboard />
-                      } 
+                      element={<DefaultDashboardLanding admin={admin} />} 
                     />
                     <Route path="/analytics" element={<Analytics admin={admin} />} />
                     <Route path="/conversations" element={<Conversations />} />
@@ -975,6 +1171,122 @@ function App() {
                     <Route path="/abandoned-carts" element={<AbandonedCarts admin={admin} />} />
                     <Route path="/billing" element={<Billing />} />
                     <Route path="/profile" element={<Profile admin={admin} onUpdateAdmin={handleUpdateAdmin} />} />
+
+                    {/* CRM Integration Routes */}
+                    <Route 
+                      path="/integration" 
+                      element={
+                        <ProtectedFeatureRoute pageKey="integration-dashboard" title="CRM Integration Hub" requiredFeature="CRM Integration Plan">
+                          <IntegrationDashboard />
+                        </ProtectedFeatureRoute>
+                      } 
+                    />
+                    <Route 
+                      path="/integration/connections" 
+                      element={
+                        <ProtectedFeatureRoute pageKey="crm-connection" title="CRM Connections" requiredFeature="CRM Integration Plan">
+                          <CRMConnections />
+                        </ProtectedFeatureRoute>
+                      } 
+                    />
+                    <Route 
+                      path="/integration/connections/:id" 
+                      element={
+                        <ProtectedFeatureRoute pageKey="crm-connection" title="CRM Connection Details" requiredFeature="CRM Integration Plan">
+                          <CRMConnectionDetail />
+                        </ProtectedFeatureRoute>
+                      } 
+                    />
+                    <Route 
+                      path="/integration/field-mapping" 
+                      element={
+                        <ProtectedFeatureRoute pageKey="field-mapping" title="Field Mapping Studio" requiredFeature="CRM Integration Plan">
+                          <FieldMapping />
+                        </ProtectedFeatureRoute>
+                      } 
+                    />
+                    <Route 
+                      path="/integration/automations" 
+                      element={
+                        <ProtectedFeatureRoute pageKey="automation-rules" title="Automation Rules" requiredFeature="CRM Automation Plan">
+                          <AutomationRules />
+                        </ProtectedFeatureRoute>
+                      } 
+                    />
+                    <Route 
+                      path="/integration/logs" 
+                      element={
+                        <ProtectedFeatureRoute pageKey="integration-logs" title="Integration Logs" requiredFeature="CRM Integration Plan">
+                          <IntegrationLogs />
+                        </ProtectedFeatureRoute>
+                      } 
+                    />
+                    <Route 
+                      path="/integration/failed-events" 
+                      element={
+                        <ProtectedFeatureRoute pageKey="failed-events" title="Failed Events Queue" requiredFeature="CRM Integration Plan">
+                          <FailedEvents />
+                        </ProtectedFeatureRoute>
+                      } 
+                    />
+
+                    {/* WhatsApp API Developer Routes */}
+                    <Route 
+                      path="/developer" 
+                      element={
+                        <ProtectedFeatureRoute pageKey="api-dashboard" title="WhatsApp API Hub" requiredFeature="WhatsApp API Plan">
+                          <ApiDashboard />
+                        </ProtectedFeatureRoute>
+                      } 
+                    />
+                    <Route 
+                      path="/developer/api-keys" 
+                      element={
+                        <ProtectedFeatureRoute pageKey="api-keys" title="API Keys" requiredFeature="WhatsApp API Plan">
+                          <ApiKeyManager />
+                        </ProtectedFeatureRoute>
+                      } 
+                    />
+                    <Route 
+                      path="/developer/docs" 
+                      element={
+                        <ProtectedFeatureRoute pageKey="api-documentation" title="API Documentation" requiredFeature="WhatsApp API Plan">
+                          <ApiDocs />
+                        </ProtectedFeatureRoute>
+                      } 
+                    />
+                    <Route 
+                      path="/developer/webhooks" 
+                      element={
+                        <ProtectedFeatureRoute pageKey="webhook-configuration" title="Outbound Webhooks" requiredFeature="WhatsApp API Plan">
+                          <WebhookConfig />
+                        </ProtectedFeatureRoute>
+                      } 
+                    />
+                    <Route 
+                      path="/developer/logs" 
+                      element={
+                        <ProtectedFeatureRoute pageKey="api-logs" title="API Request Logs" requiredFeature="WhatsApp API Plan">
+                          <ApiLogs />
+                        </ProtectedFeatureRoute>
+                      } 
+                    />
+                    <Route 
+                      path="/developer/failed-webhooks" 
+                      element={
+                        <ProtectedFeatureRoute pageKey="failed-webhooks" title="Failed Webhooks" requiredFeature="WhatsApp API Plan">
+                          <FailedWebhooks />
+                        </ProtectedFeatureRoute>
+                      } 
+                    />
+                    <Route 
+                      path="/developer/usage" 
+                      element={
+                        <ProtectedFeatureRoute pageKey="api-usage" title="API Usage & Limits" requiredFeature="WhatsApp API Plan">
+                          <ApiUsage />
+                        </ProtectedFeatureRoute>
+                      } 
+                    />
                     
                     {/* Super Admin Routes */}
                     {admin && admin.role === 'super_admin' ? (
@@ -992,7 +1304,11 @@ function App() {
                         <Route path="/super-admin/announcements" element={<SuperAdminAnnouncements />} />
                         <Route path="/demo-requests" element={<DemoRequests />} />
                         <Route path="/super-admin/user/:userId" element={<SuperAdminUserDetail />} />
+                        <Route path="/super-admin/merchants/:userId" element={<SuperAdminUserDetail />} />
                         <Route path="/super-admin/plans" element={<PlanManager />} />
+                        <Route path="/super-admin/permission-profiles" element={<PermissionProfiles />} />
+                        <Route path="/super-admin/customers/onboard" element={<CustomerOnboardWizard />} />
+                        <Route path="/super-admin/onboard" element={<CustomerOnboardWizard />} />
                         <Route path="/super-admin/developer-api" element={<DeveloperApi admin={admin} />} />
                         <Route path="/super-admin/budget" element={<SuperAdminBudget />} />
                         <Route path="/super-admin/blog" element={<SuperAdminBlog />} />
@@ -1008,12 +1324,13 @@ function App() {
                   </div>
                 </div>
               </div>
-            </ProtectedRoute>
-          }
-        />
-        <Route path="*" element={<ExternalRedirect to="/" />} />
-      </Routes>
-    </Router>
+            </EffectiveAccessProvider>
+          </ProtectedRoute>
+        }
+      />
+      <Route path="*" element={<ExternalRedirect to="/" />} />
+    </Routes>
+  </Router>
   );
 }
 

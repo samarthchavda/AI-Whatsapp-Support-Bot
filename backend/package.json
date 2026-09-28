@@ -13,7 +13,7 @@
     "create-admin": "node scripts/createAdmin.js",
     "create-test-admin": "node scripts/createTestAdmin.js",
     "seed-demo": "node scripts/seedDemoAccount.js && node scripts/generateDemoPdf.js",
-    "test": "jest --runInBand",
+    "test": "jest --runInBand --forceExit",
     "test:watch": "jest --watch",
     "test-webhook": "node scripts/testWebhook.js",
     "test-webhook:shopify": "node scripts/testWebhook.js shopify",

@@ -290,9 +290,25 @@ const adminSchema = new mongoose.Schema({
     type: Date,
     default: null
   },
+  customPermissionProfile: {
+    type: String,
+    default: null
+  },
   allowedPages: {
     type: [String],
     default: null
+  },
+  allowedPermissions: {
+    type: [String],
+    default: []
+  },
+  deniedPages: {
+    type: [String],
+    default: []
+  },
+  deniedPermissions: {
+    type: [String],
+    default: []
   }
 }, {
   timestamps: true,

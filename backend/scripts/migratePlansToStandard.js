@@ -636,8 +636,17 @@ async function runMigration(options = {}) {
     const mongoUri = process.env.MONGODB_URI || 'mongodb://localhost:27017/whatsapp_ai_db';
     if (mongoose.connection.readyState === 0) {
       if (!isQuiet) console.log('🔄 Connecting to MongoDB for pricing plan migration...');
-      await mongoose.connect(mongoUri);
-      if (!isQuiet) console.log('✅ Connected to MongoDB.');
+      try {
+        await mongoose.connect(mongoUri, { serverSelectionTimeoutMS: 2000 });
+        if (!isQuiet) console.log('✅ Connected to MongoDB.');
+      } catch (connErr) {
+        if (!isQuiet) console.warn('⚠️ MongoDB not available for pricing plan migration:', connErr.message);
+        return { totalPlanCount: defaultPlans.length, isOffline: true };
+      }
+    }
+
+    if (mongoose.connection.readyState !== 1) {
+      return { totalPlanCount: defaultPlans.length, isOffline: true };
     }
 
     let createdCount = 0;

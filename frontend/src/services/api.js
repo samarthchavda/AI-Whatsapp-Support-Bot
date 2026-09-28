@@ -163,13 +163,56 @@ export const getPricingPlans = () => api.get('/auth/plans');
 export const upgradePricingPlan = (planName, couponCode) => api.post('/auth/upgrade-plan', { planName, couponCode });
 export const getAdminProfile = () => api.get('/auth/profile');
 export const updateAdminProfile = (data) => api.put('/auth/profile', data);
+export const getEffectiveAccess = () => api.get('/auth/effective-access');
 
 // Razorpay Payments
 export const createRazorpayOrder = (planName, couponCode, planId, billingCycle = 'monthly') => api.post('/auth/razorpay/create-order', { planName, couponCode, planId, billingCycle });
 export const verifyRazorpayPayment = (data) => api.post('/auth/razorpay/verify-payment', data);
+
+// CRM Integration Platform
+export const getIntegrationOverview = () => api.get('/integration-platform/overview');
+export const getCrmConnections = (params) => api.get('/integration-platform/connections', { params });
+export const getCrmConnectionById = (id) => api.get(`/integration-platform/connections/${id}`);
+export const createCrmConnection = (data) => api.post('/integration-platform/connections', data);
+export const updateCrmConnection = (id, data) => api.put(`/integration-platform/connections/${id}`, data);
+export const testCrmConnection = (id) => api.post(`/integration-platform/connections/${id}/test`);
+export const disconnectCrmConnection = (id) => api.post(`/integration-platform/connections/${id}/disconnect`);
+
+// Field Mappings
+export const getFieldMappings = (connectionId) => api.get(`/integration-platform/connections/${connectionId}/mappings`);
+export const createFieldMapping = (connectionId, data) => api.post(`/integration-platform/connections/${connectionId}/mappings`, data);
+export const updateFieldMapping = (id, data) => api.put(`/integration-platform/mappings/${id}`, data);
+export const deleteFieldMapping = (id) => api.delete(`/integration-platform/mappings/${id}`);
+
+// Automation Rules
+export const getAutomationRules = () => api.get('/integration-platform/automations');
+export const createAutomationRule = (data) => api.post('/integration-platform/automations', data);
+export const updateAutomationRule = (id, data) => api.put(`/integration-platform/automations/${id}`, data);
+export const toggleAutomationRule = (id) => api.post(`/integration-platform/automations/${id}/toggle`);
+export const deleteAutomationRule = (id) => api.delete(`/integration-platform/automations/${id}`);
+
+// Integration Logs & Events
+export const getIntegrationEvents = (params) => api.get('/integration-platform/events', { params });
+export const getIntegrationEventById = (id) => api.get(`/integration-platform/events/${id}`);
+export const retryIntegrationEvent = (id) => api.post(`/integration-platform/events/${id}/retry`);
+
+// Developer Platform (Webhooks & API)
+export const getDeveloperWebhooks = () => api.get('/developer/webhooks');
+export const createDeveloperWebhook = (data) => api.post('/developer/webhooks', data);
+export const updateDeveloperWebhook = (id, data) => api.put(`/developer/webhooks/${id}`, data);
+export const rotateWebhookSecret = (id) => api.post(`/developer/webhooks/${id}/rotate-secret`);
+export const testDeveloperWebhook = (id) => api.post(`/developer/webhooks/${id}/test`);
+export const deleteDeveloperWebhook = (id) => api.delete(`/developer/webhooks/${id}`);
+export const getDeveloperUsage = () => api.get('/developer/usage');
+export const getDeveloperLogs = (params) => api.get('/developer/logs', { params });
+export const getFailedWebhooks = (params) => api.get('/developer/failed-webhooks', { params });
+export const retryFailedWebhook = (id) => api.post(`/developer/failed-webhooks/${id}/retry`);
+export const getApiKey = () => api.get('/auth/api-key');
+export const regenerateApiKey = (data) => api.post('/auth/api-key/regenerate', data);
 
 export const refreshAuth = () => refreshAccessToken();
 
 export const clearAuthState = () => clearStoredAuth();
 
 export default api;
+

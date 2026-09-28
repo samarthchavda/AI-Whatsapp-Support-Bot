@@ -1,3 +1,4 @@
+const mongoose = require('mongoose');
 const AuditLog = require('../models/AuditLog');
 
 /**
@@ -14,6 +15,10 @@ async function logAction({ action, actor, target = null, details = {}, req = nul
   try {
     if (!actor) {
       console.warn('⚠️ Attempted to log audit action without an actor');
+      return null;
+    }
+
+    if (mongoose.connection.readyState !== 1) {
       return null;
     }
 

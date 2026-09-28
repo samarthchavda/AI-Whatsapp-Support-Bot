@@ -827,12 +827,17 @@ exports.deleteUser = async (req, res) => {
 exports.getAllPlans = async (req, res) => {
   try {
     const PricingPlan = require('../../models/PricingPlan');
+    const PermissionProfile = require('../../models/PermissionProfile');
+    const { validatePlanReadiness } = require('../../services/planValidationService');
     const { runMigration } = require('../../scripts/migratePlansToStandard');
 
     // Run quiet idempotent migration check to ensure all standard draft plans exist
     await runMigration({ quiet: true }).catch(err => console.error('Idempotent migration check error:', err.message));
 
-    const plans = await PricingPlan.find().sort({ displayOrder: 1, createdAt: 1 });
+    const [plans, existingProfiles] = await Promise.all([
+      PricingPlan.find().sort({ displayOrder: 1, createdAt: 1 }),
+      PermissionProfile.find({ isArchived: { $ne: true } })
+    ]);
 
     // Calculate active subscriber counts per plan for UI display & subscriber-protected deletion
     const subscriberCounts = await Admin.aggregate([
@@ -860,6 +865,7 @@ exports.getAllPlans = async (req, res) => {
       const byId = subCountMap[p._id.toString()] || 0;
       const byName = subCountMap[p.name] || 0;
       pObj.activeSubscribersCount = Math.max(byId, byName);
+      pObj.validation = validatePlanReadiness(pObj, existingProfiles);
       return pObj;
     });
 
@@ -2971,4 +2977,246 @@ exports.updateAllowedPages = async (req, res) => {
     });
   }
 };
+
+// Get detailed diagnostic effective access for a user
+exports.getUserEffectiveAccess = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const user = await Admin.findById(id);
+    if (!user) {
+      return res.status(404).json({ success: false, error: 'User not found' });
+    }
+
+    const permissionService = require('../../services/permissionService');
+    const PermissionProfile = require('../../models/PermissionProfile');
+    const CRMConnection = require('../../models/CRMConnection');
+    const { PERMISSION_PROFILES } = require('../../constants/permissionProfiles');
+
+    // 1. Calculate standard effective access payload
+    const effectivePayload = await permissionService.getEffectiveAccessPayload(user);
+
+    // 2. Base profile details
+    const profileKey = user.customPermissionProfile || effectivePayload.data.subscription.planSlug || user.subscriptionPlan || 'default';
+    let dbProfile = null;
+    try {
+      dbProfile = await PermissionProfile.findOne({ key: profileKey, isArchived: { $ne: true } });
+    } catch (e) {}
+
+    const staticProfile = PERMISSION_PROFILES[profileKey] || PERMISSION_PROFILES.default;
+    const baseProfilePages = dbProfile?.pages || staticProfile?.pages || [];
+    const baseProfilePermissions = dbProfile?.permissions || staticProfile?.permissions || [];
+
+    // 3. Plan details
+    const plan = await permissionService.getAdminPricingPlan(user);
+
+    // 4. Integrations summary
+    let crmConnections = [];
+    try {
+      crmConnections = await CRMConnection.find({ adminId: user._id }).select('provider displayName status lastSuccessfulSyncAt');
+    } catch (e) {}
+
+    // 5. Diagnostics Breakdown
+    const diagnostics = {
+      user: {
+        _id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        isActive: user.isActive,
+        subscriptionPlan: user.subscriptionPlan,
+        subscriptionStatus: user.subscriptionStatus,
+        monthlyPrice: user.monthlyPrice,
+        customDiscount: user.customDiscount || 0,
+        billingCycle: user.billingCycle || 'monthly',
+        subscriptionStartDate: user.subscriptionStartDate,
+        subscriptionEndDate: user.subscriptionEndDate
+      },
+      plan: plan ? {
+        _id: plan._id,
+        name: plan.name,
+        displayName: plan.displayName,
+        category: plan.category,
+        permissionProfile: plan.permissionProfile,
+        allowedPages: plan.allowedPages || [],
+        features: plan.features || {},
+        usageLimits: plan.usageLimits || {}
+      } : null,
+      baseProfile: {
+        key: profileKey,
+        name: dbProfile?.name || profileKey,
+        isCustomProfile: Boolean(user.customPermissionProfile),
+        pages: baseProfilePages,
+        permissions: baseProfilePermissions
+      },
+      overrides: {
+        allowedPages: user.allowedPages || [],
+        allowedPermissions: user.allowedPermissions || [],
+        deniedPages: user.deniedPages || [],
+        deniedPermissions: user.deniedPermissions || [],
+        customPermissionProfile: user.customPermissionProfile || null,
+        hasOverrides: Boolean(
+          (user.allowedPages && user.allowedPages.length > 0) ||
+          (user.allowedPermissions && user.allowedPermissions.length > 0) ||
+          (user.deniedPages && user.deniedPages.length > 0) ||
+          (user.deniedPermissions && user.deniedPermissions.length > 0) ||
+          user.customPermissionProfile
+        )
+      },
+      effectiveAccess: effectivePayload.data,
+      integrations: {
+        whatsappConnected: Boolean(user.whatsappConnected),
+        crmConnectionsCount: crmConnections.length,
+        crmConnections
+      }
+    };
+
+    res.json({
+      success: true,
+      data: diagnostics
+    });
+  } catch (error) {
+    console.error('Error fetching user effective access diagnostics:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch user effective access diagnostics'
+    });
+  }
+};
+
+// Update user effective access overrides and custom permissions
+exports.updateUserEffectiveAccess = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const {
+      allowedPages,
+      allowedPermissions,
+      deniedPages,
+      deniedPermissions,
+      customPermissionProfile,
+      resetToPlanDefaults,
+      revokeActiveSessions
+    } = req.body;
+
+    const user = await Admin.findById(id);
+    if (!user) {
+      return res.status(404).json({ success: false, error: 'User not found' });
+    }
+
+    const auditLogService = require('../../services/auditLogService');
+    const previousState = {
+      allowedPages: user.allowedPages,
+      allowedPermissions: user.allowedPermissions,
+      deniedPages: user.deniedPages,
+      deniedPermissions: user.deniedPermissions,
+      customPermissionProfile: user.customPermissionProfile
+    };
+
+    if (resetToPlanDefaults) {
+      user.allowedPages = undefined;
+      user.allowedPermissions = undefined;
+      user.deniedPages = undefined;
+      user.deniedPermissions = undefined;
+      user.customPermissionProfile = undefined;
+    } else {
+      if (allowedPages !== undefined) user.allowedPages = Array.isArray(allowedPages) ? allowedPages : undefined;
+      if (allowedPermissions !== undefined) user.allowedPermissions = Array.isArray(allowedPermissions) ? allowedPermissions : undefined;
+      if (deniedPages !== undefined) user.deniedPages = Array.isArray(deniedPages) ? deniedPages : undefined;
+      if (deniedPermissions !== undefined) user.deniedPermissions = Array.isArray(deniedPermissions) ? deniedPermissions : undefined;
+      if (customPermissionProfile !== undefined) user.customPermissionProfile = customPermissionProfile || undefined;
+    }
+
+    if (revokeActiveSessions) {
+      user.tokenVersion = (user.tokenVersion || 0) + 1;
+    }
+
+    await user.save();
+
+    await auditLogService.logAction(
+      req.admin?.email || 'super_admin',
+      'user_effective_access_updated',
+      {
+        userId: user._id,
+        email: user.email,
+        resetToPlanDefaults: Boolean(resetToPlanDefaults),
+        previousState,
+        newState: {
+          allowedPages: user.allowedPages,
+          allowedPermissions: user.allowedPermissions,
+          deniedPages: user.deniedPages,
+          deniedPermissions: user.deniedPermissions,
+          customPermissionProfile: user.customPermissionProfile
+        }
+      }
+    );
+
+    // Real-time broadcast
+    if (req.io) {
+      req.io.to(`merchant:${user._id.toString()}`).emit('effective_access_updated', {
+        userId: user._id.toString(),
+        resetToPlanDefaults: Boolean(resetToPlanDefaults)
+      });
+      if (revokeActiveSessions) {
+        req.io.to(`merchant:${user._id.toString()}`).emit('session_revoked', {
+          userId: user._id.toString(),
+          reason: 'Access permissions were modified by administrator. Please log in again.'
+        });
+      }
+    }
+
+    const permissionService = require('../../services/permissionService');
+    const effectivePayload = await permissionService.getEffectiveAccessPayload(user);
+
+    res.json({
+      success: true,
+      message: resetToPlanDefaults ? 'Overrides reset to plan defaults successfully' : 'Effective access overrides updated successfully',
+      data: effectivePayload.data
+    });
+  } catch (error) {
+    console.error('Error updating user effective access:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to update user effective access'
+    });
+  }
+};
+
+// Force revoke active sessions for a user
+exports.revokeUserSessions = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const user = await Admin.findById(id);
+    if (!user) {
+      return res.status(404).json({ success: false, error: 'User not found' });
+    }
+
+    const auditLogService = require('../../services/auditLogService');
+    user.tokenVersion = (user.tokenVersion || 0) + 1;
+    await user.save();
+
+    await auditLogService.logAction(
+      req.admin?.email || 'super_admin',
+      'user_sessions_revoked',
+      { userId: user._id, email: user.email }
+    );
+
+    if (req.io) {
+      req.io.to(`merchant:${user._id.toString()}`).emit('session_revoked', {
+        userId: user._id.toString(),
+        reason: 'Session revoked by administrator'
+      });
+    }
+
+    res.json({
+      success: true,
+      message: `Active sessions for ${user.email} have been revoked.`
+    });
+  } catch (error) {
+    console.error('Error revoking user sessions:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to revoke user sessions'
+    });
+  }
+};
+
 

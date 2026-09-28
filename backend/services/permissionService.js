@@ -37,25 +37,32 @@ function validateAccountSubscription(admin) {
   return { valid: true, code: 'ACTIVE', reason: null };
 }
 
+const mongoose = require('mongoose');
+
 /**
  * Helper to fetch the active PricingPlan document for an Admin.
  * Handles both pricingPlanId reference and legacy subscriptionPlan string.
  */
 async function getAdminPricingPlan(admin) {
   if (!admin) return null;
+  if (mongoose.connection.readyState !== 1) return null;
 
-  if (admin.pricingPlanId) {
-    const plan = await PricingPlan.findById(admin.pricingPlanId);
-    if (plan) return plan;
+  try {
+    if (admin.pricingPlanId) {
+      const plan = await PricingPlan.findById(admin.pricingPlanId);
+      if (plan) return plan;
+    }
+
+    const planName = normalizePlanName(admin.subscriptionPlan || 'starter');
+    let plan = await PricingPlan.findOne({ name: planName, isActive: true });
+    if (!plan) {
+      plan = await PricingPlan.findOne({ slug: planName, isActive: true });
+    }
+
+    return plan;
+  } catch (err) {
+    return null;
   }
-
-  const planName = normalizePlanName(admin.subscriptionPlan || 'starter');
-  let plan = await PricingPlan.findOne({ name: planName, isActive: true });
-  if (!plan) {
-    plan = await PricingPlan.findOne({ slug: planName, isActive: true });
-  }
-
-  return plan;
 }
 
 /**
@@ -88,8 +95,22 @@ async function resolveEffectivePermissions(adminDoc) {
   }
 
   const plan = await getAdminPricingPlan(adminDoc);
-  const profileKey = plan?.permissionProfile || normalizePlanName(adminDoc.subscriptionPlan) || 'default';
-  const defaultProfile = PERMISSION_PROFILES[profileKey] || PERMISSION_PROFILES.default;
+  const profileKey = adminDoc.customPermissionProfile || plan?.permissionProfile || normalizePlanName(adminDoc.subscriptionPlan) || 'default';
+  
+  // Look up dynamic database PermissionProfile if available
+  let dbProfile = null;
+  if (mongoose.connection.readyState === 1) {
+    try {
+      const PermissionProfile = require('../models/PermissionProfile');
+      dbProfile = await PermissionProfile.findOne({ key: profileKey, isArchived: { $ne: true } });
+    } catch (err) {
+      // Database lookup failure gracefully falls back to constants
+    }
+  }
+
+  const defaultProfile = dbProfile 
+    ? { pages: dbProfile.pages || [], permissions: dbProfile.permissions || [] }
+    : (PERMISSION_PROFILES[profileKey] || PERMISSION_PROFILES.default);
 
   // Step 5: Base from Profile defaults
   let effectivePages = new Set(defaultProfile.pages || []);

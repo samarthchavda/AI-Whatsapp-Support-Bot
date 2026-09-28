@@ -48,7 +48,7 @@ export default function PricingPage() {
     try {
       setLoading(true);
       setLoadError('');
-      const apiBase = process.env.NEXT_PUBLIC_API_URL || 'https://kwickbot.in/api';
+      const apiBase = process.env.NEXT_PUBLIC_API_URL || '/api';
       const res = await fetch(`${apiBase}/auth/plans/public`, { cache: 'no-store' });
       if (!res.ok) {
         throw new Error(`Pricing service returned ${res.status}`);

@@ -2,11 +2,12 @@
 const cspHeader = `
   default-src 'self';
   script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net;
-  style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
+  style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://db.onlinewebfonts.com;
+  style-src-elem 'self' 'unsafe-inline' https://fonts.googleapis.com https://db.onlinewebfonts.com;
   img-src 'self' data: blob: https: http:;
   media-src 'self' https://d8j0ntlcm91z4.cloudfront.net https:;
-  font-src 'self' https://fonts.gstatic.com data:;
-  connect-src 'self' https://api.kwickbot.in http://localhost:5001 http://127.0.0.1:5001 wss://api.kwickbot.in ws://localhost:5001 ws://127.0.0.1:5001;
+  font-src 'self' https://fonts.gstatic.com https://db.onlinewebfonts.com data:;
+  connect-src 'self' https://kwickbot.in https://www.kwickbot.in https://api.kwickbot.in http://localhost:5001 http://127.0.0.1:5001 wss://api.kwickbot.in ws://localhost:5001 ws://127.0.0.1:5001;
   frame-src 'self';
   frame-ancestors 'none';
   object-src 'none';

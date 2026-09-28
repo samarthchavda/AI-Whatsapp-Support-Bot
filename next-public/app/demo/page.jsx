@@ -33,7 +33,7 @@ export default function BookDemo() {
     setError('');
 
     try {
-      const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://kwickbot.in/api';
+      const API_URL = process.env.NEXT_PUBLIC_API_URL || '/api';
       const response = await axios.post(`${API_URL}/demo-requests`, formData);
       
       if (response.data.success) {

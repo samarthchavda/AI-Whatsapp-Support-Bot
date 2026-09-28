@@ -8,7 +8,7 @@ import {
 } from 'react-icons/fa';
 import { getFailedWebhooks, retryFailedWebhook } from '../../../services/api';
 import './DeveloperPlatform.css';
-import '../IntegrationPlatform/IntegrationDashboard.css';
+import '../../../features/merchant/crm/IntegrationDashboard.css';
 
 function FailedWebhooks() {
   const [failedList, setFailedList] = useState([]);

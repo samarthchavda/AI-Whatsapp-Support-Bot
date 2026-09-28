@@ -13,7 +13,7 @@ import {
 } from 'react-icons/fa';
 import { getApiKey, regenerateApiKey } from '../../../services/api';
 import './DeveloperPlatform.css';
-import '../IntegrationPlatform/IntegrationDashboard.css';
+import '../../../features/merchant/crm/IntegrationDashboard.css';
 
 function ApiKeyManager() {
   const [apiKey, setApiKey] = useState('Loading...');

@@ -10,7 +10,7 @@ import {
 } from 'react-icons/fa';
 import { getDeveloperLogs } from '../../../services/api';
 import './DeveloperPlatform.css';
-import '../IntegrationPlatform/IntegrationDashboard.css';
+import '../../../features/merchant/crm/IntegrationDashboard.css';
 
 function ApiLogs() {
   const [logs, setLogs] = useState([]);

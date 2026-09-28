@@ -20,7 +20,7 @@ import {
   deleteDeveloperWebhook 
 } from '../../../services/api';
 import './DeveloperPlatform.css';
-import '../IntegrationPlatform/IntegrationDashboard.css';
+import '../../../features/merchant/crm/IntegrationDashboard.css';
 
 const AVAILABLE_EVENTS = [
   { id: 'message.received', name: 'Message Received', desc: 'Inbound message sent by customer on WhatsApp' },

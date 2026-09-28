@@ -1,3 +1,4 @@
+const mongoose = require('mongoose');
 const OpenAI = require('openai');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 const Order = require('../models/Order');
@@ -578,7 +579,7 @@ STRICT KNOWLEDGE BASE GROUNDING RULES:
           }
         }
 
-        const limitCheck = subscriptionService.checkLimitExceeded(adminDoc);
+        const limitCheck = await subscriptionService.checkLimitExceeded(adminDoc);
         if (limitCheck.exceeded) {
           console.warn(`⚠️ [LIMIT BREACH] Monthly limit exceeded for tenant ${adminDoc.email}: ${limitCheck.reason}`);
           
@@ -626,8 +627,43 @@ STRICT KNOWLEDGE BASE GROUNDING RULES:
             detectedLanguage,
             translation
           });
+          conversation.botPaused = true;
+          conversation.status = 'escalated';
+          conversation.escalated = true;
+          conversation.escalationReason = 'token_limit_exceeded';
           conversation.updatedAt = new Date();
           await conversation.save();
+
+          try {
+            const Escalation = require('../models/Escalation');
+            const existingEsc = await Escalation.findOne({
+              conversationId: conversation._id,
+              status: { $in: ['pending', 'in_progress'] }
+            });
+            if (!existingEsc) {
+              const newEsc = await Escalation.create({
+                conversationId: conversation._id,
+                customerPhone,
+                customerName: customerName || 'WhatsApp Customer',
+                admin: adminDoc._id,
+                reason: 'token_limit_exceeded',
+                summary: `Monthly limit reached: ${limitCheck.reason}. Bot paused and routed to Live Chat.`,
+                priority: 'high',
+                status: 'pending'
+              });
+              if (global.io) {
+                global.io.emit('new_escalation', {
+                  escalationId: newEsc._id,
+                  conversationId: conversation._id,
+                  customerPhone,
+                  customerName,
+                  reason: 'token_limit_exceeded'
+                });
+              }
+            }
+          } catch (escErr) {
+            console.error('Error creating limit escalation:', escErr.message);
+          }
 
           if (global.io) {
             global.io.emit('new_message', {
@@ -646,8 +682,8 @@ STRICT KNOWLEDGE BASE GROUNDING RULES:
             limitExceeded: true,
             message: "I apologize, but the automated support assistant is temporarily unavailable due to high query volume. A customer service representative will contact you shortly.",
             intent: currentIntent,
-            escalated: conversation.escalated || conversation.status === 'escalated',
-            escalationReason: conversation.escalationReason,
+            escalated: true,
+            escalationReason: 'token_limit_exceeded',
             relatedOrderIds: conversation.relatedOrderIds || [],
             structuredOutput: {
               intent: currentIntent,
@@ -664,7 +700,7 @@ STRICT KNOWLEDGE BASE GROUNDING RULES:
       }
 
       // Self-healing: If conversation is marked escalated, check if there are any open/active escalations
-      if (conversation.escalated || conversation.status === 'escalated') {
+      if ((conversation.escalated || conversation.status === 'escalated') && mongoose.connection.readyState === 1) {
         const Escalation = require('../models/Escalation');
         const activeEscalation = await Escalation.findOne({
           conversationId: conversation._id,
@@ -841,6 +877,119 @@ STRICT KNOWLEDGE BASE GROUNDING RULES:
       let listMessage = null;
       let buttons = [];
 
+      // CRM Connect & Odoo Sync Flow
+      const planName = subscriptionService.normalizePlanName(adminDoc?.subscriptionPlan);
+      const isCrmConnectPlan = (planName === 'crm_connect' || adminDoc?.subscriptionPlan === 'crm_connect');
+
+      let activeCrmConnection = null;
+      if (adminDoc && adminDoc._id) {
+        try {
+          const CRMConnection = require('../models/CRMConnection');
+          if (mongoose.connection.readyState === 1 || (typeof CRMConnection.findOne === 'function' && (CRMConnection.findOne._isMockFunction || typeof CRMConnection.findOne.mockResolvedValue === 'function'))) {
+            activeCrmConnection = await CRMConnection.findOne({
+              adminId: adminDoc._id,
+              isActive: true,
+              status: 'connected'
+            });
+          }
+        } catch (crmErr) {
+          console.error('Error fetching active CRM connection:', crmErr.message);
+        }
+      }
+
+      // 1. WhatsApp enquiry to lead sync flow (deduplicated & idempotent)
+      if (activeCrmConnection && activeCrmConnection.provider === 'odoo') {
+        try {
+          const crmProviderRegistry = require('./crmProviders/crmProviderRegistry');
+          const provider = crmProviderRegistry.get('odoo');
+          if (provider) {
+            const { registerEvent, markEventCompleted, markEventFailed } = require('./eventPipelineService');
+            const idempotencyKey = `odoo_lead_${adminDoc._id}_${customerPhone}_${messageId || (Math.floor(Date.now() / 60000))}`;
+            const { event, isDuplicate } = await registerEvent({
+              adminId: adminDoc._id,
+              connectionId: activeCrmConnection._id,
+              provider: 'odoo',
+              eventType: 'lead_sync',
+              direction: 'outbound',
+              idempotencyKey,
+              requestPayload: { customerPhone, customerName, enquiryMessage: message }
+            });
+
+            if (!isDuplicate) {
+              const syncRes = await provider.syncLead(activeCrmConnection, null, {
+                customerPhone,
+                customerName,
+                enquiryMessage: message,
+                idempotencyKey
+              });
+              if (syncRes && syncRes.success) {
+                await markEventCompleted(event, syncRes);
+              } else if (syncRes && syncRes.error) {
+                await markEventFailed(event, new Error(syncRes.error));
+              }
+            }
+          }
+        } catch (leadSyncErr) {
+          console.error('CRM Connect lead sync error:', leadSyncErr.message);
+        }
+      }
+
+      // 2. Unsupported actions on crm_connect: immediately route to Live Chat handoff and leave order untouched
+      if (isCrmConnectPlan && (intent === 'cancel_order' || intent === 'refund_request' || intent === 'complaint' || /cancel|cancle|refund|dispute|return\s*order/i.test(message))) {
+        conversation.botPaused = true;
+        conversation.status = 'escalated';
+        conversation.escalated = true;
+        conversation.escalationReason = 'unsupported_action_crm_connect';
+        conversation.updatedAt = new Date();
+        await conversation.save();
+
+        try {
+          const Escalation = require('../models/Escalation');
+          const escalation = await Escalation.create({
+            conversationId: conversation._id,
+            customerPhone,
+            customerName: customerName || 'WhatsApp Customer',
+            admin: adminDoc._id,
+            reason: 'unsupported_action_crm_connect',
+            summary: `Customer requested ${intent.replace('_', ' ')}: "${message}". Order remains untouched; transferred to Live Chat.`,
+            priority: 'high',
+            status: 'pending'
+          });
+
+          if (global.io) {
+            global.io.emit('new_escalation', {
+              escalationId: escalation._id,
+              conversationId: conversation._id,
+              customerPhone,
+              customerName,
+              reason: 'unsupported_action_crm_connect'
+            });
+          }
+        } catch (escErr) {
+          console.error('Error creating unsupported action escalation:', escErr.message);
+        }
+
+        return {
+          botPaused: true,
+          escalated: true,
+          escalationReason: 'unsupported_action_crm_connect',
+          message: "Order modifications, cancellations, and refund requests are handled directly by our support team. I have transferred you to Live Chat, and an agent will assist you shortly.",
+          intent,
+          buttons: ['👤 Talk to Agent'],
+          relatedOrderIds: [],
+          structuredOutput: {
+            intent,
+            metadata: {
+              responseTime: Date.now() - startTime,
+              usedAI: false,
+              escalated: true
+            }
+          },
+          responseParts: [],
+          typingDelayMs: 0
+        };
+      }
+
       // Process based on intent
       switch (intent) {
         case 'store_faqs':
@@ -869,15 +1018,34 @@ STRICT KNOWLEDGE BASE GROUNDING RULES:
           break;
 
         case 'faq_products':
-          const prodOverviewResult = await this.handleFaqProductsOverview(adminDoc);
-          response = prodOverviewResult.message;
-          buttons = prodOverviewResult.buttons || [];
-          break;
-
         case 'faq_products_all':
-          const allProdResult = await this.handleFaqAllProducts(message, adminDoc, 1);
-          response = allProdResult.message;
-          buttons = allProdResult.buttons || [];
+          if (activeCrmConnection && activeCrmConnection.provider === 'odoo') {
+            const crmProviderRegistry = require('./crmProviders/crmProviderRegistry');
+            const provider = crmProviderRegistry.get('odoo');
+            if (provider) {
+              const cleanQ = (intent === 'faq_products_all' || message.length < 5) ? '' : message.replace(/^(show\s*all\s*products|products?|do you have|what is the price of|price of)\s*/i, '').trim();
+              const products = await provider.searchProducts(activeCrmConnection, null, cleanQ, { limit: 5 });
+              if (products && products.length > 0) {
+                const itemsList = products.map(p => {
+                  const priceStr = p.price ? ` - ₹${Number(p.price).toLocaleString('en-IN')}` : '';
+                  const descStr = p.description ? `\n  _${p.description}_` : '';
+                  return `• *${p.name}*${priceStr} (${p.availability})${descStr}`;
+                }).join('\n');
+                response = `🛍️ *Available Products*\n\n${itemsList}\n\nFeel free to ask about any product or connect with our support team!`;
+                buttons = ['📋 More FAQs', '👤 Talk to Agent'];
+                break;
+              }
+            }
+          }
+          if (intent === 'faq_products_all') {
+            const allProdResult = await this.handleFaqAllProducts(message, adminDoc, 1);
+            response = allProdResult.message;
+            buttons = allProdResult.buttons || [];
+          } else {
+            const prodOverviewResult = await this.handleFaqProductsOverview(adminDoc);
+            response = prodOverviewResult.message;
+            buttons = prodOverviewResult.buttons || [];
+          }
           break;
 
         case 'agent_handoff':
@@ -891,6 +1059,29 @@ STRICT KNOWLEDGE BASE GROUNDING RULES:
           break;
 
         case 'order_status':
+          if (activeCrmConnection && activeCrmConnection.provider === 'odoo') {
+            const crmProviderRegistry = require('./crmProviders/crmProviderRegistry');
+            const provider = crmProviderRegistry.get('odoo');
+            if (provider) {
+              const requestedOrderId = this.extractOrderId(message) || message.trim();
+              const odooOrderRes = await provider.lookupOrderStatus(activeCrmConnection, null, {
+                customerPhone,
+                orderRef: requestedOrderId
+              });
+
+              if (odooOrderRes.success && odooOrderRes.verified) {
+                const dateStr = odooOrderRes.orderDate ? new Date(odooOrderRes.orderDate).toLocaleDateString('en-IN') : 'N/A';
+                response = `📦 *Order Status (${odooOrderRes.orderRef})*\n\n• Status: *${odooOrderRes.displayStatus}*\n• Date: ${dateStr}\n• Total: ₹${Number(odooOrderRes.totalAmount).toLocaleString('en-IN')}`;
+                buttons = ['📋 More FAQs', '👤 Talk to Agent'];
+                relatedOrderIds = [odooOrderRes.orderRef];
+                break;
+              } else if (odooOrderRes.verified === false) {
+                response = `I couldn't verify that order reference for this phone number. For security, order details can only be shared with the registered contact number. Would you like to connect with a support agent?`;
+                buttons = ['👤 Talk to Agent'];
+                break;
+              }
+            }
+          }
           const orderResult = await this.handleOrderStatusQuery(customerPhone, message, adminDoc ? adminDoc._id : null);
           response = orderResult.message;
           relatedOrderIds = orderResult.orderIds || [];

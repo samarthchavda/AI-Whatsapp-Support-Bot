@@ -1,3 +1,4 @@
+const mongoose = require('mongoose');
 const Admin = require('../models/Admin');
 const PricingPlan = require('../models/PricingPlan');
 const { PLAN_DEFINITIONS, normalizePlanName, getPlanLimit, isFeatureAllowed } = require('../config/planConstants');
@@ -57,17 +58,25 @@ async function resolveEffectiveAllowedPages(admin) {
   }
 
   // 2. Plan feature entitlement lookup
-  if (admin.pricingPlanId) {
-    const plan = await PricingPlan.findById(admin.pricingPlanId);
-    if (plan && Array.isArray(plan.allowedPages) && plan.allowedPages.length > 0) {
-      return plan.allowedPages;
-    }
-  }
-
+  let plan = null;
   const planName = normalizePlanName(admin.subscriptionPlan);
-  const plan = await PricingPlan.findOne({ name: planName, isActive: true });
-  if (plan && Array.isArray(plan.allowedPages) && plan.allowedPages.length > 0) {
-    return plan.allowedPages;
+
+  if (mongoose.connection && mongoose.connection.readyState === 1) {
+    try {
+      if (admin.pricingPlanId) {
+        plan = await PricingPlan.findById(admin.pricingPlanId);
+        if (plan && Array.isArray(plan.allowedPages) && plan.allowedPages.length > 0) {
+          return plan.allowedPages;
+        }
+      }
+
+      plan = await PricingPlan.findOne({ name: planName, isActive: true });
+      if (plan && Array.isArray(plan.allowedPages) && plan.allowedPages.length > 0) {
+        return plan.allowedPages;
+      }
+    } catch (err) {
+      console.warn('Failed to query PricingPlan for allowedPages, falling back to static profile:', err.message);
+    }
   }
 
   // 3. Permission profile default
@@ -97,10 +106,17 @@ async function isPageAllowed(admin, pageKey) {
  */
 async function isFeatureAllowedDynamic(rawPlanName, featureKey) {
   const planName = normalizePlanName(rawPlanName);
-  const plan = await PricingPlan.findOne({ name: planName, isActive: true });
+  let plan = null;
 
-  if (plan && plan.features && plan.features[featureKey] !== undefined) {
-    return Boolean(plan.features[featureKey]);
+  if (mongoose.connection && mongoose.connection.readyState === 1) {
+    try {
+      plan = await PricingPlan.findOne({ name: planName, isActive: true });
+      if (plan && plan.features && plan.features[featureKey] !== undefined) {
+        return Boolean(plan.features[featureKey]);
+      }
+    } catch (err) {
+      console.warn('Failed to query PricingPlan in isFeatureAllowedDynamic:', err.message);
+    }
   }
 
   // Fallback to static definitions
@@ -124,18 +140,25 @@ async function checkLimitExceededDynamic(admin) {
   }
 
   let plan = null;
-  if (admin.pricingPlanId) {
-    plan = await PricingPlan.findById(admin.pricingPlanId);
-  }
-  if (!plan) {
-    const planName = normalizePlanName(admin.subscriptionPlan);
-    plan = await PricingPlan.findOne({ name: planName, isActive: true });
+  if (mongoose.connection && mongoose.connection.readyState === 1) {
+    try {
+      if (admin.pricingPlanId) {
+        plan = await PricingPlan.findById(admin.pricingPlanId);
+      }
+      if (!plan) {
+        const planName = normalizePlanName(admin.subscriptionPlan);
+        plan = await PricingPlan.findOne({ name: planName, isActive: true });
+      }
+    } catch (err) {
+      console.warn('Failed to query PricingPlan in checkLimitExceededDynamic:', err.message);
+    }
   }
 
+  const planDef = PLAN_DEFINITIONS[normalizePlanName(admin.subscriptionPlan)];
   const limits = plan?.usageLimits || {
-    geminiTokensPerMonth: 50000,
-    monthlyConversations: 500,
-    monthlyMessages: 2000
+    geminiTokensPerMonth: (planDef?.features?.geminiTokensPerMonth !== undefined) ? planDef.features.geminiTokensPerMonth : 50000,
+    monthlyConversations: (planDef?.features?.maxConversations !== undefined) ? planDef.features.maxConversations : 500,
+    monthlyMessages: (planDef?.features?.maxMessages !== undefined) ? planDef.features.maxMessages : 2000
   };
 
   // Token limit check

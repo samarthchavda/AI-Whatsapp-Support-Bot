@@ -37,12 +37,26 @@ const DEFAULT_PROFILES_META = [
   {
     key: 'crm_connect',
     name: 'CRM Connect Profile',
-    description: 'Inbound & outbound CRM synchronization, field mapping, and integration event logging.',
+    description: 'Basic Odoo/CRM Sync + WhatsApp Support with Live Chat handoff.',
     category: 'crm_integration',
     isSystemDefault: true,
     pages: PERMISSION_PROFILES.crm_connect.pages,
     permissions: PERMISSION_PROFILES.crm_connect.permissions,
-    features: { crmConnection: true, fieldMapping: true, integrationLogs: true, whatsappConnection: true }
+    features: {
+      dashboardAccess: true,
+      conversations: true,
+      whatsappConnection: true,
+      crmConnection: true,
+      contactSync: true,
+      leadSync: true,
+      productLookup: true,
+      orderStatusSync: true,
+      fieldMapping: true,
+      integrationLogs: true,
+      aiAutomation: true,
+      knowledgeBase: true,
+      humanHandoff: true
+    }
   },
   {
     key: 'crm_automation',

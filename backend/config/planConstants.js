@@ -122,6 +122,38 @@ const PLAN_DEFINITIONS = {
       integrations: true,
       prioritySupport: true
     }
+  },
+  crm_connect: {
+    name: 'crm_connect',
+    displayName: 'CRM Connect Plan',
+    monthlyPrice: 2499,
+    description: 'Basic Odoo/CRM Sync + WhatsApp Support.',
+    features: {
+      maxConversations: 2000,
+      maxMessages: 10000,
+      geminiTokensPerMonth: 50000,
+      maxWhatsAppConnections: 1,
+      maxCrmConnections: 1,
+      maxActiveAutomations: 0,
+      maxApiKeys: 0,
+      maxKbUploads: 1,
+      maxIntegrations: 1,
+      maxBroadcastMessages: 0,
+      maxBroadcastCampaigns: 0,
+      broadcastingAccess: false,
+      scheduledBroadcasts: false,
+      audienceSegmentation: false,
+      broadcastAnalytics: 'none',
+      advancedAnalytics: false,
+      escalations: true,
+      orderCancellation: false,
+      customBranding: false,
+      developerApi: false,
+      liveChat: true,
+      knowledgeBase: true,
+      integrations: true,
+      prioritySupport: false
+    }
   }
 };
 

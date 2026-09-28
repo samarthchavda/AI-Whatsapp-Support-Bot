@@ -79,9 +79,11 @@ export default function LoginPage() {
           backdropFilter: 'blur(16px)',
           boxShadow: '0 20px 50px rgba(0,0,0,0.6)'
         }}>
-          <Link href="/" style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', color: '#a1a1aa', fontSize: '13.5px', textDecoration: 'none', marginBottom: '24px' }}>
-            <FaArrowLeft /> Back to home
-          </Link>
+          {!isAdminPortal && (
+            <Link href="/" style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', color: '#a1a1aa', fontSize: '13.5px', textDecoration: 'none', marginBottom: '24px' }}>
+              <FaArrowLeft /> Back to home
+            </Link>
+          )}
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px' }}>
             <img src="/app-icon.png" alt="Kwickbot" style={{ width: '40px', height: '40px', borderRadius: '10px' }} />

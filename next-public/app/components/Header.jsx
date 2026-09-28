@@ -6,6 +6,17 @@ import { usePathname } from 'next/navigation';
 
 export default function Header() {
   const pathname = usePathname();
+  const [isAdminPortal, setIsAdminPortal] = React.useState(false);
+
+  React.useEffect(() => {
+    if (typeof window !== 'undefined' && window.location.hostname.startsWith('admin.')) {
+      setIsAdminPortal(true);
+    }
+  }, []);
+
+  if (isAdminPortal) {
+    return null;
+  }
 
   return (
     <header className="site-header-wrapper">

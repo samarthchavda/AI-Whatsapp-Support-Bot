@@ -5,6 +5,22 @@ import Link from 'next/link';
 import { FaLinkedin, FaTwitter, FaWhatsapp, FaEnvelope, FaPhoneAlt } from 'react-icons/fa';
 
 export default function Footer() {
+  const [isAdminPortal, setIsAdminPortal] = React.useState(false);
+
+  React.useEffect(() => {
+    if (typeof window !== 'undefined' && window.location.hostname.startsWith('admin.')) {
+      setIsAdminPortal(true);
+    }
+  }, []);
+
+  if (isAdminPortal) {
+    return (
+      <footer style={{ textAlign: 'center', padding: '24px 16px', color: '#71717a', fontSize: '13px', background: '#09090b', borderTop: '1px solid rgba(255, 255, 255, 0.08)' }}>
+        © {new Date().getFullYear()} Kwickbot Master Control. All rights reserved.
+      </footer>
+    );
+  }
+
   return (
     <footer className="dark-footer-wrapper">
       <div className="dark-footer-container">

@@ -33,9 +33,9 @@ async function logAction({ action, actor, target = null, details = {}, req = nul
     await auditEntry.save();
     console.log(`📋 [AUDIT LOG] Actor: ${actor.email} | Action: ${action} | Target: ${target}`);
 
-    // Emit live to Socket.IO if enabled
+    // Emit live to Socket.IO for super admin room
     if (global.io) {
-      global.io.emit('audit_log', {
+      global.io.to('super_admin_room').emit('audit_log', {
         _id: auditEntry._id,
         action,
         actorEmail: actor.email,

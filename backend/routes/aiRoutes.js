@@ -3,6 +3,9 @@ const router = express.Router();
 const aiController = require('../controllers/merchant/aiController');
 const { verifyToken } = require('../middleware/auth');
 
+// Protect all AI routes requiring authenticated merchant access
+router.use(verifyToken);
+
 /**
  * @openapi
  * /api/ai/test-message:

@@ -35,20 +35,9 @@ const app = express();
 app.set('trust proxy', 1);
 const server = http.createServer(app);
 
-// Allow any kwickbot.in subdomain, localhost, local network IPs, or configured FRONTEND_URL
-const corsOriginHelper = (origin, callback) => {
-  if (!origin) return callback(null, true);
-
-  const allowedOrigins = (process.env.FRONTEND_URL || '').split(',').map(item => item.trim());
-  const isAllowed = allowedOrigins.includes(origin) ||
-    /^https?:\/\/(.+\.)?kwickbot\.in(:\d+)?$/.test(origin) ||
-    /^http:\/\/(localhost|127\.0\.0\.1|192\.168\.\d+\.\d+|172\.\d+\.\d+\.\d+|10\.\d+\.\d+\.\d+)(:\d+)?$/.test(origin);
-  if (isAllowed) {
-    callback(null, true);
-  } else {
-    callback(new Error('Not allowed by CORS'));
-  }
-};
+const { corsOriginHelper } = require('./middleware/originSecurity');
+const jwt = require('jsonwebtoken');
+const Admin = require('./models/Admin');
 
 const io = socketIo(server, {
   cors: {
@@ -58,13 +47,57 @@ const io = socketIo(server, {
   }
 });
 
+// Authenticate Socket.IO handshake
+io.use(async (socket, next) => {
+  try {
+    const rawToken = socket.handshake.auth?.token ||
+                     socket.handshake.auth?.authorization ||
+                     socket.handshake.headers?.authorization ||
+                     socket.handshake.query?.token;
+
+    if (!rawToken) {
+      return next(new Error('Authentication required: Access token missing'));
+    }
+
+    const token = rawToken.replace(/^Bearer\s+/i, '').trim();
+    if (!token) {
+      return next(new Error('Authentication required: Invalid token format'));
+    }
+
+    const jwtSecret = process.env.JWT_ACCESS_SECRET;
+    if (!jwtSecret) {
+      return next(new Error('Server configuration error: Access token secret missing'));
+    }
+
+    const decoded = jwt.verify(token, jwtSecret);
+
+    if (decoded.tokenType !== 'access') {
+      return next(new Error('Authentication failed: Access token required'));
+    }
+
+    const admin = await Admin.findById(decoded.id).select('-password');
+    if (!admin) {
+      return next(new Error('Authentication failed: Admin account not found'));
+    }
+
+    if (!admin.isActive) {
+      return next(new Error('Authentication failed: Admin account is inactive'));
+    }
+
+    socket.admin = admin;
+    socket.user = admin;
+    next();
+  } catch (error) {
+    return next(new Error('Authentication failed: Invalid or expired token'));
+  }
+});
+
 // Make io accessible to other modules
 app.set('io', io);
 global.io = io;
 
 // Security middleware
 app.use(helmet());
-
 
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
@@ -96,21 +129,32 @@ app.use(morgan('dev'));
 
 // Socket.IO connection handling
 io.on('connection', (socket) => {
-  console.log('🔌 Frontend connected to Socket.IO');
+  const adminId = socket.admin._id.toString();
+  const merchantRoom = `merchant:${adminId}`;
 
-  // Send current WhatsApp status
+  socket.join(merchantRoom);
+
+  if (socket.admin.role === 'super_admin') {
+    socket.join('super_admin_room');
+  }
+
+  // Send initial WhatsApp status ONLY if socket user is super_admin or authorized owner
   if (whatsappWebBot) {
     const status = whatsappWebBot.getStatus();
-    socket.emit('whatsapp-status', status);
+    const isSuperAdmin = socket.admin.role === 'super_admin';
+    const isOwner = whatsappWebBot.ownerAdminId && adminId === whatsappWebBot.ownerAdminId.toString();
 
-    // If there is an active QR code, emit it to the connecting client immediately
-    if (status.qrCode) {
-      socket.emit('whatsapp-qr', { qr: status.qrCode, timestamp: new Date() });
+    if (isSuperAdmin || isOwner || !whatsappWebBot.ownerAdminId) {
+      socket.emit('whatsapp-status', status);
+
+      if (status.qrCode) {
+        socket.emit('whatsapp-qr', { qr: status.qrCode, timestamp: new Date() });
+      }
     }
   }
 
   socket.on('disconnect', () => {
-    console.log('🔌 Frontend disconnected from Socket.IO');
+    // Client disconnected
   });
 });
 

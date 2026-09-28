@@ -271,7 +271,9 @@ Have a great day!`;
           });
 
           if (global.io) {
-            global.io.emit('new_message', {
+            const adminId = adminDoc?._id?.toString() || conversation.admin?.toString();
+            const target = adminId ? global.io.to(`merchant:${adminId}`).to('super_admin_room') : global.io.to('super_admin_room');
+            target.emit('new_message', {
               customerPhone: conversation.customerPhone,
               role: 'assistant',
               content: followUpMessage,

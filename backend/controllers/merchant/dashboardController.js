@@ -165,12 +165,14 @@ exports.updateEscalation = async (req, res) => {
           // Emit Socket.IO event so live chat / dashboard update in real-time
           const io = req.app.get('io') || global.io;
           if (io) {
-            io.emit('new_message', {
+            const adminId = req.admin?._id?.toString() || conversation.admin?.toString();
+            const target = adminId ? io.to(`merchant:${adminId}`).to('super_admin_room') : io.to('super_admin_room');
+            target.emit('new_message', {
               customerPhone: conversation.customerPhone,
               status: conversation.status,
               botPaused: conversation.botPaused
             });
-            io.emit('conversation_updated', conversation);
+            target.emit('conversation_updated', conversation);
           }
         }
       } else if (status === 'pending' || status === 'in_progress') {
@@ -184,12 +186,14 @@ exports.updateEscalation = async (req, res) => {
 
           const io = req.app.get('io') || global.io;
           if (io) {
-            io.emit('new_message', {
+            const adminId = req.admin?._id?.toString() || conversation.admin?.toString();
+            const target = adminId ? io.to(`merchant:${adminId}`).to('super_admin_room') : io.to('super_admin_room');
+            target.emit('new_message', {
               customerPhone: conversation.customerPhone,
               status: conversation.status,
               botPaused: conversation.botPaused
             });
-            io.emit('conversation_updated', conversation);
+            target.emit('conversation_updated', conversation);
           }
         }
       }

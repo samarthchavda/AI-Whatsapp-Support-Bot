@@ -421,8 +421,9 @@ class WhatsAppWebBot {
     this.qrCode = qr;
     this.status = 'qr_ready';
     if (this.io) {
-      this.io.emit('whatsapp-qr', { qr, timestamp: new Date() });
-      console.log('📤 QR code sent to frontend');
+      const target = this.ownerAdminId ? this.io.to(`merchant:${this.ownerAdminId.toString()}`).to('super_admin_room') : this.io.to('super_admin_room');
+      target.emit('whatsapp-qr', { qr, timestamp: new Date() });
+      console.log('📤 QR code sent to authorized frontend room');
     }
   }
 
@@ -432,13 +433,14 @@ class WhatsAppWebBot {
       this.qrCode = null;
     }
     if (this.io) {
-      this.io.emit('whatsapp-status', {
+      const target = this.ownerAdminId ? this.io.to(`merchant:${this.ownerAdminId.toString()}`).to('super_admin_room') : this.io.to('super_admin_room');
+      target.emit('whatsapp-status', {
         status,
         message,
         isReady: this.isReady,
         timestamp: new Date()
       });
-      console.log(`📤 Status update sent to frontend: ${status}`);
+      console.log(`📤 Status update sent to authorized frontend room: ${status}`);
     }
   }
 }

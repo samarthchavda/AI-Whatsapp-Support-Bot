@@ -64,6 +64,30 @@ exports.testMessage = async (req, res) => {
   }
 };
 
+const getTenantFilter = async (admin) => {
+  if (!admin || admin.role === 'super_admin') {
+    return { aiLogFilter: {}, conversationFilter: {}, escalationFilter: {} };
+  }
+  const merchantConversations = await Conversation.find({ admin: admin._id }).select('_id').lean();
+  const conversationIds = merchantConversations.map(c => c._id);
+
+  return {
+    aiLogFilter: {
+      $or: [
+        { admin: admin._id },
+        { conversationId: { $in: conversationIds } }
+      ]
+    },
+    conversationFilter: { admin: admin._id },
+    escalationFilter: {
+      $or: [
+        { admin: admin._id },
+        { conversationId: { $in: conversationIds } }
+      ]
+    }
+  };
+};
+
 // Get AI logs for a customer
 exports.getAILogs = async (req, res) => {
   try {
@@ -75,13 +99,16 @@ exports.getAILogs = async (req, res) => {
       });
     }
 
-    const logs = await AILog.find({ customerPhone })
+    const { aiLogFilter } = await getTenantFilter(req.admin);
+    const filter = { customerPhone, ...(aiLogFilter || {}) };
+
+    const logs = await AILog.find(filter)
       .sort({ createdAt: -1 })
       .limit(limit * 1)
       .skip((page - 1) * limit)
       .exec();
 
-    const count = await AILog.countDocuments({ customerPhone });
+    const count = await AILog.countDocuments(filter);
 
     res.json({
       success: true,
@@ -89,7 +116,7 @@ exports.getAILogs = async (req, res) => {
       pagination: {
         total: count,
         pages: Math.ceil(count / limit),
-        currentPage: page
+        currentPage: Number(page)
       }
     });
 
@@ -113,13 +140,16 @@ exports.getLogsByIntent = async (req, res) => {
       });
     }
 
-    const logs = await AILog.find({ intent })
+    const { aiLogFilter } = await getTenantFilter(req.admin);
+    const filter = { intent, ...(aiLogFilter || {}) };
+
+    const logs = await AILog.find(filter)
       .sort({ createdAt: -1 })
       .limit(limit * 1)
       .skip((page - 1) * limit)
       .exec();
 
-    const count = await AILog.countDocuments({ intent });
+    const count = await AILog.countDocuments(filter);
 
     res.json({
       success: true,
@@ -128,7 +158,7 @@ exports.getLogsByIntent = async (req, res) => {
       pagination: {
         total: count,
         pages: Math.ceil(count / limit),
-        currentPage: page
+        currentPage: Number(page)
       }
     });
 
@@ -146,13 +176,16 @@ exports.getErrorLogs = async (req, res) => {
   try {
     const { limit = 10, page = 1 } = req.query;
 
-    const logs = await AILog.find({ 'error.occurred': true })
+    const { aiLogFilter } = await getTenantFilter(req.admin);
+    const filter = { 'error.occurred': true, ...(aiLogFilter || {}) };
+
+    const logs = await AILog.find(filter)
       .sort({ createdAt: -1 })
       .limit(limit * 1)
       .skip((page - 1) * limit)
       .exec();
 
-    const count = await AILog.countDocuments({ 'error.occurred': true });
+    const count = await AILog.countDocuments(filter);
 
     res.json({
       success: true,
@@ -160,7 +193,7 @@ exports.getErrorLogs = async (req, res) => {
       pagination: {
         total: count,
         pages: Math.ceil(count / limit),
-        currentPage: page
+        currentPage: Number(page)
       }
     });
 
@@ -176,24 +209,33 @@ exports.getErrorLogs = async (req, res) => {
 // Get AI statistics
 exports.getAIStats = async (req, res) => {
   try {
+    const { aiLogFilter, conversationFilter, escalationFilter } = await getTenantFilter(req.admin);
+    const logMatch = aiLogFilter || {};
+    const escMatch = escalationFilter || {};
+    const convMatch = conversationFilter || {};
+
     const stats = {
-      totalMessages: await AILog.countDocuments(),
+      totalMessages: await AILog.countDocuments(logMatch),
       messagesByIntent: await AILog.aggregate([
+        { $match: logMatch },
         { $group: { _id: '$intent', count: { $sum: 1 } } }
       ]),
-      messagesWithErrors: await AILog.countDocuments({ 'error.occurred': true }),
-      messagesUsingAI: await AILog.countDocuments({ 'structuredOutput.metadata.usedAI': true }),
-      escalations: await Escalation.countDocuments(),
+      messagesWithErrors: await AILog.countDocuments({ ...logMatch, 'error.occurred': true }),
+      messagesUsingAI: await AILog.countDocuments({ ...logMatch, 'structuredOutput.metadata.usedAI': true }),
+      escalations: await Escalation.countDocuments(escMatch),
       escalationsByReason: await Escalation.aggregate([
+        { $match: escMatch },
         { $group: { _id: '$reason', count: { $sum: 1 } } }
       ]),
       escalationsByPriority: await Escalation.aggregate([
+        { $match: escMatch },
         { $group: { _id: '$priority', count: { $sum: 1 } } }
       ]),
       averageResponseTime: await AILog.aggregate([
+        { $match: logMatch },
         { $group: { _id: null, avgDuration: { $avg: '$duration' } } }
       ]),
-      totalConversations: await Conversation.countDocuments()
+      totalConversations: await Conversation.countDocuments(convMatch)
     };
 
     res.json({
@@ -220,6 +262,13 @@ exports.getConversationWithLogs = async (req, res) => {
     if (!conversation) {
       return res.status(404).json({
         error: 'Conversation not found'
+      });
+    }
+
+    if (req.admin.role !== 'super_admin' && conversation.admin && conversation.admin.toString() !== req.admin._id.toString()) {
+      return res.status(403).json({
+        success: false,
+        error: 'Access denied: Unauthorized conversation access'
       });
     }
 

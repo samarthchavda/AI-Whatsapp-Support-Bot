@@ -219,7 +219,7 @@ exports.updateUserSubscription = async (req, res) => {
 
     // Emit real-time Socket.IO notification for instant frontend plan sync
     if (req.io) {
-      req.io.emit('user_subscription_updated', {
+      req.io.to(`merchant:${user._id.toString()}`).to('super_admin_room').emit('user_subscription_updated', {
         userId: user._id.toString(),
         subscriptionPlan: user.subscriptionPlan,
         subscriptionStatus: user.subscriptionStatus,

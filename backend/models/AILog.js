@@ -1,6 +1,11 @@
 const mongoose = require('mongoose');
 
 const aiLogSchema = new mongoose.Schema({
+  admin: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Admin',
+    index: true
+  },
   conversationId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Conversation',

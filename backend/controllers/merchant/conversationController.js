@@ -129,12 +129,14 @@ exports.updateConversationStatus = async (req, res) => {
     // Emit socket event for real-time update
     const io = req.app.get('io') || global.io;
     if (io) {
-      io.emit('new_message', {
+      const adminId = req.admin?._id?.toString() || conversation.admin?.toString();
+      const target = adminId ? io.to(`merchant:${adminId}`).to('super_admin_room') : io.to('super_admin_room');
+      target.emit('new_message', {
         customerPhone: conversation.customerPhone,
         status: conversation.status,
         botPaused: conversation.botPaused
       });
-      io.emit('conversation_updated', conversation);
+      target.emit('conversation_updated', conversation);
     }
 
     res.json(conversation);
@@ -310,7 +312,9 @@ exports.sendAdminMessage = async (req, res) => {
     // Emit socket event for real-time update
     const io = req.app.get('io') || global.io;
     if (io) {
-      io.emit('new_message', {
+      const adminId = req.admin?._id?.toString() || conversation.admin?.toString();
+      const target = adminId ? io.to(`merchant:${adminId}`).to('super_admin_room') : io.to('super_admin_room');
+      target.emit('new_message', {
         customerPhone,
         role: 'system',
         content: message,
@@ -319,7 +323,7 @@ exports.sendAdminMessage = async (req, res) => {
         timestamp: new Date(),
         botPaused: conversation.botPaused
       });
-      io.emit('conversation_updated', conversation);
+      target.emit('conversation_updated', conversation);
     }
 
     res.json({

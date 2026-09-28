@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const authController = require('../controllers/public/authController');
 const { verifyToken } = require('../middleware/auth');
+const { verifyCsrfOrigin } = require('../middleware/originSecurity');
 const { createMongoRateLimiter } = require('../middleware/mongoRateLimiter');
 
 // Shared PM2 cluster rate limiters
@@ -130,7 +131,7 @@ router.post('/reset-password/:token', resetPasswordLimiter, authController.reset
  *       200:
  *         description: Token refreshed
  */
-router.post('/refresh', authController.refresh);
+router.post('/refresh', verifyCsrfOrigin, authController.refresh);
 
 /**
  * @openapi
@@ -143,7 +144,7 @@ router.post('/refresh', authController.refresh);
  *       200:
  *         description: Logged out successfully
  */
-router.post('/logout', authController.logout);
+router.post('/logout', verifyCsrfOrigin, authController.logout);
 
 /**
  * @openapi

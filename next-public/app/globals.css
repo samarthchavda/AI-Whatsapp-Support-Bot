@@ -1048,6 +1048,34 @@ html, body {
   transition: transform 0.3s ease, border-color 0.3s ease;
 }
 
+.pricing-skeleton-line {
+  position: relative;
+  overflow: hidden;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.pricing-skeleton-line::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.12), transparent);
+  animation: pricing-skeleton-shimmer 1.4s infinite;
+}
+
+@keyframes pricing-skeleton-shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pricing-skeleton-line::after {
+    animation: none;
+  }
+}
+
 .dark-pricing-card:hover {
   transform: translateY(-4px);
   border-color: rgba(255, 255, 255, 0.3);

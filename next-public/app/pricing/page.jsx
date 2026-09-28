@@ -38,6 +38,7 @@ export default function PricingPage() {
   const [activeCategory, setActiveCategory] = useState('kwickbot_crm');
   const [plans, setPlans] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
 
   useEffect(() => {
     fetchPublicPlans();
@@ -46,16 +47,23 @@ export default function PricingPage() {
   const fetchPublicPlans = async () => {
     try {
       setLoading(true);
+      setLoadError('');
       const apiBase = process.env.NEXT_PUBLIC_API_URL || 'https://kwickbot.in/api';
       const res = await fetch(`${apiBase}/auth/plans/public`, { cache: 'no-store' });
-      if (res.ok) {
-        const json = await res.json();
-        if (json.success && Array.isArray(json.data) && json.data.length > 0) {
-          setPlans(json.data);
-        }
+      if (!res.ok) {
+        throw new Error(`Pricing service returned ${res.status}`);
       }
+
+      const json = await res.json();
+      if (!json.success || !Array.isArray(json.data)) {
+        throw new Error('Pricing service returned an invalid response');
+      }
+
+      setPlans(json.data);
     } catch (err) {
       console.error('Error fetching public plans:', err);
+      setPlans([]);
+      setLoadError('Pricing is temporarily unavailable. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -232,7 +240,23 @@ export default function PricingPage() {
           </div>
 
           <div className="dark-pricing-grid" style={{ marginTop: '32px' }}>
-            {filteredPlans.length > 0 ? (
+            {loading ? (
+              [0, 1, 2].map(index => (
+                <div
+                  key={`pricing-skeleton-${index}`}
+                  className="dark-pricing-card"
+                  aria-hidden="true"
+                  style={{ minHeight: '430px', overflow: 'hidden' }}
+                >
+                  <div className="pricing-skeleton-line" style={{ width: '34%', height: '14px' }} />
+                  <div className="pricing-skeleton-line" style={{ width: '58%', height: '30px', marginTop: '20px' }} />
+                  <div className="pricing-skeleton-line" style={{ width: '42%', height: '42px', marginTop: '24px' }} />
+                  <div className="pricing-skeleton-line" style={{ width: '88%', height: '14px', marginTop: '24px' }} />
+                  <div className="pricing-skeleton-line" style={{ width: '72%', height: '14px', marginTop: '12px' }} />
+                  <div className="pricing-skeleton-line" style={{ width: '100%', height: '52px', marginTop: 'auto', borderRadius: '999px' }} />
+                </div>
+              ))
+            ) : filteredPlans.length > 0 ? (
               filteredPlans.map(plan => {
                 const isContactSales = plan.contactSales || plan.monthlyPrice === 0;
                 const currSymbol = getCurrencySymbol(plan.currency);
@@ -367,53 +391,23 @@ export default function PricingPage() {
                 );
               })
             ) : (
-              /* Fallback static cards if fetching or no active plans in category */
-              <>
-                <div className="dark-pricing-card">
-                  <h3>Starter</h3>
-                  <div className="dark-price">₹1499<span>/month</span></div>
-                  <p style={{ color: '#a1a1aa', fontSize: '13px' }}>For small stores validating AI support.</p>
-                  <ul>
-                    <li><FaCheck style={{ color: '#4ade80', flexShrink: 0, marginTop: '3px' }} /> Up to 500 WhatsApp Conversations/mo</li>
-                    <li><FaCheck style={{ color: '#4ade80', flexShrink: 0, marginTop: '3px' }} /> Up to 2,000 messages/mo</li>
-                    <li><FaCheck style={{ color: '#4ade80', flexShrink: 0, marginTop: '3px' }} /> 1 Active WhatsApp connection</li>
-                    <li><FaCheck style={{ color: '#4ade80', flexShrink: 0, marginTop: '3px' }} /> 1 Knowledge Base upload</li>
-                  </ul>
-                  <Link href="/demo" className="glowing-btn-white" style={{ marginTop: 'auto', width: '100%' }}>
-                    Start with demo
-                  </Link>
-                </div>
-
-                <div className="dark-pricing-card featured">
-                  <div className="cta-sparkle" style={{ fontSize: '12px', marginBottom: '8px' }}>BEST FIT</div>
-                  <h3>Growth</h3>
-                  <div className="dark-price">₹2999<span>/month</span></div>
-                  <p style={{ color: '#a1a1aa', fontSize: '13px' }}>For stores managing regular order and support volume.</p>
-                  <ul>
-                    <li><FaCheck style={{ color: '#4ade80', flexShrink: 0, marginTop: '3px' }} /> Up to 3,000 WhatsApp Conversations/mo</li>
-                    <li><FaCheck style={{ color: '#4ade80', flexShrink: 0, marginTop: '3px' }} /> Up to 15,000 messages/mo</li>
-                    <li><FaCheck style={{ color: '#4ade80', flexShrink: 0, marginTop: '3px' }} /> 2 Active WhatsApp connections</li>
-                    <li><FaCheck style={{ color: '#4ade80', flexShrink: 0, marginTop: '3px' }} /> WhatsApp Broadcasting &amp; Handoff</li>
-                  </ul>
-                  <Link href="/demo" className="glowing-btn-white" style={{ marginTop: 'auto', width: '100%' }}>
-                    Book demo
-                  </Link>
-                </div>
-
-                <div className="dark-pricing-card">
-                  <h3>Scale</h3>
-                  <div className="dark-price">₹9999<span>/month</span></div>
-                  <p style={{ color: '#a1a1aa', fontSize: '13px' }}>For teams needing higher limits and custom workflows.</p>
-                  <ul>
-                    <li><FaCheck style={{ color: '#4ade80', flexShrink: 0, marginTop: '3px' }} /> Unlimited WhatsApp Conversations &amp; Messages</li>
-                    <li><FaCheck style={{ color: '#4ade80', flexShrink: 0, marginTop: '3px' }} /> Up to 5 Active WhatsApp connections</li>
-                    <li><FaCheck style={{ color: '#4ade80', flexShrink: 0, marginTop: '3px' }} /> Custom Branding &amp; Developer APIs</li>
-                  </ul>
-                  <Link href="/demo" className="glowing-btn-white" style={{ marginTop: 'auto', width: '100%' }}>
-                    Talk to sales
-                  </Link>
-                </div>
-              </>
+              <div
+                className="dark-pricing-card"
+                style={{ gridColumn: '1 / -1', minHeight: '220px', alignItems: 'center', justifyContent: 'center', textAlign: 'center' }}
+              >
+                <FaInfoCircle style={{ color: loadError ? '#f59e0b' : '#38bdf8', fontSize: '26px' }} />
+                <h3 style={{ marginTop: '14px' }}>
+                  {loadError ? 'Unable to load pricing' : 'Plans coming soon'}
+                </h3>
+                <p style={{ color: '#a1a1aa', fontSize: '13px', maxWidth: '440px' }}>
+                  {loadError || `No published ${CATEGORIES.find(category => category.id === activeCategory)?.label || ''} plans are available right now.`}
+                </p>
+                {loadError && (
+                  <button type="button" className="glowing-btn-white" onClick={fetchPublicPlans} style={{ marginTop: '14px', padding: '12px 24px' }}>
+                    Retry pricing
+                  </button>
+                )}
+              </div>
             )}
           </div>
         </section>

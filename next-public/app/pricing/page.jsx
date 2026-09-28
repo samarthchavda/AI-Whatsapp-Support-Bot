@@ -1,9 +1,16 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { safeJsonStringify } from '../../utils/jsonSanitizer';
-import { FaCheck, FaTimes, FaChevronDown, FaChevronUp } from 'react-icons/fa';
+import { FaCheck, FaTimes, FaChevronDown, FaChevronUp, FaInfoCircle } from 'react-icons/fa';
+
+const CATEGORIES = [
+  { id: 'kwickbot_crm', label: 'Kwickbot CRM' },
+  { id: 'crm_integration', label: 'Connect Your CRM' },
+  { id: 'whatsapp_api', label: 'WhatsApp API' },
+  { id: 'enterprise_custom', label: 'Enterprise' }
+];
 
 const faqs = [
   {
@@ -27,27 +34,63 @@ const faqs = [
 export default function PricingPage() {
   const [openFaqIndex, setOpenFaqIndex] = useState(null);
   const [showFullComparison, setShowFullComparison] = useState(true);
+  const [billingCycle, setBillingCycle] = useState('monthly'); // 'monthly' | 'yearly'
+  const [activeCategory, setActiveCategory] = useState('kwickbot_crm');
+  const [plans, setPlans] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchPublicPlans();
+  }, []);
+
+  const fetchPublicPlans = async () => {
+    try {
+      setLoading(true);
+      const apiBase = process.env.NEXT_PUBLIC_API_URL || 'https://kwickbot.in/api';
+      const res = await fetch(`${apiBase}/auth/plans/public`, { cache: 'no-store' });
+      if (res.ok) {
+        const json = await res.json();
+        if (json.success && Array.isArray(json.data) && json.data.length > 0) {
+          setPlans(json.data);
+        }
+      }
+    } catch (err) {
+      console.error('Error fetching public plans:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const toggleFaq = (index) => {
     setOpenFaqIndex(openFaqIndex === index ? null : index);
   };
 
+  const getCurrencySymbol = (code = 'INR') => {
+    switch (String(code).toUpperCase()) {
+      case 'INR': return '₹';
+      case 'USD': return '$';
+      case 'EUR': return '€';
+      case 'GBP': return '£';
+      default: return `${code} `;
+    }
+  };
+
+  const formatLimit = (val, suffix = '') => {
+    if (val === -1 || val === null || val === undefined || val === Infinity) {
+      return 'Unlimited';
+    }
+    return `${Number(val).toLocaleString()}${suffix}`;
+  };
+
+  // Filter plans for active category
+  const filteredPlans = plans.filter(p => p.category === activeCategory);
+
   const breadcrumbSchema = {
     '@context': 'https://schema.org',
     '@type': 'BreadcrumbList',
     itemListElement: [
-      {
-        '@type': 'ListItem',
-        position: 1,
-        name: 'Home',
-        item: 'https://kwickbot.in'
-      },
-      {
-        '@type': 'ListItem',
-        position: 2,
-        name: 'Pricing',
-        item: 'https://kwickbot.in/pricing'
-      }
+      { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://kwickbot.in' },
+      { '@type': 'ListItem', position: 2, name: 'Pricing', item: 'https://kwickbot.in/pricing' }
     ]
   };
 
@@ -57,10 +100,7 @@ export default function PricingPage() {
     mainEntity: faqs.map(faq => ({
       '@type': 'Question',
       name: faq.question,
-      acceptedAnswer: {
-        '@type': 'Answer',
-        text: faq.answer
-      }
+      acceptedAnswer: { '@type': 'Answer', text: faq.answer }
     }))
   };
 
@@ -89,132 +129,297 @@ export default function PricingPage() {
           <div className="dark-heading-center">
             <span>PRICING TIERS</span>
             <h1 className="retro-dot-headline" style={{ fontSize: 'clamp(28px, 5vw, 56px)', margin: '16px auto' }}>
-              Transparent Support Plans
+              Transparent Support & Integration Plans
             </h1>
             <p className="retro-subhead" style={{ margin: '0 auto' }}>
-              Simple pricing tiers for validating AI, active D2C stores, and enterprise operations.
+              Simple pricing for validating AI, connecting your CRM, developer APIs, and enterprise operations.
             </p>
 
-            <button
-              onClick={() => setShowFullComparison(!showFullComparison)}
-              style={{
-                marginTop: '20px',
-                background: 'rgba(255, 255, 255, 0.08)',
-                border: '1px solid rgba(255, 255, 255, 0.2)',
-                color: '#ffffff',
-                padding: '10px 22px',
-                borderRadius: '999px',
-                fontSize: '13px',
-                fontWeight: '600',
-                cursor: 'pointer',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '8px',
-                transition: 'all 0.2s ease'
-              }}
-            >
-              {showFullComparison ? 'Show Highlights Only' : 'See Full Feature Comparison'}
-              {showFullComparison ? <FaChevronUp style={{ fontSize: '11px' }} /> : <FaChevronDown style={{ fontSize: '11px' }} />}
-            </button>
+            {/* Monthly / Yearly Toggle */}
+            <div style={{ display: 'inline-flex', alignItems: 'center', background: 'rgba(255,255,255,0.06)', padding: '6px 12px', borderRadius: '999px', margin: '24px auto 0', border: '1px solid rgba(255,255,255,0.12)', gap: '8px' }}>
+              <button
+                type="button"
+                onClick={() => setBillingCycle('monthly')}
+                style={{
+                  background: billingCycle === 'monthly' ? '#6366f1' : 'transparent',
+                  color: '#ffffff',
+                  border: 'none',
+                  padding: '8px 18px',
+                  borderRadius: '999px',
+                  fontSize: '13px',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease'
+                }}
+              >
+                Monthly Billing
+              </button>
+              <button
+                type="button"
+                onClick={() => setBillingCycle('yearly')}
+                style={{
+                  background: billingCycle === 'yearly' ? '#6366f1' : 'transparent',
+                  color: '#ffffff',
+                  border: 'none',
+                  padding: '8px 18px',
+                  borderRadius: '999px',
+                  fontSize: '13px',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px'
+                }}
+              >
+                Yearly Billing
+                <span style={{ background: '#22c55e', color: '#000000', fontSize: '10px', padding: '2px 6px', borderRadius: '999px', fontWeight: '800' }}>
+                  SAVE ~17%
+                </span>
+              </button>
+            </div>
+
+            {/* Category Tabs */}
+            <div style={{ display: 'flex', justifyContent: 'center', flexWrap: 'wrap', gap: '8px', marginTop: '20px' }}>
+              {CATEGORIES.map(cat => (
+                <button
+                  key={cat.id}
+                  onClick={() => setActiveCategory(cat.id)}
+                  style={{
+                    background: activeCategory === cat.id ? 'rgba(56, 189, 248, 0.2)' : 'rgba(255, 255, 255, 0.04)',
+                    border: activeCategory === cat.id ? '1px solid #38bdf8' : '1px solid rgba(255, 255, 255, 0.1)',
+                    color: activeCategory === cat.id ? '#38bdf8' : '#a1a1aa',
+                    padding: '8px 16px',
+                    borderRadius: '8px',
+                    fontSize: '13px',
+                    fontWeight: '600',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease'
+                  }}
+                >
+                  {cat.label}
+                </button>
+              ))}
+            </div>
+
+            <div style={{ marginTop: '16px' }}>
+              <button
+                onClick={() => setShowFullComparison(!showFullComparison)}
+                style={{
+                  background: 'rgba(255, 255, 255, 0.08)',
+                  border: '1px solid rgba(255, 255, 255, 0.2)',
+                  color: '#ffffff',
+                  padding: '8px 18px',
+                  borderRadius: '999px',
+                  fontSize: '12px',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px'
+                }}
+              >
+                {showFullComparison ? 'Show Highlights Only' : 'See Full Feature Comparison'}
+                {showFullComparison ? <FaChevronUp style={{ fontSize: '10px' }} /> : <FaChevronDown style={{ fontSize: '10px' }} />}
+              </button>
+            </div>
           </div>
 
-          <div className="dark-pricing-grid" style={{ marginTop: '36px' }}>
-            {/* Starter Plan */}
-            <div className="dark-pricing-card">
-              <h3>Starter</h3>
-              <div className="dark-price">₹1499<span>/month</span></div>
-              <p style={{ color: '#a1a1aa', fontSize: '13px' }}>For small stores validating AI support.</p>
-              <ul>
-                <li><FaCheck style={{ color: '#4ade80', flexShrink: 0, marginTop: '3px' }} /> Up to 500 WhatsApp Conversations/mo (customer chats)</li>
-                <li><FaCheck style={{ color: '#4ade80', flexShrink: 0, marginTop: '3px' }} /> Up to 2,000 messages/mo (text bubbles)</li>
-                <li><FaCheck style={{ color: '#4ade80', flexShrink: 0, marginTop: '3px' }} /> 1 Active WhatsApp connection</li>
-                <li><FaCheck style={{ color: '#4ade80', flexShrink: 0, marginTop: '3px' }} /> Max 1 PDF document Knowledge Base upload</li>
-                <li><FaCheck style={{ color: '#4ade80', flexShrink: 0, marginTop: '3px' }} /> 1 Store Integration (Shopify OR WooCommerce)</li>
-                <li><FaCheck style={{ color: '#4ade80', flexShrink: 0, marginTop: '3px' }} /> Knowledge Base Retrieval &amp; Live Chat CRM</li>
+          {/* Additional Charges Disclaimer Note */}
+          <div style={{ maxWidth: '840px', margin: '20px auto 0', padding: '12px 16px', background: 'rgba(245, 158, 11, 0.08)', border: '1px solid rgba(245, 158, 11, 0.25)', borderRadius: '10px', fontSize: '12px', color: '#fef08a', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <FaInfoCircle style={{ color: '#f59e0b', flexShrink: 0, fontSize: '14px' }} />
+            <span>Note: Meta WhatsApp conversation charges &amp; third-party CRM/Odoo subscription fees are charged separately by respective providers. Connector maintenance fees apply where specified.</span>
+          </div>
 
-                {showFullComparison && (
-                  <>
-                    <li className="disabled"><FaTimes style={{ flexShrink: 0, marginTop: '3px' }} /> WhatsApp Broadcasting (0 Messages, 0 Campaigns)</li>
-                    <li className="disabled"><FaTimes style={{ flexShrink: 0, marginTop: '3px' }} /> Advanced Analytics Dashboard</li>
-                    <li className="disabled"><FaTimes style={{ flexShrink: 0, marginTop: '3px' }} /> Live Chat Handoff Escalations</li>
-                    <li className="disabled"><FaTimes style={{ flexShrink: 0, marginTop: '3px' }} /> Automated Order Cancellations</li>
-                    <li className="disabled"><FaTimes style={{ flexShrink: 0, marginTop: '3px' }} /> Custom Branding (White Labeling)</li>
-                    <li className="disabled"><FaTimes style={{ flexShrink: 0, marginTop: '3px' }} /> Developer API &amp; Webhooks Access</li>
-                    <li className="disabled"><FaTimes style={{ flexShrink: 0, marginTop: '3px' }} /> Priority Support</li>
-                  </>
-                )}
-              </ul>
-              <Link href="/demo" className="glowing-btn-white" style={{ marginTop: 'auto', width: '100%' }}>
-                Start with demo
-              </Link>
-            </div>
+          <div className="dark-pricing-grid" style={{ marginTop: '32px' }}>
+            {filteredPlans.length > 0 ? (
+              filteredPlans.map(plan => {
+                const isContactSales = plan.contactSales || plan.monthlyPrice === 0;
+                const currSymbol = getCurrencySymbol(plan.currency);
 
-            {/* Growth Plan */}
-            <div className="dark-pricing-card featured">
-              <div className="cta-sparkle" style={{ fontSize: '12px', marginBottom: '8px' }}>BEST FIT</div>
-              <h3>Growth</h3>
-              <div className="dark-price">₹2999<span>/month</span></div>
-              <p style={{ color: '#a1a1aa', fontSize: '13px' }}>For stores managing regular order and support volume.</p>
-              <ul>
-                <li><FaCheck style={{ color: '#4ade80', flexShrink: 0, marginTop: '3px' }} /> Up to 3,000 WhatsApp Conversations/mo (customer chats)</li>
-                <li><FaCheck style={{ color: '#4ade80', flexShrink: 0, marginTop: '3px' }} /> Up to 15,000 messages/mo (text bubbles)</li>
-                <li><FaCheck style={{ color: '#4ade80', flexShrink: 0, marginTop: '3px' }} /> Up to 2 Active WhatsApp connections</li>
-                <li><FaCheck style={{ color: '#4ade80', flexShrink: 0, marginTop: '3px' }} /> Max 3 PDF document Knowledge Base uploads</li>
-                <li><FaCheck style={{ color: '#4ade80', flexShrink: 0, marginTop: '3px' }} /> 1 Store Integration (Shopify OR WooCommerce)</li>
-                <li><FaCheck style={{ color: '#4ade80', flexShrink: 0, marginTop: '3px' }} /> Knowledge Base Retrieval &amp; Live Chat CRM</li>
-                <li><FaCheck style={{ color: '#4ade80', flexShrink: 0, marginTop: '3px' }} /> WhatsApp Broadcasting (5,000 Messages &amp; 10 Campaigns/mo)</li>
-                <li><FaCheck style={{ color: '#4ade80', flexShrink: 0, marginTop: '3px' }} /> Advanced Analytics Dashboard (view metrics &amp; logs)</li>
-                <li><FaCheck style={{ color: '#4ade80', flexShrink: 0, marginTop: '3px' }} /> Live Chat Handoff Escalations (automatic takeover)</li>
-                <li><FaCheck style={{ color: '#4ade80', flexShrink: 0, marginTop: '3px' }} /> Automated Order Cancellations via WhatsApp</li>
+                let priceDisplay = 'Contact Sales';
+                let subtext = '';
+                let savingsText = null;
 
-                {showFullComparison && (
-                  <>
-                    <li className="disabled"><FaTimes style={{ flexShrink: 0, marginTop: '3px' }} /> Custom Branding (White Labeling)</li>
-                    <li className="disabled"><FaTimes style={{ flexShrink: 0, marginTop: '3px' }} /> Developer API &amp; Webhooks Access</li>
-                  </>
-                )}
+                if (!isContactSales) {
+                  if (billingCycle === 'yearly' && plan.yearlyPrice) {
+                    const monthlyEquiv = Math.round(plan.yearlyPrice / 12);
+                    priceDisplay = `${currSymbol}${plan.yearlyPrice}`;
+                    subtext = `/year (effective ${currSymbol}${monthlyEquiv}/mo)`;
 
-                <li><FaCheck style={{ color: '#4ade80', flexShrink: 0, marginTop: '3px' }} /> Priority Email &amp; Chat Support (under 4 hours)</li>
-              </ul>
-              <Link href="/demo" className="glowing-btn-white" style={{ marginTop: 'auto', width: '100%' }}>
-                Book demo
-              </Link>
-            </div>
+                    if (plan.monthlyPrice > 0 && plan.yearlyPrice < plan.monthlyPrice * 12) {
+                      const totalMonthlyYear = plan.monthlyPrice * 12;
+                      const savingsPercent = Math.round(((totalMonthlyYear - plan.yearlyPrice) / totalMonthlyYear) * 100);
+                      savingsText = `Save ${savingsPercent}% on yearly billing`;
+                    }
+                  } else {
+                    priceDisplay = `${currSymbol}${plan.monthlyPrice}`;
+                    subtext = '/month';
+                  }
+                }
 
-            {/* Scale Plan */}
-            <div className="dark-pricing-card">
-              <h3>Scale</h3>
-              <div className="dark-price">₹9999<span>/month</span></div>
-              <p style={{ color: '#a1a1aa', fontSize: '13px' }}>For teams needing higher limits and custom workflows.</p>
-              <ul>
-                <li><FaCheck style={{ color: '#4ade80', flexShrink: 0, marginTop: '3px' }} /> Unlimited WhatsApp Conversations &amp; Messages</li>
-                <li><FaCheck style={{ color: '#4ade80', flexShrink: 0, marginTop: '3px' }} /> Up to 5 Active WhatsApp connections simultaneously</li>
-                <li><FaCheck style={{ color: '#4ade80', flexShrink: 0, marginTop: '3px' }} /> Unlimited PDF document Knowledge Base uploads</li>
-                <li><FaCheck style={{ color: '#4ade80', flexShrink: 0, marginTop: '3px' }} /> Multiple Integrations (Shopify &amp; WooCommerce both)</li>
-                <li><FaCheck style={{ color: '#4ade80', flexShrink: 0, marginTop: '3px' }} /> Knowledge Base Retrieval &amp; Live Chat CRM</li>
-                <li><FaCheck style={{ color: '#4ade80', flexShrink: 0, marginTop: '3px' }} /> WhatsApp Broadcasting (25,000 Messages &amp; Unlimited Campaigns/mo)</li>
-                <li><FaCheck style={{ color: '#4ade80', flexShrink: 0, marginTop: '3px' }} /> Advanced Analytics Dashboard (view metrics &amp; logs)</li>
-                <li><FaCheck style={{ color: '#4ade80', flexShrink: 0, marginTop: '3px' }} /> Live Chat Handoff Escalations (automatic takeover)</li>
-                <li><FaCheck style={{ color: '#4ade80', flexShrink: 0, marginTop: '3px' }} /> Automated Order Cancellations via WhatsApp</li>
+                const isPopularCard = plan.isPopular;
 
-                {showFullComparison && (
-                  <>
-                    <li><FaCheck style={{ color: '#4ade80', flexShrink: 0, marginTop: '3px' }} /> Custom Branding (rebrand console with logo &amp; name)</li>
-                    <li><FaCheck style={{ color: '#4ade80', flexShrink: 0, marginTop: '3px' }} /> Developer API &amp; Webhooks Access</li>
-                  </>
-                )}
+                return (
+                  <div key={plan._id || plan.name} className={`dark-pricing-card ${isPopularCard ? 'featured' : ''}`}>
+                    {(isPopularCard || plan.badge) && (
+                      <div className="cta-sparkle" style={{ fontSize: '11px', marginBottom: '6px' }}>
+                        {plan.badge || 'POPULAR'}
+                      </div>
+                    )}
 
-                <li><FaCheck style={{ color: '#4ade80', flexShrink: 0, marginTop: '3px' }} /> Premium Support</li>
-              </ul>
-              <Link href="/demo" className="glowing-btn-white" style={{ marginTop: 'auto', width: '100%' }}>
-                Talk to sales
-              </Link>
-            </div>
+                    <h3>{plan.displayName}</h3>
+                    <div className="dark-price" style={{ fontSize: isContactSales ? '28px' : '36px' }}>
+                      {priceDisplay}
+                      {subtext && <span style={{ fontSize: '13px', color: '#a1a1aa' }}>{subtext}</span>}
+                    </div>
+
+                    {savingsText && (
+                      <div style={{ color: '#4ade80', fontSize: '11px', fontWeight: '700', marginTop: '2px' }}>
+                        {savingsText}
+                      </div>
+                    )}
+
+                    {plan.setupFee > 0 && (
+                      <div style={{ color: '#cbd5e1', fontSize: '11px', marginTop: '4px' }}>
+                        + {currSymbol}{plan.setupFee} one-time setup fee
+                      </div>
+                    )}
+
+                    {plan.connectorMaintenanceFee > 0 && (
+                      <div style={{ color: '#cbd5e1', fontSize: '11px', marginTop: '2px' }}>
+                        + {currSymbol}{plan.connectorMaintenanceFee}/mo connector maintenance fee
+                      </div>
+                    )}
+
+                    <p style={{ color: '#a1a1aa', fontSize: '13px', marginTop: '8px' }}>
+                      {plan.shortDescription || plan.detailedDescription}
+                    </p>
+
+                    <ul style={{ marginTop: '16px' }}>
+                      {/* Usage limits */}
+                      {plan.usageLimits && (
+                        <>
+                          <li><FaCheck style={{ color: '#4ade80', flexShrink: 0, marginTop: '3px' }} /> {formatLimit(plan.usageLimits.monthlyConversations)} WhatsApp Conversations/mo</li>
+                          <li><FaCheck style={{ color: '#4ade80', flexShrink: 0, marginTop: '3px' }} /> {formatLimit(plan.usageLimits.monthlyMessages)} Messages/mo</li>
+                          <li><FaCheck style={{ color: '#4ade80', flexShrink: 0, marginTop: '3px' }} /> {formatLimit(plan.usageLimits.maxWhatsAppConnections)} Active WhatsApp Connection(s)</li>
+                        </>
+                      )}
+
+                      {/* Dynamic Feature Entitlements */}
+                      {plan.features?.aiAutomation && (
+                        <li><FaCheck style={{ color: '#4ade80', flexShrink: 0, marginTop: '3px' }} /> AI Knowledge Base &amp; Automated Support</li>
+                      )}
+
+                      {plan.features?.crmConnection && (
+                        <li><FaCheck style={{ color: '#4ade80', flexShrink: 0, marginTop: '3px' }} /> CRM / ERP Bi-directional Sync</li>
+                      )}
+
+                      {plan.features?.leadSync && (
+                        <li><FaCheck style={{ color: '#4ade80', flexShrink: 0, marginTop: '3px' }} /> Automated Lead &amp; Contact Sync</li>
+                      )}
+
+                      {plan.features?.orderStatusSync && (
+                        <li><FaCheck style={{ color: '#4ade80', flexShrink: 0, marginTop: '3px' }} /> WhatsApp Order Status Sync &amp; Cancellations</li>
+                      )}
+
+                      {plan.features?.broadcasts && (
+                        <li><FaCheck style={{ color: '#4ade80', flexShrink: 0, marginTop: '3px' }} /> WhatsApp Broadcast Campaigns</li>
+                      )}
+
+                      {plan.features?.advancedAnalytics && (
+                        <li><FaCheck style={{ color: '#4ade80', flexShrink: 0, marginTop: '3px' }} /> Advanced Analytics &amp; Message Logs</li>
+                      )}
+
+                      {plan.features?.humanHandoff && (
+                        <li><FaCheck style={{ color: '#4ade80', flexShrink: 0, marginTop: '3px' }} /> Automatic Live Chat Human Handoff</li>
+                      )}
+
+                      {showFullComparison && (
+                        <>
+                          {plan.features?.customBranding ? (
+                            <li><FaCheck style={{ color: '#4ade80', flexShrink: 0, marginTop: '3px' }} /> Custom Branding &amp; White Labeling</li>
+                          ) : (
+                            <li className="disabled"><FaTimes style={{ flexShrink: 0, marginTop: '3px' }} /> Custom Branding</li>
+                          )}
+
+                          {plan.features?.developerApi ? (
+                            <li><FaCheck style={{ color: '#4ade80', flexShrink: 0, marginTop: '3px' }} /> Developer API &amp; Webhook Triggers</li>
+                          ) : (
+                            <li className="disabled"><FaTimes style={{ flexShrink: 0, marginTop: '3px' }} /> Developer API &amp; Webhooks</li>
+                          )}
+                        </>
+                      )}
+
+                      {plan.supportLevel && (
+                        <li><FaCheck style={{ color: '#4ade80', flexShrink: 0, marginTop: '3px' }} /> {plan.supportLevel}</li>
+                      )}
+                    </ul>
+
+                    <Link
+                      href={isContactSales ? "/demo" : "/demo"}
+                      className="glowing-btn-white"
+                      style={{ marginTop: 'auto', width: '100%', textAlign: 'center' }}
+                    >
+                      {isContactSales ? 'Talk to sales' : 'Start with demo'}
+                    </Link>
+                  </div>
+                );
+              })
+            ) : (
+              /* Fallback static cards if fetching or no active plans in category */
+              <>
+                <div className="dark-pricing-card">
+                  <h3>Starter</h3>
+                  <div className="dark-price">₹1499<span>/month</span></div>
+                  <p style={{ color: '#a1a1aa', fontSize: '13px' }}>For small stores validating AI support.</p>
+                  <ul>
+                    <li><FaCheck style={{ color: '#4ade80', flexShrink: 0, marginTop: '3px' }} /> Up to 500 WhatsApp Conversations/mo</li>
+                    <li><FaCheck style={{ color: '#4ade80', flexShrink: 0, marginTop: '3px' }} /> Up to 2,000 messages/mo</li>
+                    <li><FaCheck style={{ color: '#4ade80', flexShrink: 0, marginTop: '3px' }} /> 1 Active WhatsApp connection</li>
+                    <li><FaCheck style={{ color: '#4ade80', flexShrink: 0, marginTop: '3px' }} /> 1 Knowledge Base upload</li>
+                  </ul>
+                  <Link href="/demo" className="glowing-btn-white" style={{ marginTop: 'auto', width: '100%' }}>
+                    Start with demo
+                  </Link>
+                </div>
+
+                <div className="dark-pricing-card featured">
+                  <div className="cta-sparkle" style={{ fontSize: '12px', marginBottom: '8px' }}>BEST FIT</div>
+                  <h3>Growth</h3>
+                  <div className="dark-price">₹2999<span>/month</span></div>
+                  <p style={{ color: '#a1a1aa', fontSize: '13px' }}>For stores managing regular order and support volume.</p>
+                  <ul>
+                    <li><FaCheck style={{ color: '#4ade80', flexShrink: 0, marginTop: '3px' }} /> Up to 3,000 WhatsApp Conversations/mo</li>
+                    <li><FaCheck style={{ color: '#4ade80', flexShrink: 0, marginTop: '3px' }} /> Up to 15,000 messages/mo</li>
+                    <li><FaCheck style={{ color: '#4ade80', flexShrink: 0, marginTop: '3px' }} /> 2 Active WhatsApp connections</li>
+                    <li><FaCheck style={{ color: '#4ade80', flexShrink: 0, marginTop: '3px' }} /> WhatsApp Broadcasting &amp; Handoff</li>
+                  </ul>
+                  <Link href="/demo" className="glowing-btn-white" style={{ marginTop: 'auto', width: '100%' }}>
+                    Book demo
+                  </Link>
+                </div>
+
+                <div className="dark-pricing-card">
+                  <h3>Scale</h3>
+                  <div className="dark-price">₹9999<span>/month</span></div>
+                  <p style={{ color: '#a1a1aa', fontSize: '13px' }}>For teams needing higher limits and custom workflows.</p>
+                  <ul>
+                    <li><FaCheck style={{ color: '#4ade80', flexShrink: 0, marginTop: '3px' }} /> Unlimited WhatsApp Conversations &amp; Messages</li>
+                    <li><FaCheck style={{ color: '#4ade80', flexShrink: 0, marginTop: '3px' }} /> Up to 5 Active WhatsApp connections</li>
+                    <li><FaCheck style={{ color: '#4ade80', flexShrink: 0, marginTop: '3px' }} /> Custom Branding &amp; Developer APIs</li>
+                  </ul>
+                  <Link href="/demo" className="glowing-btn-white" style={{ marginTop: 'auto', width: '100%' }}>
+                    Talk to sales
+                  </Link>
+                </div>
+              </>
+            )}
           </div>
         </section>
 
         {/* FAQ ACCORDION */}
-        <section className="dark-section-card">
+        <section className="dark-section-card" style={{ marginTop: '40px' }}>
           <div className="dark-heading-center">
             <span>FAQ</span>
             <h2>Frequently Asked Questions</h2>

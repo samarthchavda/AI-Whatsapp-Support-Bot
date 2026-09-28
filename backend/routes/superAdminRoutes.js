@@ -29,6 +29,9 @@ router.post('/plans/custom', superAdminController.createCustomPlan);
 router.get('/plans', superAdminController.getAllPlans);
 router.post('/plans', superAdminController.createOrUpdatePlan);
 router.put('/plans/:id', superAdminController.createOrUpdatePlan);
+router.post('/plans/reorder', superAdminController.reorderPlans);
+router.post('/plans/:id/duplicate', superAdminController.duplicatePlan);
+router.post('/plans/:id/toggle-publish', superAdminController.togglePublishPlan);
 router.delete('/plans/:id', superAdminController.deletePlan);
 
 // Coupon management

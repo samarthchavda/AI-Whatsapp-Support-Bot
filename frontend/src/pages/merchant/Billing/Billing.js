@@ -15,6 +15,7 @@ function Billing() {
   const [couponError, setCouponError] = useState(null);
   const [verifyingCoupon, setVerifyingCoupon] = useState(false);
   const [razorpayKeyId, setRazorpayKeyId] = useState('');
+  const [selectedCycle, setSelectedCycle] = useState('monthly');
 
   useEffect(() => {
     fetchBillingData();
@@ -75,13 +76,13 @@ function Billing() {
     });
   };
 
-  const handleUpgrade = async (planName) => {
+  const handleUpgrade = async (planName, planId) => {
     if (planName === profile?.subscriptionPlan) {
       alert('You are already on this plan.');
       return;
     }
 
-    if (!window.confirm(`Proceed to subscribe to the ${planName.toUpperCase()} plan?`)) {
+    if (!window.confirm(`Proceed to subscribe to the ${planName.toUpperCase()} plan (${selectedCycle.toUpperCase()})?`)) {
       return;
     }
 
@@ -96,7 +97,7 @@ function Billing() {
       }
 
       // 2. Create Razorpay order on backend
-      const orderRes = await createRazorpayOrder(planName, activeCoupon ? activeCoupon.code : undefined);
+      const orderRes = await createRazorpayOrder(planName, activeCoupon ? activeCoupon.code : undefined, planId, selectedCycle);
       const { id, amount, currency } = orderRes.data.data;
 
       // 3. Open Razorpay checkout modal
@@ -119,7 +120,7 @@ function Billing() {
         amount: amount,
         currency: currency,
         name: 'Kwickbot AI',
-        description: `Upgrade to ${planName.toUpperCase()} Plan`,
+        description: `Subscribe to ${planName.toUpperCase()} Plan (${selectedCycle.toUpperCase()})`,
         image: '/logo.png',
         order_id: id,
         handler: async function (response) {
@@ -128,6 +129,8 @@ function Billing() {
             // 4. Verify payment signature on backend
             const verifyRes = await verifyRazorpayPayment({
               planName,
+              planId,
+              billingCycle: selectedCycle,
               razorpay_payment_id: response.razorpay_payment_id,
               razorpay_order_id: response.razorpay_order_id,
               razorpay_signature: response.razorpay_signature

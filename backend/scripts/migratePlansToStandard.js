@@ -1,75 +1,636 @@
-require('dotenv').config();
 const mongoose = require('mongoose');
-const Admin = require('../models/Admin');
+const dotenv = require('dotenv');
+const path = require('path');
+
+dotenv.config({ path: path.join(__dirname, '../.env') });
+
 const PricingPlan = require('../models/PricingPlan');
-const { PLAN_DEFINITIONS } = require('../config/planConstants');
 
-async function migrate() {
-  console.log('🔌 Connecting to MongoDB for subscription plan migration...');
-  if (!process.env.MONGODB_URI) {
-    console.error('❌ MONGODB_URI not set in environment.');
-    process.exit(1);
+const defaultPlans = [
+  // 1. Kwickbot CRM (Active & Published)
+  {
+    name: 'starter',
+    slug: 'starter',
+    displayName: 'Starter',
+    shortDescription: 'For small stores validating AI support.',
+    detailedDescription: 'Essential AI WhatsApp automation and support desk features for small merchants.',
+    category: 'kwickbot_crm',
+    currency: 'INR',
+    monthlyPrice: 1499,
+    yearlyPrice: 14990,
+    setupFee: 0,
+    connectorMaintenanceFee: 0,
+    customPricing: false,
+    contactSales: false,
+    trialEnabled: true,
+    trialDays: 14,
+    badge: null,
+    displayOrder: 1,
+    isPopular: false,
+    isActive: true,
+    isPublished: true,
+    allowedBillingCycles: ['monthly', 'yearly'],
+    permissionProfile: 'starter',
+    allowedPages: ['dashboard', 'conversations', 'knowledge-base', 'integrations', 'profile', 'billing'],
+    features: {
+      dashboardAccess: true,
+      conversations: true,
+      internalOrders: false,
+      internalInvoices: false,
+      internalLeads: false,
+      whatsappConnection: true,
+      crmConnection: false,
+      leadSync: false,
+      contactSync: false,
+      productLookup: false,
+      quotationCreation: false,
+      saleOrderCreation: false,
+      orderStatusSync: false,
+      fieldMapping: false,
+      automationRules: false,
+      customWebhooks: false,
+      developerApi: false,
+      apiKeys: false,
+      integrationLogs: false,
+      failedEventReplay: false,
+      aiAutomation: true,
+      knowledgeBase: true,
+      broadcasts: false,
+      advancedAnalytics: false,
+      humanHandoff: false,
+      customBranding: false,
+      prioritySupport: false,
+      dedicatedSupport: false,
+      customSla: false
+    },
+    usageLimits: {
+      monthlyConversations: 500,
+      monthlyMessages: 2000,
+      monthlyApiRequests: 10000,
+      monthlyWebhookDeliveries: 5000,
+      monthlyAutomationExecutions: 1000,
+      maxWhatsAppConnections: 1,
+      maxCrmConnections: 0,
+      maxActiveAutomations: 0,
+      maxApiKeys: 0,
+      maxTeamMembers: 1,
+      logRetentionDays: 30,
+      geminiTokensPerMonth: 50000
+    },
+    supportLevel: 'Standard Email Support',
+    sla: 'Best Effort'
+  },
+  {
+    name: 'growth',
+    slug: 'growth',
+    displayName: 'Growth',
+    shortDescription: 'For stores managing regular order and support volume.',
+    detailedDescription: 'Full-featured AI WhatsApp automation, broadcasts, live chat handoff, and analytics.',
+    category: 'kwickbot_crm',
+    currency: 'INR',
+    monthlyPrice: 2999,
+    yearlyPrice: 29990,
+    setupFee: 0,
+    connectorMaintenanceFee: 0,
+    customPricing: false,
+    contactSales: false,
+    trialEnabled: false,
+    trialDays: 0,
+    badge: 'BEST FIT',
+    displayOrder: 2,
+    isPopular: true,
+    isActive: true,
+    isPublished: true,
+    allowedBillingCycles: ['monthly', 'yearly'],
+    permissionProfile: 'growth',
+    allowedPages: ['dashboard', 'conversations', 'knowledge-base', 'broadcast', 'analytics', 'escalations', 'integrations', 'profile', 'billing'],
+    features: {
+      dashboardAccess: true,
+      conversations: true,
+      internalOrders: true,
+      internalInvoices: false,
+      internalLeads: true,
+      whatsappConnection: true,
+      crmConnection: false,
+      leadSync: true,
+      contactSync: true,
+      productLookup: true,
+      quotationCreation: false,
+      saleOrderCreation: false,
+      orderStatusSync: true,
+      fieldMapping: false,
+      automationRules: true,
+      customWebhooks: false,
+      developerApi: false,
+      apiKeys: false,
+      integrationLogs: true,
+      failedEventReplay: false,
+      aiAutomation: true,
+      knowledgeBase: true,
+      broadcasts: true,
+      advancedAnalytics: true,
+      humanHandoff: true,
+      customBranding: false,
+      prioritySupport: true,
+      dedicatedSupport: false,
+      customSla: false
+    },
+    usageLimits: {
+      monthlyConversations: 3000,
+      monthlyMessages: 15000,
+      monthlyApiRequests: 50000,
+      monthlyWebhookDeliveries: 25000,
+      monthlyAutomationExecutions: 10000,
+      maxWhatsAppConnections: 2,
+      maxCrmConnections: 1,
+      maxActiveAutomations: 5,
+      maxApiKeys: 1,
+      maxTeamMembers: 3,
+      logRetentionDays: 60,
+      geminiTokensPerMonth: 200000
+    },
+    supportLevel: 'Priority Email & Chat Support (under 4h)',
+    sla: '4-hour Response SLA'
+  },
+  {
+    name: 'scale',
+    slug: 'scale',
+    displayName: 'Scale',
+    shortDescription: 'For teams needing higher limits and custom workflows.',
+    detailedDescription: 'High-capacity AI automation with custom branding, developer APIs, and premium support.',
+    category: 'kwickbot_crm',
+    currency: 'INR',
+    monthlyPrice: 9999,
+    yearlyPrice: 99990,
+    setupFee: 0,
+    connectorMaintenanceFee: 0,
+    customPricing: false,
+    contactSales: false,
+    trialEnabled: false,
+    trialDays: 0,
+    badge: 'ENTERPRISE',
+    displayOrder: 3,
+    isPopular: false,
+    isActive: true,
+    isPublished: true,
+    allowedBillingCycles: ['monthly', 'yearly'],
+    permissionProfile: 'scale',
+    allowedPages: ['dashboard', 'conversations', 'knowledge-base', 'broadcast', 'analytics', 'escalations', 'templates', 'integrations', 'orders', 'leads', 'api-keys', 'profile', 'billing'],
+    features: {
+      dashboardAccess: true,
+      conversations: true,
+      internalOrders: true,
+      internalInvoices: true,
+      internalLeads: true,
+      whatsappConnection: true,
+      crmConnection: true,
+      leadSync: true,
+      contactSync: true,
+      productLookup: true,
+      quotationCreation: true,
+      saleOrderCreation: true,
+      orderStatusSync: true,
+      fieldMapping: true,
+      automationRules: true,
+      customWebhooks: true,
+      developerApi: true,
+      apiKeys: true,
+      integrationLogs: true,
+      failedEventReplay: true,
+      aiAutomation: true,
+      knowledgeBase: true,
+      broadcasts: true,
+      advancedAnalytics: true,
+      humanHandoff: true,
+      customBranding: true,
+      prioritySupport: true,
+      dedicatedSupport: true,
+      customSla: true
+    },
+    usageLimits: {
+      monthlyConversations: -1,
+      monthlyMessages: -1,
+      monthlyApiRequests: -1,
+      monthlyWebhookDeliveries: -1,
+      monthlyAutomationExecutions: -1,
+      maxWhatsAppConnections: 5,
+      maxCrmConnections: 3,
+      maxActiveAutomations: -1,
+      maxApiKeys: 5,
+      maxTeamMembers: 10,
+      logRetentionDays: 180,
+      geminiTokensPerMonth: -1
+    },
+    supportLevel: 'Dedicated Account Manager & 24/7 Phone',
+    sla: '99.9% Uptime & 1-hour Response SLA'
+  },
+
+  // 2. CRM Integration (Draft / Unpublished)
+  {
+    name: 'crm_connect',
+    slug: 'crm-connect',
+    displayName: 'CRM Connect',
+    shortDescription: 'Connect WhatsApp support with your existing CRM.',
+    detailedDescription: 'Bi-directional lead and contact synchronization with custom field mapping.',
+    category: 'crm_integration',
+    currency: 'INR',
+    monthlyPrice: 3499,
+    yearlyPrice: 34990,
+    setupFee: 1499,
+    connectorMaintenanceFee: 499,
+    customPricing: false,
+    contactSales: false,
+    trialEnabled: false,
+    trialDays: 0,
+    badge: 'DRAFT',
+    displayOrder: 1,
+    isPopular: false,
+    isActive: true,
+    isPublished: false,
+    allowedBillingCycles: ['monthly', 'yearly'],
+    permissionProfile: 'crm_basic',
+    allowedPages: ['dashboard', 'conversations', 'integrations', 'leads', 'profile', 'billing'],
+    features: {
+      dashboardAccess: true,
+      conversations: true,
+      crmConnection: true,
+      leadSync: true,
+      contactSync: true,
+      fieldMapping: true,
+      orderStatusSync: true
+    },
+    usageLimits: {
+      monthlyConversations: 2000,
+      monthlyMessages: 10000,
+      maxCrmConnections: 1,
+      maxWhatsAppConnections: 1
+    },
+    supportLevel: 'Email Support',
+    sla: '12-hour Response SLA'
+  },
+  {
+    name: 'crm_automation',
+    slug: 'crm-automation',
+    displayName: 'CRM Automation',
+    shortDescription: 'Advanced automated sales & support workflow triggers for CRM.',
+    detailedDescription: 'Automatic sale order creation, quotation creation, and failed event replays.',
+    category: 'crm_integration',
+    currency: 'INR',
+    monthlyPrice: 6999,
+    yearlyPrice: 69990,
+    setupFee: 2999,
+    connectorMaintenanceFee: 999,
+    customPricing: false,
+    contactSales: false,
+    trialEnabled: false,
+    trialDays: 0,
+    badge: 'DRAFT',
+    displayOrder: 2,
+    isPopular: false,
+    isActive: true,
+    isPublished: false,
+    allowedBillingCycles: ['monthly', 'yearly'],
+    permissionProfile: 'crm_advanced',
+    allowedPages: ['dashboard', 'conversations', 'integrations', 'orders', 'leads', 'analytics', 'profile', 'billing'],
+    features: {
+      dashboardAccess: true,
+      conversations: true,
+      crmConnection: true,
+      leadSync: true,
+      contactSync: true,
+      quotationCreation: true,
+      saleOrderCreation: true,
+      orderStatusSync: true,
+      fieldMapping: true,
+      automationRules: true,
+      failedEventReplay: true
+    },
+    usageLimits: {
+      monthlyConversations: 5000,
+      monthlyMessages: 25000,
+      maxCrmConnections: 2,
+      maxWhatsAppConnections: 2
+    },
+    supportLevel: 'Priority Email & Chat Support',
+    sla: '4-hour Response SLA'
+  },
+  {
+    name: 'crm_enterprise',
+    slug: 'crm-enterprise',
+    displayName: 'CRM Enterprise',
+    shortDescription: 'Tailored enterprise CRM synchronization & Odoo ERP integration.',
+    detailedDescription: 'Custom integration architecture, unlimited sync operations, and custom SLA.',
+    category: 'crm_integration',
+    currency: 'INR',
+    monthlyPrice: 0,
+    yearlyPrice: 0,
+    setupFee: 0,
+    connectorMaintenanceFee: 0,
+    customPricing: true,
+    contactSales: true,
+    trialEnabled: false,
+    trialDays: 0,
+    badge: 'ENTERPRISE',
+    displayOrder: 3,
+    isPopular: false,
+    isActive: true,
+    isPublished: false,
+    allowedBillingCycles: ['monthly', 'yearly'],
+    permissionProfile: 'enterprise',
+    allowedPages: ['dashboard', 'conversations', 'knowledge-base', 'broadcast', 'analytics', 'escalations', 'templates', 'integrations', 'orders', 'leads', 'api-keys', 'profile', 'billing'],
+    features: {
+      dashboardAccess: true,
+      conversations: true,
+      crmConnection: true,
+      leadSync: true,
+      contactSync: true,
+      quotationCreation: true,
+      saleOrderCreation: true,
+      orderStatusSync: true,
+      fieldMapping: true,
+      automationRules: true,
+      customWebhooks: true,
+      developerApi: true,
+      apiKeys: true,
+      integrationLogs: true,
+      failedEventReplay: true,
+      customSla: true
+    },
+    usageLimits: {
+      monthlyConversations: -1,
+      monthlyMessages: -1,
+      maxCrmConnections: -1,
+      maxWhatsAppConnections: -1
+    },
+    supportLevel: 'Dedicated Account Manager',
+    sla: 'Custom Enterprise SLA'
+  },
+
+  // 3. WhatsApp API (Draft / Unpublished)
+  {
+    name: 'api_starter',
+    slug: 'api-starter',
+    displayName: 'API Starter',
+    shortDescription: 'Official WhatsApp Cloud API endpoint access for developers.',
+    detailedDescription: 'Developer API access, webhook subscriptions, and key management.',
+    category: 'whatsapp_api',
+    currency: 'INR',
+    monthlyPrice: 1999,
+    yearlyPrice: 19990,
+    setupFee: 0,
+    connectorMaintenanceFee: 0,
+    customPricing: false,
+    contactSales: false,
+    trialEnabled: false,
+    trialDays: 0,
+    badge: 'DRAFT',
+    displayOrder: 1,
+    isPopular: false,
+    isActive: true,
+    isPublished: false,
+    allowedBillingCycles: ['monthly', 'yearly'],
+    permissionProfile: 'api_basic',
+    allowedPages: ['dashboard', 'conversations', 'api-keys', 'integrations', 'profile', 'billing'],
+    features: {
+      dashboardAccess: true,
+      conversations: true,
+      whatsappConnection: true,
+      developerApi: true,
+      apiKeys: true,
+      customWebhooks: true
+    },
+    usageLimits: {
+      monthlyApiRequests: 50000,
+      monthlyWebhookDeliveries: 25000,
+      maxApiKeys: 2,
+      maxWhatsAppConnections: 1
+    },
+    supportLevel: 'Developer Forum & Email',
+    sla: 'Best Effort'
+  },
+  {
+    name: 'api_growth',
+    slug: 'api-growth',
+    displayName: 'API Growth',
+    shortDescription: 'High-throughput WhatsApp Cloud API infrastructure.',
+    detailedDescription: 'Higher API rate limits, webhooks, failed event replays, and integration logs.',
+    category: 'whatsapp_api',
+    currency: 'INR',
+    monthlyPrice: 4999,
+    yearlyPrice: 49990,
+    setupFee: 0,
+    connectorMaintenanceFee: 0,
+    customPricing: false,
+    contactSales: false,
+    trialEnabled: false,
+    trialDays: 0,
+    badge: 'DRAFT',
+    displayOrder: 2,
+    isPopular: false,
+    isActive: true,
+    isPublished: false,
+    allowedBillingCycles: ['monthly', 'yearly'],
+    permissionProfile: 'api_advanced',
+    allowedPages: ['dashboard', 'conversations', 'api-keys', 'integrations', 'analytics', 'profile', 'billing'],
+    features: {
+      dashboardAccess: true,
+      conversations: true,
+      whatsappConnection: true,
+      developerApi: true,
+      apiKeys: true,
+      customWebhooks: true,
+      integrationLogs: true,
+      failedEventReplay: true
+    },
+    usageLimits: {
+      monthlyApiRequests: 250000,
+      monthlyWebhookDeliveries: 100000,
+      maxApiKeys: 5,
+      maxWhatsAppConnections: 3
+    },
+    supportLevel: 'Priority Technical Support',
+    sla: '4-hour Response SLA'
+  },
+  {
+    name: 'api_enterprise',
+    slug: 'api-enterprise',
+    displayName: 'API Enterprise',
+    shortDescription: 'Custom high-throughput WhatsApp Cloud API pipeline for heavy enterprise loads.',
+    detailedDescription: 'Unlimited API throughput, custom webhook endpoints, and dedicated throughput pipeline.',
+    category: 'whatsapp_api',
+    currency: 'INR',
+    monthlyPrice: 0,
+    yearlyPrice: 0,
+    setupFee: 0,
+    connectorMaintenanceFee: 0,
+    customPricing: true,
+    contactSales: true,
+    trialEnabled: false,
+    trialDays: 0,
+    badge: 'ENTERPRISE',
+    displayOrder: 3,
+    isPopular: false,
+    isActive: true,
+    isPublished: false,
+    allowedBillingCycles: ['monthly', 'yearly'],
+    permissionProfile: 'enterprise',
+    allowedPages: ['dashboard', 'conversations', 'api-keys', 'integrations', 'analytics', 'profile', 'billing'],
+    features: {
+      dashboardAccess: true,
+      conversations: true,
+      whatsappConnection: true,
+      developerApi: true,
+      apiKeys: true,
+      customWebhooks: true,
+      integrationLogs: true,
+      failedEventReplay: true,
+      dedicatedSupport: true,
+      customSla: true
+    },
+    usageLimits: {
+      monthlyApiRequests: -1,
+      monthlyWebhookDeliveries: -1,
+      maxApiKeys: -1,
+      maxWhatsAppConnections: -1
+    },
+    supportLevel: 'Dedicated Technical Account Manager',
+    sla: '99.99% Uptime & 1-hour SLA'
+  },
+
+  // 4. Enterprise Custom (Draft / Unpublished)
+  {
+    name: 'custom_automation',
+    slug: 'custom-automation',
+    displayName: 'Custom Automation',
+    shortDescription: 'Fully tailored multi-channel AI and CRM automation solution.',
+    detailedDescription: 'Bespoke AI logic, custom ERP integrations, dedicated server deployment, and custom SLA.',
+    category: 'enterprise_custom',
+    currency: 'INR',
+    monthlyPrice: 0,
+    yearlyPrice: 0,
+    setupFee: 0,
+    connectorMaintenanceFee: 0,
+    customPricing: true,
+    contactSales: true,
+    trialEnabled: false,
+    trialDays: 0,
+    badge: 'CUSTOM',
+    displayOrder: 1,
+    isPopular: false,
+    isActive: true,
+    isPublished: false,
+    allowedBillingCycles: ['monthly', 'yearly'],
+    permissionProfile: 'enterprise',
+    allowedPages: ['dashboard', 'conversations', 'knowledge-base', 'broadcast', 'analytics', 'escalations', 'templates', 'integrations', 'orders', 'leads', 'api-keys', 'profile', 'billing'],
+    features: {
+      dashboardAccess: true,
+      conversations: true,
+      internalOrders: true,
+      internalInvoices: true,
+      internalLeads: true,
+      whatsappConnection: true,
+      crmConnection: true,
+      leadSync: true,
+      contactSync: true,
+      productLookup: true,
+      quotationCreation: true,
+      saleOrderCreation: true,
+      orderStatusSync: true,
+      fieldMapping: true,
+      automationRules: true,
+      customWebhooks: true,
+      developerApi: true,
+      apiKeys: true,
+      integrationLogs: true,
+      failedEventReplay: true,
+      aiAutomation: true,
+      knowledgeBase: true,
+      broadcasts: true,
+      advancedAnalytics: true,
+      humanHandoff: true,
+      customBranding: true,
+      prioritySupport: true,
+      dedicatedSupport: true,
+      customSla: true
+    },
+    usageLimits: {
+      monthlyConversations: -1,
+      monthlyMessages: -1,
+      monthlyApiRequests: -1,
+      monthlyWebhookDeliveries: -1,
+      monthlyAutomationExecutions: -1,
+      maxWhatsAppConnections: -1,
+      maxCrmConnections: -1,
+      maxActiveAutomations: -1,
+      maxApiKeys: -1,
+      maxTeamMembers: -1,
+      logRetentionDays: 365,
+      geminiTokensPerMonth: -1
+    },
+    supportLevel: 'Dedicated Solutions Architect & 24/7 Line',
+    sla: 'Custom Dedicated SLA'
   }
+];
 
-  await mongoose.connect(process.env.MONGODB_URI);
-  console.log('✅ Connected to MongoDB');
-
-  // 1. Update Admin documents from legacy plan names ('professional' -> 'growth', 'enterprise' -> 'scale')
-  const professionalAdmins = await Admin.updateMany(
-    { subscriptionPlan: 'professional' },
-    { $set: { subscriptionPlan: 'growth' } }
-  );
-  console.log(`✅ Migrated ${professionalAdmins.modifiedCount} Admin accounts from 'professional' to 'growth'.`);
-
-  const enterpriseAdmins = await Admin.updateMany(
-    { subscriptionPlan: 'enterprise' },
-    { $set: { subscriptionPlan: 'scale' } }
-  );
-  console.log(`✅ Migrated ${enterpriseAdmins.modifiedCount} Admin accounts from 'enterprise' to 'scale'.`);
-
-  // 2. Ensure PricingPlan collection entries match official definitions
-  for (const [key, def] of Object.entries(PLAN_DEFINITIONS)) {
-    if (key === 'custom') continue;
-
-    let existing = await PricingPlan.findOne({ name: key });
-    if (!existing && key === 'growth') {
-      existing = await PricingPlan.findOne({ name: 'professional' });
-    }
-    if (!existing && key === 'scale') {
-      existing = await PricingPlan.findOne({ name: 'enterprise' });
+async function runMigration() {
+  try {
+    const mongoUri = process.env.MONGODB_URI || 'mongodb://localhost:27017/whatsapp_ai_db';
+    if (mongoose.connection.readyState === 0) {
+      console.log('🔄 Connecting to MongoDB for pricing plan migration...');
+      await mongoose.connect(mongoUri);
+      console.log('✅ Connected to MongoDB.');
     }
 
-    if (existing) {
-      existing.name = def.name;
-      existing.displayName = def.displayName;
-      existing.monthlyPrice = def.monthlyPrice;
-      existing.description = def.description;
-      existing.features = def.features;
-      await existing.save();
-      console.log(`✅ Updated PricingPlan record for '${def.name}' (₹${def.monthlyPrice}/mo)`);
-    } else {
-      const newPlan = new PricingPlan({
-        name: def.name,
-        displayName: def.displayName,
-        monthlyPrice: def.monthlyPrice,
-        description: def.description,
-        features: def.features,
-        isActive: true
+    let createdCount = 0;
+    let updatedCount = 0;
+
+    for (const planData of defaultPlans) {
+      const existing = await PricingPlan.findOne({
+        $or: [{ name: planData.name }, { slug: planData.slug }]
       });
-      await newPlan.save();
-      console.log(`✨ Created new PricingPlan record for '${def.name}' (₹${def.monthlyPrice}/mo)`);
+
+      if (!existing) {
+        await PricingPlan.create(planData);
+        console.log(`✨ Created new plan: ${planData.displayName} (${planData.category})`);
+        createdCount++;
+      } else {
+        // Update existing plan preserving current price if customized
+        existing.category = existing.category || planData.category;
+        existing.displayName = existing.displayName || planData.displayName;
+        existing.slug = existing.slug || planData.slug;
+        existing.allowedBillingCycles = existing.allowedBillingCycles?.length ? existing.allowedBillingCycles : planData.allowedBillingCycles;
+        existing.permissionProfile = existing.permissionProfile || planData.permissionProfile;
+        existing.allowedPages = (existing.allowedPages && existing.allowedPages.length > 0) ? existing.allowedPages : planData.allowedPages;
+        
+        // Merge features safely
+        existing.features = { ...planData.features, ...existing.features };
+        existing.usageLimits = { ...planData.usageLimits, ...existing.usageLimits };
+
+        if (existing.isPublished === undefined) {
+          existing.isPublished = planData.isPublished;
+        }
+
+        await existing.save();
+        console.log(`🔄 Updated existing plan: ${existing.name}`);
+        updatedCount++;
+      }
     }
+
+    console.log(`\n🎉 Pricing plan migration completed! Created: ${createdCount}, Preserved/Updated: ${updatedCount}`);
+    return { createdCount, updatedCount };
+  } catch (error) {
+    console.error('❌ Error running pricing plan migration:', error);
+    throw error;
   }
-
-  // Remove any remaining old legacy PricingPlan documents
-  await PricingPlan.deleteMany({ name: { $in: ['professional', 'enterprise'] } });
-  console.log('🧹 Purged remaining legacy PricingPlan records (professional, enterprise).');
-
-  await mongoose.disconnect();
-  console.log('🔌 Disconnected from MongoDB. Migration completed successfully!');
 }
 
-migrate().catch(err => {
-  console.error('❌ Migration failed:', err);
-  process.exit(1);
-});
+if (require.main === module) {
+  runMigration()
+    .then(() => {
+      mongoose.disconnect();
+      process.exit(0);
+    })
+    .catch(() => process.exit(1));
+}
+
+module.exports = { defaultPlans, runMigration };

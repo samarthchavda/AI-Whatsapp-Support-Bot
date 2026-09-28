@@ -83,10 +83,19 @@ const adminSchema = new mongoose.Schema({
     sparse: true
   },
   // Subscription fields
+  pricingPlanId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'PricingPlan',
+    default: null
+  },
   subscriptionPlan: {
     type: String,
-    enum: ['starter', 'growth', 'scale', 'custom', 'enterprise', 'professional', 'pro', 'free'],
     default: 'starter'
+  },
+  billingCycle: {
+    type: String,
+    enum: ['monthly', 'yearly'],
+    default: 'monthly'
   },
   subscriptionStatus: {
     type: String,

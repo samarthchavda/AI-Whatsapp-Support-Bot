@@ -226,6 +226,7 @@ router.post('/change-password', verifyToken, authController.changePassword);
  *       200:
  *         description: List of available pricing plans
  */
+router.get('/plans/public', authController.getPublicPlans);
 router.get('/plans', verifyToken, authController.getPlans);
 
 /**

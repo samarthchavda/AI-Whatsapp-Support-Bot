@@ -1,14 +1,117 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { FaCog, FaPlus, FaEdit, FaTrash, FaCheck, FaTicketAlt } from 'react-icons/fa';
+import { FaCog, FaPlus, FaEdit, FaTrash, FaCheck, FaTicketAlt, FaCopy, FaEye, FaEyeSlash, FaArrowUp, FaArrowDown, FaInfoCircle } from 'react-icons/fa';
 import '../Dashboard/SuperAdmin.css';
 
 const API_BASE = process.env.REACT_APP_API_URL || (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' ? 'http://localhost:5001/api' : '/api');
+
+const CATEGORY_OPTIONS = [
+  { id: 'kwickbot_crm', name: 'Kwickbot CRM' },
+  { id: 'crm_integration', name: 'CRM Integration' },
+  { id: 'whatsapp_api', name: 'WhatsApp API' },
+  { id: 'enterprise_custom', name: 'Enterprise Custom' }
+];
+
+const AVAILABLE_PAGES = [
+  'dashboard', 'conversations', 'knowledge-base', 'broadcast', 'analytics',
+  'escalations', 'templates', 'integrations', 'orders', 'leads', 'api-keys', 'profile', 'billing'
+];
+
+const FEATURE_KEYS = [
+  { key: 'dashboardAccess', label: 'Dashboard Access' },
+  { key: 'conversations', label: 'Conversations & Live Chat' },
+  { key: 'internalOrders', label: 'Internal Orders Management' },
+  { key: 'internalInvoices', label: 'Internal Invoices Management' },
+  { key: 'internalLeads', label: 'Internal Leads CRM' },
+  { key: 'whatsappConnection', label: 'WhatsApp Connection' },
+  { key: 'crmConnection', label: 'CRM / ERP Bi-directional Sync' },
+  { key: 'leadSync', label: 'Automated Lead Sync' },
+  { key: 'contactSync', label: 'Automated Contact Sync' },
+  { key: 'productLookup', label: 'Catalog / Product Lookup' },
+  { key: 'quotationCreation', label: 'Quotation Creation' },
+  { key: 'saleOrderCreation', label: 'Sale Order Creation' },
+  { key: 'orderStatusSync', label: 'Order Status Sync & Cancellations' },
+  { key: 'fieldMapping', label: 'Custom Field Mapping' },
+  { key: 'automationRules', label: 'Automation Rules Engine' },
+  { key: 'customWebhooks', label: 'Custom Webhook Triggers' },
+  { key: 'developerApi', label: 'Developer REST API Access' },
+  { key: 'apiKeys', label: 'API Keys Management' },
+  { key: 'integrationLogs', label: 'Integration & Audit Logs' },
+  { key: 'failedEventReplay', label: 'Failed Event Replay' },
+  { key: 'aiAutomation', label: 'AI Knowledge Base Support' },
+  { key: 'knowledgeBase', label: 'Knowledge Base Uploads' },
+  { key: 'broadcasts', label: 'WhatsApp Broadcast Campaigns' },
+  { key: 'advancedAnalytics', label: 'Advanced Analytics Dashboard' },
+  { key: 'humanHandoff', label: 'Automatic Human Handoff' },
+  { key: 'customBranding', label: 'Custom Branding / White Labeling' },
+  { key: 'prioritySupport', label: 'Priority Support' },
+  { key: 'dedicatedSupport', label: 'Dedicated Account Manager' },
+  { key: 'customSla', label: 'Custom Enterprise SLA' }
+];
+
+const USAGE_LIMIT_KEYS = [
+  { key: 'monthlyConversations', label: 'Monthly Conversations (-1 for unlimited)' },
+  { key: 'monthlyMessages', label: 'Monthly Messages (-1 for unlimited)' },
+  { key: 'monthlyApiRequests', label: 'Monthly API Requests (-1 for unlimited)' },
+  { key: 'monthlyWebhookDeliveries', label: 'Monthly Webhook Deliveries (-1 for unlimited)' },
+  { key: 'monthlyAutomationExecutions', label: 'Monthly Automation Executions (-1 for unlimited)' },
+  { key: 'maxWhatsAppConnections', label: 'Max WhatsApp Connections (-1 for unlimited)' },
+  { key: 'maxCrmConnections', label: 'Max CRM Connections (-1 for unlimited)' },
+  { key: 'maxActiveAutomations', label: 'Max Active Automations (-1 for unlimited)' },
+  { key: 'maxApiKeys', label: 'Max API Keys (-1 for unlimited)' },
+  { key: 'maxTeamMembers', label: 'Max Team Members (-1 for unlimited)' },
+  { key: 'logRetentionDays', label: 'Log Retention Days' },
+  { key: 'geminiTokensPerMonth', label: 'AI Gemini Tokens / Month (-1 for unlimited)' }
+];
+
+const DEFAULT_FORM_DATA = {
+  name: '',
+  slug: '',
+  displayName: '',
+  shortDescription: '',
+  detailedDescription: '',
+  category: 'kwickbot_crm',
+  currency: 'INR',
+  monthlyPrice: 0,
+  yearlyPrice: 0,
+  setupFee: 0,
+  connectorMaintenanceFee: 0,
+  customPricing: false,
+  contactSales: false,
+  trialEnabled: false,
+  trialDays: 14,
+  badge: '',
+  displayOrder: 0,
+  isPopular: false,
+  isActive: true,
+  isPublished: true,
+  allowedBillingCycles: ['monthly', 'yearly'],
+  permissionProfile: 'default',
+  allowedPages: ['dashboard', 'conversations', 'knowledge-base', 'integrations', 'profile', 'billing'],
+  features: FEATURE_KEYS.reduce((acc, f) => ({ ...acc, [f.key]: false }), { dashboardAccess: true, conversations: true }),
+  usageLimits: {
+    monthlyConversations: 500,
+    monthlyMessages: 2000,
+    monthlyApiRequests: 10000,
+    monthlyWebhookDeliveries: 5000,
+    monthlyAutomationExecutions: 1000,
+    maxWhatsAppConnections: 1,
+    maxCrmConnections: 0,
+    maxActiveAutomations: 0,
+    maxApiKeys: 0,
+    maxTeamMembers: 1,
+    logRetentionDays: 30,
+    geminiTokensPerMonth: 50000
+  },
+  supportLevel: 'Standard Email Support',
+  sla: 'Best Effort'
+};
 
 function PlanManager() {
   const [plans, setPlans] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('plans'); // 'plans' or 'coupons'
+  const [filterCategory, setFilterCategory] = useState('all');
   
   // Coupon States
   const [coupons, setCoupons] = useState([]);
@@ -16,29 +119,11 @@ function PlanManager() {
   const [couponLoading, setCouponLoading] = useState(false);
   const [newCoupon, setNewCoupon] = useState({ code: '', discountPercent: 10, expiresAt: '' });
 
+  // Plan Form & Modal States
   const [showModal, setShowModal] = useState(false);
   const [editingPlan, setEditingPlan] = useState(null);
-  const [formData, setFormData] = useState({
-    name: '',
-    displayName: '',
-    description: '',
-    monthlyPrice: 0,
-    yearlyPrice: null,
-    badge: null,
-    features: {
-      maxConversations: -1,
-      maxMessages: -1,
-      geminiTokensPerMonth: 10000,
-      maxWhatsAppConnections: 1,
-      advancedAnalytics: false,
-      customBranding: false,
-      liveChat: false,
-      knowledgeBase: false,
-      integrations: false,
-      apiAccess: false,
-      prioritySupport: false
-    }
-  });
+  const [formSection, setFormSection] = useState(1); // 1 to 9
+  const [formData, setFormData] = useState(DEFAULT_FORM_DATA);
 
   useEffect(() => {
     fetchPlans();
@@ -105,14 +190,12 @@ function PlanManager() {
   const handleToggleCoupon = async (couponId) => {
     try {
       const token = localStorage.getItem('token') || localStorage.getItem('accessToken');
-      const response = await axios.post(
+      await axios.post(
         `${API_BASE}/super-admin/coupons/${couponId}/toggle`,
         {},
         { headers: { Authorization: `Bearer ${token}` } }
       );
-      if (response.data.success) {
-        fetchCoupons();
-      }
+      fetchCoupons();
     } catch (err) {
       alert('Failed to update coupon status');
     }
@@ -122,69 +205,55 @@ function PlanManager() {
     if (!window.confirm('Are you sure you want to delete this promo code?')) return;
     try {
       const token = localStorage.getItem('token') || localStorage.getItem('accessToken');
-      const response = await axios.delete(
-        `${API_BASE}/super-admin/coupons/${couponId}`,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      if (response.data.success) {
-        alert('Coupon deleted successfully!');
-        fetchCoupons();
-      }
+      await axios.delete(`${API_BASE}/super-admin/coupons/${couponId}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      fetchCoupons();
     } catch (err) {
       alert('Failed to delete coupon');
     }
   };
 
   const handleOpenModal = (plan = null) => {
+    setFormSection(1);
     if (plan) {
       setEditingPlan(plan);
       setFormData({
+        ...DEFAULT_FORM_DATA,
         ...plan,
         features: {
-          maxConversations: -1,
-          maxMessages: -1,
-          geminiTokensPerMonth: 10000,
-          maxWhatsAppConnections: 1,
-          advancedAnalytics: false,
-          customBranding: false,
-          liveChat: false,
-          knowledgeBase: false,
-          integrations: false,
-          apiAccess: false,
-          prioritySupport: false,
+          ...DEFAULT_FORM_DATA.features,
           ...plan.features
+        },
+        usageLimits: {
+          ...DEFAULT_FORM_DATA.usageLimits,
+          ...plan.usageLimits
         }
       });
     } else {
       setEditingPlan(null);
-      setFormData({
-        name: '',
-        displayName: '',
-        description: '',
-        monthlyPrice: 0,
-        yearlyPrice: null,
-        badge: null,
-        features: {
-          maxConversations: -1,
-          maxMessages: -1,
-          geminiTokensPerMonth: 10000,
-          maxWhatsAppConnections: 1,
-          advancedAnalytics: false,
-          customBranding: false,
-          liveChat: false,
-          knowledgeBase: false,
-          integrations: false,
-          apiAccess: false,
-          prioritySupport: false
-        }
-      });
+      setFormData(DEFAULT_FORM_DATA);
     }
     setShowModal(true);
   };
 
   const handleSavePlan = async () => {
+    if (!formData.name.trim() || !formData.displayName.trim()) {
+      alert('Plan Name and Display Name are required');
+      return;
+    }
+
+    if (Number(formData.monthlyPrice) < 0 || Number(formData.yearlyPrice) < 0) {
+      alert('Prices cannot be negative');
+      return;
+    }
+
+    if (!formData.contactSales && (!formData.allowedBillingCycles || formData.allowedBillingCycles.length === 0)) {
+      alert('At least one billing cycle must be enabled unless Contact Sales is checked');
+      return;
+    }
+
     const token = localStorage.getItem('token') || localStorage.getItem('accessToken');
-    
     try {
       if (editingPlan) {
         await axios.put(
@@ -208,22 +277,72 @@ function PlanManager() {
     }
   };
 
-  const handleDeletePlan = async (planId) => {
-    if (!window.confirm('Delete this pricing plan?')) return;
-
+  const handleDuplicatePlan = async (planId) => {
     const token = localStorage.getItem('token') || localStorage.getItem('accessToken');
-    
     try {
-      await axios.delete(
-        `${API_BASE}/super-admin/plans/${planId}`,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+      await axios.post(`${API_BASE}/super-admin/plans/${planId}/duplicate`, {}, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      alert('Plan duplicated cleanly as draft!');
+      fetchPlans();
+    } catch (error) {
+      alert(error.response?.data?.error || 'Failed to duplicate plan');
+    }
+  };
+
+  const handleTogglePublish = async (planId, currentPublishStatus) => {
+    const token = localStorage.getItem('token') || localStorage.getItem('accessToken');
+    try {
+      await axios.post(`${API_BASE}/super-admin/plans/${planId}/toggle-publish`, {
+        isPublished: !currentPublishStatus
+      }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      fetchPlans();
+    } catch (error) {
+      alert(error.response?.data?.error || 'Failed to toggle publish status');
+    }
+  };
+
+  const handleDeletePlan = async (planId) => {
+    if (!window.confirm('Are you sure you want to delete this pricing plan?')) return;
+    const token = localStorage.getItem('token') || localStorage.getItem('accessToken');
+    try {
+      await axios.delete(`${API_BASE}/super-admin/plans/${planId}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
       alert('Plan deleted successfully');
       fetchPlans();
     } catch (error) {
-      alert('Failed to delete plan');
+      alert(error.response?.data?.error || 'Failed to delete plan');
     }
   };
+
+  const handleMoveOrder = async (index, direction) => {
+    const newPlans = [...plans];
+    const targetIndex = direction === 'up' ? index - 1 : index + 1;
+    if (targetIndex < 0 || targetIndex >= newPlans.length) return;
+
+    const temp = newPlans[index].displayOrder;
+    newPlans[index].displayOrder = newPlans[targetIndex].displayOrder;
+    newPlans[targetIndex].displayOrder = temp;
+
+    const planOrders = newPlans.map(p => ({ id: p._id, displayOrder: p.displayOrder }));
+    const token = localStorage.getItem('token') || localStorage.getItem('accessToken');
+
+    try {
+      await axios.post(`${API_BASE}/super-admin/plans/reorder`, { planOrders }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      fetchPlans();
+    } catch (err) {
+      alert('Failed to reorder plans');
+    }
+  };
+
+  const displayedPlans = filterCategory === 'all'
+    ? plans
+    : plans.filter(p => p.category === filterCategory);
 
   if (loading) {
     return <div className="container"><div style={{ padding: '40px', textAlign: 'center', color: '#71717a' }}>Loading plans...</div></div>;
@@ -235,9 +354,9 @@ function PlanManager() {
         <div>
           <h1 className="page-title">
             <FaCog style={{ color: '#f59e0b', marginRight: '12px' }} />
-            Pricing Plan & Coupon Manager
+            Dynamic Pricing Plan & Coupon Manager
           </h1>
-          <p className="page-subtitle">Create and manage subscription plans and discount codes</p>
+          <p className="page-subtitle">Configure subscription tiers, monthly/yearly pricing, features, limits, and permissions</p>
         </div>
         {activeTab === 'plans' ? (
           <button onClick={() => handleOpenModal()} className="btn-primary">
@@ -250,296 +369,596 @@ function PlanManager() {
         )}
       </div>
 
-      {/* Tabs */}
-      <div className="super-admin-tabs" style={{ display: 'flex', gap: '16px', marginBottom: '24px', borderBottom: '1px solid var(--border-subtle)', paddingBottom: '12px' }}>
-        <button 
-          onClick={() => setActiveTab('plans')}
-          className={`tab-btn ${activeTab === 'plans' ? 'active' : ''}`}
-          style={{
-            background: 'none',
-            border: 'none',
-            color: activeTab === 'plans' ? 'var(--accent)' : 'var(--text-secondary)',
-            fontWeight: '600',
-            fontSize: '15px',
-            cursor: 'pointer',
-            padding: '8px 16px',
-            borderBottom: activeTab === 'plans' ? '2px solid var(--accent)' : 'none',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px'
-          }}
-        >
-          <FaCog /> Subscription Plans
-        </button>
-        <button 
-          onClick={() => setActiveTab('coupons')}
-          className={`tab-btn ${activeTab === 'coupons' ? 'active' : ''}`}
-          style={{
-            background: 'none',
-            border: 'none',
-            color: activeTab === 'coupons' ? 'var(--accent)' : 'var(--text-secondary)',
-            fontWeight: '600',
-            fontSize: '15px',
-            cursor: 'pointer',
-            padding: '8px 16px',
-            borderBottom: activeTab === 'coupons' ? '2px solid var(--accent)' : 'none',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px'
-          }}
-        >
-          <FaTicketAlt /> Discount Codes
-        </button>
-      </div>
+      {/* TABS & CATEGORY FILTER */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', flexWrap: 'wrap', gap: '12px' }}>
+        <div style={{ display: 'flex', gap: '8px' }}>
+          <button
+            onClick={() => setActiveTab('plans')}
+            style={{
+              padding: '10px 20px',
+              borderRadius: '8px',
+              border: 'none',
+              background: activeTab === 'plans' ? '#6366f1' : 'rgba(255,255,255,0.06)',
+              color: '#ffffff',
+              fontWeight: '600',
+              cursor: 'pointer'
+            }}
+          >
+            Pricing Plans ({plans.length})
+          </button>
+          <button
+            onClick={() => setActiveTab('coupons')}
+            style={{
+              padding: '10px 20px',
+              borderRadius: '8px',
+              border: 'none',
+              background: activeTab === 'coupons' ? '#6366f1' : 'rgba(255,255,255,0.06)',
+              color: '#ffffff',
+              fontWeight: '600',
+              cursor: 'pointer'
+            }}
+          >
+            <FaTicketAlt style={{ marginRight: '6px' }} />
+            Promo Coupons ({coupons.length})
+          </button>
+        </div>
 
-      {activeTab === 'plans' && (
-        plans.length === 0 ? (
-          <div style={{
-            background: 'var(--bg-secondary)',
-            border: '1px dashed var(--border-color)',
-            borderRadius: '16px',
-            padding: '48px 24px',
-            textAlign: 'center',
-            marginTop: '24px'
-          }}>
-            <FaCog style={{ fontSize: '48px', color: 'var(--accent)', marginBottom: '16px', opacity: 0.8 }} />
-            <h3 style={{ color: 'var(--text-primary)', fontSize: '20px', fontWeight: '600', marginBottom: '8px' }}>No Pricing Plans Found</h3>
-            <p style={{ color: 'var(--text-secondary)', fontSize: '14px', maxWidth: '480px', margin: '0 auto 24px' }}>
-              Create subscription plans to offer your merchants Starter, Growth, or Enterprise scale packages.
-            </p>
-            <button 
-              onClick={() => handleOpenModal()} 
-              className="btn-primary"
+        {activeTab === 'plans' && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span style={{ fontSize: '13px', color: '#a1a1aa' }}>Category:</span>
+            <select
+              value={filterCategory}
+              onChange={(e) => setFilterCategory(e.target.value)}
               style={{
-                background: 'linear-gradient(135deg, #1677ff 0%, #0958d9 100%)',
+                background: 'rgba(24,24,27,0.9)',
+                border: '1px solid rgba(255,255,255,0.15)',
                 color: '#ffffff',
-                border: 'none',
-                padding: '10px 24px',
-                borderRadius: '8px',
-                fontWeight: '600',
-                cursor: 'pointer',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '8px'
+                padding: '6px 12px',
+                borderRadius: '6px',
+                fontSize: '13px'
               }}
             >
-              <FaPlus /> Create First Plan
-            </button>
+              <option value="all">All Categories</option>
+              {CATEGORY_OPTIONS.map(c => (
+                <option key={c.id} value={c.id}>{c.name}</option>
+              ))}
+            </select>
           </div>
-        ) : (
-          <div className="plans-grid">
-            {plans.map((plan) => (
-              <div key={plan._id} className="plan-card">
-                <div className="plan-badge">
-                  {plan.badge && <span className="badge-text">{plan.badge}</span>}
-                </div>
+        )}
+      </div>
 
-                <h2 className="plan-name">{plan.displayName}</h2>
-                <p className="plan-description">{plan.description}</p>
-
-                <div className="plan-price">
-                  <span className="price">₹{plan.monthlyPrice}</span>
-                  <span className="period">/month</span>
-                </div>
-
-                {plan.yearlyPrice && (
-                  <div className="yearly-price">
-                    ₹{plan.yearlyPrice}/year (Save {Math.round((1 - plan.yearlyPrice / (plan.monthlyPrice * 12)) * 100)}%)
-                  </div>
-                )}
-
-                <div className="plan-features">
-                  <h3>Features</h3>
-                  <ul>
-                    {plan.features.maxConversations === -1 ? (
-                      <li><FaCheck /> Unlimited Conversations</li>
-                    ) : (
-                      <li>Up to {plan.features.maxConversations} Conversations</li>
-                    )}
-                    
-                    {plan.features.maxMessages === -1 ? (
-                      <li><FaCheck /> Unlimited Messages</li>
-                    ) : (
-                      <li>Up to {plan.features.maxMessages} Messages</li>
-                    )}
-
-                    <li><FaCheck /> {plan.features.geminiTokensPerMonth === -1 ? 'Unlimited' : plan.features.geminiTokensPerMonth.toLocaleString()} Gemini Tokens/month</li>
-                    <li><FaCheck /> {plan.features.maxWhatsAppConnections} WhatsApp Connection{plan.features.maxWhatsAppConnections > 1 ? 's' : ''}</li>
-
-                    {plan.features.advancedAnalytics && <li><FaCheck /> Advanced Analytics</li>}
-                    {plan.features.customBranding && <li><FaCheck /> Custom Branding</li>}
-                    {plan.features.liveChat && <li><FaCheck /> Live Chat Support</li>}
-                    {plan.features.knowledgeBase && <li><FaCheck /> Knowledge Base</li>}
-                    {plan.features.integrations && <li><FaCheck /> E-commerce Integrations</li>}
-                    {plan.features.apiAccess && <li><FaCheck /> API Access</li>}
-                    {plan.features.prioritySupport && <li><FaCheck /> Priority Support</li>}
-                  </ul>
-                </div>
-
-                <div className="plan-actions">
-                  <button onClick={() => handleOpenModal(plan)} className="btn-icon-edit">
-                    <FaEdit /> Edit
-                  </button>
-                  <button onClick={() => handleDeletePlan(plan._id)} className="btn-icon-delete">
-                    <FaTrash /> Delete
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        )
+      {activeTab === 'plans' ? (
+        <div className="table-responsive" style={{ background: 'rgba(24, 24, 27, 0.8)', borderRadius: '12px', border: '1px solid rgba(255, 255, 255, 0.1)' }}>
+          <table className="data-table">
+            <thead>
+              <tr>
+                <th>Order</th>
+                <th>Plan Name</th>
+                <th>Category</th>
+                <th>Monthly Price</th>
+                <th>Yearly Price</th>
+                <th>Status</th>
+                <th>Pages</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {displayedPlans.map((plan, index) => (
+                <tr key={plan._id || plan.name}>
+                  <td>
+                    <div style={{ display: 'flex', gap: '4px' }}>
+                      <button onClick={() => handleMoveOrder(index, 'up')} style={{ background: 'transparent', border: 'none', color: '#a1a1aa', cursor: 'pointer' }}><FaArrowUp /></button>
+                      <button onClick={() => handleMoveOrder(index, 'down')} style={{ background: 'transparent', border: 'none', color: '#a1a1aa', cursor: 'pointer' }}><FaArrowDown /></button>
+                    </div>
+                  </td>
+                  <td>
+                    <div style={{ fontWeight: '600', color: '#ffffff' }}>{plan.displayName}</div>
+                    <div style={{ fontSize: '11px', color: '#71717a' }}>{plan.name}</div>
+                    {plan.badge && <span className="badge badge-info" style={{ fontSize: '10px', marginTop: '2px' }}>{plan.badge}</span>}
+                  </td>
+                  <td>
+                    <span className="badge badge-secondary">{plan.category}</span>
+                  </td>
+                  <td>
+                    {plan.contactSales ? 'Contact Sales' : `${plan.currency || 'INR'} ${plan.monthlyPrice}`}
+                    {plan.setupFee > 0 && <div style={{ fontSize: '10px', color: '#f59e0b' }}>+{plan.currency || 'INR'}{plan.setupFee} setup</div>}
+                  </td>
+                  <td>
+                    {plan.contactSales ? 'Contact Sales' : (plan.yearlyPrice ? `${plan.currency || 'INR'} ${plan.yearlyPrice}` : 'N/A')}
+                  </td>
+                  <td>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                      <span className={`badge ${plan.isPublished ? 'badge-success' : 'badge-warning'}`}>
+                        {plan.isPublished ? 'Published' : 'Draft / Unpublished'}
+                      </span>
+                      <span className={`badge ${plan.isActive ? 'badge-info' : 'badge-danger'}`} style={{ fontSize: '10px' }}>
+                        {plan.isActive ? 'Active' : 'Inactive'}
+                      </span>
+                    </div>
+                  </td>
+                  <td>
+                    <span style={{ fontSize: '12px', color: '#38bdf8' }}>{plan.allowedPages?.length || 0} pages</span>
+                  </td>
+                  <td>
+                    <div style={{ display: 'flex', gap: '6px' }}>
+                      <button onClick={() => handleTogglePublish(plan._id, plan.isPublished)} title={plan.isPublished ? "Unpublish" : "Publish"} className="btn-icon" style={{ color: plan.isPublished ? '#f59e0b' : '#22c55e' }}>
+                        {plan.isPublished ? <FaEyeSlash /> : <FaEye />}
+                      </button>
+                      <button onClick={() => handleOpenModal(plan)} title="Edit Plan" className="btn-icon"><FaEdit /></button>
+                      <button onClick={() => handleDuplicatePlan(plan._id)} title="Duplicate Plan" className="btn-icon" style={{ color: '#38bdf8' }}><FaCopy /></button>
+                      <button onClick={() => handleDeletePlan(plan._id)} title="Delete Plan" className="btn-icon btn-danger"><FaTrash /></button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ) : (
+        /* PROMO COUPONS TABLE */
+        <div className="table-responsive" style={{ background: 'rgba(24, 24, 27, 0.8)', borderRadius: '12px', border: '1px solid rgba(255, 255, 255, 0.1)' }}>
+          <table className="data-table">
+            <thead>
+              <tr>
+                <th>Code</th>
+                <th>Discount</th>
+                <th>Status</th>
+                <th>Expires</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {coupons.map((coupon) => (
+                <tr key={coupon._id}>
+                  <td style={{ fontWeight: '700', color: '#6366f1' }}>{coupon.code}</td>
+                  <td>{coupon.discountPercent}% OFF</td>
+                  <td><span className={`badge ${coupon.isActive ? 'badge-success' : 'badge-secondary'}`}>{coupon.isActive ? 'Active' : 'Inactive'}</span></td>
+                  <td>{coupon.expiresAt ? new Date(coupon.expiresAt).toLocaleDateString() : 'Never'}</td>
+                  <td>
+                    <div style={{ display: 'flex', gap: '6px' }}>
+                      <button onClick={() => handleToggleCoupon(coupon._id)} className="btn-secondary" style={{ padding: '4px 8px', fontSize: '11px' }}>Toggle</button>
+                      <button onClick={() => handleDeleteCoupon(coupon._id)} className="btn-icon btn-danger"><FaTrash /></button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
 
-      {/* Create/Edit Plan Modal */}
+      {/* PLAN FORM MODAL */}
       {showModal && (
-        <div className="modal-overlay" onClick={() => setShowModal(false)}>
-          <div className="modal-content-large" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h2>{editingPlan ? 'Edit Plan' : 'Create New Plan'}</h2>
-              <button onClick={() => setShowModal(false)} className="modal-close">✕</button>
+        <div className="modal-overlay" style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
+          <div className="modal-content" style={{ background: '#18181b', border: '1px solid rgba(255,255,255,0.15)', borderRadius: '16px', width: '100%', maxWidth: '850px', maxHeight: '90vh', overflowY: 'auto', padding: '24px', color: '#ffffff' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(255,255,255,0.1)', pb: '16px', marginBottom: '20px' }}>
+              <h2 style={{ fontSize: '20px', fontWeight: '700' }}>{editingPlan ? 'Edit Pricing Plan' : 'Create Pricing Plan'}</h2>
+              <button onClick={() => setShowModal(false)} style={{ background: 'transparent', border: 'none', color: '#a1a1aa', fontSize: '20px', cursor: 'pointer' }}>✕</button>
             </div>
 
-            <div className="modal-body plan-form">
-              <div className="form-row">
-                <div className="form-group">
-                  <label>Plan Name (Internal)</label>
+            {/* FORM STEPPER NAV */}
+            <div style={{ display: 'flex', gap: '6px', overflowX: 'auto', marginBottom: '20px', pb: '8px', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
+              {['1. Basic', '2. Category', '3. Pricing', '4. Setup Fees', '5. Features', '6. Limits', '7. Pages', '8. Support', '9. Preview'].map((stepName, idx) => (
+                <button
+                  key={idx}
+                  onClick={() => setFormSection(idx + 1)}
+                  style={{
+                    padding: '6px 12px',
+                    borderRadius: '6px',
+                    border: 'none',
+                    fontSize: '12px',
+                    fontWeight: '600',
+                    background: formSection === (idx + 1) ? '#6366f1' : 'rgba(255,255,255,0.06)',
+                    color: formSection === (idx + 1) ? '#ffffff' : '#a1a1aa',
+                    cursor: 'pointer',
+                    whiteSpace: 'nowrap'
+                  }}
+                >
+                  {stepName}
+                </button>
+              ))}
+            </div>
+
+            {/* SECTION 1: BASIC INFO */}
+            {formSection === 1 && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                <div>
+                  <label className="form-label">Plan Name Key (Unique machine identifier)*</label>
                   <input
                     type="text"
                     value={formData.name}
                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    placeholder="e.g., 'professional'"
+                    className="form-control"
+                    placeholder="e.g. crm_connect, api_starter, starter"
+                    required
                   />
                 </div>
-                <div className="form-group">
-                  <label>Display Name</label>
+                <div>
+                  <label className="form-label">Display Name*</label>
                   <input
                     type="text"
                     value={formData.displayName}
                     onChange={(e) => setFormData({ ...formData, displayName: e.target.value })}
-                    placeholder="e.g., 'Professional Plan'"
+                    className="form-control"
+                    placeholder="e.g. CRM Connect, Growth Plan"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="form-label">URL Slug*</label>
+                  <input
+                    type="text"
+                    value={formData.slug}
+                    onChange={(e) => setFormData({ ...formData, slug: e.target.value })}
+                    className="form-control"
+                    placeholder="e.g. crm-connect, growth"
+                  />
+                </div>
+                <div>
+                  <label className="form-label">Short Description</label>
+                  <input
+                    type="text"
+                    value={formData.shortDescription}
+                    onChange={(e) => setFormData({ ...formData, shortDescription: e.target.value })}
+                    className="form-control"
+                    placeholder="Brief 1-line headline description"
+                  />
+                </div>
+                <div>
+                  <label className="form-label">Detailed Description</label>
+                  <textarea
+                    value={formData.detailedDescription}
+                    onChange={(e) => setFormData({ ...formData, detailedDescription: e.target.value })}
+                    className="form-control"
+                    rows={3}
+                    placeholder="Full plan capabilities and description"
                   />
                 </div>
               </div>
+            )}
 
-              <div className="form-group">
-                <label>Description</label>
-                <textarea
-                  value={formData.description}
-                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  placeholder="Plan description"
-                  rows="2"
-                />
-              </div>
-
-              <div className="form-row">
-                <div className="form-group">
-                  <label>Monthly Price ($)</label>
-                  <input
-                    type="number"
-                    value={formData.monthlyPrice}
-                    onChange={(e) => setFormData({ ...formData, monthlyPrice: Number(e.target.value) })}
-                  />
+            {/* SECTION 2: CATEGORY & DISPLAY */}
+            {formSection === 2 && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                <div>
+                  <label className="form-label">Plan Category*</label>
+                  <select
+                    value={formData.category}
+                    onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                    className="form-control"
+                  >
+                    {CATEGORY_OPTIONS.map(c => (
+                      <option key={c.id} value={c.id}>{c.name}</option>
+                    ))}
+                  </select>
                 </div>
-                <div className="form-group">
-                  <label>Yearly Price ($) - Optional</label>
-                  <input
-                    type="number"
-                    value={formData.yearlyPrice || ''}
-                    onChange={(e) => setFormData({ ...formData, yearlyPrice: e.target.value ? Number(e.target.value) : null })}
-                  />
-                </div>
-                <div className="form-group">
-                  <label>Badge (e.g., POPULAR)</label>
+                <div>
+                  <label className="form-label">Badge Text (e.g. POPULAR, BEST FIT, ENTERPRISE)</label>
                   <input
                     type="text"
                     value={formData.badge || ''}
-                    onChange={(e) => setFormData({ ...formData, badge: e.target.value || null })}
+                    onChange={(e) => setFormData({ ...formData, badge: e.target.value })}
+                    className="form-control"
+                  />
+                </div>
+                <div>
+                  <label className="form-label">Display Order (Numeric sort order)</label>
+                  <input
+                    type="number"
+                    value={formData.displayOrder}
+                    onChange={(e) => setFormData({ ...formData, displayOrder: Number(e.target.value) })}
+                    className="form-control"
+                  />
+                </div>
+                <div style={{ display: 'flex', gap: '20px', marginTop: '10px' }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                    <input
+                      type="checkbox"
+                      checked={formData.isPopular}
+                      onChange={(e) => setFormData({ ...formData, isPopular: e.target.checked })}
+                    />
+                    Highlight as Popular Plan
+                  </label>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                    <input
+                      type="checkbox"
+                      checked={formData.isPublished}
+                      onChange={(e) => setFormData({ ...formData, isPublished: e.target.checked })}
+                    />
+                    Publish on Public Website
+                  </label>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                    <input
+                      type="checkbox"
+                      checked={formData.isActive}
+                      onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })}
+                    />
+                    Is Active
+                  </label>
+                </div>
+              </div>
+            )}
+
+            {/* SECTION 3: PRICING */}
+            {formSection === 3 && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                  <div>
+                    <label className="form-label">Currency Code</label>
+                    <input
+                      type="text"
+                      value={formData.currency}
+                      onChange={(e) => setFormData({ ...formData, currency: e.target.value.toUpperCase() })}
+                      className="form-control"
+                      placeholder="INR, USD, EUR"
+                    />
+                  </div>
+                  <div>
+                    <label className="form-label">Monthly Price</label>
+                    <input
+                      type="number"
+                      value={formData.monthlyPrice}
+                      onChange={(e) => setFormData({ ...formData, monthlyPrice: Number(e.target.value) })}
+                      className="form-control"
+                      disabled={formData.contactSales}
+                    />
+                  </div>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                  <div>
+                    <label className="form-label">Yearly Price (Full year charge)</label>
+                    <input
+                      type="number"
+                      value={formData.yearlyPrice || 0}
+                      onChange={(e) => setFormData({ ...formData, yearlyPrice: Number(e.target.value) })}
+                      className="form-control"
+                      disabled={formData.contactSales}
+                    />
+                  </div>
+                  <div>
+                    <label className="form-label">Supported Billing Cycles</label>
+                    <div style={{ display: 'flex', gap: '16px', marginTop: '8px' }}>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <input
+                          type="checkbox"
+                          checked={formData.allowedBillingCycles?.includes('monthly')}
+                          onChange={(e) => {
+                            const cycles = new Set(formData.allowedBillingCycles || []);
+                            if (e.target.checked) cycles.add('monthly'); else cycles.delete('monthly');
+                            setFormData({ ...formData, allowedBillingCycles: Array.from(cycles) });
+                          }}
+                        /> Monthly
+                      </label>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <input
+                          type="checkbox"
+                          checked={formData.allowedBillingCycles?.includes('yearly')}
+                          onChange={(e) => {
+                            const cycles = new Set(formData.allowedBillingCycles || []);
+                            if (e.target.checked) cycles.add('yearly'); else cycles.delete('yearly');
+                            setFormData({ ...formData, allowedBillingCycles: Array.from(cycles) });
+                          }}
+                        /> Yearly
+                      </label>
+                    </div>
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', gap: '20px', marginTop: '10px' }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                    <input
+                      type="checkbox"
+                      checked={formData.contactSales}
+                      onChange={(e) => setFormData({ ...formData, contactSales: e.target.checked })}
+                    />
+                    Contact Sales CTA (Hides ₹ price, shows Contact Sales button)
+                  </label>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                    <input
+                      type="checkbox"
+                      checked={formData.customPricing}
+                      onChange={(e) => setFormData({ ...formData, customPricing: e.target.checked })}
+                    />
+                    Custom Pricing (Enterprise negotiated rate)
+                  </label>
+                </div>
+              </div>
+            )}
+
+            {/* SECTION 4: SETUP & MAINTENANCE FEES */}
+            {formSection === 4 && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                <div>
+                  <label className="form-label">Setup Fee (One-time charge)</label>
+                  <input
+                    type="number"
+                    value={formData.setupFee || 0}
+                    onChange={(e) => setFormData({ ...formData, setupFee: Number(e.target.value) })}
+                    className="form-control"
+                  />
+                </div>
+                <div>
+                  <label className="form-label">Connector Maintenance Fee (Recurring monthly maintenance)</label>
+                  <input
+                    type="number"
+                    value={formData.connectorMaintenanceFee || 0}
+                    onChange={(e) => setFormData({ ...formData, connectorMaintenanceFee: Number(e.target.value) })}
+                    className="form-control"
                   />
                 </div>
               </div>
+            )}
 
-              <div className="form-row">
-                <div className="form-group">
-                  <label>Max Conversations (-1 = unlimited)</label>
-                  <input
-                    type="number"
-                    value={formData.features.maxConversations}
-                    onChange={(e) => setFormData({
-                      ...formData,
-                      features: { ...formData.features, maxConversations: Number(e.target.value) }
-                    })}
-                  />
-                </div>
-                <div className="form-group">
-                  <label>Max Messages (-1 = unlimited)</label>
-                  <input
-                    type="number"
-                    value={formData.features.maxMessages}
-                    onChange={(e) => setFormData({
-                      ...formData,
-                      features: { ...formData.features, maxMessages: Number(e.target.value) }
-                    })}
-                  />
-                </div>
-                <div className="form-group">
-                  <label>Max WhatsApp Connections</label>
-                  <input
-                    type="number"
-                    min="1"
-                    value={formData.features.maxWhatsAppConnections}
-                    onChange={(e) => setFormData({
-                      ...formData,
-                      features: { ...formData.features, maxWhatsAppConnections: Number(e.target.value) }
-                    })}
-                  />
-                </div>
-              </div>
-
-              <div className="form-group">
-                <label>Gemini Tokens Per Month</label>
-                <input
-                  type="number"
-                  value={formData.features.geminiTokensPerMonth}
-                  onChange={(e) => setFormData({
-                    ...formData,
-                    features: { ...formData.features, geminiTokensPerMonth: Number(e.target.value) }
-                  })}
-                />
-              </div>
-
-              <div className="features-checklist">
-                <h3>Features</h3>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px' }}>
-                  {[
-                    { key: 'advancedAnalytics', label: 'Advanced Analytics' },
-                    { key: 'customBranding', label: 'Custom Branding' },
-                    { key: 'liveChat', label: 'Live Chat Support' },
-                    { key: 'knowledgeBase', label: 'Knowledge Base' },
-                    { key: 'integrations', label: 'E-commerce Integrations' },
-                    { key: 'apiAccess', label: 'API Access' },
-                    { key: 'prioritySupport', label: 'Priority Support' }
-                  ].map((feature) => (
-                    <label key={feature.key} style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+            {/* SECTION 5: FEATURES */}
+            {formSection === 5 && (
+              <div>
+                <h4 style={{ fontSize: '14px', marginBottom: '12px', color: '#38bdf8' }}>Feature Entitlements (Machine-readable keys)</h4>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', maxHeight: '350px', overflowY: 'auto' }}>
+                  {FEATURE_KEYS.map(f => (
+                    <label key={f.key} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', background: 'rgba(255,255,255,0.03)', padding: '8px 12px', borderRadius: '6px' }}>
                       <input
                         type="checkbox"
-                        checked={formData.features[feature.key]}
+                        checked={Boolean(formData.features?.[f.key])}
                         onChange={(e) => setFormData({
                           ...formData,
-                          features: { ...formData.features, [feature.key]: e.target.checked }
+                          features: { ...formData.features, [f.key]: e.target.checked }
                         })}
                       />
-                      {feature.label}
+                      {f.label}
                     </label>
                   ))}
                 </div>
               </div>
+            )}
 
-              <div className="modal-actions">
-                <button onClick={handleSavePlan} className="btn-primary">
-                  {editingPlan ? 'Update Plan' : 'Create Plan'}
-                </button>
-                <button onClick={() => setShowModal(false)} className="btn-secondary">
-                  Cancel
+            {/* SECTION 6: USAGE LIMITS */}
+            {formSection === 6 && (
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', maxHeight: '380px', overflowY: 'auto' }}>
+                {USAGE_LIMIT_KEYS.map(u => (
+                  <div key={u.key}>
+                    <label className="form-label" style={{ fontSize: '12px' }}>{u.label}</label>
+                    <input
+                      type="number"
+                      value={formData.usageLimits?.[u.key] ?? -1}
+                      onChange={(e) => setFormData({
+                        ...formData,
+                        usageLimits: { ...formData.usageLimits, [u.key]: Number(e.target.value) }
+                      })}
+                      className="form-control"
+                    />
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* SECTION 7: PAGE PERMISSIONS */}
+            {formSection === 7 && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                <div>
+                  <label className="form-label">Permission Profile</label>
+                  <input
+                    type="text"
+                    value={formData.permissionProfile || 'default'}
+                    onChange={(e) => setFormData({ ...formData, permissionProfile: e.target.value })}
+                    className="form-control"
+                    placeholder="starter, growth, scale, crm_basic, api_basic, enterprise"
+                  />
+                </div>
+                <div>
+                  <label className="form-label">Allowed Navigation Pages (Front &amp; Backend Enforcement)</label>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px', marginTop: '8px' }}>
+                    {AVAILABLE_PAGES.map(pageKey => (
+                      <label key={pageKey} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', background: 'rgba(255,255,255,0.03)', padding: '6px 10px', borderRadius: '6px' }}>
+                        <input
+                          type="checkbox"
+                          checked={formData.allowedPages?.includes(pageKey)}
+                          onChange={(e) => {
+                            const setPages = new Set(formData.allowedPages || []);
+                            if (e.target.checked) setPages.add(pageKey); else setPages.delete(pageKey);
+                            setFormData({ ...formData, allowedPages: Array.from(setPages) });
+                          }}
+                        /> {pageKey}
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* SECTION 8: TRIAL & SUPPORT */}
+            {formSection === 8 && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                <div style={{ display: 'flex', gap: '20px' }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                    <input
+                      type="checkbox"
+                      checked={formData.trialEnabled}
+                      onChange={(e) => setFormData({ ...formData, trialEnabled: e.target.checked })}
+                    /> Enable Free Trial
+                  </label>
+                </div>
+                {formData.trialEnabled && (
+                  <div>
+                    <label className="form-label">Trial Duration (Days)</label>
+                    <input
+                      type="number"
+                      value={formData.trialDays}
+                      onChange={(e) => setFormData({ ...formData, trialDays: Number(e.target.value) })}
+                      className="form-control"
+                    />
+                  </div>
+                )}
+                <div>
+                  <label className="form-label">Support Level Description</label>
+                  <input
+                    type="text"
+                    value={formData.supportLevel}
+                    onChange={(e) => setFormData({ ...formData, supportLevel: e.target.value })}
+                    className="form-control"
+                    placeholder="Standard Email, Priority Chat, Dedicated Manager"
+                  />
+                </div>
+                <div>
+                  <label className="form-label">SLA Commitment</label>
+                  <input
+                    type="text"
+                    value={formData.sla}
+                    onChange={(e) => setFormData({ ...formData, sla: e.target.value })}
+                    className="form-control"
+                    placeholder="Best Effort, 4-hour SLA, 99.9% Uptime SLA"
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* SECTION 9: PREVIEW */}
+            {formSection === 9 && (
+              <div>
+                <h4 style={{ fontSize: '14px', color: '#38bdf8', marginBottom: '12px' }}>Live Public Pricing Card Preview</h4>
+                <div style={{ maxWidth: '340px', margin: '0 auto', background: '#18181b', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '16px', padding: '24px' }}>
+                  {formData.isPopular && <div className="cta-sparkle" style={{ fontSize: '10px', marginBottom: '6px' }}>{formData.badge || 'POPULAR'}</div>}
+                  <h3 style={{ fontSize: '20px', fontWeight: '700' }}>{formData.displayName || 'Plan Name'}</h3>
+                  <div style={{ fontSize: '32px', fontWeight: '800', margin: '12px 0 4px' }}>
+                    {formData.contactSales ? 'Contact Sales' : `${formData.currency} ${formData.monthlyPrice}`}
+                    {!formData.contactSales && <span style={{ fontSize: '13px', color: '#a1a1aa' }}>/month</span>}
+                  </div>
+                  <p style={{ fontSize: '12px', color: '#a1a1aa' }}>{formData.shortDescription}</p>
+                  <ul style={{ fontSize: '12px', marginTop: '16px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    <li><FaCheck style={{ color: '#22c55e' }} /> {formData.usageLimits?.monthlyConversations === -1 ? 'Unlimited' : formData.usageLimits?.monthlyConversations} Conversations/mo</li>
+                    <li><FaCheck style={{ color: '#22c55e' }} /> {formData.usageLimits?.maxWhatsAppConnections} Active WA Connections</li>
+                    {formData.features?.aiAutomation && <li><FaCheck style={{ color: '#22c55e' }} /> AI Knowledge Base Support</li>}
+                    {formData.features?.broadcastingAccess && <li><FaCheck style={{ color: '#22c55e' }} /> WhatsApp Broadcasting</li>}
+                  </ul>
+                  <button className="glowing-btn-white" style={{ marginTop: '20px', width: '100%', pointerEvents: 'none' }}>
+                    {formData.contactSales ? 'Talk to sales' : 'Start with demo'}
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* MODAL FOOTER */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '24px', paddingTop: '16px', borderTop: '1px solid rgba(255,255,255,0.1)' }}>
+              <button
+                type="button"
+                disabled={formSection === 1}
+                onClick={() => setFormSection(prev => Math.max(1, prev - 1))}
+                className="btn-secondary"
+              >
+                Previous Step
+              </button>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                {formSection < 9 && (
+                  <button
+                    type="button"
+                    onClick={() => setFormSection(prev => Math.min(9, prev + 1))}
+                    className="btn-secondary"
+                  >
+                    Next Step
+                  </button>
+                )}
+                <button type="button" onClick={handleSavePlan} className="btn-primary">
+                  <FaCheck /> Save Plan
                 </button>
               </div>
             </div>
@@ -547,146 +966,51 @@ function PlanManager() {
         </div>
       )}
 
-      {activeTab === 'coupons' && (
-        <div className="table-container-premium super-admin-table" style={{ marginTop: '24px' }}>
-          <div className="table-wrapper">
-            <table className="premium-table">
-              <thead>
-                <tr>
-                  <th>Code</th>
-                  <th>Discount Percentage</th>
-                  <th>Status</th>
-                  <th>Expires At</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {coupons.length === 0 ? (
-                  <tr>
-                    <td colSpan="5" style={{ textAlign: 'center', padding: '24px', color: 'var(--text-muted)' }}>
-                      No discount codes generated yet. Click "Create Promo Code" to make one.
-                    </td>
-                  </tr>
-                ) : (
-                  coupons.map((coupon) => (
-                    <tr key={coupon._id}>
-                      <td style={{ fontWeight: '700', color: 'var(--text-primary)' }}>{coupon.code}</td>
-                      <td>
-                        <span className="plan-badge-pill starter" style={{ backgroundColor: 'rgba(22, 163, 74, 0.1)', color: 'var(--brand)', fontWeight: 'bold' }}>
-                          {coupon.discountPercent}% OFF
-                        </span>
-                      </td>
-                      <td>
-                        <span className={`channel-status ${coupon.isActive ? 'connected' : 'disconnected'}`}>
-                          {coupon.isActive ? 'Active' : 'Inactive'}
-                        </span>
-                      </td>
-                      <td>
-                        {coupon.expiresAt ? new Date(coupon.expiresAt).toLocaleDateString() : 'Never'}
-                      </td>
-                      <td>
-                        <div className="action-buttons coupon-actions">
-                          <button
-                            onClick={() => handleToggleCoupon(coupon._id)}
-                            className={`btn-action-toggle ${coupon.isActive ? 'btn-deactivate' : 'btn-activate'}`}
-                            title={coupon.isActive ? "Deactivate Code" : "Activate Code"}
-                          >
-                            {coupon.isActive ? 'Deactivate' : 'Activate'}
-                          </button>
-                          <button
-                            onClick={() => handleDeleteCoupon(coupon._id)}
-                            className="btn-action-delete"
-                            title="Delete Code"
-                          >
-                            <FaTrash /> Delete
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
-
-      {/* Create Coupon Modal */}
+      {/* PROMO CODE MODAL */}
       {showCouponModal && (
-        <div className="modal-overlay" onClick={() => setShowCouponModal(false)}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h2>Create New Discount Code</h2>
-              <button onClick={() => setShowCouponModal(false)} className="modal-close">✕</button>
-            </div>
-
-            <div className="modal-body plan-form" style={{ padding: '20px 24px' }}>
-              <div className="form-group" style={{ marginBottom: '16px' }}>
-                <label>Promo Code (Uppercase, letters & numbers)</label>
+        <div className="modal-overlay" style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
+          <div className="modal-content" style={{ background: '#18181b', border: '1px solid rgba(255,255,255,0.15)', borderRadius: '16px', width: '100%', maxWidth: '450px', padding: '24px', color: '#ffffff' }}>
+            <h2 style={{ fontSize: '18px', fontWeight: '700', marginBottom: '16px' }}>Create Promo Code</h2>
+            <form onSubmit={handleCreateCoupon}>
+              <div style={{ marginBottom: '12px' }}>
+                <label className="form-label">Coupon Code*</label>
                 <input
                   type="text"
                   value={newCoupon.code}
                   onChange={(e) => setNewCoupon({ ...newCoupon, code: e.target.value.toUpperCase() })}
-                  placeholder="e.g. SUMMER50"
-                  style={{
-                    background: 'var(--bg-input)',
-                    border: '1px solid var(--border-default)',
-                    borderRadius: '8px',
-                    padding: '10px 14px',
-                    color: 'var(--text-primary)',
-                    width: '100%',
-                    marginTop: '6px'
-                  }}
+                  className="form-control"
+                  placeholder="e.g. KWICK10, FESTIVE20"
+                  required
                 />
               </div>
-
-              <div className="form-group" style={{ marginBottom: '16px' }}>
-                <label>Discount Percentage (%)</label>
+              <div style={{ marginBottom: '12px' }}>
+                <label className="form-label">Discount Percentage (%)*</label>
                 <input
                   type="number"
-                  min="1"
-                  max="100"
                   value={newCoupon.discountPercent}
                   onChange={(e) => setNewCoupon({ ...newCoupon, discountPercent: Number(e.target.value) })}
-                  style={{
-                    background: 'var(--bg-input)',
-                    border: '1px solid var(--border-default)',
-                    borderRadius: '8px',
-                    padding: '10px 14px',
-                    color: 'var(--text-primary)',
-                    width: '100%',
-                    marginTop: '6px'
-                  }}
+                  className="form-control"
+                  min="1"
+                  max="100"
+                  required
                 />
               </div>
-
-              <div className="form-group" style={{ marginBottom: '24px' }}>
-                <label>Expiry Date (Optional)</label>
+              <div style={{ marginBottom: '20px' }}>
+                <label className="form-label">Expiration Date (Optional)</label>
                 <input
                   type="date"
                   value={newCoupon.expiresAt}
                   onChange={(e) => setNewCoupon({ ...newCoupon, expiresAt: e.target.value })}
-                  style={{
-                    background: 'var(--bg-input)',
-                    border: '1px solid var(--border-default)',
-                    borderRadius: '8px',
-                    padding: '10px 14px',
-                    color: 'var(--text-primary)',
-                    width: '100%',
-                    marginTop: '6px'
-                  }}
+                  className="form-control"
                 />
               </div>
-
-              <div className="modal-actions" style={{ marginTop: '24px' }}>
-                <button onClick={handleCreateCoupon} className="btn-primary" disabled={couponLoading}>
-                  {couponLoading ? 'Creating...' : 'Create Promo Code'}
-                </button>
-                <button onClick={() => setShowCouponModal(false)} className="btn-secondary">
-                  Cancel
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
+                <button type="button" onClick={() => setShowCouponModal(false)} className="btn-secondary">Cancel</button>
+                <button type="submit" disabled={couponLoading} className="btn-primary">
+                  {couponLoading ? 'Creating...' : 'Save Promo Code'}
                 </button>
               </div>
-            </div>
+            </form>
           </div>
         </div>
       )}

@@ -566,84 +566,8 @@ exports.logout = async (req, res) => {
 exports.getPlans = async (req, res) => {
   try {
     const PricingPlan = require('../../models/PricingPlan');
-    let plans = await PricingPlan.find({ isActive: true });
-    
-    // Seed default plans if none exist in the database
-    if (plans.length === 0) {
-      plans = [
-        {
-          name: 'starter',
-          displayName: 'Starter Plan',
-          description: 'Perfect for small e-commerce stores starting out.',
-          monthlyPrice: 1499,
-          badge: null,
-          features: {
-            maxConversations: 500,
-            maxMessages: 2000,
-            geminiTokensPerMonth: 50000,
-            maxWhatsAppConnections: 1,
-            maxKbUploads: 1,
-            maxIntegrations: 1,
-            advancedAnalytics: false,
-            escalations: false,
-            orderCancellation: false,
-            customBranding: false,
-            developerApi: false,
-            liveChat: true,
-            knowledgeBase: true,
-            integrations: true
-          }
-        },
-        {
-          name: 'growth',
-          displayName: 'Growth Plan',
-          description: 'Great for growing businesses looking for premium AI support and automation.',
-          monthlyPrice: 2999,
-          badge: 'POPULAR',
-          features: {
-            maxConversations: 3000,
-            maxMessages: 15000,
-            geminiTokensPerMonth: 200000,
-            maxWhatsAppConnections: 2,
-            maxKbUploads: 3,
-            maxIntegrations: 1,
-            advancedAnalytics: true,
-            escalations: true,
-            orderCancellation: true,
-            customBranding: false,
-            developerApi: false,
-            liveChat: true,
-            knowledgeBase: true,
-            integrations: true,
-            prioritySupport: true
-          }
-        },
-        {
-          name: 'scale',
-          displayName: 'Scale Plan',
-          description: 'For large-scale operations requiring maximum power, volume, and customization.',
-          monthlyPrice: 9999,
-          badge: 'BEST VALUE',
-          features: {
-            maxConversations: -1,
-            maxMessages: -1,
-            geminiTokensPerMonth: -1,
-            maxWhatsAppConnections: 5,
-            maxKbUploads: -1,
-            maxIntegrations: -1,
-            advancedAnalytics: true,
-            escalations: true,
-            orderCancellation: true,
-            customBranding: true,
-            developerApi: true,
-            liveChat: true,
-            knowledgeBase: true,
-            integrations: true,
-            prioritySupport: true
-          }
-        }
-      ];
-    }
+    const plans = await PricingPlan.find({ isActive: true, isPublished: true })
+      .sort({ category: 1, displayOrder: 1 });
     
     let rzpKeyId = process.env.RAZORPAY_KEY_ID || 'rzp_test_mockkey';
     try {
@@ -663,6 +587,29 @@ exports.getPlans = async (req, res) => {
     res.status(500).json({
       success: false,
       error: error.message
+    });
+  }
+};
+
+/**
+ * Public read-only endpoint for website pricing page (no auth token required)
+ */
+exports.getPublicPlans = async (req, res) => {
+  try {
+    const PricingPlan = require('../../models/PricingPlan');
+    const plans = await PricingPlan.find({ isActive: true, isPublished: true })
+      .select('-__v -createdAt -updatedAt')
+      .sort({ category: 1, displayOrder: 1 });
+
+    res.json({
+      success: true,
+      data: plans
+    });
+  } catch (error) {
+    console.error('Error fetching public plans:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch public pricing plans'
     });
   }
 };
@@ -1041,35 +988,51 @@ exports.verifyCoupon = async (req, res) => {
  */
 exports.createRazorpayOrder = async (req, res) => {
   try {
-    const { planName, couponCode } = req.body;
-    const allowedPlans = ['starter', 'growth', 'scale'];
-    if (!allowedPlans.includes(planName)) {
-      return res.status(400).json({ success: false, error: 'Invalid plan selected' });
-    }
+    const { planName, planId, billingCycle = 'monthly', couponCode } = req.body;
 
     const admin = await Admin.findById(req.admin._id);
     if (!admin) {
       return res.status(404).json({ success: false, error: 'Merchant admin not found' });
     }
 
-    // Get pricing plan details
     const PricingPlan = require('../../models/PricingPlan');
-    const planDetails = await PricingPlan.findOne({ name: planName, isActive: true });
-    
-    let originalPrice = 1499;
-    if (planDetails) {
-      originalPrice = planDetails.monthlyPrice;
-    } else {
-      const fallbacks = {
-        starter: 1499,
-        growth: 2999,
-        scale: 9999
-      };
-      originalPrice = fallbacks[planName];
+    let planDetails = null;
+
+    if (planId) {
+      planDetails = await PricingPlan.findById(planId);
+    }
+    if (!planDetails && planName) {
+      planDetails = await PricingPlan.findOne({
+        $or: [{ name: planName }, { slug: planName }],
+        isActive: true
+      });
     }
 
-    let finalPrice = originalPrice;
+    if (!planDetails) {
+      return res.status(404).json({ success: false, error: 'Selected pricing plan not found or inactive' });
+    }
+
+    if (planDetails.contactSales) {
+      return res.status(400).json({ success: false, error: 'Contact Sales plans must be processed through custom setup' });
+    }
+
+    const cycle = (billingCycle === 'yearly') ? 'yearly' : 'monthly';
+    if (Array.isArray(planDetails.allowedBillingCycles) && !planDetails.allowedBillingCycles.includes(cycle)) {
+      return res.status(400).json({ success: false, error: `The selected plan does not support ${cycle} billing` });
+    }
+
+    // Server-side calculated base price (Never trust frontend price)
+    let basePrice = (cycle === 'yearly' && planDetails.yearlyPrice)
+      ? planDetails.yearlyPrice
+      : planDetails.monthlyPrice;
+
+    if (planDetails.setupFee && planDetails.setupFee > 0) {
+      basePrice += planDetails.setupFee;
+    }
+
+    let finalPrice = basePrice;
     let discountAmount = 0;
+
     if (couponCode) {
       const Coupon = require('../../models/Coupon');
       const coupon = await Coupon.findOne({ code: couponCode.toUpperCase() });
@@ -1082,16 +1045,15 @@ exports.createRazorpayOrder = async (req, res) => {
       if (coupon.expiresAt && coupon.expiresAt < new Date()) {
         return res.status(400).json({ success: false, error: 'This coupon has expired' });
       }
-      
-      discountAmount = (originalPrice * coupon.discountPercent) / 100;
-      finalPrice = originalPrice - discountAmount;
+
+      discountAmount = (basePrice * coupon.discountPercent) / 100;
+      finalPrice = basePrice - discountAmount;
     }
 
-    // Razorpay amount in paise (1 INR = 100 paise)
     const amountInPaise = Math.round(finalPrice * 100);
+    const currency = planDetails.currency || 'INR';
 
     const Razorpay = require('razorpay');
-    // Initialize Razorpay
     let rzpKeyId = process.env.RAZORPAY_KEY_ID || 'rzp_test_mockkey';
     let rzpKeySecret = process.env.RAZORPAY_KEY_SECRET || 'rzp_mocksecret';
     try {
@@ -1111,11 +1073,13 @@ exports.createRazorpayOrder = async (req, res) => {
 
     const options = {
       amount: amountInPaise,
-      currency: 'INR',
-      receipt: `subscription_rcpt_${admin._id.toString().slice(-6)}_${Date.now()}`,
+      currency: currency,
+      receipt: `sub_${admin._id.toString().slice(-6)}_${Date.now()}`,
       notes: {
         adminId: admin._id.toString(),
-        planName: planName,
+        planId: planDetails._id.toString(),
+        planName: planDetails.name,
+        billingCycle: cycle,
         couponCode: couponCode || ''
       }
     };
@@ -1128,7 +1092,9 @@ exports.createRazorpayOrder = async (req, res) => {
         id: order.id,
         amount: order.amount,
         currency: order.currency,
-        planName,
+        planName: planDetails.name,
+        planId: planDetails._id,
+        billingCycle: cycle,
         discountAmount,
         finalPrice
       }
@@ -1145,7 +1111,7 @@ exports.createRazorpayOrder = async (req, res) => {
  */
 exports.verifyRazorpayPayment = async (req, res) => {
   try {
-    const { planName, razorpay_payment_id, razorpay_order_id, razorpay_signature } = req.body;
+    const { planName, planId, billingCycle = 'monthly', razorpay_payment_id, razorpay_order_id, razorpay_signature } = req.body;
     
     if (!razorpay_payment_id || !razorpay_order_id || !razorpay_signature) {
       return res.status(400).json({ success: false, error: 'Missing payment details for verification' });
@@ -1174,34 +1140,44 @@ exports.verifyRazorpayPayment = async (req, res) => {
       return res.status(404).json({ success: false, error: 'Merchant admin not found' });
     }
 
-    // Get pricing details
     const PricingPlan = require('../../models/PricingPlan');
-    const planDetails = await PricingPlan.findOne({ name: planName, isActive: true });
-    
-    let originalPrice = 1499;
-    let tokensLimit = 10000;
-    if (planDetails) {
-      originalPrice = planDetails.monthlyPrice;
-      tokensLimit = planDetails.features?.geminiTokensPerMonth || 10000;
-    } else {
-      const fallbacks = {
-        starter: { price: 1499, limit: 50000 },
-        growth: { price: 2999, limit: 200000 },
-        scale: { price: 9999, limit: -1 }
-      };
-      const fallback = fallbacks[planName];
-      originalPrice = fallback.price;
-      tokensLimit = fallback.limit;
+    let planDetails = null;
+
+    if (planId) {
+      planDetails = await PricingPlan.findById(planId);
+    }
+    if (!planDetails && planName) {
+      planDetails = await PricingPlan.findOne({
+        $or: [{ name: planName }, { slug: planName }],
+        isActive: true
+      });
     }
 
-    // Update admin subscription details
-    admin.subscriptionPlan = planName;
+    if (!planDetails) {
+      return res.status(404).json({ success: false, error: 'Selected pricing plan not found' });
+    }
+
+    const cycle = (billingCycle === 'yearly') ? 'yearly' : 'monthly';
+    const originalPrice = (cycle === 'yearly' && planDetails.yearlyPrice)
+      ? planDetails.yearlyPrice
+      : planDetails.monthlyPrice;
+
+    const tokensLimit = planDetails.usageLimits?.geminiTokensPerMonth ?? 50000;
+    const durationDays = cycle === 'yearly' ? 365 : 30;
+
+    // Save price snapshot and update admin subscription details
+    admin.pricingPlanId = planDetails._id;
+    admin.subscriptionPlan = planDetails.name;
+    admin.billingCycle = cycle;
     admin.monthlyPrice = originalPrice;
     admin.geminiTokensLimit = tokensLimit;
+    admin.allowedPages = (planDetails.allowedPages && planDetails.allowedPages.length > 0)
+      ? planDetails.allowedPages
+      : admin.allowedPages;
     admin.subscriptionStatus = 'active';
     admin.subscriptionStartDate = new Date();
-    admin.subscriptionEndDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // 30-day active period
-    admin.totalMessagesProcessed = 0; // reset usage for new billing cycle
+    admin.subscriptionEndDate = new Date(Date.now() + durationDays * 24 * 60 * 60 * 1000);
+    admin.totalMessagesProcessed = 0;
     admin.geminiTokensUsed = 0;
     admin.limitNotificationSent = false;
     await admin.save();
@@ -1217,7 +1193,7 @@ exports.verifyRazorpayPayment = async (req, res) => {
 
     const invoice = new Invoice({
       invoiceNumber: `INV-${nextNum}`,
-      customerId: admin._id, // Using admin ID as customer reference for subscription invoices
+      customerId: admin._id,
       customerPhone: admin.phone || admin.businessPhone || '9999999999',
       customerName: admin.name || admin.businessName || 'Merchant',
       customerEmail: admin.email,
@@ -1226,10 +1202,10 @@ exports.verifyRazorpayPayment = async (req, res) => {
       status: 'paid',
       paymentStatus: 'completed',
       paymentTerms: 'Due on Receipt',
-      dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days due
+      dueDate: new Date(Date.now() + durationDays * 24 * 60 * 60 * 1000),
       items: [
         {
-          description: `Kwickbot ${planName.toUpperCase()} Plan Subscription`,
+          description: `Kwickbot ${planDetails.displayName} Subscription (${cycle.toUpperCase()})`,
           quantity: 1,
           unitPrice: originalPrice,
           amount: originalPrice

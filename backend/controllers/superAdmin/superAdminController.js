@@ -823,72 +823,16 @@ exports.deleteUser = async (req, res) => {
   }
 };
 
-// Get all pricing plans
+// Get all pricing plans for Super Admin (returns all plans including drafts/unpublished)
 exports.getAllPlans = async (req, res) => {
   try {
     const PricingPlan = require('../../models/PricingPlan');
-    let plans = await PricingPlan.find({ isActive: true }).sort({ monthlyPrice: 1 });
+    let plans = await PricingPlan.find().sort({ category: 1, displayOrder: 1 });
 
     if (!plans || plans.length === 0) {
-      const defaultPlans = [
-        {
-          name: 'starter',
-          displayName: 'Starter Plan',
-          description: 'Ideal for small businesses launching WhatsApp automation',
-          monthlyPrice: 1499,
-          yearlyPrice: 14990,
-          badge: 'BASIC',
-          features: {
-            maxConversations: 1000,
-            maxMessages: 5000,
-            geminiTokensPerMonth: 50000,
-            maxWhatsAppConnections: 1,
-            liveChat: true,
-            knowledgeBase: true,
-            integrations: false,
-            apiAccess: false
-          }
-        },
-        {
-          name: 'growth',
-          displayName: 'Growth Plan',
-          description: 'Best for growing e-commerce brands needing Shopify & CRM webhooks',
-          monthlyPrice: 2999,
-          yearlyPrice: 29990,
-          badge: 'POPULAR',
-          features: {
-            maxConversations: 5000,
-            maxMessages: 25000,
-            geminiTokensPerMonth: 200000,
-            maxWhatsAppConnections: 2,
-            liveChat: true,
-            knowledgeBase: true,
-            integrations: true,
-            apiAccess: true
-          }
-        },
-        {
-          name: 'scale',
-          displayName: 'Scale Enterprise Plan',
-          description: 'Unlimited capacity with full Developer API & Webhooks Access',
-          monthlyPrice: 5999,
-          yearlyPrice: 59990,
-          badge: 'ENTERPRISE',
-          features: {
-            maxConversations: -1,
-            maxMessages: -1,
-            geminiTokensPerMonth: 1000000,
-            maxWhatsAppConnections: 5,
-            liveChat: true,
-            knowledgeBase: true,
-            integrations: true,
-            apiAccess: true,
-            advancedAnalytics: true,
-            prioritySupport: true
-          }
-        }
-      ];
-      plans = await PricingPlan.insertMany(defaultPlans);
+      const { runMigration } = require('../../scripts/migratePlansToStandard');
+      await runMigration().catch(() => {});
+      plans = await PricingPlan.find().sort({ category: 1, displayOrder: 1 });
     }
 
     res.json({
@@ -896,10 +840,10 @@ exports.getAllPlans = async (req, res) => {
       data: plans
     });
   } catch (error) {
-    console.error('Error fetching plans:', error);
+    console.error('Error fetching super admin plans:', error);
     res.status(500).json({
       success: false,
-      error: 'Failed to fetch plans'
+      error: 'Failed to fetch pricing plans'
     });
   }
 };
@@ -908,17 +852,75 @@ exports.getAllPlans = async (req, res) => {
 exports.createOrUpdatePlan = async (req, res) => {
   try {
     const PricingPlan = require('../../models/PricingPlan');
+    const auditLogService = require('../../services/auditLogService');
     const { id } = req.params;
     const planData = req.body;
 
+    // Validation 1: Required fields
+    if (!planData.name || !planData.displayName) {
+      return res.status(400).json({ success: false, error: 'Plan name and display name are required' });
+    }
+
+    const slug = planData.slug || planData.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+    planData.slug = slug;
+    planData.name = planData.name.toLowerCase().trim();
+
+    // Validation 2: Unique name and slug
+    const existingName = await PricingPlan.findOne({
+      _id: { $ne: id },
+      $or: [{ name: planData.name }, { slug: planData.slug }]
+    });
+
+    if (existingName) {
+      return res.status(400).json({ success: false, error: 'Plan name or slug already exists' });
+    }
+
+    // Validation 3: Non-negative prices
+    if ((planData.monthlyPrice !== undefined && planData.monthlyPrice < 0) ||
+        (planData.yearlyPrice !== undefined && planData.yearlyPrice !== null && planData.yearlyPrice < 0) ||
+        (planData.setupFee !== undefined && planData.setupFee < 0) ||
+        (planData.connectorMaintenanceFee !== undefined && planData.connectorMaintenanceFee < 0)) {
+      return res.status(400).json({ success: false, error: 'Prices and fees cannot be negative' });
+    }
+
+    // Validation 4: Allowed billing cycles
+    if (!planData.contactSales && (!planData.allowedBillingCycles || planData.allowedBillingCycles.length === 0)) {
+      return res.status(400).json({ success: false, error: 'At least one billing cycle must be enabled unless Contact Sales is checked' });
+    }
+
+    // Validation 5: Numeric display order
+    if (planData.displayOrder !== undefined && isNaN(Number(planData.displayOrder))) {
+      return res.status(400).json({ success: false, error: 'Display order must be numeric' });
+    }
+
+    // Validation 6: Usage limits validation
+    if (planData.usageLimits) {
+      for (const [key, val] of Object.entries(planData.usageLimits)) {
+        if (typeof val === 'number' && val !== -1 && val < 0) {
+          return res.status(400).json({ success: false, error: `Usage limit for ${key} must be a valid non-negative integer or -1 for unlimited` });
+        }
+      }
+    }
+
     let plan;
     if (id) {
-      // Update existing plan
-      plan = await PricingPlan.findByIdAndUpdate(id, planData, { new: true });
+      plan = await PricingPlan.findByIdAndUpdate(id, planData, { new: true, runValidators: true });
+      if (!plan) {
+        return res.status(404).json({ success: false, error: 'Plan not found' });
+      }
+      await auditLogService.logAction(
+        req.admin?.email || 'super_admin',
+        'plan_update',
+        { planId: plan._id, planName: plan.name, category: plan.category }
+      );
     } else {
-      // Create new plan
       plan = new PricingPlan(planData);
       await plan.save();
+      await auditLogService.logAction(
+        req.admin?.email || 'super_admin',
+        'plan_create',
+        { planId: plan._id, planName: plan.name, category: plan.category }
+      );
     }
 
     res.json({
@@ -930,25 +932,155 @@ exports.createOrUpdatePlan = async (req, res) => {
     console.error('Error saving plan:', error);
     res.status(500).json({
       success: false,
-      error: 'Failed to save plan'
+      error: error.message || 'Failed to save plan'
     });
   }
 };
 
-// Delete pricing plan
+// Duplicate an existing plan
+exports.duplicatePlan = async (req, res) => {
+  try {
+    const PricingPlan = require('../../models/PricingPlan');
+    const auditLogService = require('../../services/auditLogService');
+    const { id } = req.params;
+
+    const original = await PricingPlan.findById(id);
+    if (!original) {
+      return res.status(404).json({ success: false, error: 'Original plan not found' });
+    }
+
+    const dupObj = original.toObject();
+    delete dupObj._id;
+    delete dupObj.createdAt;
+    delete dupObj.updatedAt;
+
+    const suffix = Date.now().toString().slice(-4);
+    dupObj.name = `${original.name}_copy_${suffix}`;
+    dupObj.slug = `${original.slug}-copy-${suffix}`;
+    dupObj.displayName = `${original.displayName} (Copy)`;
+    dupObj.isPublished = false; // Always create copies as draft/unpublished
+    dupObj.badge = 'DRAFT';
+
+    const newPlan = new PricingPlan(dupObj);
+    await newPlan.save();
+
+    await auditLogService.logAction(
+      req.admin?.email || 'super_admin',
+      'plan_duplicate',
+      { originalId: original._id, newPlanId: newPlan._id, newName: newPlan.name }
+    );
+
+    res.json({
+      success: true,
+      message: 'Plan duplicated successfully as draft',
+      data: newPlan
+    });
+  } catch (error) {
+    console.error('Error duplicating plan:', error);
+    res.status(500).json({ success: false, error: 'Failed to duplicate plan' });
+  }
+};
+
+// Toggle plan publish/active status
+exports.togglePublishPlan = async (req, res) => {
+  try {
+    const PricingPlan = require('../../models/PricingPlan');
+    const auditLogService = require('../../services/auditLogService');
+    const { id } = req.params;
+    const { isPublished, isActive } = req.body;
+
+    const plan = await PricingPlan.findById(id);
+    if (!plan) {
+      return res.status(404).json({ success: false, error: 'Plan not found' });
+    }
+
+    if (isPublished !== undefined) plan.isPublished = Boolean(isPublished);
+    if (isActive !== undefined) plan.isActive = Boolean(isActive);
+
+    await plan.save();
+
+    await auditLogService.logAction(
+      req.admin?.email || 'super_admin',
+      'plan_status_toggle',
+      { planId: plan._id, isPublished: plan.isPublished, isActive: plan.isActive }
+    );
+
+    res.json({
+      success: true,
+      message: `Plan ${plan.isPublished ? 'published' : 'unpublished'} successfully`,
+      data: plan
+    });
+  } catch (error) {
+    console.error('Error toggling plan status:', error);
+    res.status(500).json({ success: false, error: 'Failed to update plan status' });
+  }
+};
+
+// Reorder pricing plans
+exports.reorderPlans = async (req, res) => {
+  try {
+    const PricingPlan = require('../../models/PricingPlan');
+    const { planOrders } = req.body; // Array of { id, displayOrder }
+
+    if (!Array.isArray(planOrders)) {
+      return res.status(400).json({ success: false, error: 'planOrders array is required' });
+    }
+
+    const bulkOps = planOrders.map(item => ({
+      updateOne: {
+        filter: { _id: item.id },
+        update: { displayOrder: Number(item.displayOrder) || 0 }
+      }
+    }));
+
+    await PricingPlan.bulkWrite(bulkOps);
+
+    res.json({
+      success: true,
+      message: 'Plans reordered successfully'
+    });
+  } catch (error) {
+    console.error('Error reordering plans:', error);
+    res.status(500).json({ success: false, error: 'Failed to reorder plans' });
+  }
+};
+
+// Delete pricing plan (with active subscriber protection)
 exports.deletePlan = async (req, res) => {
   try {
     const PricingPlan = require('../../models/PricingPlan');
+    const auditLogService = require('../../services/auditLogService');
     const { id } = req.params;
 
-    const plan = await PricingPlan.findByIdAndDelete(id);
-    
+    const plan = await PricingPlan.findById(id);
     if (!plan) {
-      return res.status(404).json({
+      return res.status(404).json({ success: false, error: 'Plan not found' });
+    }
+
+    // Protection check: Cannot hard delete plan with active subscribers
+    const activeSubscribersCount = await Admin.countDocuments({
+      $or: [
+        { pricingPlanId: plan._id },
+        { subscriptionPlan: plan.name }
+      ],
+      role: { $ne: 'super_admin' },
+      subscriptionStatus: 'active'
+    });
+
+    if (activeSubscribersCount > 0) {
+      return res.status(400).json({
         success: false,
-        error: 'Plan not found'
+        error: `Cannot delete plan "${plan.displayName}" because it has ${activeSubscribersCount} active customer subscription(s). You can archive or unpublish the plan instead to prevent new subscriptions.`
       });
     }
+
+    await PricingPlan.findByIdAndDelete(id);
+
+    await auditLogService.logAction(
+      req.admin?.email || 'super_admin',
+      'plan_delete',
+      { planId: id, planName: plan.name }
+    );
 
     res.json({
       success: true,

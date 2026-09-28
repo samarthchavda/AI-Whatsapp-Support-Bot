@@ -1,4 +1,5 @@
 const Admin = require('../models/Admin');
+const PricingPlan = require('../models/PricingPlan');
 const { PLAN_DEFINITIONS, normalizePlanName, getPlanLimit, isFeatureAllowed } = require('../config/planConstants');
 
 // Export legacy PLAN_LIMITS for backward compatibility if imported elsewhere
@@ -9,10 +10,21 @@ const PLAN_LIMITS = {
   custom: { tokens: -1, messages: -1, conversations: -1 }
 };
 
+// Permission Profile Defaults
+const PERMISSION_PROFILES = {
+  starter: ['dashboard', 'conversations', 'knowledge-base', 'integrations', 'profile', 'billing'],
+  growth: ['dashboard', 'conversations', 'knowledge-base', 'broadcast', 'analytics', 'escalations', 'integrations', 'profile', 'billing'],
+  scale: ['dashboard', 'conversations', 'knowledge-base', 'broadcast', 'analytics', 'escalations', 'templates', 'integrations', 'orders', 'leads', 'api-keys', 'profile', 'billing'],
+  crm_basic: ['dashboard', 'conversations', 'integrations', 'leads', 'profile', 'billing'],
+  crm_advanced: ['dashboard', 'conversations', 'integrations', 'orders', 'leads', 'analytics', 'profile', 'billing'],
+  api_basic: ['dashboard', 'conversations', 'api-keys', 'integrations', 'profile', 'billing'],
+  api_advanced: ['dashboard', 'conversations', 'api-keys', 'integrations', 'analytics', 'profile', 'billing'],
+  enterprise: ['dashboard', 'conversations', 'knowledge-base', 'broadcast', 'analytics', 'escalations', 'templates', 'integrations', 'orders', 'leads', 'api-keys', 'profile', 'billing'],
+  default: ['dashboard', 'conversations', 'profile', 'billing']
+};
+
 /**
  * Validates subscription status, account active state, and billing expiration date.
- * @param {Object} admin - Mongoose Admin document
- * @returns {Object} { valid: boolean, reason: string|null }
  */
 function validateSubscriptionStatus(admin) {
   if (!admin) return { valid: false, reason: 'Account record not found' };
@@ -38,40 +50,122 @@ function validateSubscriptionStatus(admin) {
 }
 
 /**
- * Check if a merchant (admin) has exceeded their monthly limits (status, tokens, messages, conversations).
- * @param {Object} admin - The Admin mongoose document
- * @returns {Object} { exceeded: boolean, reason: string }
+ * Resolves effective allowed pages for an admin according to priority:
+ * 1. Customer-specific override (admin.allowedPages)
+ * 2. Plan feature entitlement (plan.allowedPages)
+ * 3. Permission-profile default
+ * 4. Deny by default
  */
-function checkLimitExceeded(admin) {
+async function resolveEffectiveAllowedPages(admin) {
+  if (!admin) return [];
+  if (admin.role === 'super_admin') {
+    return ['all'];
+  }
+
+  // 1. Customer-specific override
+  if (Array.isArray(admin.allowedPages) && admin.allowedPages.length > 0) {
+    return admin.allowedPages;
+  }
+
+  // 2. Plan feature entitlement lookup
+  if (admin.pricingPlanId) {
+    const plan = await PricingPlan.findById(admin.pricingPlanId);
+    if (plan && Array.isArray(plan.allowedPages) && plan.allowedPages.length > 0) {
+      return plan.allowedPages;
+    }
+  }
+
+  const planName = normalizePlanName(admin.subscriptionPlan);
+  const plan = await PricingPlan.findOne({ name: planName, isActive: true });
+  if (plan && Array.isArray(plan.allowedPages) && plan.allowedPages.length > 0) {
+    return plan.allowedPages;
+  }
+
+  // 3. Permission profile default
+  const profileKey = plan?.permissionProfile || planName || 'default';
+  if (PERMISSION_PROFILES[profileKey]) {
+    return PERMISSION_PROFILES[profileKey];
+  }
+
+  return PERMISSION_PROFILES.default;
+}
+
+/**
+ * Check if a page permission is allowed for an admin account.
+ */
+async function isPageAllowed(admin, pageKey) {
+  if (!admin) return false;
+  if (admin.role === 'super_admin') return true;
+
+  const allowedPages = await resolveEffectiveAllowedPages(admin);
+  if (allowedPages.includes('all')) return true;
+  return allowedPages.includes(pageKey);
+}
+
+/**
+ * Check if a feature is allowed for a plan.
+ */
+async function isFeatureAllowedDynamic(rawPlanName, featureKey) {
+  const planName = normalizePlanName(rawPlanName);
+  const plan = await PricingPlan.findOne({ name: planName, isActive: true });
+
+  if (plan && plan.features && plan.features[featureKey] !== undefined) {
+    return Boolean(plan.features[featureKey]);
+  }
+
+  // Fallback to static definitions
+  const staticDef = PLAN_DEFINITIONS[planName] || PLAN_DEFINITIONS.starter;
+  return Boolean(staticDef.features && staticDef.features[featureKey]);
+}
+
+/**
+ * Check limit exceeded for admin.
+ */
+async function checkLimitExceededDynamic(admin) {
   if (!admin) return { exceeded: false, reason: null };
 
-  // 1. Subscription status and expiration validation
   const statusCheck = validateSubscriptionStatus(admin);
   if (!statusCheck.valid) {
     return { exceeded: true, reason: statusCheck.reason };
   }
 
-  const planName = normalizePlanName(admin.subscriptionPlan);
-  const planDef = PLAN_DEFINITIONS[planName] || PLAN_DEFINITIONS.starter;
+  if (admin.role === 'super_admin') {
+    return { exceeded: false, reason: null };
+  }
 
-  // 2. Token Limit Check
+  let plan = null;
+  if (admin.pricingPlanId) {
+    plan = await PricingPlan.findById(admin.pricingPlanId);
+  }
+  if (!plan) {
+    const planName = normalizePlanName(admin.subscriptionPlan);
+    plan = await PricingPlan.findOne({ name: planName, isActive: true });
+  }
+
+  const limits = plan?.usageLimits || {
+    geminiTokensPerMonth: 50000,
+    monthlyConversations: 500,
+    monthlyMessages: 2000
+  };
+
+  // Token limit check
   const tokenLimit = (admin.geminiTokensLimit !== undefined && admin.geminiTokensLimit !== null)
     ? admin.geminiTokensLimit
-    : planDef.features.geminiTokensPerMonth;
+    : limits.geminiTokensPerMonth;
   const tokensUsed = admin.geminiTokensUsed || 0;
   if (tokenLimit !== -1 && tokenLimit !== Infinity && tokensUsed >= tokenLimit) {
     return { exceeded: true, reason: `AI token budget reached (${tokensUsed.toLocaleString()}/${tokenLimit.toLocaleString()})` };
   }
 
-  // 3. Conversation Limit Check
-  const conversationLimit = planDef.features.maxConversations;
+  // Conversation limit check
+  const conversationLimit = limits.monthlyConversations;
   const conversationsUsed = admin.monthlyConversationsCount || 0;
   if (conversationLimit !== -1 && conversationLimit !== Infinity && conversationsUsed >= conversationLimit) {
     return { exceeded: true, reason: `Monthly WhatsApp conversation limit reached (${conversationsUsed.toLocaleString()}/${conversationLimit.toLocaleString()})` };
   }
 
-  // 4. Message Limit Check
-  const messageLimit = planDef.features.maxMessages;
+  // Message limit check
+  const messageLimit = limits.monthlyMessages;
   const messagesProcessed = admin.totalMessagesProcessed || 0;
   if (messageLimit !== -1 && messageLimit !== Infinity && messagesProcessed >= messageLimit) {
     return { exceeded: true, reason: `Monthly WhatsApp message quota reached (${messagesProcessed.toLocaleString()}/${messageLimit.toLocaleString()})` };
@@ -81,8 +175,7 @@ function checkLimitExceeded(admin) {
 }
 
 /**
- * Daily check to find accounts whose monthly cycle has ended (30 days since last reset)
- * and reset their usage to 0.
+ * Monthly token & usage reset worker.
  */
 async function checkAndResetMonthlyTokens() {
   console.log('⏰ Running monthly subscription usage reset check...');
@@ -113,17 +206,21 @@ async function checkAndResetMonthlyTokens() {
     return result;
   } catch (error) {
     console.error('❌ Error resetting monthly subscription usage:', error);
-    throw error;
   }
 }
 
 module.exports = {
+  PERMISSION_PROFILES,
   PLAN_LIMITS,
   PLAN_DEFINITIONS,
   normalizePlanName,
   getPlanLimit,
   isFeatureAllowed,
   validateSubscriptionStatus,
-  checkLimitExceeded,
+  resolveEffectiveAllowedPages,
+  isPageAllowed,
+  isFeatureAllowedDynamic,
+  checkLimitExceededDynamic,
+  checkLimitExceeded: checkLimitExceededDynamic,
   checkAndResetMonthlyTokens
 };

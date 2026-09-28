@@ -324,42 +324,111 @@ exports.getFieldMappings = async (req, res) => {
 
     const mappings = await CRMFieldMapping.find(query).sort({ entityType: 1, sourceField: 1 });
 
+    // Group mappings by entityType so the frontend mapping table and active mapping list work seamlessly
+    const grouped = {};
+    for (const m of mappings) {
+      if (!grouped[m.entityType]) {
+        grouped[m.entityType] = {
+          _id: m._id,
+          entityType: m.entityType,
+          direction: 'bidirectional',
+          mappings: []
+        };
+      }
+      grouped[m.entityType].mappings.push({
+        _id: m._id,
+        sourceField: m.sourceField,
+        targetField: m.destinationField,
+        destinationField: m.destinationField,
+        transformation: m.transformation || 'none',
+        defaultValue: m.defaultValue || ''
+      });
+    }
+
+    const groupedArray = Object.values(grouped);
+
     res.json({
       success: true,
-      data: mappings
+      data: groupedArray.length > 0 ? groupedArray : mappings
     });
   } catch (error) {
     res.status(500).json({ success: false, error: 'Failed to fetch field mappings' });
   }
 };
 
+const normalizeTransformation = (trans) => {
+  if (!trans || trans === 'direct' || trans === 'none') return 'none';
+  const valid = ['none', 'uppercase', 'lowercase', 'trim', 'number', 'boolean', 'date', 'custom_regex'];
+  const t = trans.toLowerCase().trim();
+  return valid.includes(t) ? t : 'none';
+};
+
 exports.createFieldMapping = async (req, res) => {
   try {
     const { id: connectionId } = req.params;
     const adminId = req.admin._id;
-    const { entityType, sourceField, destinationField, transformation, required, defaultValue } = req.body;
+    const { entityType } = req.body;
 
     const connection = await CRMConnection.findOne({ _id: connectionId, adminId });
     if (!connection) {
       return res.status(404).json({ success: false, error: 'Connection not found' });
     }
 
-    if (!entityType || !sourceField || !destinationField) {
+    if (!entityType) {
+      return res.status(400).json({ success: false, error: 'Entity type is required' });
+    }
+
+    // Support batch mappings from UI
+    if (Array.isArray(req.body.mappings) && req.body.mappings.length > 0) {
+      const savedMappings = [];
+      for (const row of req.body.mappings) {
+        const src = (row.sourceField || '').trim();
+        const dst = (row.destinationField || row.targetField || '').trim();
+        if (!src || !dst) continue;
+
+        const trans = normalizeTransformation(row.transformation);
+        const mapping = await CRMFieldMapping.findOneAndUpdate(
+          { adminId, connectionId, entityType: entityType.toLowerCase(), sourceField: src },
+          {
+            destinationField: dst,
+            transformation: trans,
+            required: Boolean(row.required),
+            defaultValue: row.defaultValue || null,
+            isActive: true
+          },
+          { upsert: true, new: true, setDefaultsOnInsert: true }
+        );
+        savedMappings.push(mapping);
+      }
+
+      return res.status(201).json({
+        success: true,
+        message: 'Field mappings saved successfully',
+        data: savedMappings
+      });
+    }
+
+    // Single mapping fallback
+    const { sourceField, destinationField, targetField, transformation, required, defaultValue } = req.body;
+    const src = (sourceField || '').trim();
+    const dst = (destinationField || targetField || '').trim();
+
+    if (!src || !dst) {
       return res.status(400).json({ success: false, error: 'Entity type, source field, and destination field are required' });
     }
 
-    const mapping = new CRMFieldMapping({
-      adminId,
-      connectionId,
-      entityType: entityType.toLowerCase(),
-      sourceField: sourceField.trim(),
-      destinationField: destinationField.trim(),
-      transformation: transformation || 'none',
-      required: Boolean(required),
-      defaultValue: defaultValue || null
-    });
-
-    await mapping.save();
+    const trans = normalizeTransformation(transformation);
+    const mapping = await CRMFieldMapping.findOneAndUpdate(
+      { adminId, connectionId, entityType: entityType.toLowerCase(), sourceField: src },
+      {
+        destinationField: dst,
+        transformation: trans,
+        required: Boolean(required),
+        defaultValue: defaultValue || null,
+        isActive: true
+      },
+      { upsert: true, new: true, setDefaultsOnInsert: true }
+    );
 
     res.status(201).json({
       success: true,
@@ -370,24 +439,64 @@ exports.createFieldMapping = async (req, res) => {
     if (error.code === 11000) {
       return res.status(409).json({ success: false, error: 'Field mapping already exists for this source field' });
     }
+    console.error('createFieldMapping error:', error);
     res.status(500).json({ success: false, error: 'Failed to create field mapping' });
   }
 };
 
 exports.updateFieldMapping = async (req, res) => {
   try {
+    const adminId = req.admin._id;
+    const { entityType, mappings } = req.body;
+
+    // If batch update from frontend
+    if (Array.isArray(mappings) && mappings.length > 0) {
+      const existing = await CRMFieldMapping.findOne({ _id: req.params.id, adminId });
+      const connectionId = existing ? existing.connectionId : null;
+
+      if (connectionId && entityType) {
+        const savedMappings = [];
+        for (const row of mappings) {
+          const src = (row.sourceField || '').trim();
+          const dst = (row.destinationField || row.targetField || '').trim();
+          if (!src || !dst) continue;
+
+          const trans = normalizeTransformation(row.transformation);
+          const updated = await CRMFieldMapping.findOneAndUpdate(
+            { adminId, connectionId, entityType: entityType.toLowerCase(), sourceField: src },
+            {
+              destinationField: dst,
+              transformation: trans,
+              required: Boolean(row.required),
+              defaultValue: row.defaultValue || null,
+              isActive: true
+            },
+            { upsert: true, new: true, setDefaultsOnInsert: true }
+          );
+          savedMappings.push(updated);
+        }
+
+        return res.json({
+          success: true,
+          message: 'Field mappings updated successfully',
+          data: savedMappings
+        });
+      }
+    }
+
     const mapping = await CRMFieldMapping.findOne({
       _id: req.params.id,
-      adminId: req.admin._id
+      adminId
     });
 
     if (!mapping) {
       return res.status(404).json({ success: false, error: 'Field mapping not found' });
     }
 
-    const { destinationField, transformation, required, defaultValue, isActive } = req.body;
-    if (destinationField) mapping.destinationField = destinationField.trim();
-    if (transformation) mapping.transformation = transformation;
+    const { destinationField, targetField, transformation, required, defaultValue, isActive } = req.body;
+    const dst = destinationField || targetField;
+    if (dst) mapping.destinationField = dst.trim();
+    if (transformation) mapping.transformation = normalizeTransformation(transformation);
     if (required !== undefined) mapping.required = Boolean(required);
     if (defaultValue !== undefined) mapping.defaultValue = defaultValue;
     if (isActive !== undefined) mapping.isActive = Boolean(isActive);
@@ -406,14 +515,19 @@ exports.updateFieldMapping = async (req, res) => {
 
 exports.deleteFieldMapping = async (req, res) => {
   try {
-    const result = await CRMFieldMapping.findOneAndDelete({
-      _id: req.params.id,
-      adminId: req.admin._id
-    });
+    const adminId = req.admin._id;
+    const mapping = await CRMFieldMapping.findOne({ _id: req.params.id, adminId });
 
-    if (!result) {
+    if (!mapping) {
       return res.status(404).json({ success: false, error: 'Field mapping not found' });
     }
+
+    // Delete all mappings for this entityType & connection if grouped
+    await CRMFieldMapping.deleteMany({
+      adminId,
+      connectionId: mapping.connectionId,
+      entityType: mapping.entityType
+    });
 
     res.json({
       success: true,

@@ -248,8 +248,18 @@ const defaultPlans = [
     isActive: true,
     isPublished: false,
     allowedBillingCycles: ['monthly', 'yearly'],
-    permissionProfile: 'crm_basic',
-    allowedPages: ['dashboard', 'conversations', 'integrations', 'leads', 'profile', 'billing'],
+    permissionProfile: 'crm_connect',
+    allowedPages: [
+      'integration-dashboard',
+      'crm-connection',
+      'field-mapping',
+      'whatsapp-templates',
+      'integration-logs',
+      'whatsapp-connection',
+      'usage',
+      'billing',
+      'settings'
+    ],
     features: {
       dashboardAccess: true,
       conversations: true,
@@ -290,8 +300,20 @@ const defaultPlans = [
     isActive: true,
     isPublished: false,
     allowedBillingCycles: ['monthly', 'yearly'],
-    permissionProfile: 'crm_advanced',
-    allowedPages: ['dashboard', 'conversations', 'integrations', 'orders', 'leads', 'analytics', 'profile', 'billing'],
+    permissionProfile: 'crm_automation',
+    allowedPages: [
+      'integration-dashboard',
+      'crm-connection',
+      'field-mapping',
+      'automation-rules',
+      'whatsapp-templates',
+      'integration-logs',
+      'failed-events',
+      'whatsapp-connection',
+      'usage',
+      'billing',
+      'settings'
+    ],
     features: {
       dashboardAccess: true,
       conversations: true,
@@ -336,8 +358,21 @@ const defaultPlans = [
     isActive: true,
     isPublished: false,
     allowedBillingCycles: ['monthly', 'yearly'],
-    permissionProfile: 'enterprise',
-    allowedPages: ['dashboard', 'conversations', 'knowledge-base', 'broadcast', 'analytics', 'escalations', 'templates', 'integrations', 'orders', 'leads', 'api-keys', 'profile', 'billing'],
+    permissionProfile: 'crm_enterprise',
+    allowedPages: [
+      'integration-dashboard',
+      'crm-connection',
+      'field-mapping',
+      'automation-rules',
+      'webhook-configuration',
+      'whatsapp-templates',
+      'integration-logs',
+      'failed-events',
+      'whatsapp-connection',
+      'usage',
+      'billing',
+      'settings'
+    ],
     features: {
       dashboardAccess: true,
       conversations: true,
@@ -389,8 +424,18 @@ const defaultPlans = [
     isActive: true,
     isPublished: false,
     allowedBillingCycles: ['monthly', 'yearly'],
-    permissionProfile: 'api_basic',
-    allowedPages: ['dashboard', 'conversations', 'api-keys', 'integrations', 'profile', 'billing'],
+    permissionProfile: 'api_starter',
+    allowedPages: [
+      'api-dashboard',
+      'api-keys',
+      'api-documentation',
+      'webhook-configuration',
+      'whatsapp-templates',
+      'api-logs',
+      'api-usage',
+      'billing',
+      'settings'
+    ],
     features: {
       dashboardAccess: true,
       conversations: true,
@@ -430,8 +475,19 @@ const defaultPlans = [
     isActive: true,
     isPublished: false,
     allowedBillingCycles: ['monthly', 'yearly'],
-    permissionProfile: 'api_advanced',
-    allowedPages: ['dashboard', 'conversations', 'api-keys', 'integrations', 'analytics', 'profile', 'billing'],
+    permissionProfile: 'api_growth',
+    allowedPages: [
+      'api-dashboard',
+      'api-keys',
+      'api-documentation',
+      'webhook-configuration',
+      'whatsapp-templates',
+      'api-logs',
+      'failed-webhooks',
+      'api-usage',
+      'billing',
+      'settings'
+    ],
     features: {
       dashboardAccess: true,
       conversations: true,
@@ -617,6 +673,15 @@ async function runMigration(options = {}) {
         if (!existing.permissionProfile) {
           existing.permissionProfile = planData.permissionProfile;
           needsSave = true;
+        }
+
+        // For draft plans, sync canonical profile and allowedPages if updated
+        if (!existing.isPublished && planData.permissionProfile) {
+          if (existing.permissionProfile !== planData.permissionProfile || !existing.allowedPages || existing.allowedPages.length === 0 || existing.permissionProfile === 'crm_basic' || existing.permissionProfile === 'api_basic') {
+            existing.permissionProfile = planData.permissionProfile;
+            existing.allowedPages = planData.allowedPages;
+            needsSave = true;
+          }
         }
 
         if (needsSave && !isDryRun) {

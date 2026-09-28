@@ -1,0 +1,269 @@
+const { CANONICAL_PERMISSIONS } = require('./permissions');
+
+/**
+ * Standard Permission Profiles Mapping
+ * Defines default allowed pages and granular permissions for each profile tier.
+ */
+const PERMISSION_PROFILES = {
+  // 1. Preserved Standard CRM Profiles (Starter, Growth, Scale)
+  starter: {
+    pages: ['dashboard', 'conversations', 'knowledge-base', 'integrations', 'profile', 'billing'],
+    permissions: [
+      CANONICAL_PERMISSIONS.USAGE_VIEW,
+      CANONICAL_PERMISSIONS.BILLING_VIEW,
+      CANONICAL_PERMISSIONS.WHATSAPP_CONNECTION_VIEW,
+      CANONICAL_PERMISSIONS.WHATSAPP_CONNECTION_MANAGE,
+      CANONICAL_PERMISSIONS.SETTINGS_VIEW
+    ]
+  },
+  growth: {
+    pages: ['dashboard', 'conversations', 'knowledge-base', 'broadcast', 'analytics', 'escalations', 'integrations', 'profile', 'billing'],
+    permissions: [
+      CANONICAL_PERMISSIONS.USAGE_VIEW,
+      CANONICAL_PERMISSIONS.BILLING_VIEW,
+      CANONICAL_PERMISSIONS.WHATSAPP_CONNECTION_VIEW,
+      CANONICAL_PERMISSIONS.WHATSAPP_CONNECTION_MANAGE,
+      CANONICAL_PERMISSIONS.WHATSAPP_TEMPLATES_VIEW,
+      CANONICAL_PERMISSIONS.SETTINGS_VIEW,
+      CANONICAL_PERMISSIONS.SETTINGS_MANAGE
+    ]
+  },
+  scale: {
+    pages: ['dashboard', 'conversations', 'knowledge-base', 'broadcast', 'analytics', 'escalations', 'templates', 'integrations', 'orders', 'leads', 'api-keys', 'profile', 'billing'],
+    permissions: [
+      CANONICAL_PERMISSIONS.USAGE_VIEW,
+      CANONICAL_PERMISSIONS.BILLING_VIEW,
+      CANONICAL_PERMISSIONS.WHATSAPP_CONNECTION_VIEW,
+      CANONICAL_PERMISSIONS.WHATSAPP_CONNECTION_MANAGE,
+      CANONICAL_PERMISSIONS.WHATSAPP_TEMPLATES_VIEW,
+      CANONICAL_PERMISSIONS.WHATSAPP_TEMPLATES_MANAGE,
+      CANONICAL_PERMISSIONS.API_KEYS_VIEW,
+      CANONICAL_PERMISSIONS.API_KEYS_MANAGE,
+      CANONICAL_PERMISSIONS.SETTINGS_VIEW,
+      CANONICAL_PERMISSIONS.SETTINGS_MANAGE
+    ]
+  },
+
+  // 2. CRM Integration Profiles
+  crm_connect: {
+    pages: [
+      'integration-dashboard',
+      'crm-connection',
+      'field-mapping',
+      'whatsapp-templates',
+      'integration-logs',
+      'whatsapp-connection',
+      'usage',
+      'billing',
+      'settings'
+    ],
+    permissions: [
+      CANONICAL_PERMISSIONS.INTEGRATION_DASHBOARD_VIEW,
+      CANONICAL_PERMISSIONS.CRM_CONNECTION_VIEW,
+      CANONICAL_PERMISSIONS.CRM_CONNECTION_MANAGE,
+      CANONICAL_PERMISSIONS.FIELD_MAPPING_VIEW,
+      CANONICAL_PERMISSIONS.FIELD_MAPPING_MANAGE,
+      CANONICAL_PERMISSIONS.WHATSAPP_TEMPLATES_VIEW,
+      CANONICAL_PERMISSIONS.INTEGRATION_LOGS_VIEW,
+      CANONICAL_PERMISSIONS.WHATSAPP_CONNECTION_VIEW,
+      CANONICAL_PERMISSIONS.WHATSAPP_CONNECTION_MANAGE,
+      CANONICAL_PERMISSIONS.USAGE_VIEW,
+      CANONICAL_PERMISSIONS.BILLING_VIEW,
+      CANONICAL_PERMISSIONS.SETTINGS_VIEW,
+      CANONICAL_PERMISSIONS.SETTINGS_MANAGE
+    ]
+  },
+  crm_automation: {
+    pages: [
+      'integration-dashboard',
+      'crm-connection',
+      'field-mapping',
+      'automation-rules',
+      'whatsapp-templates',
+      'integration-logs',
+      'failed-events',
+      'whatsapp-connection',
+      'usage',
+      'billing',
+      'settings'
+    ],
+    permissions: [
+      CANONICAL_PERMISSIONS.INTEGRATION_DASHBOARD_VIEW,
+      CANONICAL_PERMISSIONS.CRM_CONNECTION_VIEW,
+      CANONICAL_PERMISSIONS.CRM_CONNECTION_MANAGE,
+      CANONICAL_PERMISSIONS.FIELD_MAPPING_VIEW,
+      CANONICAL_PERMISSIONS.FIELD_MAPPING_MANAGE,
+      CANONICAL_PERMISSIONS.AUTOMATION_RULES_VIEW,
+      CANONICAL_PERMISSIONS.AUTOMATION_RULES_MANAGE,
+      CANONICAL_PERMISSIONS.WHATSAPP_TEMPLATES_VIEW,
+      CANONICAL_PERMISSIONS.WHATSAPP_TEMPLATES_MANAGE,
+      CANONICAL_PERMISSIONS.INTEGRATION_LOGS_VIEW,
+      CANONICAL_PERMISSIONS.FAILED_EVENTS_VIEW,
+      CANONICAL_PERMISSIONS.FAILED_EVENTS_RETRY,
+      CANONICAL_PERMISSIONS.WHATSAPP_CONNECTION_VIEW,
+      CANONICAL_PERMISSIONS.WHATSAPP_CONNECTION_MANAGE,
+      CANONICAL_PERMISSIONS.USAGE_VIEW,
+      CANONICAL_PERMISSIONS.BILLING_VIEW,
+      CANONICAL_PERMISSIONS.SETTINGS_VIEW,
+      CANONICAL_PERMISSIONS.SETTINGS_MANAGE
+    ]
+  },
+  crm_enterprise: {
+    pages: [
+      'integration-dashboard',
+      'crm-connection',
+      'field-mapping',
+      'automation-rules',
+      'webhook-configuration',
+      'whatsapp-templates',
+      'integration-logs',
+      'failed-events',
+      'whatsapp-connection',
+      'usage',
+      'billing',
+      'settings'
+    ],
+    permissions: [
+      CANONICAL_PERMISSIONS.INTEGRATION_DASHBOARD_VIEW,
+      CANONICAL_PERMISSIONS.CRM_CONNECTION_VIEW,
+      CANONICAL_PERMISSIONS.CRM_CONNECTION_MANAGE,
+      CANONICAL_PERMISSIONS.FIELD_MAPPING_VIEW,
+      CANONICAL_PERMISSIONS.FIELD_MAPPING_MANAGE,
+      CANONICAL_PERMISSIONS.AUTOMATION_RULES_VIEW,
+      CANONICAL_PERMISSIONS.AUTOMATION_RULES_MANAGE,
+      CANONICAL_PERMISSIONS.WEBHOOK_CONFIGURATION_VIEW,
+      CANONICAL_PERMISSIONS.WEBHOOK_CONFIGURATION_MANAGE,
+      CANONICAL_PERMISSIONS.WHATSAPP_TEMPLATES_VIEW,
+      CANONICAL_PERMISSIONS.WHATSAPP_TEMPLATES_MANAGE,
+      CANONICAL_PERMISSIONS.INTEGRATION_LOGS_VIEW,
+      CANONICAL_PERMISSIONS.FAILED_EVENTS_VIEW,
+      CANONICAL_PERMISSIONS.FAILED_EVENTS_RETRY,
+      CANONICAL_PERMISSIONS.WHATSAPP_CONNECTION_VIEW,
+      CANONICAL_PERMISSIONS.WHATSAPP_CONNECTION_MANAGE,
+      CANONICAL_PERMISSIONS.USAGE_VIEW,
+      CANONICAL_PERMISSIONS.BILLING_VIEW,
+      CANONICAL_PERMISSIONS.SETTINGS_VIEW,
+      CANONICAL_PERMISSIONS.SETTINGS_MANAGE
+    ]
+  },
+
+  // 3. WhatsApp API Profiles
+  api_starter: {
+    pages: [
+      'api-dashboard',
+      'api-keys',
+      'api-documentation',
+      'webhook-configuration',
+      'whatsapp-templates',
+      'api-logs',
+      'api-usage',
+      'billing',
+      'settings'
+    ],
+    permissions: [
+      CANONICAL_PERMISSIONS.API_DASHBOARD_VIEW,
+      CANONICAL_PERMISSIONS.API_KEYS_VIEW,
+      CANONICAL_PERMISSIONS.API_KEYS_MANAGE,
+      CANONICAL_PERMISSIONS.API_DOCUMENTATION_VIEW,
+      CANONICAL_PERMISSIONS.WEBHOOK_CONFIGURATION_VIEW,
+      CANONICAL_PERMISSIONS.WEBHOOK_CONFIGURATION_MANAGE,
+      CANONICAL_PERMISSIONS.WHATSAPP_TEMPLATES_VIEW,
+      CANONICAL_PERMISSIONS.API_LOGS_VIEW,
+      CANONICAL_PERMISSIONS.API_USAGE_VIEW,
+      CANONICAL_PERMISSIONS.USAGE_VIEW,
+      CANONICAL_PERMISSIONS.BILLING_VIEW,
+      CANONICAL_PERMISSIONS.SETTINGS_VIEW
+    ]
+  },
+  api_growth: {
+    pages: [
+      'api-dashboard',
+      'api-keys',
+      'api-documentation',
+      'webhook-configuration',
+      'whatsapp-templates',
+      'api-logs',
+      'failed-webhooks',
+      'api-usage',
+      'billing',
+      'settings'
+    ],
+    permissions: [
+      CANONICAL_PERMISSIONS.API_DASHBOARD_VIEW,
+      CANONICAL_PERMISSIONS.API_KEYS_VIEW,
+      CANONICAL_PERMISSIONS.API_KEYS_MANAGE,
+      CANONICAL_PERMISSIONS.API_DOCUMENTATION_VIEW,
+      CANONICAL_PERMISSIONS.WEBHOOK_CONFIGURATION_VIEW,
+      CANONICAL_PERMISSIONS.WEBHOOK_CONFIGURATION_MANAGE,
+      CANONICAL_PERMISSIONS.WHATSAPP_TEMPLATES_VIEW,
+      CANONICAL_PERMISSIONS.WHATSAPP_TEMPLATES_MANAGE,
+      CANONICAL_PERMISSIONS.API_LOGS_VIEW,
+      CANONICAL_PERMISSIONS.FAILED_WEBHOOKS_VIEW,
+      CANONICAL_PERMISSIONS.FAILED_WEBHOOKS_RETRY,
+      CANONICAL_PERMISSIONS.API_USAGE_VIEW,
+      CANONICAL_PERMISSIONS.USAGE_VIEW,
+      CANONICAL_PERMISSIONS.BILLING_VIEW,
+      CANONICAL_PERMISSIONS.SETTINGS_VIEW,
+      CANONICAL_PERMISSIONS.SETTINGS_MANAGE
+    ]
+  },
+  api_enterprise: {
+    pages: [
+      'api-dashboard',
+      'api-keys',
+      'api-documentation',
+      'webhook-configuration',
+      'whatsapp-templates',
+      'api-logs',
+      'failed-webhooks',
+      'api-usage',
+      'billing',
+      'settings'
+    ],
+    permissions: [
+      CANONICAL_PERMISSIONS.API_DASHBOARD_VIEW,
+      CANONICAL_PERMISSIONS.API_KEYS_VIEW,
+      CANONICAL_PERMISSIONS.API_KEYS_MANAGE,
+      CANONICAL_PERMISSIONS.API_DOCUMENTATION_VIEW,
+      CANONICAL_PERMISSIONS.WEBHOOK_CONFIGURATION_VIEW,
+      CANONICAL_PERMISSIONS.WEBHOOK_CONFIGURATION_MANAGE,
+      CANONICAL_PERMISSIONS.WHATSAPP_TEMPLATES_VIEW,
+      CANONICAL_PERMISSIONS.WHATSAPP_TEMPLATES_MANAGE,
+      CANONICAL_PERMISSIONS.API_LOGS_VIEW,
+      CANONICAL_PERMISSIONS.FAILED_WEBHOOKS_VIEW,
+      CANONICAL_PERMISSIONS.FAILED_WEBHOOKS_RETRY,
+      CANONICAL_PERMISSIONS.API_USAGE_VIEW,
+      CANONICAL_PERMISSIONS.USAGE_VIEW,
+      CANONICAL_PERMISSIONS.BILLING_VIEW,
+      CANONICAL_PERMISSIONS.SETTINGS_VIEW,
+      CANONICAL_PERMISSIONS.SETTINGS_MANAGE
+    ]
+  },
+
+  // 4. Custom Automation: Deny by default until Super Admin explicitly assigns permissions
+  custom_automation: {
+    pages: [],
+    permissions: []
+  },
+
+  // Default Fallback Profile
+  default: {
+    pages: ['dashboard', 'conversations', 'profile', 'billing'],
+    permissions: [
+      CANONICAL_PERMISSIONS.USAGE_VIEW,
+      CANONICAL_PERMISSIONS.BILLING_VIEW,
+      CANONICAL_PERMISSIONS.SETTINGS_VIEW
+    ]
+  }
+};
+
+// Aliases for backward compatibility with legacy seeded profiles
+PERMISSION_PROFILES.crm_basic = PERMISSION_PROFILES.crm_connect;
+PERMISSION_PROFILES.crm_advanced = PERMISSION_PROFILES.crm_automation;
+PERMISSION_PROFILES.api_basic = PERMISSION_PROFILES.api_starter;
+PERMISSION_PROFILES.api_advanced = PERMISSION_PROFILES.api_growth;
+PERMISSION_PROFILES.enterprise = PERMISSION_PROFILES.crm_enterprise;
+
+module.exports = {
+  PERMISSION_PROFILES
+};

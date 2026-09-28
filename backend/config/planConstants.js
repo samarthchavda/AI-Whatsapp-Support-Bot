@@ -135,8 +135,7 @@ function normalizePlanName(planName) {
   const lower = String(planName).toLowerCase().trim();
   if (lower === 'professional' || lower === 'pro') return 'growth';
   if (lower === 'enterprise') return 'scale';
-  if (PLAN_DEFINITIONS[lower]) return lower;
-  return 'starter';
+  return lower;
 }
 
 /**

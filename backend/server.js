@@ -279,6 +279,8 @@ app.use('/api/traffic', trafficRoutes);
 app.use('/api/abandoned-carts', abandonedCartRoutes);
 app.use('/api/blog', blogRoutes);
 app.use('/api/merchant-leads', require('./routes/merchantLeadRoutes'));
+app.use('/api/integration-platform', require('./routes/integrationPlatformRoutes'));
+app.use('/api/developer', require('./routes/developerRoutes'));
 
 // Error handling middleware
 app.use((err, req, res, next) => {

@@ -1374,3 +1374,20 @@ exports.regenerateApiKey = async (req, res) => {
     res.status(500).json({ success: false, error: 'Failed to update API key' });
   }
 };
+
+// Get Effective Access Payload (Canonical Modules, Granular Permissions, Usage Limits)
+exports.getEffectiveAccess = async (req, res) => {
+  try {
+    const permissionService = require('../../services/permissionService');
+    const admin = await Admin.findById(req.admin._id);
+    if (!admin) {
+      return res.status(404).json({ success: false, error: 'Account not found' });
+    }
+
+    const payload = await permissionService.getEffectiveAccessPayload(admin);
+    res.json(payload);
+  } catch (error) {
+    console.error('Error fetching effective access:', error);
+    res.status(500).json({ success: false, error: 'Failed to resolve effective permissions' });
+  }
+};

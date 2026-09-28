@@ -343,4 +343,7 @@ router.post('/razorpay/verify-payment', verifyToken, authController.verifyRazorp
 router.get('/api-key', verifyToken, authController.getApiKey);
 router.post('/api-key/regenerate', verifyToken, authController.regenerateApiKey);
 
+// Effective Access & Granular Permissions Endpoint
+router.get('/effective-access', verifyToken, authController.getEffectiveAccess);
+
 module.exports = router;

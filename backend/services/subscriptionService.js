@@ -10,18 +10,7 @@ const PLAN_LIMITS = {
   custom: { tokens: -1, messages: -1, conversations: -1 }
 };
 
-// Permission Profile Defaults
-const PERMISSION_PROFILES = {
-  starter: ['dashboard', 'conversations', 'knowledge-base', 'integrations', 'profile', 'billing'],
-  growth: ['dashboard', 'conversations', 'knowledge-base', 'broadcast', 'analytics', 'escalations', 'integrations', 'profile', 'billing'],
-  scale: ['dashboard', 'conversations', 'knowledge-base', 'broadcast', 'analytics', 'escalations', 'templates', 'integrations', 'orders', 'leads', 'api-keys', 'profile', 'billing'],
-  crm_basic: ['dashboard', 'conversations', 'integrations', 'leads', 'profile', 'billing'],
-  crm_advanced: ['dashboard', 'conversations', 'integrations', 'orders', 'leads', 'analytics', 'profile', 'billing'],
-  api_basic: ['dashboard', 'conversations', 'api-keys', 'integrations', 'profile', 'billing'],
-  api_advanced: ['dashboard', 'conversations', 'api-keys', 'integrations', 'analytics', 'profile', 'billing'],
-  enterprise: ['dashboard', 'conversations', 'knowledge-base', 'broadcast', 'analytics', 'escalations', 'templates', 'integrations', 'orders', 'leads', 'api-keys', 'profile', 'billing'],
-  default: ['dashboard', 'conversations', 'profile', 'billing']
-};
+const { PERMISSION_PROFILES } = require('../constants/permissionProfiles');
 
 /**
  * Validates subscription status, account active state, and billing expiration date.
@@ -83,11 +72,12 @@ async function resolveEffectiveAllowedPages(admin) {
 
   // 3. Permission profile default
   const profileKey = plan?.permissionProfile || planName || 'default';
-  if (PERMISSION_PROFILES[profileKey]) {
-    return PERMISSION_PROFILES[profileKey];
+  const profile = PERMISSION_PROFILES[profileKey] || PERMISSION_PROFILES.default;
+  if (profile) {
+    return Array.isArray(profile) ? profile : (profile.pages || []);
   }
 
-  return PERMISSION_PROFILES.default;
+  return PERMISSION_PROFILES.default.pages || [];
 }
 
 /**

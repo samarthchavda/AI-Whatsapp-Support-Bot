@@ -2,6 +2,37 @@ const express = require('express');
 const router = express.Router();
 const authController = require('../controllers/public/authController');
 const { verifyToken } = require('../middleware/auth');
+const { createMongoRateLimiter } = require('../middleware/mongoRateLimiter');
+
+// Shared PM2 cluster rate limiters
+const loginIpLimiter = createMongoRateLimiter({
+  prefix: 'rl:login:ip',
+  windowMs: 15 * 60 * 1000,
+  maxRequests: 10,
+  message: 'Too many login attempts from this IP address. Please try again later.'
+});
+
+const loginAccountLimiter = createMongoRateLimiter({
+  prefix: 'rl:login:account',
+  windowMs: 15 * 60 * 1000,
+  maxRequests: 5,
+  keyGenerator: (req) => (req.body?.email || '').toLowerCase().trim() || 'unknown',
+  message: 'Too many login attempts for this account. Please try again later.'
+});
+
+const forgotPasswordLimiter = createMongoRateLimiter({
+  prefix: 'rl:forgot',
+  windowMs: 15 * 60 * 1000,
+  maxRequests: 5,
+  message: 'Too many password reset requests. Please try again later.'
+});
+
+const resetPasswordLimiter = createMongoRateLimiter({
+  prefix: 'rl:reset',
+  windowMs: 15 * 60 * 1000,
+  maxRequests: 5,
+  message: 'Too many password reset attempts. Please try again later.'
+});
 
 /**
  * @openapi
@@ -33,7 +64,7 @@ const { verifyToken } = require('../middleware/auth');
  *       401:
  *         description: Invalid credentials
  */
-router.post('/login', authController.login);
+router.post('/login', loginIpLimiter, loginAccountLimiter, authController.login);
 
 /**
  * @openapi
@@ -57,7 +88,7 @@ router.post('/login', authController.login);
  *       200:
  *         description: Password reset email sent
  */
-router.post('/forgot-password', authController.forgotPassword);
+router.post('/forgot-password', forgotPasswordLimiter, authController.forgotPassword);
 
 /**
  * @openapi
@@ -86,7 +117,7 @@ router.post('/forgot-password', authController.forgotPassword);
  *       200:
  *         description: Password reset successfully
  */
-router.post('/reset-password/:token', authController.resetPassword);
+router.post('/reset-password/:token', resetPasswordLimiter, authController.resetPassword);
 
 /**
  * @openapi

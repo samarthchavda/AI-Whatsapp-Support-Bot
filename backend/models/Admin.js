@@ -53,6 +53,14 @@ const adminSchema = new mongoose.Schema({
   lastLogin: {
     type: Date
   },
+  failedLoginAttempts: {
+    type: Number,
+    default: 0
+  },
+  lockedUntil: {
+    type: Date,
+    default: null
+  },
   apiKey: {
     type: String,
     unique: true,

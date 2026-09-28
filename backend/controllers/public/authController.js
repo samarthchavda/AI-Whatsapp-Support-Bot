@@ -7,8 +7,18 @@ const {
   hashToken,
   verifyRefreshToken
 } = require('../../middleware/auth');
+const bcrypt = require('bcryptjs');
+const mongoose = require('mongoose');
+const { logAction } = require('../../services/auditLogService');
+const { resetRateLimitKey, incrementRateLimitKey } = require('../../middleware/mongoRateLimiter');
 
 const REFRESH_TOKEN_TTL_MS = 30 * 24 * 60 * 60 * 1000;
+const DUMMY_HASH = '$2a$10$IzpFmyKFRqZDqwBHY.1gkuLalXSlc.n2PlJI51SNHdoXL0JkpL..O';
+const GENERIC_LOGIN_ERROR = {
+  success: false,
+  error: 'Invalid credentials',
+  message: 'Email or password is incorrect'
+};
 
 const parseCookies = (cookieHeader = '') => cookieHeader.split(';').reduce((cookies, cookiePair) => {
   const [rawKey, ...rawValueParts] = cookiePair.trim().split('=');
@@ -125,32 +135,25 @@ exports.login = async (req, res) => {
       });
     }
 
-    const admin = await Admin.findOne({ email: email.toLowerCase() });
+    const normalizedEmail = (email || '').toLowerCase().trim();
+    const admin = await Admin.findOne({ email: normalizedEmail });
 
-    if (!admin) {
-      return res.status(401).json({
-        success: false,
-        error: 'Invalid credentials',
-        message: 'Email or password is incorrect'
+    // Dummy compare to guarantee constant response timing whether email exists or not
+    const targetHash = admin ? admin.password : DUMMY_HASH;
+    const isPasswordValid = await bcrypt.compare(password, targetHash);
+
+    const clientIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress || req.ip || '127.0.0.1';
+    const actorId = admin ? admin._id : new mongoose.Types.ObjectId();
+
+    // Check account lockout
+    if (admin && admin.lockedUntil && admin.lockedUntil > new Date()) {
+      await logAction({
+        action: 'account_lockout_attempt',
+        actor: { _id: admin._id, email: admin.email },
+        details: { ip: clientIp },
+        req
       });
-    }
-
-    if (!admin.isActive) {
-      return res.status(403).json({
-        success: false,
-        error: 'Account disabled',
-        message: 'Your account has been disabled. Contact administrator.'
-      });
-    }
-
-    const isPasswordValid = await admin.comparePassword(password);
-
-    if (!isPasswordValid) {
-      return res.status(401).json({
-        success: false,
-        error: 'Invalid credentials',
-        message: 'Email or password is incorrect'
-      });
+      return res.status(401).json(GENERIC_LOGIN_ERROR);
     }
 
     // Role & Domain Enforcement Check
@@ -158,31 +161,90 @@ exports.login = async (req, res) => {
     const origin = req.get('origin') || req.get('referer') || '';
     const isSuperAdminDomain = host.startsWith('admin.') || origin.includes('admin.kwickbot.in');
 
-    if (isSuperAdminDomain && admin.role !== 'super_admin') {
-      return res.status(403).json({
-        success: false,
-        error: 'Access Denied',
-        message: 'Only Super Admin accounts are allowed to log in on admin.kwickbot.in.'
-      });
+    let domainMismatch = false;
+    if (admin) {
+      if (isSuperAdminDomain && admin.role !== 'super_admin') {
+        domainMismatch = true;
+      }
+      if (!isSuperAdminDomain && admin.role === 'super_admin') {
+        domainMismatch = true;
+      }
     }
 
-    if (!isSuperAdminDomain && admin.role === 'super_admin') {
-      return res.status(403).json({
-        success: false,
-        error: 'Access Denied',
-        message: 'Super Admin account detected. Please log in via https://admin.kwickbot.in'
+    if (!admin || !isPasswordValid || domainMismatch || !admin.isActive) {
+      // Record failed attempt on admin if exists
+      if (admin && admin.isActive) {
+        admin.failedLoginAttempts = (admin.failedLoginAttempts || 0) + 1;
+        
+        // Exponential lockout starting at 5 attempts
+        if (admin.failedLoginAttempts >= 5) {
+          const lockMinutes = 15 * Math.pow(2, Math.min(admin.failedLoginAttempts - 5, 6)); // 15m, 30m, 60m...
+          admin.lockedUntil = new Date(Date.now() + lockMinutes * 60 * 1000);
+          
+          await logAction({
+            action: 'account_lockout',
+            actor: { _id: admin._id, email: admin.email },
+            details: { failedAttempts: admin.failedLoginAttempts, lockMinutes, ip: clientIp },
+            req
+          });
+        }
+        await admin.save();
+      }
+
+      await logAction({
+        action: 'login_failure',
+        actor: { _id: actorId, email: normalizedEmail },
+        details: { ip: clientIp, domainMismatch: !!domainMismatch },
+        req
       });
+
+      // Increment shared rate limits
+      await incrementRateLimitKey(`rl:login:ip:${clientIp}`, 15 * 60 * 1000);
+      await incrementRateLimitKey(`rl:login:account:${normalizedEmail}`, 15 * 60 * 1000);
+
+      if (domainMismatch) {
+        if (isSuperAdminDomain && admin.role !== 'super_admin') {
+          return res.status(403).json({
+            success: false,
+            error: 'Access Denied',
+            message: 'Only Super Admin accounts are allowed to log in on admin.kwickbot.in.'
+          });
+        }
+        if (!isSuperAdminDomain && admin.role === 'super_admin') {
+          return res.status(403).json({
+            success: false,
+            error: 'Access Denied',
+            message: 'Super Admin account detected. Please log in via https://admin.kwickbot.in'
+          });
+        }
+      }
+
+      return res.status(401).json(GENERIC_LOGIN_ERROR);
     }
 
+    // SUCCESSFUL LOGIN
+    admin.failedLoginAttempts = 0;
+    admin.lockedUntil = null;
     admin.lastLogin = new Date();
     pruneExpiredRefreshTokens(admin);
 
     const { accessToken, refreshToken } = issueSessionTokens(admin, req);
     await admin.save();
 
+    // Reset rate limits on successful login
+    await resetRateLimitKey(`rl:login:ip:${clientIp}`);
+    await resetRateLimitKey(`rl:login:account:${normalizedEmail}`);
+
+    await logAction({
+      action: 'login_success',
+      actor: { _id: admin._id, email: admin.email },
+      details: { ip: clientIp },
+      req
+    });
+
     res.cookie(getRefreshCookieName(), refreshToken, getRefreshCookieOptions());
 
-    res.json({
+    return res.json({
       success: true,
       message: 'Login successful',
       data: {
@@ -652,13 +714,24 @@ exports.forgotPassword = async (req, res) => {
       });
     }
 
-    const admin = await Admin.findOne({ email: email.toLowerCase() });
+    const normalizedEmail = (email || '').toLowerCase().trim();
+    const admin = await Admin.findOne({ email: normalizedEmail });
+    const actorId = admin ? admin._id : new mongoose.Types.ObjectId();
+
+    await logAction({
+      action: 'password_reset_request',
+      actor: { _id: actorId, email: normalizedEmail },
+      details: { accountExists: !!admin },
+      req
+    });
+
+    const GENERIC_FORGOT_SUCCESS = {
+      success: true,
+      message: 'If an account with that email address exists, password reset instructions have been sent.'
+    };
 
     if (!admin) {
-      return res.status(404).json({
-        success: false,
-        error: 'Email address not found in our database'
-      });
+      return res.json(GENERIC_FORGOT_SUCCESS);
     }
 
     // Generate crypto token
@@ -730,10 +803,7 @@ exports.forgotPassword = async (req, res) => {
       console.warn(`⚠️ Printing password reset URL: ${resetUrl}`);
     }
 
-    res.json({
-      success: true,
-      message: 'A password reset link has been sent to your email address.'
-    });
+    return res.json(GENERIC_FORGOT_SUCCESS);
 
   } catch (error) {
     console.error('Forgot password error:', error);
@@ -783,7 +853,15 @@ exports.resetPassword = async (req, res) => {
     admin.resetPasswordToken = null;
     admin.resetPasswordExpires = null;
     admin.refreshTokens = []; // Clear active sessions to force re-login
+    admin.failedLoginAttempts = 0;
+    admin.lockedUntil = null;
     await admin.save();
+
+    await logAction({
+      action: 'password_reset_success',
+      actor: { _id: admin._id, email: admin.email },
+      req
+    });
 
     res.json({
       success: true,

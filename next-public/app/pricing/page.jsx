@@ -12,6 +12,66 @@ const CATEGORIES = [
   { id: 'enterprise_custom', label: 'Enterprise' }
 ];
 
+// The Kwickbot CRM plans have a defined public comparison. Keep this presentation
+// layer separate from the plan API so Super Admin remains the source of truth for
+// plan price, billing cycle, publication status and CTA behaviour.
+const KWICKBOT_CRM_COMPARISON = {
+  starter: {
+    conversations: '500',
+    messages: '2,000',
+    connections: '1',
+    knowledgeBasePdfs: '1 PDF document',
+    storeIntegrations: '1 store integration (Shopify or WooCommerce)',
+    advancedAnalytics: false,
+    liveChatEscalation: false,
+    orderCancellation: false,
+    broadcasting: false,
+    broadcastCampaigns: null,
+    broadcastMessages: null,
+    scheduledBroadcasts: false,
+    audienceSegmentation: false,
+    broadcastAnalytics: null,
+    customBranding: false,
+    developerApi: false
+  },
+  growth: {
+    conversations: '3,000',
+    messages: '15,000',
+    connections: '2',
+    knowledgeBasePdfs: '3 PDF documents',
+    storeIntegrations: '1 store integration (Shopify or WooCommerce)',
+    advancedAnalytics: true,
+    liveChatEscalation: true,
+    orderCancellation: true,
+    broadcasting: true,
+    broadcastCampaigns: '10/month',
+    broadcastMessages: '5,000/month',
+    scheduledBroadcasts: true,
+    audienceSegmentation: true,
+    broadcastAnalytics: 'Basic',
+    customBranding: false,
+    developerApi: false
+  },
+  scale: {
+    conversations: 'Unlimited',
+    messages: 'Unlimited',
+    connections: '5',
+    knowledgeBasePdfs: 'Unlimited',
+    storeIntegrations: 'Multiple store integrations',
+    advancedAnalytics: true,
+    liveChatEscalation: true,
+    orderCancellation: true,
+    broadcasting: true,
+    broadcastCampaigns: 'Unlimited',
+    broadcastMessages: '25,000/month',
+    scheduledBroadcasts: true,
+    audienceSegmentation: true,
+    broadcastAnalytics: 'Advanced',
+    customBranding: true,
+    developerApi: true
+  }
+};
+
 const faqs = [
   {
     question: "Do I need a Meta Business Manager account to connect WhatsApp?",
@@ -89,6 +149,17 @@ export default function PricingPage() {
     }
     return `${Number(val).toLocaleString()}${suffix}`;
   };
+
+  const FeatureItem = ({ enabled = true, children }) => (
+    <li className={enabled ? '' : 'disabled'}>
+      {enabled ? (
+        <FaCheck style={{ color: '#4ade80', flexShrink: 0, marginTop: '3px' }} />
+      ) : (
+        <FaTimes style={{ flexShrink: 0, marginTop: '3px' }} />
+      )}
+      {children}
+    </li>
+  );
 
   // Filter plans for active category
   const filteredPlans = plans.filter(p => p.category === activeCategory);
@@ -260,6 +331,9 @@ export default function PricingPage() {
               filteredPlans.map(plan => {
                 const isContactSales = plan.contactSales || plan.monthlyPrice === 0;
                 const currSymbol = getCurrencySymbol(plan.currency);
+                const crmComparison = activeCategory === 'kwickbot_crm'
+                  ? KWICKBOT_CRM_COMPARISON[String(plan.name || '').toLowerCase()]
+                  : null;
 
                 let priceDisplay = 'Contact Sales';
                 let subtext = '';
@@ -321,6 +395,40 @@ export default function PricingPage() {
                     </p>
 
                     <ul style={{ marginTop: '16px' }}>
+                      {crmComparison ? (
+                        <>
+                          <FeatureItem>{crmComparison.conversations} WhatsApp Conversations/mo</FeatureItem>
+                          <FeatureItem>{crmComparison.messages} WhatsApp Messages/mo</FeatureItem>
+                          <FeatureItem>{crmComparison.connections} Active WhatsApp Connection{crmComparison.connections === '1' ? '' : 's'}</FeatureItem>
+                          <FeatureItem>{crmComparison.knowledgeBasePdfs} Knowledge Base</FeatureItem>
+                          <FeatureItem>{crmComparison.storeIntegrations}</FeatureItem>
+                          <FeatureItem>AI WhatsApp Support</FeatureItem>
+                          <FeatureItem>Live Chat CRM</FeatureItem>
+
+                          {showFullComparison && (
+                            <>
+                              <FeatureItem enabled={crmComparison.advancedAnalytics}>Advanced Analytics</FeatureItem>
+                              <FeatureItem enabled={crmComparison.liveChatEscalation}>Live Chat Escalation</FeatureItem>
+                              <FeatureItem enabled={crmComparison.orderCancellation}>Order Cancellation</FeatureItem>
+                              <FeatureItem enabled={crmComparison.broadcasting}>WhatsApp Broadcasting</FeatureItem>
+                              <FeatureItem enabled={Boolean(crmComparison.broadcastCampaigns)}>
+                                {crmComparison.broadcastCampaigns ? `${crmComparison.broadcastCampaigns} Broadcast Campaigns` : 'Broadcast Campaigns'}
+                              </FeatureItem>
+                              <FeatureItem enabled={Boolean(crmComparison.broadcastMessages)}>
+                                {crmComparison.broadcastMessages ? `${crmComparison.broadcastMessages} Broadcast Messages` : 'Broadcast Messages'}
+                              </FeatureItem>
+                              <FeatureItem enabled={crmComparison.scheduledBroadcasts}>Scheduled Broadcasts</FeatureItem>
+                              <FeatureItem enabled={crmComparison.audienceSegmentation}>Audience Segmentation</FeatureItem>
+                              <FeatureItem enabled={Boolean(crmComparison.broadcastAnalytics)}>
+                                {crmComparison.broadcastAnalytics ? `${crmComparison.broadcastAnalytics} Broadcast Analytics` : 'Broadcast Analytics'}
+                              </FeatureItem>
+                              <FeatureItem enabled={crmComparison.customBranding}>Custom Branding</FeatureItem>
+                              <FeatureItem enabled={crmComparison.developerApi}>Developer API &amp; Webhooks</FeatureItem>
+                            </>
+                          )}
+                        </>
+                      ) : (
+                        <>
                       {/* Usage limits */}
                       {plan.usageLimits && (
                         <>
@@ -372,6 +480,8 @@ export default function PricingPage() {
                           ) : (
                             <li className="disabled"><FaTimes style={{ flexShrink: 0, marginTop: '3px' }} /> Developer API &amp; Webhooks</li>
                           )}
+                        </>
+                      )}
                         </>
                       )}
 

@@ -271,7 +271,7 @@ const defaultPlans = [
     },
     usageLimits: {
       monthlyConversations: 2000,
-      monthlyMessages: 10000,
+      monthlyMessages: 50000,
       maxCrmConnections: 1,
       maxWhatsAppConnections: 1
     },
@@ -329,7 +329,7 @@ const defaultPlans = [
     },
     usageLimits: {
       monthlyConversations: 5000,
-      monthlyMessages: 25000,
+      monthlyMessages: 100000,
       maxCrmConnections: 2,
       maxWhatsAppConnections: 2
     },

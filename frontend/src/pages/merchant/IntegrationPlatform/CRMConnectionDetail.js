@@ -237,13 +237,20 @@ function CRMConnectionDetail() {
             </div>
           </div>
 
-          <form onSubmit={handleSave} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          <form onSubmit={handleSave} autoComplete="off" data-lpignore="true" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            {/* Dummy hidden inputs to prevent Chrome password manager from autofilling user credentials */}
+            <input type="text" name="crm_detail_autofill_honeypot_user" style={{ display: 'none' }} tabIndex="-1" autoComplete="off" />
+            <input type="password" name="crm_detail_autofill_honeypot_pass" style={{ display: 'none' }} tabIndex="-1" autoComplete="new-password" />
+
             <div className="form-group-saas">
               <label>Display Name *</label>
               <input 
                 type="text" 
+                name="crm_detail_display_name"
                 value={displayName} 
                 onChange={e => setDisplayName(e.target.value)} 
+                autoComplete="off"
+                data-lpignore="true"
                 required 
               />
             </div>
@@ -252,8 +259,11 @@ function CRMConnectionDetail() {
               <label>Base URL *</label>
               <input 
                 type="url" 
+                name="crm_detail_base_url"
                 value={baseUrl} 
                 onChange={e => setBaseUrl(e.target.value)} 
+                autoComplete="off"
+                data-lpignore="true"
                 required 
               />
             </div>
@@ -263,8 +273,12 @@ function CRMConnectionDetail() {
                 <label>Odoo Database Name</label>
                 <input 
                   type="text" 
+                  name="crm_detail_odoo_db"
                   value={databaseName} 
                   onChange={e => setDatabaseName(e.target.value)} 
+                  autoComplete="new-password"
+                  data-lpignore="true"
+                  data-form-type="other"
                 />
               </div>
             )}
@@ -273,8 +287,12 @@ function CRMConnectionDetail() {
               <label>Tenant / Account Identifier</label>
               <input 
                 type="text" 
+                name="crm_detail_tenant_id"
                 value={tenantIdentifier} 
                 onChange={e => setTenantIdentifier(e.target.value)} 
+                autoComplete="off"
+                data-lpignore="true"
+                data-form-type="other"
               />
             </div>
 
@@ -282,9 +300,13 @@ function CRMConnectionDetail() {
               <label>Update Secret API Key / Token</label>
               <input 
                 type="password" 
+                name="crm_detail_update_key"
                 placeholder="Leave blank to keep existing encrypted secret" 
                 value={newApiKey}
                 onChange={e => setNewApiKey(e.target.value)}
+                autoComplete="new-password"
+                data-lpignore="true"
+                data-form-type="other"
               />
               <span className="form-hint">For security, existing credentials are encrypted with AES-256 and never sent back in plaintext.</span>
             </div>

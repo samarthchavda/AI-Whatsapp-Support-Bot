@@ -611,14 +611,17 @@ export default function CustomerOnboardWizard() {
                 <h2 className="onboard-step-title">Step 5: WhatsApp Cloud API Setup (Optional)</h2>
                 <p className="onboard-step-desc">Configure the merchant's Meta Cloud API credentials or leave blank to connect later from the merchant dashboard:</p>
 
-                <div className="onboard-form-grid">
+                <div className="onboard-form-grid" data-lpignore="true">
                   <div className="onboard-form-group">
                     <label>WhatsApp Business Phone Number</label>
                     <input
                       type="text"
+                      name="onboard_wa_phone_number"
                       placeholder="+91 98765 43210"
                       value={formData.whatsappPhoneNumber}
                       onChange={(e) => setFormData({ ...formData, whatsappPhoneNumber: e.target.value })}
+                      autoComplete="off"
+                      data-lpignore="true"
                     />
                   </div>
 
@@ -626,9 +629,13 @@ export default function CustomerOnboardWizard() {
                     <label>WhatsApp Business Account ID (WABA ID)</label>
                     <input
                       type="text"
+                      name="onboard_waba_account_id"
                       placeholder="e.g., 1084829104928"
                       value={formData.wabaId}
                       onChange={(e) => setFormData({ ...formData, wabaId: e.target.value })}
+                      autoComplete="new-password"
+                      data-lpignore="true"
+                      data-form-type="other"
                     />
                   </div>
 
@@ -636,9 +643,13 @@ export default function CustomerOnboardWizard() {
                     <label>Phone Number ID</label>
                     <input
                       type="text"
+                      name="onboard_wa_phone_number_id"
                       placeholder="e.g., 1039482019482"
                       value={formData.phoneNumberId}
                       onChange={(e) => setFormData({ ...formData, phoneNumberId: e.target.value })}
+                      autoComplete="new-password"
+                      data-lpignore="true"
+                      data-form-type="other"
                     />
                   </div>
                 </div>
@@ -651,7 +662,7 @@ export default function CustomerOnboardWizard() {
                 <h2 className="onboard-step-title">Step 6: CRM Connector Setup (Optional)</h2>
                 <p className="onboard-step-desc">Provision an initial CRM connection for synchronization (e.g. Odoo, HubSpot, Salesforce):</p>
 
-                <div className="onboard-form-grid">
+                <div className="onboard-form-grid" data-lpignore="true">
                   <div className="onboard-form-group">
                     <label>CRM Provider</label>
                     <select
@@ -670,9 +681,12 @@ export default function CustomerOnboardWizard() {
                     <label>CRM API Base URL</label>
                     <input
                       type="text"
+                      name="onboard_crm_api_url"
                       placeholder="https://mycompany.odoo.com"
                       value={formData.crmApiUrl}
                       onChange={(e) => setFormData({ ...formData, crmApiUrl: e.target.value })}
+                      autoComplete="off"
+                      data-lpignore="true"
                     />
                   </div>
 
@@ -680,9 +694,13 @@ export default function CustomerOnboardWizard() {
                     <label>API Key / Access Token</label>
                     <input
                       type="password"
+                      name="onboard_crm_api_secret_key"
                       placeholder="Secret API key or token"
                       value={formData.crmApiKey}
                       onChange={(e) => setFormData({ ...formData, crmApiKey: e.target.value })}
+                      autoComplete="new-password"
+                      data-lpignore="true"
+                      data-form-type="other"
                     />
                   </div>
 
@@ -690,9 +708,13 @@ export default function CustomerOnboardWizard() {
                     <label>Database Name (for Odoo)</label>
                     <input
                       type="text"
+                      name="onboard_crm_database_name"
                       placeholder="e.g., mycompany-db"
                       value={formData.crmDatabase}
                       onChange={(e) => setFormData({ ...formData, crmDatabase: e.target.value })}
+                      autoComplete="new-password"
+                      data-lpignore="true"
+                      data-form-type="other"
                     />
                   </div>
 
@@ -700,9 +722,13 @@ export default function CustomerOnboardWizard() {
                     <label>Username / Login Email (for Odoo)</label>
                     <input
                       type="text"
+                      name="onboard_crm_login_user"
                       placeholder="admin@mycompany.com"
                       value={formData.crmUsername}
                       onChange={(e) => setFormData({ ...formData, crmUsername: e.target.value })}
+                      autoComplete="off"
+                      data-lpignore="true"
+                      data-form-type="other"
                     />
                   </div>
                 </div>

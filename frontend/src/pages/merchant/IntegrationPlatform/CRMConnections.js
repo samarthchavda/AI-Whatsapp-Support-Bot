@@ -348,7 +348,11 @@ function CRMConnections() {
               </button>
             </div>
 
-            <form onSubmit={handleAddSubmit}>
+            <form onSubmit={handleAddSubmit} autoComplete="off" data-lpignore="true">
+              {/* Dummy hidden inputs to prevent Chrome password manager from autofilling user credentials */}
+              <input type="text" name="crm_autofill_honeypot_user" style={{ display: 'none' }} tabIndex="-1" autoComplete="off" />
+              <input type="password" name="crm_autofill_honeypot_pass" style={{ display: 'none' }} tabIndex="-1" autoComplete="new-password" />
+
               <div className="modal-body-saas">
                 {formError && (
                   <div style={{
@@ -381,10 +385,13 @@ function CRMConnections() {
                 <div className="form-group-saas">
                   <label>Display Name *</label>
                   <input 
-                    type="text" 
+                    type="text"
+                    name="crm_connection_display_name"
                     placeholder="e.g. Production Odoo 16 CRM" 
                     value={formData.displayName}
                     onChange={e => setFormData({ ...formData, displayName: e.target.value })}
+                    autoComplete="off"
+                    data-lpignore="true"
                     required
                   />
                 </div>
@@ -393,9 +400,12 @@ function CRMConnections() {
                   <label>CRM Base URL *</label>
                   <input 
                     type="url" 
+                    name="crm_connection_base_url"
                     placeholder="https://mycompany.odoo.com or https://api.crm.com" 
                     value={formData.baseUrl}
                     onChange={e => setFormData({ ...formData, baseUrl: e.target.value })}
+                    autoComplete="off"
+                    data-lpignore="true"
                     required
                   />
                   <span className="form-hint">Must be a secure public HTTPS endpoint (SSRF protected)</span>
@@ -405,11 +415,14 @@ function CRMConnections() {
                   <div className="form-group-saas">
                     <label>Odoo Database Name</label>
                     <input 
-                      type="text" 
+                      type="text"
+                      name="crm_odoo_database_name"
                       placeholder="e.g. odoo_production_db" 
                       value={formData.databaseName}
                       onChange={e => setFormData({ ...formData, databaseName: e.target.value })}
-                      autoComplete="off"
+                      autoComplete="new-password"
+                      data-lpignore="true"
+                      data-form-type="other"
                     />
                   </div>
                 )}
@@ -432,18 +445,26 @@ function CRMConnections() {
                       <label>Username / Email</label>
                       <input 
                         type="text" 
+                        name="crm_custom_auth_username"
                         placeholder="admin@example.com" 
                         value={formData.username}
                         onChange={e => setFormData({ ...formData, username: e.target.value })}
+                        autoComplete="off"
+                        data-lpignore="true"
+                        data-form-type="other"
                       />
                     </div>
                     <div className="form-group-saas">
                       <label>Password / User API Key</label>
                       <input 
                         type="password" 
+                        name="crm_custom_auth_password"
                         placeholder="••••••••••••" 
                         value={formData.password}
                         onChange={e => setFormData({ ...formData, password: e.target.value })}
+                        autoComplete="new-password"
+                        data-lpignore="true"
+                        data-form-type="other"
                       />
                     </div>
                   </>
@@ -452,10 +473,13 @@ function CRMConnections() {
                     <label>Secret API Key / Bearer Token</label>
                     <input 
                       type="password" 
+                      name="crm_custom_api_key_secret"
                       placeholder="Enter secret key or token..." 
                       value={formData.apiKey}
                       onChange={e => setFormData({ ...formData, apiKey: e.target.value })}
-                      autoComplete="off"
+                      autoComplete="new-password"
+                      data-lpignore="true"
+                      data-form-type="other"
                     />
                     <span className="form-hint">Stored securely using AES-256 encryption</span>
                   </div>

@@ -356,7 +356,11 @@ function verifyKwickbotWebhook(req, res, next) {
               </button>
             </div>
 
-            <form onSubmit={handleAddSubmit}>
+            <form onSubmit={handleAddSubmit} autoComplete="off" data-lpignore="true">
+              {/* Dummy hidden inputs to prevent Chrome password manager from autofilling */}
+              <input type="text" name="webhook_autofill_honeypot_user" style={{ display: 'none' }} tabIndex="-1" autoComplete="off" />
+              <input type="password" name="webhook_autofill_honeypot_pass" style={{ display: 'none' }} tabIndex="-1" autoComplete="new-password" />
+
               <div className="modal-body-saas">
                 {formError && (
                   <div style={{
@@ -375,9 +379,12 @@ function verifyKwickbotWebhook(req, res, next) {
                   <label>Endpoint Name *</label>
                   <input 
                     type="text" 
+                    name="webhook_endpoint_name"
                     placeholder="e.g. Production CRM Callback" 
                     value={name}
                     onChange={e => setName(e.target.value)}
+                    autoComplete="off"
+                    data-lpignore="true"
                     required
                   />
                 </div>
@@ -386,9 +393,12 @@ function verifyKwickbotWebhook(req, res, next) {
                   <label>Destination HTTPS URL *</label>
                   <input 
                     type="url" 
+                    name="webhook_destination_url"
                     placeholder="https://your-crm.com/api/kwickbot-webhook" 
                     value={url}
                     onChange={e => setUrl(e.target.value)}
+                    autoComplete="off"
+                    data-lpignore="true"
                     required
                   />
                   <span className="form-hint">SSRF-protected. Must be a secure public HTTPS endpoint.</span>

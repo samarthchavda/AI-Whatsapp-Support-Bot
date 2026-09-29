@@ -329,35 +329,33 @@ function FieldMapping() {
           </div>
 
           <form onSubmit={handleSaveMapping} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
-              <div className="form-group-saas">
-                <label>Entity Type *</label>
-                <select 
-                  value={entityType} 
-                  onChange={e => setEntityType(e.target.value)}
-                  disabled={isCrmConnectPlan}
-                >
-                  {(isCrmConnectPlan ? ENTITY_TYPES.filter(t => t.id === 'lead') : ENTITY_TYPES).map(t => (
-                    <option key={t.id} value={t.id}>{t.name}</option>
-                  ))}
-                </select>
+            {isCrmConnectPlan ? (
+              <div style={{ padding: '14px 16px', border: '1px solid rgba(22, 119, 255, 0.22)', borderRadius: '10px', background: 'rgba(22, 119, 255, 0.05)' }}>
+                <div style={{ fontSize: '12px', color: 'var(--text-muted, #667085)', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.04em' }}>What happens for each new WhatsApp enquiry</div>
+                <div style={{ marginTop: '6px', fontSize: '15px', color: 'var(--text-primary, #101828)', fontWeight: '700' }}>WhatsApp enquiry <span style={{ color: 'var(--accent, #1677ff)' }}>→</span> Odoo CRM Lead</div>
+                <div style={{ marginTop: '4px', fontSize: '12.5px', color: 'var(--text-secondary, #475467)' }}>This is fixed for CRM Connect. No contact, quotation, invoice, or sales order is created.</div>
               </div>
+            ) : (
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
+                <div className="form-group-saas">
+                  <label>Entity Type *</label>
+                  <select value={entityType} onChange={e => setEntityType(e.target.value)}>
+                    {ENTITY_TYPES.map(t => (
+                      <option key={t.id} value={t.id}>{t.name}</option>
+                    ))}
+                  </select>
+                </div>
 
-              <div className="form-group-saas">
-                <label>Sync Direction *</label>
-                {isCrmConnectPlan ? (
-                  <div style={{ padding: '10px 12px', border: '1px solid var(--border-subtle, #d9e8f7)', borderRadius: '8px', background: 'var(--bg-input, #f8fafc)', fontSize: '13px', fontWeight: '600' }}>
-                    Outbound (Kwickbot → Odoo lead only)
-                  </div>
-                ) : (
+                <div className="form-group-saas">
+                  <label>Sync Direction *</label>
                   <select value={direction} onChange={e => setDirection(e.target.value)}>
                     <option value="bidirectional">Bidirectional (CRM &harr; Kwickbot)</option>
                     <option value="crm_to_kwickbot">Inbound (CRM &rarr; Kwickbot)</option>
                     <option value="kwickbot_to_crm">Outbound (Kwickbot &rarr; CRM)</option>
                   </select>
-                )}
+                </div>
               </div>
-            </div>
+            )}
 
             {/* Field Rows Table */}
             <div style={{ marginTop: '8px' }}>

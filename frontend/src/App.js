@@ -77,6 +77,7 @@ function Sidebar({ admin, onLogout, isOpen, onToggle, pendingDemoRequestsCount }
     if (!admin || admin.role === 'super_admin') return true;
     return canViewPage(key);
   };
+  const canUseTemplates = isPageAllowed('templates') || isPageAllowed('whatsapp-templates');
 
   return (
     <div className={`sidebar${isOpen ? ' sidebar-expanded' : ''}`}>
@@ -415,7 +416,7 @@ function Sidebar({ admin, onLogout, isOpen, onToggle, pendingDemoRequestsCount }
                 </div>
               )}
 
-              {(isPageAllowed('broadcast') || isPageAllowed('templates')) && (
+              {(isPageAllowed('broadcast') || canUseTemplates) && (
                 <div className="nav-section">
                   {isOpen && <div className="nav-section-title">Messaging</div>}
                   <ul className="nav-links">
@@ -427,7 +428,7 @@ function Sidebar({ admin, onLogout, isOpen, onToggle, pendingDemoRequestsCount }
                         </Link>
                       </li>
                     )}
-                    {isPageAllowed('templates') && (
+                    {canUseTemplates && (
                       <li>
                         <Link to="/dashboard/templates" className={isActive('/dashboard/templates')} title="Templates">
                           <FaFileAlt />

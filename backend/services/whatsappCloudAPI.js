@@ -354,10 +354,14 @@ class WhatsAppCloudAPI {
     try {
       const url = `${this.baseUrl}/${phoneNumberId}/messages`;
 
+      const safeBodyText = (bodyText && typeof bodyText === 'string')
+        ? (bodyText.length > 1024 ? bodyText.substring(0, 1020) + '...' : bodyText)
+        : 'Select an option below:';
+
       const interactive = {
         type: 'button',
         body: {
-          text: bodyText
+          text: safeBodyText
         },
         action: {
           buttons: buttons.slice(0, 3).map((btn, idx) => ({

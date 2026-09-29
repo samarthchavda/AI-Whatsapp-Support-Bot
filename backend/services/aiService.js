@@ -1031,12 +1031,17 @@ STRICT KNOWLEDGE BASE GROUNDING RULES:
 
               if (isGeneralCatalog) {
                 if (allProducts && allProducts.length > 0) {
-                  const itemsList = allProducts.map(p => {
+                  const displayLimit = 6;
+                  const displayProducts = allProducts.slice(0, displayLimit);
+                  const remainingCount = allProducts.length - displayProducts.length;
+
+                  const itemsList = displayProducts.map(p => {
                     const priceStr = p.price ? ` - ₹${Number(p.price).toLocaleString('en-IN')}` : '';
-                    const descStr = p.description ? `\n  _${p.description}_` : '';
-                    return `• *${p.name}*${priceStr} (${p.availability})${descStr}`;
+                    return `• *${p.name}*${priceStr} (${p.availability})`;
                   }).join('\n');
-                  response = `🛍️ *Available Products*\n\n${itemsList}\n\nFeel free to ask about any product or its specifications!`;
+
+                  const moreText = remainingCount > 0 ? `\n_...and ${remainingCount} more items in catalog._` : '';
+                  response = `🛍️ *Available Products*\n\n${itemsList}${moreText}\n\nType any product name for full specifications and pricing!`;
                   buttons = ['📋 More FAQs'];
                   break;
                 } else {

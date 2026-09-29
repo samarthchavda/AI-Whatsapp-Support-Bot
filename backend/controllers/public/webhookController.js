@@ -266,14 +266,35 @@ async function handleIncomingMessage(message, contactName, matchedAdmin, request
       );
     } else if (aiResponse.buttons && aiResponse.buttons.length > 0) {
       console.log(`🔘 Sending interactive button response to ${customerPhone} with buttons: ${aiResponse.buttons.join(', ')}`);
-      sendResult = await whatsappCloudAPI.sendInteractiveMessage(
-        customerPhone,
-        null,
-        aiResponse.message,
-        'Select an option below:',
-        aiResponse.buttons,
-        customCredentials
-      );
+      
+      // WhatsApp interactive messages have a strict 1024 character limit.
+      // If the message is long (> 1000 chars), send full text message first, then interactive buttons prompt.
+      if (aiResponse.message && aiResponse.message.length > 1000) {
+        await whatsappCloudAPI.sendMessage(customerPhone, aiResponse.message, customCredentials);
+        sendResult = await whatsappCloudAPI.sendInteractiveMessage(
+          customerPhone,
+          null,
+          'Select an option below:',
+          undefined,
+          aiResponse.buttons,
+          customCredentials
+        );
+      } else {
+        sendResult = await whatsappCloudAPI.sendInteractiveMessage(
+          customerPhone,
+          null,
+          aiResponse.message,
+          'Select an option below:',
+          aiResponse.buttons,
+          customCredentials
+        );
+      }
+
+      // Fail-safe: If interactive button send fails, fall back to standard text message so response is never dropped
+      if (!sendResult || !sendResult.success) {
+        console.warn('⚠️ Interactive button send failed. Falling back to plain text reply...');
+        sendResult = await whatsappCloudAPI.sendMessage(customerPhone, aiResponse.message, customCredentials);
+      }
     } else {
       sendResult = await whatsappCloudAPI.sendMessage(customerPhone, aiResponse.message, customCredentials);
     }

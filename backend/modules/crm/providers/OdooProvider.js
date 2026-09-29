@@ -241,15 +241,28 @@ class OdooProvider extends BaseCRMProvider {
     if (!cleanDigits) return null;
 
     try {
-      const domain = ['|', ['phone', 'ilike', cleanDigits], ['mobile', 'ilike', cleanDigits]];
-      const partners = await this.executeKw(
-        connection,
-        credentials,
-        'res.partner',
-        'search_read',
-        [domain],
-        { fields: ['id', 'name', 'phone', 'mobile', 'email'], limit: 1 }
-      );
+      let partners = [];
+      try {
+        const domain = ['|', ['phone', 'ilike', cleanDigits], ['mobile', 'ilike', cleanDigits]];
+        partners = await this.executeKw(
+          connection,
+          credentials,
+          'res.partner',
+          'search_read',
+          [domain],
+          { fields: ['id', 'name', 'phone', 'email'], limit: 1 }
+        );
+      } catch (domainErr) {
+        // Fallback to phone field only if mobile field is not present on res.partner
+        partners = await this.executeKw(
+          connection,
+          credentials,
+          'res.partner',
+          'search_read',
+          [[['phone', 'ilike', cleanDigits]]],
+          { fields: ['id', 'name', 'phone', 'email'], limit: 1 }
+        );
+      }
 
       return (partners && partners.length > 0) ? partners[0] : null;
     } catch (err) {

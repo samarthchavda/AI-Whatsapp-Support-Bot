@@ -18,10 +18,7 @@ const FALLBACK_POSTS = {
 
       <p>For store owners, these updates can either be an unexpected cost driver or an extraordinary opportunity to optimize support workflows, slash Customer Acquisition Costs (CAC), and boost conversion rates. In this comprehensive guide, we unpack every detail of the October 2026 Meta WhatsApp API changes, provide exact cost simulations, and reveal how forward-thinking brands use <strong>Kwickbot AI</strong> to protect their margins and scale profitably.</p>
 
-      <div style="text-align: center; margin: 35px 0;">
-        <img src="https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=1000&q=80" alt="Meta WhatsApp Cloud API Digital Infrastructure and Messaging Billing Architecture" style="max-width: 100%; height: auto; border-radius: 12px; box-shadow: 0 8px 30px rgba(0,0,0,0.12);" />
-        <p style="font-size: 13px; color: #64748b; margin-top: 10px;">Figure 1: Meta's WhatsApp Cloud API shifts to consumption-based per-message and token pricing in October 2026</p>
-      </div>
+
 
       <hr />
 
@@ -47,10 +44,7 @@ const FALLBACK_POSTS = {
       <h3>6. Strict Task-Specific AI Compliance Rules</h3>
       <p>Meta has mandated that AI chatbots on WhatsApp Business API must be <strong>task-specific</strong> (e.g., resolving e-commerce support tickets, querying order status, providing product recommendations). Open-ended, general-purpose chat is prohibited. Kwickbot's domain-grounded Google Gemini AI architecture is 100% compliant with this policy out of the box.</p>
 
-      <div style="text-align: center; margin: 35px 0;">
-        <img src="https://images.unsplash.com/photo-1556742049-0a675409b7cc?auto=format&fit=crop&w=1000&q=80" alt="E-Commerce Customer Support Team Managing WhatsApp Inquiries on Kwickbot" style="max-width: 100%; height: auto; border-radius: 12px; box-shadow: 0 8px 30px rgba(0,0,0,0.12);" />
-        <p style="font-size: 13px; color: #64748b; margin-top: 10px;">Figure 2: Kwickbot AI consolidates multi-turn customer dialogues into crisp, single-turn responses to eliminate unnecessary per-message charges</p>
-      </div>
+
 
       <hr />
 
@@ -119,10 +113,7 @@ const FALLBACK_POSTS = {
         <li>By routing paid traffic directly to WhatsApp via Kwickbot rather than high-bounce web landing pages, D2C brands slash CAC by up to 65% while bypassing service message charges entirely!</li>
       </ul>
 
-      <div style="text-align: center; margin: 35px 0;">
-        <img src="https://images.unsplash.com/photo-1512941937669-90a1b58e7e9c?auto=format&fit=crop&w=1000&q=80" alt="Customer Engaging in WhatsApp Mobile E-Commerce Shopping Experience" style="max-width: 100%; height: auto; border-radius: 12px; box-shadow: 0 8px 30px rgba(0,0,0,0.12);" />
-        <p style="font-size: 13px; color: #64748b; margin-top: 10px;">Figure 3: Click-to-WhatsApp ads unlock a 72-hour zero-fee conversation window for customer acquisition and automated upselling</p>
-      </div>
+
 
       <h3>Strategy 3: Deploy WhatsApp Flows 2.0 to Eliminate Chat Churn</h3>
       <p>Instead of having customers type out addresses, product names, or support ticket descriptions across 6 back-and-forth messages, deploy <strong>WhatsApp Flows</strong>. A single flow opens a native interactive form inside the chat. The user picks their product variant, selects delivery date, and confirms their order in 1 tap. The data returns to Kwickbot in a single payload, saving up to 8 billable message turns per interaction.</p>

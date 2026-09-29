@@ -41,7 +41,7 @@ const conversationSchema = new mongoose.Schema({
     },
     intent: {
       type: String,
-      enum: ['order_status', 'cancel_order', 'return_policy', 'refund_request', 'complaint', 'general_inquiry', 'new_order_inquiry', 'store_faqs', 'faq_shipping', 'faq_returns', 'faq_payments', 'faq_products', 'faq_products_all', 'faq_offers', 'other'],
+      enum: ['order_status', 'cancel_order', 'return_policy', 'refund_request', 'complaint', 'general_inquiry', 'new_order_inquiry', 'store_faqs', 'faq_shipping', 'faq_returns', 'faq_payments', 'faq_products', 'faq_products_all', 'faq_offers', 'agent_handoff', 'other'],
       default: 'other'
     },
     messageId: {
@@ -72,7 +72,7 @@ const conversationSchema = new mongoose.Schema({
   },
   escalationReason: {
     type: String,
-    enum: [null, 'refund_request', 'complaint', 'high_priority', 'unresolved', 'customer_request', 'system_error', 'other'],
+    enum: [null, 'refund_request', 'complaint', 'high_priority', 'unresolved', 'customer_request', 'user_requested', 'system_error', 'unsupported_action_crm_connect', 'other'],
     default: null
   },
   escalatedAt: {

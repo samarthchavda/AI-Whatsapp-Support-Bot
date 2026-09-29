@@ -16,7 +16,7 @@ const escalationSchema = new mongoose.Schema({
   },
   reason: {
     type: String,
-    enum: ['refund_request', 'high_priority', 'unresolved', 'customer_request', 'complaint', 'other'],
+    enum: ['refund_request', 'high_priority', 'unresolved', 'customer_request', 'user_requested', 'complaint', 'unsupported_action_crm_connect', 'other'],
     required: true
   },
   priority: {

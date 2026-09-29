@@ -67,7 +67,7 @@ exports.handleWebhook = async (req, res) => {
       const Admin = require('../../models/Admin');
       const { encrypt } = require('../../services/whatsappCredentialService');
       const encryptedPhoneId = encrypt(incomingPhoneNumberId, true);
-      const matchedAdmin = await Admin.findOne({
+      const matchingAdmins = await Admin.find({
         $or: [
           { whatsappPhoneNumberId: encryptedPhoneId },
           { whatsappPhoneNumberId: incomingPhoneNumberId },
@@ -75,10 +75,31 @@ exports.handleWebhook = async (req, res) => {
         ]
       });
 
+      // A historical connection entry can remain on an older account after a
+      // number is connected to its current owner. Always prefer the active
+      // account whose primary credential is this exact phone ID. This prevents
+      // an inbound message being processed against the stale tenant.
+      const primaryActiveMatches = matchingAdmins.filter((admin) => (
+        admin.whatsappConnected === true &&
+        admin.whatsappPhoneNumberId === incomingPhoneNumberId
+      ));
+      const activeConnectionMatches = matchingAdmins.filter((admin) => (
+        admin.whatsappConnected === true &&
+        (admin.whatsappConnections || []).some((connection) => (
+          connection.phoneNumberId === incomingPhoneNumberId && connection.isActive !== false
+        ))
+      ));
+      const matchedAdmin = primaryActiveMatches.length === 1
+        ? primaryActiveMatches[0]
+        : activeConnectionMatches.length === 1
+          ? activeConnectionMatches[0]
+          : null;
+
       // Fail-closed enforcement: if receiving connection is not registered, stop processing immediately
       if (!matchedAdmin) {
-        console.warn(`🔒 [SECURITY] Unrecognized receiving phone_number_id (${incomingPhoneNumberId}). Fail-closed: skipping AI processing.`);
-        res.status(200).json({ success: true, message: 'Unrecognized recipient connection' });
+        const reason = matchingAdmins.length > 1 ? 'Ambiguous recipient connection' : 'Unrecognized recipient connection';
+        console.warn(`🔒 [SECURITY] ${reason} (${incomingPhoneNumberId}). Fail-closed: skipping AI processing.`);
+        res.status(200).json({ success: true, message: reason });
         return;
       }
 

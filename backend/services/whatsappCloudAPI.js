@@ -127,9 +127,11 @@ class WhatsAppCloudAPI {
       const errorMsg = metaErrDetails ? `[Meta Error ${metaErrDetails.code}]: ${metaErrDetails.message}` : error.message;
       console.error('❌ Error sending WhatsApp message:', error.response?.data || error.message);
 
+      // A merchant message must never fall back to the platform credentials. Apart
+      // from replying from the wrong business number, that would cross tenant
+      // boundaries if a merchant token is expired or incorrectly configured.
       if (customCredentials) {
-        console.warn(`⚠️ Custom credentials failed for ${phoneNumber}: ${errorMsg}. Retrying with system credentials...`);
-        return this.sendMessage(phoneNumber, message, null);
+        console.error(`🔒 Merchant WhatsApp send failed for ${phoneNumber}; system credential fallback is blocked: ${errorMsg}`);
       }
 
       return {
@@ -319,9 +321,10 @@ class WhatsAppCloudAPI {
       const errorMsg = metaErrDetails ? `[Meta Error ${metaErrDetails.code}]: ${metaErrDetails.message}` : error.message;
       console.error('❌ Error sending template:', error.response?.data || error.message);
 
+      // Template messages have the same tenant boundary as normal messages.
+      // Do not retry through the platform number when merchant credentials fail.
       if (customCredentials) {
-        console.warn(`⚠️ Custom credentials failed for template message to ${phoneNumber}: ${errorMsg}. Retrying with system credentials...`);
-        return this.sendTemplateMessage(phoneNumber, templateName, templateLanguage, parameters, null, headerImageUrl);
+        console.error(`🔒 Merchant template send failed for ${phoneNumber}; system credential fallback is blocked: ${errorMsg}`);
       }
 
       return { success: false, error: errorMsg };

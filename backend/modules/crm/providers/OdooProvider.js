@@ -294,41 +294,72 @@ class OdooProvider extends BaseCRMProvider {
       const partner = await this.findContact(connection, credentials, customerPhone);
       const partnerId = partner?.id || null;
 
-      // 2. Check for existing open lead (deduplication)
+      // 2. Check for existing open lead (deduplication by customer phone or partner ID)
+      const cleanDigits = customerPhone ? customerPhone.replace(/\D/g, '').slice(-10) : '';
+      const searchDomain = (partnerId && cleanDigits)
+        ? ['|', ['partner_id', '=', partnerId], ['phone', 'ilike', cleanDigits]]
+        : (partnerId
+          ? [['partner_id', '=', partnerId]]
+          : (cleanDigits ? [['phone', 'ilike', cleanDigits]] : []));
+
       let existingLeads = [];
-      try {
-        existingLeads = await this.executeKw(
-          connection,
-          credentials,
-          'crm.lead',
-          'search_read',
-          [partnerId
-            ? [['partner_id', '=', partnerId], ['type', '=', 'lead']]
-            : [['phone', 'ilike', customerPhone.replace(/\D/g, '').slice(-10)], ['type', '=', 'lead']]
-          ],
-          { fields: ['id', 'name', 'description'], limit: 1 }
-        );
-      } catch (searchLeadErr) {
-        // If crm module domain differences, proceed to create
+      if (searchDomain.length > 0) {
+        try {
+          existingLeads = await this.executeKw(
+            connection,
+            credentials,
+            'crm.lead',
+            'search_read',
+            [searchDomain],
+            { fields: ['id', 'name', 'phone', 'description'], limit: 1, order: 'id desc' }
+          );
+        } catch (searchLeadErr) {
+          console.warn('Odoo search lead error:', searchLeadErr.message);
+        }
       }
 
       if (existingLeads && existingLeads.length > 0) {
+        const existingLead = existingLeads[0];
+        try {
+          const timeStr = new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
+          const dateStr = new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short' });
+          const currentDesc = existingLead.description ? existingLead.description.replace(/<[^>]*>/g, '').trim() : '';
+
+          if (enquiryMessage && !currentDesc.includes(enquiryMessage.trim())) {
+            const updatedDesc = currentDesc
+              ? `${currentDesc}\n\n• [${dateStr}, ${timeStr}] ${enquiryMessage.trim()}`
+              : `• [${dateStr}, ${timeStr}] ${enquiryMessage.trim()}`;
+
+            await this.executeKw(
+              connection,
+              credentials,
+              'crm.lead',
+              'write',
+              [[existingLead.id], { description: updatedDesc }]
+            );
+          }
+        } catch (updateErr) {
+          console.warn('Could not update existing lead description:', updateErr.message);
+        }
+
         return {
           success: true,
-          leadId: existingLeads[0].id,
+          leadId: existingLead.id,
           partnerId,
           isNewLead: false,
           linkedExistingContact: Boolean(partnerId),
-          message: 'Existing lead found and linked.'
+          message: 'Existing lead found and updated.'
         };
       }
 
       // 3. Create lead in Odoo
+      const timeStr = new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
+      const dateStr = new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short' });
       const leadPayload = {
         name: `WhatsApp Enquiry: ${customerName}`,
         phone: customerPhone,
         contact_name: customerName,
-        description: enquiryMessage
+        description: `• [${dateStr}, ${timeStr}] ${enquiryMessage.trim()}`
       };
 
       if (partnerId) {

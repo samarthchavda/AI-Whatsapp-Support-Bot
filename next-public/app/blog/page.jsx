@@ -12,6 +12,26 @@ export const metadata = {
 
 const FALLBACK_POSTS = [
   {
+    _id: 'meta-pricing-october-2026',
+    slug: 'meta-whatsapp-api-changes-october-2026-pricing-guide',
+    title: 'Meta WhatsApp API Changes (October 2026): The Complete Guide to Service Message Pricing, Meta Business Agent (MBA), and Cost-Saving Strategies for E-Commerce Brands',
+    summary: 'Meta is overhauling WhatsApp Business Platform pricing on October 1, 2026. Discover how the end of free service messages, the new Meta Business Agent (MBA) category, and per-message billing impact your e-commerce store—and how to cut costs by 50% with Kwickbot AI.',
+    tags: ['WhatsApp API Changes', 'Meta Pricing 2026', 'Meta Business Agent', 'AI Customer Support', 'Broadcasting', 'Shopify Automation'],
+    author: 'Kwickbot Product & Strategy Team',
+    createdAt: '2026-09-29T08:00:00.000Z',
+    coverImage: 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&w=1200&q=80'
+  },
+  {
+    _id: 'whatsapp-flows-2026-1',
+    slug: 'whatsapp-flows-native-checkout-ai-agents-guide-2026',
+    title: 'WhatsApp Flows 2.0 & AI Agents: The Complete 2026 Guide to In-Chat Native Checkout, Smart Forms & Automated Support',
+    summary: 'Discover how D2C and Shopify brands use WhatsApp Flows 2.0 and Gemini AI agents to build multi-screen native in-chat checkouts, smart support intake forms, and automated broadcasts that eliminate bounce rates and drive 4x higher sales.',
+    tags: ['WhatsApp Flows', 'Native In-Chat Checkout', 'WhatsApp Cloud API', 'Gemini AI Agents'],
+    author: 'Kwickbot Product Team',
+    createdAt: '2026-09-28T09:00:00.000Z',
+    coverImage: 'https://images.unsplash.com/photo-1556740738-b6a63e27c4df?auto=format&fit=crop&w=1200&q=80'
+  },
+  {
     _id: 'meta-templates-simple-1',
     slug: 'what-are-whatsapp-meta-templates-simple-guide-2026',
     title: 'Understanding WhatsApp Meta Templates (2026): A Simple Guide for Store Owners (No Coding Required)',

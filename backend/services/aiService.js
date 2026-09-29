@@ -1019,11 +1019,14 @@ STRICT KNOWLEDGE BASE GROUNDING RULES:
 
         case 'faq_products':
         case 'faq_products_all':
-          if (isCrmConnectPlan && activeCrmConnection && activeCrmConnection.provider === 'odoo') {
+          if (activeCrmConnection && activeCrmConnection.provider === 'odoo') {
             const crmProviderRegistry = require('./crmProviders/crmProviderRegistry');
             const provider = crmProviderRegistry.get('odoo');
             if (provider) {
-              const cleanQ = (intent === 'faq_products_all' || message.length < 5) ? '' : message.replace(/^(show\s*all\s*products|products?|do you have|what is the price of|price of)\s*/i, '').trim();
+              const isGeneralCatalog = /^(what\s*(kind\s*of\s*)?products?\s*(do\s*you\s*(have|sell)|are\s*available)?|what\s*do\s*you\s*(sell|have)|show\s*(all\s*)?products?|view\s*all\s*products?|all\s*products?|list\s*products?|do\s*you\s*have\s*(any\s*)?products?|products?|\ud83d\udecd\ufe0f\s*products?)\s*\??$/i.test(message.trim());
+              const cleanQ = (intent === 'faq_products_all' || message.length < 5 || isGeneralCatalog)
+                ? ''
+                : message.replace(/^(show\s*all\s*products|show\s*products|products?|do you have\s*(any)?|what is the price of|price of|can i buy|tell me about)\s*/i, '').replace(/[?!.,]/g, '').trim();
               const products = await provider.searchProducts(activeCrmConnection, null, cleanQ, { limit: 5 });
               if (products && products.length > 0) {
                 const itemsList = products.map(p => {
@@ -1033,6 +1036,14 @@ STRICT KNOWLEDGE BASE GROUNDING RULES:
                 }).join('\n');
                 response = `🛍️ *Available Products*\n\n${itemsList}\n\nFeel free to ask about any product or connect with our support team!`;
                 buttons = ['📋 More FAQs', '👤 Talk to Agent'];
+                break;
+              } else if (cleanQ) {
+                response = `I couldn't find any product matching "${cleanQ}". Would you like to see all available products or speak with an agent?`;
+                buttons = ['🛍️ View All Products', '👤 Talk to Agent'];
+                break;
+              } else {
+                response = `🛍️ We are currently updating our product catalog. Feel free to ask our support team for specific items or pricing!`;
+                buttons = ['👤 Talk to Agent'];
                 break;
               }
             }
@@ -1481,12 +1492,15 @@ Response format must be ONLY the product name or "NONE". Do not write any other 
     }
 
     // Products (Show All Products / Paginated Products)
-    if (/^(show\s*all\s*products|show\s*more\s*products|view\s*all\s*products|all\s*products)\b/i.test(lowerMessage)) {
+    if (/^(show\s*(all|more)\s*products?|view\s*all\s*products?|all\s*products?)\b/i.test(lowerMessage)) {
       return 'faq_products_all';
     }
 
-    // Products Overview
-    if (/^(products?|\ud83d\udecd\ufe0f products|our\s*products|what products do you sell|what do you sell)\b/i.test(lowerMessage)) {
+    // Products Overview & Catalog Queries
+    if (
+      /^(products?|\ud83d\udecd\ufe0f products|our\s*products|what products do you sell|what do you sell|what product(s)? do you (have|sell)|what do you have|do you have (any )?products?|which products? (do you have|are available)|tell me (about )?your products?|show (me )?products?|product list|list products?)\b/i.test(lowerMessage) ||
+      (/\b(product|products|items|catalog)\b/i.test(lowerMessage) && /\b(have|show|list|sell|available|offer|what|which)\b/i.test(lowerMessage))
+    ) {
       return 'faq_products';
     }
 

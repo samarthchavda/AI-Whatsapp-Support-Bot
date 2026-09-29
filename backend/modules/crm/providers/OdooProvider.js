@@ -202,14 +202,14 @@ class OdooProvider extends BaseCRMProvider {
    */
   async searchProducts(connection, credentials, query = '', options = {}) {
     try {
-      const limit = Math.min(20, Math.max(1, options.limit || 5));
+      const limit = Math.min(50, Math.max(1, options.limit || 5));
       const cleanQuery = (query || '').trim();
       const domain = cleanQuery
         ? [['name', 'ilike', cleanQuery]]
         : [];
 
       // Safe fields ONLY
-      const fields = ['id', 'name', 'display_name', 'list_price', 'description_sale', 'qty_available'];
+      const fields = ['id', 'name', 'display_name', 'list_price', 'description', 'description_sale', 'qty_available', 'default_code'];
       const rawProducts = await this.executeKw(
         connection,
         credentials,
@@ -221,14 +221,21 @@ class OdooProvider extends BaseCRMProvider {
 
       if (!Array.isArray(rawProducts)) return [];
 
-      return rawProducts.map(p => ({
-        id: p.id,
-        name: p.name || p.display_name,
-        description: (p.description_sale && typeof p.description_sale === 'string') ? p.description_sale.trim() : '',
-        price: typeof p.list_price === 'number' ? p.list_price : 0,
-        currency: 'INR',
-        availability: (typeof p.qty_available === 'number' && p.qty_available > 0) ? 'In Stock' : 'Available on order'
-      }));
+      return rawProducts.map(p => {
+        const rawDesc = (p.description_sale && typeof p.description_sale === 'string' && p.description_sale.trim())
+          ? p.description_sale
+          : ((p.description && typeof p.description === 'string' && !p.description.toLowerCase().startsWith('vendor note')) ? p.description : '');
+        const cleanDesc = rawDesc ? rawDesc.replace(/<[^>]*>/g, '').trim() : '';
+        return {
+          id: p.id,
+          name: p.name || p.display_name,
+          sku: (p.default_code && typeof p.default_code === 'string') ? p.default_code.trim() : '',
+          description: cleanDesc,
+          price: typeof p.list_price === 'number' ? p.list_price : 0,
+          currency: 'INR',
+          availability: (typeof p.qty_available === 'number' && p.qty_available > 0) ? 'In Stock' : 'Available on order'
+        };
+      });
     } catch (err) {
       console.error('Odoo searchProducts error:', err.message);
       return [];

@@ -72,6 +72,45 @@ const KWICKBOT_CRM_COMPARISON = {
   }
 };
 
+// CRM plans have intentionally different operational boundaries. Keep these
+// customer-facing promises explicit rather than exposing internal token or
+// implementation limits from the plan service.
+const CRM_INTEGRATION_COMPARISON = {
+  crm_connect: {
+    included: [
+      '1 WhatsApp connection and 1 CRM connection',
+      'Up to 2,000 WhatsApp conversations/month',
+      'Up to 10,000 WhatsApp messages/month',
+      'AI WhatsApp support with 1 knowledge base upload',
+      'Read-only Odoo product details and order-status lookup',
+      'WhatsApp enquiry → Odoo CRM lead creation',
+      'Live Chat handoff and integration logs'
+    ],
+    excluded: [
+      'Customer/contact create or update',
+      'Quotation, sales order, invoice, return or cancellation creation',
+      'Custom automation rules and failed-event replay',
+      'Custom webhooks, developer API and custom branding'
+    ]
+  },
+  crm_automation: {
+    included: [
+      '2 WhatsApp connections and 2 CRM connections',
+      'Up to 5,000 WhatsApp conversations/month',
+      'Up to 100,000 WhatsApp messages/month',
+      'Product and order-status sync with lead and contact sync',
+      'Live Chat handoff, templates and integration logs',
+      'Configurable CRM automation rules',
+      'Quotation and sales-order automation with event retry'
+    ],
+    excluded: [
+      'Custom webhooks and developer API',
+      'Custom branding / white-labeling',
+      'Unlimited connections and enterprise custom SLA'
+    ]
+  }
+};
+
 const faqs = [
   {
     question: "Do I need a Meta Business Manager account to connect WhatsApp?",
@@ -334,6 +373,9 @@ export default function PricingPage() {
                 const crmComparison = activeCategory === 'kwickbot_crm'
                   ? KWICKBOT_CRM_COMPARISON[String(plan.name || '').toLowerCase()]
                   : null;
+                const crmIntegrationComparison = activeCategory === 'crm_integration'
+                  ? CRM_INTEGRATION_COMPARISON[String(plan.name || '').toLowerCase()]
+                  : null;
 
                 let priceDisplay = 'Contact Sales';
                 let subtext = '';
@@ -424,6 +466,23 @@ export default function PricingPage() {
                               </FeatureItem>
                               <FeatureItem enabled={crmComparison.customBranding}>Custom Branding</FeatureItem>
                               <FeatureItem enabled={crmComparison.developerApi}>Developer API &amp; Webhooks</FeatureItem>
+                            </>
+                          )}
+                        </>
+                      ) : crmIntegrationComparison ? (
+                        <>
+                          {crmIntegrationComparison.included.map((feature) => (
+                            <FeatureItem key={`included-${feature}`}>{feature}</FeatureItem>
+                          ))}
+
+                          {showFullComparison && (
+                            <>
+                              <li style={{ listStyle: 'none', marginTop: '14px', paddingTop: '14px', borderTop: '1px solid rgba(255,255,255,0.1)', color: '#fca5a5', fontSize: '11px', fontWeight: '800', letterSpacing: '0.08em' }}>
+                                NOT INCLUDED
+                              </li>
+                              {crmIntegrationComparison.excluded.map((feature) => (
+                                <FeatureItem key={`excluded-${feature}`} enabled={false}>{feature}</FeatureItem>
+                              ))}
                             </>
                           )}
                         </>

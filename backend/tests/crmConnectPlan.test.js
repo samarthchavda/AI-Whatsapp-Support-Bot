@@ -380,7 +380,8 @@ describe('CRM Connect Plan (₹2,499/mo) Dedicated Test Suite', () => {
       const mockCatalog = [
         { id: 7, name: 'Office Chair Red', price: 1, sku: 'PROD-0007' },
         { id: 50, name: 'Office Chair', price: 8999, sku: 'PROD-0010' },
-        { id: 57, name: 'Business Smartphone', price: 24999, sku: 'PROD-0017' }
+        { id: 57, name: 'Business Smartphone', price: 24999, sku: 'PROD-0017' },
+        { id: 49, name: 'Webcam Full HD', price: 3499, sku: 'PROD-0009' }
       ];
 
       // Specific inquiry returns matched product
@@ -394,6 +395,12 @@ describe('CRM Connect Plan (₹2,499/mo) Dedicated Test Suite', () => {
       expect(match2).toBeDefined();
       expect(match2.name).toBe('Business Smartphone');
       expect(match2.price).toBe(24999);
+
+      // Spaced compound word "web cam full hd" matches "Webcam Full HD"
+      const match3 = aiService.matchProductFromCatalog(mockCatalog, 'tell me about specification of web cam full hd ?');
+      expect(match3).toBeDefined();
+      expect(match3.name).toBe('Webcam Full HD');
+      expect(match3.price).toBe(3499);
 
       // General catalog inquiry returns null
       const matchGeneral = aiService.matchProductFromCatalog(mockCatalog, 'what product do you have ?');

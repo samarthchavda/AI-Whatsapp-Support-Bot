@@ -1575,14 +1575,37 @@ Response format must be ONLY the product name or "NONE". Do not write any other 
     const isGeneralCatalog = /^(what\s*(kind\s*of\s*)?products?\s*(do\s*you\s*(have|sell)|are\s*available)?|what\s*do\s*you\s*(sell|have)|show\s*(all\s*)?products?|view\s*all\s*products?|all\s*products?|list\s*products?|do\s*you\s*have\s*(any\s*)?products?|products?|\ud83d\udecd\ufe0f\s*products?)\s*\??$/i.test(lowerMsg);
     if (isGeneralCatalog) return null;
 
+    // Normalize compound/spaced words (e.g. "web cam" -> "webcam", "smart phone" -> "smartphone", etc.)
+    const normalizeCompound = (str) => {
+      return (str || '')
+        .toLowerCase()
+        .replace(/\bweb\s+cam\b/g, 'webcam')
+        .replace(/\bsmart\s+phone\b/g, 'smartphone')
+        .replace(/\blap\s+top\b/g, 'laptop')
+        .replace(/\bhead\s+set\b/g, 'headset')
+        .replace(/\bkey\s+board\b/g, 'keyboard')
+        .replace(/\bwi\s*[- ]\s*fi\b/g, 'wifi')
+        .replace(/\busb\s*[- ]\s*c\b/g, 'usb-c')
+        .replace(/\btype\s*[- ]\s*c\b/g, 'usb-c');
+    };
+
+    const canonMsg = normalizeCompound(lowerMsg);
+    const compactMsg = lowerMsg.replace(/[^a-z0-9]/g, '');
+
     // Sort by name length descending so specific product names match before partials (e.g. "Office Chair Red" before "Office Chair")
     const sortedProducts = [...products].sort((a, b) => (b.name || '').length - (a.name || '').length);
 
-    // 1. Direct name, SKU, or display_name match
+    // 1. Direct name, SKU, or compact match
     for (const p of sortedProducts) {
       const pName = (p.name || '').toLowerCase().trim();
+      const pCanon = normalizeCompound(pName);
       const pSku = (p.sku || '').toLowerCase().trim();
-      if (pName && pName.length > 2 && lowerMsg.includes(pName)) {
+      const pCompact = pName.replace(/[^a-z0-9]/g, '');
+
+      if (pName && pName.length > 2 && (lowerMsg.includes(pName) || canonMsg.includes(pCanon))) {
+        return p;
+      }
+      if (pCompact && pCompact.length >= 4 && compactMsg.includes(pCompact)) {
         return p;
       }
       if (pSku && pSku.length > 2 && lowerMsg.includes(pSku)) {
@@ -1590,24 +1613,52 @@ Response format must be ONLY the product name or "NONE". Do not write any other 
       }
     }
 
-    // 2. Token overlap match for multi-word inquiries (e.g. "red office chair" -> "Office Chair Red")
+    // 2. Token overlap match for multi-word or fuzzy inquiries
     let bestProduct = null;
     let bestScore = 0;
-    const commonStopWords = new Set(['and', 'the', 'for', 'with', 'about', 'details', 'tell', 'show', 'price', 'pricing', 'cost', 'specs', 'specification', 'specifications', 'what', 'which', 'have', 'does', 'much', 'please', 'give', 'more', 'info', 'information', 'rate', 'item', 'items', 'product', 'products', 'can', 'you']);
+    const commonStopWords = new Set([
+      'and', 'the', 'for', 'with', 'about', 'details', 'tell', 'show', 'price',
+      'pricing', 'cost', 'specs', 'specification', 'specifications', 'what', 'which',
+      'have', 'does', 'much', 'please', 'give', 'more', 'info', 'information', 'rate',
+      'item', 'items', 'product', 'products', 'can', 'you', 'is', 'in', 'on', 'at', 'of'
+    ]);
+
+    // Build term frequency across products to identify unique identifying keywords
+    const termProductMap = new Map();
+    for (const p of sortedProducts) {
+      const pName = (p.name || '').toLowerCase().trim();
+      const pCanon = normalizeCompound(pName);
+      const pTokens = pCanon.split(/[\s\-_]+/).filter(w => w.length >= 2 && !commonStopWords.has(w));
+      for (const t of new Set(pTokens)) {
+        termProductMap.set(t, (termProductMap.get(t) || 0) + 1);
+      }
+    }
 
     for (const p of sortedProducts) {
       const pName = (p.name || '').toLowerCase().trim();
-      const pTokens = pName.split(/\s+/).filter(w => w.length > 2 && !commonStopWords.has(w));
+      const pCanon = normalizeCompound(pName);
+      const pTokens = pCanon.split(/[\s\-_]+/).filter(w => w.length >= 2 && !commonStopWords.has(w));
       if (pTokens.length === 0) continue;
 
       let matchCount = 0;
+      let hasUniqueKeyword = false;
       for (const token of pTokens) {
-        if (lowerMsg.includes(token)) matchCount++;
+        if (canonMsg.includes(token)) {
+          matchCount++;
+          if (termProductMap.get(token) === 1 && token.length >= 4) {
+            hasUniqueKeyword = true;
+          }
+        }
       }
 
-      const isSignificantMatch = (pTokens.length === 1 && matchCount === 1) || (matchCount >= 2) || (matchCount === pTokens.length);
-      if (isSignificantMatch && matchCount > bestScore) {
-        bestScore = matchCount;
+      const isSignificantMatch = (pTokens.length === 1 && matchCount === 1) || 
+                                 (matchCount >= 2) || 
+                                 (matchCount === pTokens.length) || 
+                                 hasUniqueKeyword;
+
+      const score = matchCount + (hasUniqueKeyword ? 1.5 : 0);
+      if (isSignificantMatch && score > bestScore) {
+        bestScore = score;
         bestProduct = p;
       }
     }

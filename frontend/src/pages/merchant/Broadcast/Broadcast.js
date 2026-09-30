@@ -456,10 +456,10 @@ function Broadcast() {
                   <>
                     <input type="hidden" name="recipientSource" value="csv" />
                     <div style={{
-                      width: '100%', padding: '14px', border: '1px solid rgba(52, 211, 153, 0.45)',
+                      width: '100%', padding: '14px', border: '1px solid black',
                       borderRadius: '12px', fontSize: '14px', background: 'rgba(16, 185, 129, 0.08)', color: '#d1fae5'
                     }}>
-                      📁 Upload CSV File <span style={{ color: '#86efac', fontSize: '12px' }}>— CRM Automation recipient source</span>
+                      📁 Upload CSV File <span style={{ color: '#040404', fontSize: '12px' }}>— CRM Automation recipient source</span>
                     </div>
                   </>
                 ) : (

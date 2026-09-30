@@ -154,6 +154,38 @@ const PLAN_DEFINITIONS = {
       integrations: true,
       prioritySupport: false
     }
+  },
+  crm_automation: {
+    name: 'crm_automation',
+    displayName: 'CRM Automation Plan',
+    monthlyPrice: 2999,
+    description: 'CRM automation with controlled WhatsApp broadcast campaigns.',
+    features: {
+      maxConversations: 5000,
+      maxMessages: 25000,
+      geminiTokensPerMonth: 50000,
+      maxWhatsAppConnections: 2,
+      maxCrmConnections: 2,
+      maxActiveAutomations: 0,
+      maxApiKeys: 0,
+      maxKbUploads: 1,
+      maxIntegrations: 2,
+      maxBroadcastMessages: 5000,
+      maxBroadcastCampaigns: 5,
+      broadcastingAccess: true,
+      scheduledBroadcasts: false,
+      audienceSegmentation: false,
+      broadcastAnalytics: 'basic',
+      advancedAnalytics: false,
+      escalations: true,
+      orderCancellation: false,
+      customBranding: false,
+      developerApi: false,
+      liveChat: true,
+      knowledgeBase: true,
+      integrations: true,
+      prioritySupport: true
+    }
   }
 };
 

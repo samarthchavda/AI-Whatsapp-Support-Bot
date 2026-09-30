@@ -85,6 +85,7 @@ const PERMISSION_PROFILES = {
       'crm-connection',
       'field-mapping',
       'automation-rules',
+      'broadcast',
       'whatsapp-templates',
       'integration-logs',
       'failed-events',

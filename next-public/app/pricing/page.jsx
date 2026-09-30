@@ -90,6 +90,7 @@ const CRM_INTEGRATION_COMPARISON = {
       'Customer/contact create or update',
       'Quotation, sales order, invoice, return or cancellation creation',
       'Custom automation rules and failed-event replay',
+      'WhatsApp broadcasting and broadcast campaigns',
       'Custom webhooks, developer API and custom branding'
     ]
   },
@@ -101,7 +102,9 @@ const CRM_INTEGRATION_COMPARISON = {
       'Product and order-status sync with lead and contact sync',
       'Live Chat handoff, templates and integration logs',
       'Configurable CRM automation rules',
-      'Quotation and sales-order automation with event retry'
+      'Quotation and sales-order automation with event retry',
+      'Up to 5 WhatsApp broadcast campaigns/month',
+      'Up to 5,000 broadcast messages/month'
     ],
     excluded: [
       'Custom webhooks and developer API',

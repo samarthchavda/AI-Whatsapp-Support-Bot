@@ -176,6 +176,17 @@ describe('CRM Connect Plan (₹2,499/mo) Dedicated Test Suite', () => {
     });
   });
 
+  describe('CRM Automation broadcast entitlement', () => {
+    test('allows five campaigns and 5,000 broadcast messages per monthly cycle', () => {
+      expect(subscriptionService.isFeatureAllowed('crm_automation', 'broadcastingAccess')).toBe(true);
+      expect(subscriptionService.getPlanLimit('crm_automation', 'maxBroadcastCampaigns')).toBe(5);
+      expect(subscriptionService.getPlanLimit('crm_automation', 'maxBroadcastMessages')).toBe(5000);
+
+      expect(subscriptionService.isFeatureAllowed('crm_connect', 'broadcastingAccess')).toBe(false);
+      expect(subscriptionService.getPlanLimit('crm_connect', 'maxBroadcastCampaigns')).toBe(0);
+    });
+  });
+
   // =========================================================================
   // 2. Inbound WhatsApp Enquiry Syncing to Odoo with Idempotency Protection
   // =========================================================================

@@ -341,6 +341,7 @@ const defaultPlans = [
       'crm-connection',
       'field-mapping',
       'automation-rules',
+      'broadcast',
       'whatsapp-templates',
       'integration-logs',
       'failed-events',
@@ -360,13 +361,17 @@ const defaultPlans = [
       orderStatusSync: true,
       fieldMapping: true,
       automationRules: true,
-      failedEventReplay: true
+      failedEventReplay: true,
+      broadcasts: true,
+      broadcastingAccess: true
     },
     usageLimits: {
       monthlyConversations: 5000,
       monthlyMessages: 100000,
       maxCrmConnections: 2,
-      maxWhatsAppConnections: 2
+      maxWhatsAppConnections: 2,
+      maxBroadcastCampaigns: 5,
+      maxBroadcastMessages: 5000
     },
     supportLevel: 'Priority Email & Chat Support',
     sla: '4-hour Response SLA'

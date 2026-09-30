@@ -880,8 +880,8 @@ STRICT KNOWLEDGE BASE GROUNDING RULES:
       let buttons = [];
 
       // CRM Connect & Odoo Sync Flow
-      const planName = subscriptionService.normalizePlanName(adminDoc?.subscriptionPlan);
-      const isCrmConnectPlan = (planName === 'crm_connect' || adminDoc?.subscriptionPlan === 'crm_connect');
+      const rawPlan = (adminDoc?.subscriptionPlan || '').toLowerCase().replace(/-/g, '_');
+      const isCrmConnectPlan = (rawPlan === 'crm_connect' || rawPlan === 'crm_automation' || rawPlan === 'crm_enterprise');
 
       let activeCrmConnection = null;
       if (adminDoc && adminDoc._id) {

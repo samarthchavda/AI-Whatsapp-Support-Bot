@@ -52,7 +52,6 @@ const PERMISSION_PROFILES = {
       'integration-dashboard',
       'crm-connection',
       'field-mapping',
-      'whatsapp-templates',
       'integration-logs',
       'whatsapp-connection',
       'conversations',
@@ -69,8 +68,6 @@ const PERMISSION_PROFILES = {
       CANONICAL_PERMISSIONS.INTEGRATION_LOGS_VIEW,
       CANONICAL_PERMISSIONS.WHATSAPP_CONNECTION_VIEW,
       CANONICAL_PERMISSIONS.WHATSAPP_CONNECTION_MANAGE,
-      CANONICAL_PERMISSIONS.WHATSAPP_TEMPLATES_VIEW,
-      CANONICAL_PERMISSIONS.WHATSAPP_TEMPLATES_MANAGE,
       CANONICAL_PERMISSIONS.CONVERSATIONS_VIEW,
       CANONICAL_PERMISSIONS.CONVERSATIONS_MANAGE,
       CANONICAL_PERMISSIONS.USAGE_VIEW,
@@ -81,6 +78,9 @@ const PERMISSION_PROFILES = {
   },
   crm_automation: {
     pages: [
+      'dashboard',
+      'conversations',
+      'live-chat',
       'integration-dashboard',
       'crm-connection',
       'field-mapping',

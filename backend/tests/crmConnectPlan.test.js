@@ -103,8 +103,8 @@ describe('CRM Connect Plan (₹2,499/mo) Dedicated Test Suite', () => {
       expect(connectPlan.features.dedicatedSupport).toBe(false);
       expect(connectPlan.features.customSla).toBe(false);
 
-      // CRM Connect exposes its dashboard, Live Chat and WhatsApp template workspace,
-      // along with the restricted lead-only integration setup pages.
+      // CRM Connect exposes dashboard, Live Chat and restricted lead-only
+      // integration setup pages. Template management is reserved for CRM Pro.
       expect(connectPlan.allowedPages.sort()).toEqual([
         'billing',
         'conversations',
@@ -116,13 +116,13 @@ describe('CRM Connect Plan (₹2,499/mo) Dedicated Test Suite', () => {
         'live-chat',
         'settings',
         'usage',
-        'whatsapp-templates',
         'whatsapp-connection'
       ].sort());
 
       // Blocked / Restricted Pages
       const blockedPages = [
         'knowledge-base',
+        'whatsapp-templates',
         'automation-rules',
         'failed-events',
         'api-keys',

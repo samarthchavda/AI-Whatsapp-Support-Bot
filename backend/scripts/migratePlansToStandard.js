@@ -255,7 +255,6 @@ const defaultPlans = [
       'integration-dashboard',
       'crm-connection',
       'field-mapping',
-      'whatsapp-templates',
       'integration-logs',
       'whatsapp-connection',
       'conversations',
@@ -335,6 +334,9 @@ const defaultPlans = [
     allowedBillingCycles: ['monthly', 'yearly'],
     permissionProfile: 'crm_automation',
     allowedPages: [
+      'dashboard',
+      'conversations',
+      'live-chat',
       'integration-dashboard',
       'crm-connection',
       'field-mapping',

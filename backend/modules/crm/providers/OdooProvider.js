@@ -323,32 +323,46 @@ class OdooProvider extends BaseCRMProvider {
         }
       }
 
-      const timeStr = new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
-      const dateStr = new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short' });
+      const tz = leadData.timezone || connection?.timezone || 'Asia/Kolkata';
+      const now = new Date();
+      const timeStr = now.toLocaleTimeString('en-IN', {
+        timeZone: tz,
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true
+      });
+      const dateStr = now.toLocaleDateString('en-IN', {
+        timeZone: tz,
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric'
+      });
 
-      let noteEntry = '';
-      if (productName) {
-        const priceStr = validPrice !== null ? ` - ₹${Number(validPrice).toLocaleString('en-IN')}` : '';
-        noteEntry = `• [${dateStr}, ${timeStr}] Product: ${productName}${priceStr}\n  Query: ${enquiryMessage.trim()}`;
-      } else {
-        noteEntry = `• [${dateStr}, ${timeStr}] ${enquiryMessage.trim()}`;
-      }
+      const formattedTimestamp = `${dateStr}, ${timeStr}`;
+
+      const priceFormatted = validPrice !== null ? `₹${Number(validPrice).toLocaleString('en-IN')}` : '';
+      const priceStr = priceFormatted ? ` - ${priceFormatted}` : '';
+
+      const noteHtml = productName
+        ? `<p><strong>• ${formattedTimestamp}</strong><br/>Product: ${productName}${priceStr}<br/>Query: ${enquiryMessage.trim()}</p>`
+        : `<p><strong>• ${formattedTimestamp}</strong><br/>Query: ${enquiryMessage.trim()}</p>`;
 
       if (existingLeads && existingLeads.length > 0) {
         const existingLead = existingLeads[0];
         try {
-          const currentDesc = existingLead.description ? existingLead.description.replace(/<[^>]*>/g, '').trim() : '';
+          const currentDesc = existingLead.description ? existingLead.description.trim() : '';
+          const plainDesc = currentDesc.replace(/<[^>]*>/g, '').trim();
           const writePayload = {};
 
-          if (enquiryMessage && !currentDesc.includes(enquiryMessage.trim())) {
+          if (enquiryMessage && !plainDesc.includes(enquiryMessage.trim())) {
             const updatedDesc = currentDesc
-              ? `${currentDesc}\n\n${noteEntry}`
-              : noteEntry;
+              ? (currentDesc.includes('<p>') ? `${currentDesc}${noteHtml}` : `<p>${currentDesc.replace(/\n/g, '<br/>')}</p>${noteHtml}`)
+              : noteHtml;
             writePayload.description = updatedDesc;
-          } else if (productName && !currentDesc.includes(productName)) {
+          } else if (productName && !plainDesc.includes(productName)) {
             const updatedDesc = currentDesc
-              ? `${currentDesc}\n\n${noteEntry}`
-              : noteEntry;
+              ? (currentDesc.includes('<p>') ? `${currentDesc}${noteHtml}` : `<p>${currentDesc.replace(/\n/g, '<br/>')}</p>${noteHtml}`)
+              : noteHtml;
             writePayload.description = updatedDesc;
           }
 
@@ -390,7 +404,7 @@ class OdooProvider extends BaseCRMProvider {
           : `WhatsApp Enquiry: ${customerName}`,
         phone: customerPhone,
         contact_name: customerName,
-        description: noteEntry
+        description: noteHtml
       };
 
       if (validPrice !== null) {

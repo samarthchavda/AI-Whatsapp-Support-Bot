@@ -288,6 +288,11 @@ class OdooProvider extends BaseCRMProvider {
       const customerPhone = leadData.customerPhone;
       const customerName = leadData.customerName || 'WhatsApp Customer';
       const enquiryMessage = leadData.enquiryMessage || 'Inbound inquiry from WhatsApp';
+      const productName = leadData.productName || null;
+      const rawPrice = (typeof leadData.productPrice === 'number' && !isNaN(leadData.productPrice))
+        ? leadData.productPrice
+        : (leadData.productPrice !== undefined && leadData.productPrice !== null ? Number(leadData.productPrice) : null);
+      const validPrice = (typeof rawPrice === 'number' && !isNaN(rawPrice) && rawPrice >= 0) ? rawPrice : null;
 
       // 1. An existing Odoo contact may be linked, but CRM Connect must not
       // create a contact as a side effect of a WhatsApp enquiry.
@@ -311,35 +316,61 @@ class OdooProvider extends BaseCRMProvider {
             'crm.lead',
             'search_read',
             [searchDomain],
-            { fields: ['id', 'name', 'phone', 'description'], limit: 1, order: 'id desc' }
+            { fields: ['id', 'name', 'phone', 'description', 'expected_revenue'], limit: 1, order: 'id desc' }
           );
         } catch (searchLeadErr) {
           console.warn('Odoo search lead error:', searchLeadErr.message);
         }
       }
 
+      const timeStr = new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
+      const dateStr = new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short' });
+
+      let noteEntry = '';
+      if (productName) {
+        const priceStr = validPrice !== null ? ` - ₹${Number(validPrice).toLocaleString('en-IN')}` : '';
+        noteEntry = `• [${dateStr}, ${timeStr}] Product: ${productName}${priceStr}\n  Query: ${enquiryMessage.trim()}`;
+      } else {
+        noteEntry = `• [${dateStr}, ${timeStr}] ${enquiryMessage.trim()}`;
+      }
+
       if (existingLeads && existingLeads.length > 0) {
         const existingLead = existingLeads[0];
         try {
-          const timeStr = new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
-          const dateStr = new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short' });
           const currentDesc = existingLead.description ? existingLead.description.replace(/<[^>]*>/g, '').trim() : '';
+          const writePayload = {};
 
           if (enquiryMessage && !currentDesc.includes(enquiryMessage.trim())) {
             const updatedDesc = currentDesc
-              ? `${currentDesc}\n\n• [${dateStr}, ${timeStr}] ${enquiryMessage.trim()}`
-              : `• [${dateStr}, ${timeStr}] ${enquiryMessage.trim()}`;
+              ? `${currentDesc}\n\n${noteEntry}`
+              : noteEntry;
+            writePayload.description = updatedDesc;
+          } else if (productName && !currentDesc.includes(productName)) {
+            const updatedDesc = currentDesc
+              ? `${currentDesc}\n\n${noteEntry}`
+              : noteEntry;
+            writePayload.description = updatedDesc;
+          }
 
+          if (validPrice !== null) {
+            writePayload.expected_revenue = validPrice;
+          }
+
+          if (productName && existingLead.name && !existingLead.name.includes(productName)) {
+            writePayload.name = `WhatsApp Enquiry: ${customerName} - ${productName}`;
+          }
+
+          if (Object.keys(writePayload).length > 0) {
             await this.executeKw(
               connection,
               credentials,
               'crm.lead',
               'write',
-              [[existingLead.id], { description: updatedDesc }]
+              [[existingLead.id], writePayload]
             );
           }
         } catch (updateErr) {
-          console.warn('Could not update existing lead description:', updateErr.message);
+          console.warn('Could not update existing lead description/revenue:', updateErr.message);
         }
 
         return {
@@ -353,14 +384,18 @@ class OdooProvider extends BaseCRMProvider {
       }
 
       // 3. Create lead in Odoo
-      const timeStr = new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
-      const dateStr = new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short' });
       const leadPayload = {
-        name: `WhatsApp Enquiry: ${customerName}`,
+        name: productName
+          ? `WhatsApp Enquiry: ${customerName} - ${productName}`
+          : `WhatsApp Enquiry: ${customerName}`,
         phone: customerPhone,
         contact_name: customerName,
-        description: `• [${dateStr}, ${timeStr}] ${enquiryMessage.trim()}`
+        description: noteEntry
       };
+
+      if (validPrice !== null) {
+        leadPayload.expected_revenue = validPrice;
+      }
 
       if (partnerId) {
         leadPayload.partner_id = partnerId;

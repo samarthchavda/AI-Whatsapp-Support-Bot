@@ -290,6 +290,118 @@ describe('CRM Connect Plan (₹2,499/mo) Dedicated Test Suite', () => {
       expect(syncResult3.isNewLead).toBe(false);
       expect(leadCreatedCount).toBe(1);
     });
+
+    test('sets expected_revenue to product price and includes product name and price in notes when customer inquires about a product', async () => {
+      const adminId = new mongoose.Types.ObjectId();
+      const connection = new CRMConnection({
+        _id: new mongoose.Types.ObjectId(),
+        adminId,
+        provider: 'odoo',
+        baseUrl: 'https://odoo-mock.test.local',
+        databaseName: 'odoo_db',
+        tenantIdentifier: 'admin@odoo.local',
+        status: 'connected',
+        isActive: true
+      });
+      connection.setCredentials({ apiKey: 'mock_api_key' });
+
+      let createdLeadPayload = null;
+      let updatedLeadPayload = null;
+
+      jest.spyOn(odooProvider, 'executeKw').mockImplementation(async (conn, creds, model, method, args) => {
+        if (model === 'res.partner' && method === 'search_read') return [];
+        if (model === 'crm.lead' && method === 'search_read') return [];
+        if (model === 'crm.lead' && method === 'create') {
+          createdLeadPayload = args[0];
+          return 301;
+        }
+        if (model === 'crm.lead' && method === 'write') {
+          updatedLeadPayload = args[1];
+          return true;
+        }
+        return [];
+      });
+
+      // 1. New lead creation with product inquiry
+      const syncResult = await odooProvider.syncLead(connection, null, {
+        customerPhone: '+918488880452',
+        customerName: 'Samarth Chavda',
+        enquiryMessage: 'Can you tell me more about Business Smartphone?',
+        productName: 'Business Smartphone',
+        productPrice: 24999
+      });
+
+      expect(syncResult.success).toBe(true);
+      expect(syncResult.leadId).toBe(301);
+      expect(createdLeadPayload).toBeDefined();
+      expect(createdLeadPayload.expected_revenue).toBe(24999);
+      expect(createdLeadPayload.name).toBe('WhatsApp Enquiry: Samarth Chavda - Business Smartphone');
+      expect(createdLeadPayload.description).toContain('Product: Business Smartphone - ₹24,999');
+      expect(createdLeadPayload.description).toContain('Query: Can you tell me more about Business Smartphone?');
+
+      // 2. Existing lead update with new product inquiry
+      jest.spyOn(odooProvider, 'executeKw').mockImplementation(async (conn, creds, model, method, args) => {
+        if (model === 'res.partner' && method === 'search_read') return [];
+        if (model === 'crm.lead' && method === 'search_read') {
+          return [{
+            id: 13,
+            name: 'WhatsApp Enquiry: Samarth Chavda',
+            phone: '+918488880452',
+            expected_revenue: 0,
+            description: '• [29 Sept, 07:46 am] what product do you have ?'
+          }];
+        }
+        if (model === 'crm.lead' && method === 'write') {
+          updatedLeadPayload = args[1];
+          return true;
+        }
+        return [];
+      });
+
+      const updateResult = await odooProvider.syncLead(connection, null, {
+        customerPhone: '+918488880452',
+        customerName: 'Samarth Chavda',
+        enquiryMessage: 'what is the price of Office Chair Red?',
+        productName: 'Office Chair Red',
+        productPrice: 1
+      });
+
+      expect(updateResult.success).toBe(true);
+      expect(updateResult.leadId).toBe(13);
+      expect(updateResult.isNewLead).toBe(false);
+      expect(updatedLeadPayload).toBeDefined();
+      expect(updatedLeadPayload.expected_revenue).toBe(1);
+      expect(updatedLeadPayload.name).toBe('WhatsApp Enquiry: Samarth Chavda - Office Chair Red');
+      expect(updatedLeadPayload.description).toContain('Product: Office Chair Red - ₹1');
+      expect(updatedLeadPayload.description).toContain('Query: what is the price of Office Chair Red?');
+    });
+
+    test('matchProductFromCatalog accurately identifies specific products and distinguishes from general catalog questions', () => {
+      const mockCatalog = [
+        { id: 7, name: 'Office Chair Red', price: 1, sku: 'PROD-0007' },
+        { id: 50, name: 'Office Chair', price: 8999, sku: 'PROD-0010' },
+        { id: 57, name: 'Business Smartphone', price: 24999, sku: 'PROD-0017' }
+      ];
+
+      // Specific inquiry returns matched product
+      const match1 = aiService.matchProductFromCatalog(mockCatalog, 'what is the price of Office Chair Red?');
+      expect(match1).toBeDefined();
+      expect(match1.name).toBe('Office Chair Red');
+      expect(match1.price).toBe(1);
+
+      // Token overlap matches specific product
+      const match2 = aiService.matchProductFromCatalog(mockCatalog, 'tell me details about business smartphone');
+      expect(match2).toBeDefined();
+      expect(match2.name).toBe('Business Smartphone');
+      expect(match2.price).toBe(24999);
+
+      // General catalog inquiry returns null
+      const matchGeneral = aiService.matchProductFromCatalog(mockCatalog, 'what product do you have ?');
+      expect(matchGeneral).toBeNull();
+
+      const matchGeneral2 = aiService.matchProductFromCatalog(mockCatalog, 'show all products');
+      expect(matchGeneral2).toBeNull();
+    });
   });
 
   // =========================================================================

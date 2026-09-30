@@ -56,4 +56,6 @@ video .zip
 !frontend/public/*.svg
 !frontend/public/*.jpg
 !frontend/public/*.jpeg
+!frontend/public/blog/*
+!next-public/public/blog/*
 

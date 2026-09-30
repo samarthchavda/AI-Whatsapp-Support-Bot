@@ -12,6 +12,16 @@ export const metadata = {
 
 const FALLBACK_POSTS = [
   {
+    _id: 'agentic-ai-whatsapp-cloud-api-2026',
+    slug: 'agentic-ai-whatsapp-cloud-api-ecommerce-automation-guide-2026',
+    title: 'Agentic AI on WhatsApp Cloud API (2026): The Complete Guide to Autonomous Customer Support, Smart Broadcasting & E-Commerce Automation',
+    summary: 'Discover how Agentic AI on Meta\'s WhatsApp Cloud API is replacing rigid chatbots in 2026. Learn how autonomous AI agents execute multi-step workflows—from real-time order tracking and returns to hyper-targeted broadcasts and abandoned cart recovery—achieving 90%+ resolution rates.',
+    tags: ['Agentic AI', 'WhatsApp Cloud API', 'E-Commerce Automation', 'Customer Support', 'Broadcasting', 'Shopify AI'],
+    author: 'Kwickbot Product & AI Architecture Team',
+    createdAt: '2026-09-30T04:30:00.000Z',
+    coverImage: '/blog/agentic-ai-whatsapp-cloud-api-2026.jpg'
+  },
+  {
     _id: 'meta-pricing-october-2026',
     slug: 'meta-whatsapp-api-changes-october-2026-pricing-guide',
     title: 'Meta WhatsApp API Changes (October 2026): The Complete Guide to Service Message Pricing, Meta Business Agent (MBA), and Cost-Saving Strategies for E-Commerce Brands',

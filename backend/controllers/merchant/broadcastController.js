@@ -5,10 +5,23 @@ const fs = require('fs').promises;
 const csv = require('csv-parser');
 const { createReadStream } = require('fs');
 
+const isCrmAutomationPlan = (plan) => ['crm_automation', 'crm-automation'].includes(
+  String(plan || '').trim().toLowerCase()
+);
+
+const removeUploadedFiles = async (req) => {
+  const uploadedFiles = [
+    ...(req.file ? [req.file] : []),
+    ...Object.values(req.files || {}).flat()
+  ];
+  await Promise.all(uploadedFiles.map((file) => fs.unlink(file.path).catch(() => {})));
+};
+
 // Create new broadcast
 exports.createBroadcast = async (req, res) => {
   try {
-    const { title, message, scheduledFor, recipientSource } = req.body;
+    const { title, message, scheduledFor } = req.body;
+    const recipientSource = req.body.recipientSource || 'csv';
     let recipients = [];
     let csvFileName = 'Imported from CRM/Orders';
 
@@ -28,6 +41,18 @@ exports.createBroadcast = async (req, res) => {
       return res.status(403).json({
         success: false,
         error: 'WhatsApp Broadcasting is not available on your current plan. Please upgrade to Growth or Scale to run broadcast campaigns.'
+      });
+    }
+
+    // The CRM Automation offering currently accepts an intentional, explicit
+    // CSV audience only. Do not let API callers bypass the UI and pull store
+    // orders, abandoned carts, or a previous campaign's recipient list.
+    if (isCrmAutomationPlan(req.admin.subscriptionPlan) &&
+      (recipientSource !== 'csv' || req.body.reuseFromId)) {
+      await removeUploadedFiles(req);
+      return res.status(400).json({
+        success: false,
+        error: 'CRM Automation broadcasts currently accept recipients via CSV upload only.'
       });
     }
 

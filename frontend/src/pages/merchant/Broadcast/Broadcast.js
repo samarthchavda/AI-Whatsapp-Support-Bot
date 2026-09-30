@@ -18,6 +18,9 @@ function Broadcast() {
   const [selectedTemplate, setSelectedTemplate] = useState(null);
 
   const plan = (JSON.parse(localStorage.getItem('admin') || '{}')?.subscriptionPlan || 'starter').toLowerCase();
+  // CRM Automation is intentionally CSV-only for now. CRM data imports and
+  // recipient-list reuse remain available only to the store-commerce plans.
+  const isCrmAutomationPlan = plan === 'crm_automation' || plan === 'crm-automation';
 
   // Fetch live preview count when source changes
   const fetchImportPreview = useCallback(async (source) => {
@@ -93,6 +96,10 @@ function Broadcast() {
   };
 
   const handleReuseBroadcast = (broadcast) => {
+    if (isCrmAutomationPlan) {
+      alert('CRM Automation broadcasts currently accept recipients through a CSV upload only.');
+      return;
+    }
     setReusedBroadcast({
       id: broadcast._id,
       title: broadcast.title,
@@ -302,7 +309,11 @@ function Broadcast() {
                   <li><strong>Optional columns:</strong> name (for personalization)</li>
                   <li><strong>Example:</strong> phoneNumber,name</li>
                   <li><strong>Max file size:</strong> 5MB</li>
-                  <li><strong>Shopify Basic Plan Guide:</strong> Learn how to export customers from Shopify and format the CSV by downloading the <a href="/docs/broadcast_guide.pdf" target="_blank" rel="noopener noreferrer" style={{ color: '#a5b4fc', textDecoration: 'underline', fontWeight: 'bold' }}>Shopify Basic Plan PDF Guide</a>.</li>
+                  {isCrmAutomationPlan ? (
+                    <li><strong>CRM export:</strong> Export the recipients you want to message from your CRM/Odoo, then upload that CSV here.</li>
+                  ) : (
+                    <li><strong>Shopify Basic Plan Guide:</strong> Learn how to export customers from Shopify and format the CSV by downloading the <a href="/docs/broadcast_guide.pdf" target="_blank" rel="noopener noreferrer" style={{ color: '#a5b4fc', textDecoration: 'underline', fontWeight: 'bold' }}>Shopify Basic Plan PDF Guide</a>.</li>
+                  )}
                 </ul>
               </div>
             )}
@@ -441,31 +452,43 @@ function Broadcast() {
 
               <div className="filter-group">
                 <label>Recipient Source *</label>
-                <select
-                  name="recipientSource"
-                  value={recipientSource}
-                  onChange={handleSourceChange}
-                  style={{
-                    width: '100%',
-                    padding: '14px',
-                    border: '1px solid rgba(63, 63, 70, 0.5)',
-                    borderRadius: '12px',
-                    fontSize: '14px',
-                    background: 'rgba(39, 39, 42, 0.6)',
-                    color: '#fafafa'
-                  }}
-                >
-                  <option value="csv">📁 Upload CSV File</option>
-                  {reusedBroadcast && (
-                    <option value="reuse">♻️ Reusing: {reusedBroadcast.title}</option>
-                  )}
-                  <option value="crm" disabled={plan === 'starter'}>
-                    📦 Import from Orders {plan === 'starter' ? '🔒 (Upgrade Plan)' : ''}
-                  </option>
-                  <option value="abandoned_carts" disabled={plan === 'starter'}>
-                    🛒 Import from Abandoned Carts {plan === 'starter' ? '🔒 (Upgrade Plan)' : ''}
-                  </option>
-                </select>
+                {isCrmAutomationPlan ? (
+                  <>
+                    <input type="hidden" name="recipientSource" value="csv" />
+                    <div style={{
+                      width: '100%', padding: '14px', border: '1px solid rgba(52, 211, 153, 0.45)',
+                      borderRadius: '12px', fontSize: '14px', background: 'rgba(16, 185, 129, 0.08)', color: '#d1fae5'
+                    }}>
+                      📁 Upload CSV File <span style={{ color: '#86efac', fontSize: '12px' }}>— CRM Automation recipient source</span>
+                    </div>
+                  </>
+                ) : (
+                  <select
+                    name="recipientSource"
+                    value={recipientSource}
+                    onChange={handleSourceChange}
+                    style={{
+                      width: '100%',
+                      padding: '14px',
+                      border: '1px solid rgba(63, 63, 70, 0.5)',
+                      borderRadius: '12px',
+                      fontSize: '14px',
+                      background: 'rgba(39, 39, 42, 0.6)',
+                      color: '#fafafa'
+                    }}
+                  >
+                    <option value="csv">📁 Upload CSV File</option>
+                    {reusedBroadcast && (
+                      <option value="reuse">♻️ Reusing: {reusedBroadcast.title}</option>
+                    )}
+                    <option value="crm" disabled={plan === 'starter'}>
+                      📦 Import from Orders {plan === 'starter' ? '🔒 (Upgrade Plan)' : ''}
+                    </option>
+                    <option value="abandoned_carts" disabled={plan === 'starter'}>
+                      🛒 Import from Abandoned Carts {plan === 'starter' ? '🔒 (Upgrade Plan)' : ''}
+                    </option>
+                  </select>
+                )}
               </div>
 
               <div className="filter-group">
@@ -692,14 +715,16 @@ function Broadcast() {
                         <FaEye /> Log
                       </button>
 
-                      <button
-                        onClick={() => handleReuseBroadcast(broadcast)}
-                        className="btn btn-secondary"
-                        style={{ fontSize: '11px', padding: '5px 8px', display: 'flex', alignItems: 'center', gap: '3px' }}
-                        title="Reuse Recipient List / Resend"
-                      >
-                        <FaRedo /> Reuse
-                      </button>
+                      {!isCrmAutomationPlan && (
+                        <button
+                          onClick={() => handleReuseBroadcast(broadcast)}
+                          className="btn btn-secondary"
+                          style={{ fontSize: '11px', padding: '5px 8px', display: 'flex', alignItems: 'center', gap: '3px' }}
+                          title="Reuse Recipient List / Resend"
+                        >
+                          <FaRedo /> Reuse
+                        </button>
+                      )}
 
                       {(broadcast.status === 'draft' || broadcast.status === 'scheduled') && (
                         <button
@@ -901,13 +926,15 @@ function Broadcast() {
               background: '#27272a',
               flexShrink: 0
             }}>
-              <button
-                onClick={() => handleReuseBroadcast(detailModalBroadcast)}
-                className="btn btn-primary"
-                style={{ fontSize: '13px', display: 'flex', alignItems: 'center', gap: '6px' }}
-              >
-                <FaRedo /> Reuse CSV / Resend to List
-              </button>
+              {!isCrmAutomationPlan && (
+                <button
+                  onClick={() => handleReuseBroadcast(detailModalBroadcast)}
+                  className="btn btn-primary"
+                  style={{ fontSize: '13px', display: 'flex', alignItems: 'center', gap: '6px' }}
+                >
+                  <FaRedo /> Reuse CSV / Resend to List
+                </button>
+              )}
               <button
                 onClick={() => setDetailModalBroadcast(null)}
                 className="btn btn-secondary"

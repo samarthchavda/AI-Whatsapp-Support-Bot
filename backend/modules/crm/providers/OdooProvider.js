@@ -225,7 +225,7 @@ class OdooProvider extends BaseCRMProvider {
         const rawDesc = (p.description_sale && typeof p.description_sale === 'string' && p.description_sale.trim())
           ? p.description_sale
           : ((p.description && typeof p.description === 'string' && !p.description.toLowerCase().startsWith('vendor note')) ? p.description : '');
-        const cleanDesc = rawDesc ? rawDesc.replace(/<[^>]*>/g, '').trim() : '';
+        const cleanDesc = rawDesc ? rawDesc.replace(/<[^>]*>/g, '').replace(/^demo\s*product\s*\d+\s*:\s*/i, '').trim() : '';
         return {
           id: p.id,
           name: p.name || p.display_name,

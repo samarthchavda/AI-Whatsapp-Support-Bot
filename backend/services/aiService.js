@@ -1094,37 +1094,60 @@ STRICT KNOWLEDGE BASE GROUNDING RULES:
               }
 
               if (matchedProduct) {
+                const cleanDesc = (matchedProduct.description || '')
+                  .replace(/^demo\s*product\s*\d+\s*:\s*/i, '')
+                  .trim();
                 const productContext = `PRODUCT INFORMATION FROM STORE CATALOG:
 • Product Name: ${matchedProduct.name}
 • Model / SKU: ${matchedProduct.sku || 'N/A'}
 • Price: ₹${Number(matchedProduct.price).toLocaleString('en-IN')}
 • Availability: ${matchedProduct.availability}
-• Description & Specifications: ${matchedProduct.description || 'Standard business configuration'}`;
+• Specifications & Highlights: ${cleanDesc || 'Standard business configuration'}`;
 
                 if (this.gemini) {
                   try {
-                    const prompt = `You are a professional customer support assistant for ${adminDoc?.businessName || 'our store'}.
-The customer asked: "${message}"
+                    const prompt = `You are a helpful customer support assistant for ${adminDoc?.businessName || 'our store'}.
+A customer on WhatsApp asked: "${message}"
 
-Official store product details:
-${productContext}
+Official Product Details:
+- Name: ${matchedProduct.name}
+- Model / SKU: ${matchedProduct.sku || 'N/A'}
+- Price: ₹${Number(matchedProduct.price).toLocaleString('en-IN')}
+- Availability: ${matchedProduct.availability}
+- Base Details: ${cleanDesc || 'Standard configuration'}
 
-Instructions:
-1. Answer the customer's questions regarding specifications, features, requirements, and pricing accurately using the product details above.
-2. Clearly provide the product name, price, model/SKU, availability, and description/specs.
-3. If specific technical requirements (such as minimum OS, RAM, processor) are not detailed in the catalog description, explain what is available in the catalog and let them know they can inquire with us for custom configurations.
-4. Keep the tone polite, professional, and helpful.
-5. STRICT RULE: Do not use any emojis in your response.`;
+STRICT FORMATTING REQUIREMENTS:
+1. Output MUST follow this exact clean, structured WhatsApp card format:
+*${matchedProduct.name}*
+
+• *Price:* ₹${Number(matchedProduct.price).toLocaleString('en-IN')}
+• *Model / SKU:* ${matchedProduct.sku || 'N/A'}
+• *Availability:* ${matchedProduct.availability}
+• *Specifications:* [Provide 1-2 concise, clear sentences summarizing features based on the product name and details, such as resolution, connectivity, or build quality. Do NOT mention internal words like 'demo product', and do NOT give disclaimers about what is missing.]
+
+Feel free to ask any other questions or place an order!
+
+2. DO NOT include any greeting, preamble, or conversational intro (NO "Certainly!", NO "Here is the information:", NO conversational chatter).
+3. DO NOT include loose or dangling asterisks (*).
+4. DO NOT write meta-disclaimers or discuss what technical details are missing in the catalog.
+5. Keep it concise (under 350 characters total) so it fits comfortably on mobile screens without requiring "Read more".
+6. STRICT RULE: Do not use any emojis in your response.`;
 
                     const modelClient = this.gemini.getGenerativeModel({ model: this.geminiModelName });
                     const result = await modelClient.generateContent(prompt);
-                    const aiText = result?.response?.text();
+                    let aiText = result?.response?.text();
                     if (aiText && aiText.trim()) {
-                      response = aiText.trim();
+                      aiText = aiText.trim()
+                        .replace(/^(certainly!?|sure!?|hello!?|hi!?|here is the information[^:\n]*:?\s*\*?|i can provide[^:\n]*:?\s*\*?)[^\n]*\n+/i, '')
+                        .replace(/^\*\s*\n/m, '')
+                        .replace(/^•\s*\*Product Name:\*[^\n]*\n+/im, '')
+                        .trim();
+
+                      response = aiText;
                       usedAI = true;
                       aiModel = this.geminiModelName;
                       modelUsed = 'Gemini';
-                      buttons = ['🛍️ View All Products', '📋 More FAQs'];
+                      buttons = ['🛍️ View Products', '📋 More FAQs'];
                       break;
                     }
                   } catch (geminiErr) {
@@ -1133,14 +1156,14 @@ Instructions:
                 }
 
                 // Fallback structured specification response:
-                const skuLine = matchedProduct.sku ? `\n• Model/Code: ${matchedProduct.sku}` : '';
-                const descLine = matchedProduct.description ? `\n• Specifications: ${matchedProduct.description}` : '';
-                response = `*${matchedProduct.name}*\n\n• Price: ₹${Number(matchedProduct.price).toLocaleString('en-IN')}${skuLine}\n• Availability: ${matchedProduct.availability}${descLine}\n\nFeel free to ask if you have any questions or would like to place an order!`;
-                buttons = ['🛍️ View All Products', '📋 More FAQs'];
+                const skuLine = matchedProduct.sku ? `\n• *Model / SKU:* ${matchedProduct.sku}` : '';
+                const descLine = cleanDesc ? `\n• *Specifications:* ${cleanDesc}` : '';
+                response = `*${matchedProduct.name}*\n\n• *Price:* ₹${Number(matchedProduct.price).toLocaleString('en-IN')}${skuLine}\n• *Availability:* ${matchedProduct.availability}${descLine}\n\nFeel free to ask if you have any questions or would like to place an order!`;
+                buttons = ['🛍️ View Products', '📋 More FAQs'];
                 break;
               } else {
                 response = `I couldn't find a product matching your query. Would you like to view our full product catalog?`;
-                buttons = ['🛍️ View All Products', '📋 More FAQs'];
+                buttons = ['🛍️ View Products', '📋 More FAQs'];
                 break;
               }
             }

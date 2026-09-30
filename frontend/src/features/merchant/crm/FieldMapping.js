@@ -38,15 +38,22 @@ const ENTITY_TYPES = [
   { id: 'custom', name: 'Custom Entity' }
 ];
 
+const CRM_CONNECT_DEFAULT_ROWS = [
+  { sourceField: 'customer_phone', targetField: 'phone', transformation: 'phone_e164', defaultValue: '' },
+  { sourceField: 'customer_name', targetField: 'contact_name', transformation: 'direct', defaultValue: '' }
+];
+
+const normalizePlanKey = (plan) => String(plan || '')
+  .trim()
+  .toLowerCase()
+  .replace(/[\s-]+/g, '_');
+
 function FieldMapping() {
   const { subscription } = useEffectiveAccess();
   const [searchParams, setSearchParams] = useSearchParams();
-  const isCrmConnectPlan = (subscription?.planSlug || JSON.parse(localStorage.getItem('admin') || '{}')?.subscriptionPlan || '')
-    .toLowerCase() === 'crm_connect';
-  const crmConnectDefaultRows = [
-    { sourceField: 'customer_phone', targetField: 'phone', transformation: 'phone_e164', defaultValue: '' },
-    { sourceField: 'customer_name', targetField: 'contact_name', transformation: 'direct', defaultValue: '' }
-  ];
+  const storedPlan = JSON.parse(localStorage.getItem('admin') || '{}')?.subscriptionPlan;
+  const planKey = normalizePlanKey(subscription?.planSlug || subscription?.planName || storedPlan);
+  const isCrmConnectPlan = planKey === 'crm_connect';
   const [connections, setConnections] = useState([]);
   const [selectedConnectionId, setSelectedConnectionId] = useState(searchParams.get('connectionId') || '');
   const [mappingsList, setMappingsList] = useState([]);
@@ -58,7 +65,7 @@ function FieldMapping() {
   const [editingMappingId, setEditingMappingId] = useState(null);
   const [entityType, setEntityType] = useState(isCrmConnectPlan ? 'lead' : 'contact');
   const [direction, setDirection] = useState(isCrmConnectPlan ? 'kwickbot_to_crm' : 'bidirectional');
-  const [fieldRows, setFieldRows] = useState(isCrmConnectPlan ? crmConnectDefaultRows : [
+  const [fieldRows, setFieldRows] = useState(isCrmConnectPlan ? CRM_CONNECT_DEFAULT_ROWS : [
     { sourceField: 'phone', targetField: 'customer_phone', transformation: 'phone_e164', defaultValue: '' },
     { sourceField: 'name', targetField: 'customer_name', transformation: 'direct', defaultValue: '' }
   ]);
@@ -97,6 +104,16 @@ function FieldMapping() {
   useEffect(() => {
     fetchConnectionsAndMappings();
   }, [fetchConnectionsAndMappings]);
+
+  // Effective access loads asynchronously. Once CRM Connect is identified,
+  // immediately reset the editor to its only permitted Odoo Lead mapping.
+  useEffect(() => {
+    if (isCrmConnectPlan) {
+      setEntityType('lead');
+      setDirection('kwickbot_to_crm');
+      setFieldRows(CRM_CONNECT_DEFAULT_ROWS);
+    }
+  }, [isCrmConnectPlan]);
 
   const handleConnectionChange = async (connId) => {
     setSelectedConnectionId(connId);
@@ -151,7 +168,7 @@ function FieldMapping() {
     setEditingMappingId(null);
     setEntityType(isCrmConnectPlan ? 'lead' : 'contact');
     setDirection(isCrmConnectPlan ? 'kwickbot_to_crm' : 'bidirectional');
-    setFieldRows(isCrmConnectPlan ? crmConnectDefaultRows : [
+    setFieldRows(isCrmConnectPlan ? CRM_CONNECT_DEFAULT_ROWS : [
       { sourceField: 'phone', targetField: 'customer_phone', transformation: 'phone_e164', defaultValue: '' },
       { sourceField: 'name', targetField: 'customer_name', transformation: 'direct', defaultValue: '' }
     ]);

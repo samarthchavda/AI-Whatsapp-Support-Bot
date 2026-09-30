@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Link, useLocation, Navigate } from 'react-router-dom';
-import { FaHome, FaComments, FaBox, FaExclamationTriangle, FaPlug, FaSearch, FaBell, FaSignOutAlt, FaUser, FaBrain, FaCommentDots, FaBroadcastTower, FaChartLine, FaCog, FaCrown, FaFileAlt, FaShoppingCart, FaCoins, FaUserSecret, FaHeartbeat, FaBullhorn, FaBlog, FaBars, FaWhatsapp, FaShieldAlt, FaToggleOn, FaTimes, FaTags, FaUserTag, FaCode, FaExchangeAlt, FaNetworkWired, FaBookOpen, FaKey, FaUserPlus } from 'react-icons/fa';
+import { FaHome, FaComments, FaBox, FaExclamationTriangle, FaPlug, FaSearch, FaBell, FaSignOutAlt, FaUser, FaBrain, FaCommentDots, FaBroadcastTower, FaChartLine, FaCog, FaCrown, FaFileAlt, FaShoppingCart, FaCoins, FaUserSecret, FaHeartbeat, FaBullhorn, FaBlog, FaBars, FaWhatsapp, FaShieldAlt, FaToggleOn, FaTimes, FaTags, FaUserTag, FaCode, FaNetworkWired, FaBookOpen, FaKey, FaUserPlus, FaDatabase, FaProjectDiagram, FaClipboardList } from 'react-icons/fa';
 import api, { clearAuthState, refreshAuth } from './services/api';
 import io from 'socket.io-client';
 import Dashboard from './pages/merchant/Dashboard/Dashboard';
@@ -456,7 +456,7 @@ function Sidebar({ admin, onLogout, isOpen, onToggle, pendingDemoRequestsCount }
                     {isPageAllowed('crm-connection') && (
                       <li>
                         <Link to="/dashboard/integration/connections" className={isActive('/dashboard/integration/connections')} title="CRM Connections">
-                          <FaPlug />
+                          <FaDatabase />
                           <span className="nav-label">CRM Connections</span>
                         </Link>
                       </li>
@@ -464,7 +464,7 @@ function Sidebar({ admin, onLogout, isOpen, onToggle, pendingDemoRequestsCount }
                     {isPageAllowed('field-mapping') && (
                       <li>
                         <Link to="/dashboard/integration/field-mapping" className={isActive('/dashboard/integration/field-mapping')} title="Field Mapping">
-                          <FaExchangeAlt />
+                          <FaProjectDiagram />
                           <span className="nav-label">Field Mapping</span>
                         </Link>
                       </li>
@@ -480,7 +480,7 @@ function Sidebar({ admin, onLogout, isOpen, onToggle, pendingDemoRequestsCount }
                     {isPageAllowed('integration-logs') && (
                       <li>
                         <Link to="/dashboard/integration/logs" className={isActive('/dashboard/integration/logs')} title="Integration Logs">
-                          <FaFileAlt />
+                          <FaClipboardList />
                           <span className="nav-label">Integration Logs</span>
                         </Link>
                       </li>
@@ -592,7 +592,7 @@ function Sidebar({ admin, onLogout, isOpen, onToggle, pendingDemoRequestsCount }
                       <li>
                         <Link to="/dashboard/whatsapp-connect" className={isActive('/dashboard/whatsapp-connect')} title="WhatsApp Connect">
                           <div style={{ position: 'relative', display: 'inline-flex' }}>
-                            <FaPlug />
+                            <FaWhatsapp />
                             <span className="ai-status-indicator" style={{ position: 'absolute', top: '-2px', right: '-4px' }}>
                               <span className="ai-status-dot"></span>
                             </span>

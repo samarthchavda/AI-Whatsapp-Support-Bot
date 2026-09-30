@@ -7,7 +7,10 @@ const { replayEvent } = require('../services/eventPipelineService');
 const { validateSSRF } = require('../../../utils/ssrfValidator');
 const { logAction } = require('../../../services/auditLogService');
 
-const isCrmConnectPlan = (admin) => String(admin?.subscriptionPlan || '').toLowerCase() === 'crm_connect';
+const isCrmConnectPlan = (admin) => String(admin?.subscriptionPlan || '')
+  .trim()
+  .toLowerCase()
+  .replace(/[\s-]+/g, '_') === 'crm_connect';
 
 const assertSafeCrmConnectLeadMapping = (admin, entityType) => {
   if (isCrmConnectPlan(admin) && String(entityType || '').toLowerCase() !== 'lead') {

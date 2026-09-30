@@ -1141,6 +1141,8 @@ Feel free to ask any other questions or place an order!
                         .replace(/^(certainly!?|sure!?|hello!?|hi!?|here is the information[^:\n]*:?\s*\*?|i can provide[^:\n]*:?\s*\*?)[^\n]*\n+/i, '')
                         .replace(/^\*\s*\n/m, '')
                         .replace(/^•\s*\*Product Name:\*[^\n]*\n+/im, '')
+                        .replace(/^(\*[^*]+\*)\s*•/m, '$1\n\n•')
+                        .replace(/(•\s*\*Specifications:\*[^\n]+)\s+(Feel free[^\n]*)/i, '$1\n\n$2')
                         .trim();
 
                       response = aiText;

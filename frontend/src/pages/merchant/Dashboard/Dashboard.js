@@ -2,11 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import io from 'socket.io-client';
 import { getDashboardStats } from '../../../services/api';
-import { FaComments, FaBox, FaExclamationTriangle, FaCheckCircle, FaCommentDots, FaPlug, FaBrain, FaBroadcastTower } from 'react-icons/fa';
+import { FaComments, FaBox, FaExclamationTriangle, FaCheckCircle, FaCommentDots, FaPlug, FaBrain, FaBroadcastTower, FaExchangeAlt } from 'react-icons/fa';
+import { useEffectiveAccess } from '../../../context/EffectiveAccessContext';
 
 const SOCKET_URL = process.env.REACT_APP_API_URL?.replace('/api', '') || (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' ? 'http://localhost:5001' : window.location.origin);
 
 function Dashboard() {
+  const { canViewPage } = useEffectiveAccess();
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -230,33 +232,65 @@ function Dashboard() {
       </div>
 
       <div className="quick-actions-grid">
-        <Link to="/dashboard/whatsapp-connect" className="quick-action-card">
-          <div className="quick-action-icon" style={admin && admin.whatsappConnected ? { background: 'rgba(16, 185, 129, 0.12)', color: '#10b981' } : { background: 'rgba(245, 158, 11, 0.12)', color: '#f59e0b' }}>
-            {admin && admin.whatsappConnected ? <FaCheckCircle /> : <FaPlug />}
-          </div>
-          <div>
-            <h4>{admin && admin.whatsappConnected ? 'WhatsApp Connected' : 'Connect WhatsApp'}</h4>
-            <p>{admin && admin.whatsappConnected ? 'Manage your active WhatsApp connection' : 'Link your business number to start receiving messages'}</p>
-          </div>
-        </Link>
-        <Link to="/dashboard/knowledge-base" className="quick-action-card">
-          <div className="quick-action-icon" style={{ background: 'rgba(139, 92, 246, 0.12)', color: '#8b5cf6' }}>
-            <FaBrain />
-          </div>
-          <div>
-            <h4>Upload Knowledge Base</h4>
-            <p>Train AI with your FAQs and product documents</p>
-          </div>
-        </Link>
-        <Link to="/dashboard/broadcast" className="quick-action-card">
-          <div className="quick-action-icon" style={{ background: 'rgba(99, 102, 241, 0.12)', color: '#6366f1' }}>
-            <FaBroadcastTower />
-          </div>
-          <div>
-            <h4>Send Broadcast</h4>
-            <p>Message customers with promotions and updates</p>
-          </div>
-        </Link>
+        {(canViewPage('whatsapp-connection') || canViewPage('wa_connect') || canViewPage('whatsapp-connect') || canViewPage('dashboard')) && (
+          <Link to="/dashboard/whatsapp-connect" className="quick-action-card">
+            <div className="quick-action-icon" style={admin && admin.whatsappConnected ? { background: 'rgba(16, 185, 129, 0.12)', color: '#10b981' } : { background: 'rgba(245, 158, 11, 0.12)', color: '#f59e0b' }}>
+              {admin && admin.whatsappConnected ? <FaCheckCircle /> : <FaPlug />}
+            </div>
+            <div>
+              <h4>{admin && admin.whatsappConnected ? 'WhatsApp Connected' : 'Connect WhatsApp'}</h4>
+              <p>{admin && admin.whatsappConnected ? 'Manage your active WhatsApp connection' : 'Link your business number to start receiving messages'}</p>
+            </div>
+          </Link>
+        )}
+
+        {canViewPage('knowledge-base') && (
+          <Link to="/dashboard/knowledge-base" className="quick-action-card">
+            <div className="quick-action-icon" style={{ background: 'rgba(139, 92, 246, 0.12)', color: '#8b5cf6' }}>
+              <FaBrain />
+            </div>
+            <div>
+              <h4>Upload Knowledge Base</h4>
+              <p>Train AI with your FAQs and product documents</p>
+            </div>
+          </Link>
+        )}
+
+        {canViewPage('broadcast') && (
+          <Link to="/dashboard/broadcast" className="quick-action-card">
+            <div className="quick-action-icon" style={{ background: 'rgba(99, 102, 241, 0.12)', color: '#6366f1' }}>
+              <FaBroadcastTower />
+            </div>
+            <div>
+              <h4>Send Broadcast</h4>
+              <p>Message customers with promotions and updates</p>
+            </div>
+          </Link>
+        )}
+
+        {canViewPage('crm-connection') && (
+          <Link to="/dashboard/integration/connections" className="quick-action-card">
+            <div className="quick-action-icon" style={{ background: 'rgba(59, 130, 246, 0.12)', color: '#3b82f6' }}>
+              <FaPlug />
+            </div>
+            <div>
+              <h4>CRM Connections</h4>
+              <p>Manage your Odoo and CRM connections</p>
+            </div>
+          </Link>
+        )}
+
+        {canViewPage('field-mapping') && (
+          <Link to="/dashboard/integration/field-mapping" className="quick-action-card">
+            <div className="quick-action-icon" style={{ background: 'rgba(16, 185, 129, 0.12)', color: '#10b981' }}>
+              <FaExchangeAlt />
+            </div>
+            <div>
+              <h4>Field Mapping</h4>
+              <p>Map WhatsApp customer data to CRM fields</p>
+            </div>
+          </Link>
+        )}
       </div>
 
       {/* Recent Conversations */}

@@ -255,7 +255,14 @@ async function hasPageAccess(adminDoc, pageKey) {
   if (!status.valid) return false;
 
   const { pages } = await resolveEffectivePermissions(adminDoc);
-  return pages.includes(pageKey) || pages.includes('all');
+  const normalizedKey = (pageKey || '').toLowerCase();
+  const underscoreKey = normalizedKey.replace(/-/g, '_');
+  const hyphenKey = normalizedKey.replace(/_/g, '-');
+
+  return pages.includes(normalizedKey) || 
+         pages.includes(underscoreKey) || 
+         pages.includes(hyphenKey) || 
+         pages.includes('all');
 }
 
 /**

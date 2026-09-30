@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const knowledgeBaseController = require('../controllers/merchant/knowledgeBaseController');
 const { verifyToken } = require('../middleware/auth');
+const { requirePage } = require('../middleware/rbac');
 const { MAX_KB_FILE_SIZE } = require('../config/kbConstants');
 const multer = require('multer');
 
@@ -68,8 +69,8 @@ const handleUploadMiddleware = (req, res, next) => {
  *       201:
  *         description: Document uploaded and ingested into AI
  */
-router.get('/', verifyToken, knowledgeBaseController.getAllKnowledgeBases);
-router.post('/', verifyToken, handleUploadMiddleware, knowledgeBaseController.uploadKnowledgeBase);
+router.get('/', verifyToken, requirePage('knowledge-base'), knowledgeBaseController.getAllKnowledgeBases);
+router.post('/', verifyToken, requirePage('knowledge-base'), handleUploadMiddleware, knowledgeBaseController.uploadKnowledgeBase);
 
 /**
  * @openapi
@@ -84,7 +85,7 @@ router.post('/', verifyToken, handleUploadMiddleware, knowledgeBaseController.up
  *       200:
  *         description: Shopify products synced
  */
-router.post('/sync-shopify-products', verifyToken, knowledgeBaseController.syncShopifyProducts);
+router.post('/sync-shopify-products', verifyToken, requirePage('knowledge-base'), knowledgeBaseController.syncShopifyProducts);
 
 /**
  * @openapi
@@ -110,7 +111,7 @@ router.post('/sync-shopify-products', verifyToken, knowledgeBaseController.syncS
  *       200:
  *         description: URL content ingested
  */
-router.post('/url', verifyToken, knowledgeBaseController.ingestURL);
+router.post('/url', verifyToken, requirePage('knowledge-base'), knowledgeBaseController.ingestURL);
 
 /**
  * @openapi
@@ -146,7 +147,7 @@ router.post('/url', verifyToken, knowledgeBaseController.ingestURL);
  *       200:
  *         description: Document deleted
  */
-router.get('/:id', verifyToken, knowledgeBaseController.getKnowledgeBaseById);
-router.delete('/:id', verifyToken, knowledgeBaseController.deleteKnowledgeBase);
+router.get('/:id', verifyToken, requirePage('knowledge-base'), knowledgeBaseController.getKnowledgeBaseById);
+router.delete('/:id', verifyToken, requirePage('knowledge-base'), knowledgeBaseController.deleteKnowledgeBase);
 
 module.exports = router;

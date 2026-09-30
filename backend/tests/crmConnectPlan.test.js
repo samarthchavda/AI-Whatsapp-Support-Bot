@@ -122,6 +122,7 @@ describe('CRM Connect Plan (₹2,499/mo) Dedicated Test Suite', () => {
 
       // Blocked / Restricted Pages
       const blockedPages = [
+        'knowledge-base',
         'automation-rules',
         'failed-events',
         'api-keys',
@@ -163,6 +164,8 @@ describe('CRM Connect Plan (₹2,499/mo) Dedicated Test Suite', () => {
       expect(await permissionService.hasPageAccess(merchant, 'settings')).toBe(true);
 
       // Blocked / Restricted Pages
+      expect(await permissionService.hasPageAccess(merchant, 'knowledge-base')).toBe(false);
+      expect(await permissionService.hasPageAccess(merchant, 'knowledge_base')).toBe(false);
       expect(await permissionService.hasPageAccess(merchant, 'automation-rules')).toBe(false);
       expect(await permissionService.hasPageAccess(merchant, 'failed-events')).toBe(false);
       expect(await permissionService.hasPageAccess(merchant, 'api-keys')).toBe(false);

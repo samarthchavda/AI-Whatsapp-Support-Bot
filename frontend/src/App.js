@@ -1156,20 +1156,83 @@ function App() {
                       path="/" 
                       element={<DefaultDashboardLanding admin={admin} />} 
                     />
-                    <Route path="/analytics" element={<Analytics admin={admin} />} />
+                    <Route 
+                      path="/analytics" 
+                      element={
+                        <ProtectedFeatureRoute pageKey="analytics" title="Analytics" requiredFeature="Analytics & Reports">
+                          <Analytics admin={admin} />
+                        </ProtectedFeatureRoute>
+                      } 
+                    />
                     <Route path="/conversations" element={<Conversations />} />
                     <Route path="/live-chat" element={<LiveChat admin={admin} />} />
-                    <Route path="/orders" element={<Orders admin={admin} />} />
-                    <Route path="/products" element={<Products admin={admin} />} />
-                    <Route path="/leads" element={<MerchantLeads admin={admin} />} />
-                    <Route path="/escalations" element={<Escalations admin={admin} />} />
-                    <Route path="/broadcast" element={<Broadcast />} />
-                    <Route path="/knowledge-base" element={<KnowledgeBase />} />
-                    <Route path="/integrations" element={<Integrations admin={admin} />} />
+                    <Route 
+                      path="/orders" 
+                      element={
+                        <ProtectedFeatureRoute pageKey="orders" title="Orders" requiredFeature="Order Tracking">
+                          <Orders admin={admin} />
+                        </ProtectedFeatureRoute>
+                      } 
+                    />
+                    <Route 
+                      path="/products" 
+                      element={
+                        <ProtectedFeatureRoute pageKey="products" title="Products Catalog" requiredFeature="Catalog Management">
+                          <Products admin={admin} />
+                        </ProtectedFeatureRoute>
+                      } 
+                    />
+                    <Route 
+                      path="/leads" 
+                      element={
+                        <ProtectedFeatureRoute pageKey="leads" title="Leads" requiredFeature="Leads Management">
+                          <MerchantLeads admin={admin} />
+                        </ProtectedFeatureRoute>
+                      } 
+                    />
+                    <Route 
+                      path="/escalations" 
+                      element={
+                        <ProtectedFeatureRoute pageKey="escalations" title="Human Escalations" requiredFeature="Human Escalation">
+                          <Escalations admin={admin} />
+                        </ProtectedFeatureRoute>
+                      } 
+                    />
+                    <Route 
+                      path="/broadcast" 
+                      element={
+                        <ProtectedFeatureRoute pageKey="broadcast" title="Broadcast Messages" requiredFeature="Broadcast Messaging">
+                          <Broadcast />
+                        </ProtectedFeatureRoute>
+                      } 
+                    />
+                    <Route 
+                      path="/knowledge-base" 
+                      element={
+                        <ProtectedFeatureRoute pageKey="knowledge-base" title="Knowledge Base" requiredFeature="Knowledge Base Training">
+                          <KnowledgeBase />
+                        </ProtectedFeatureRoute>
+                      } 
+                    />
+                    <Route 
+                      path="/integrations" 
+                      element={
+                        <ProtectedFeatureRoute pageKey="integrations" title="Store Integrations" requiredFeature="Store Integrations">
+                          <Integrations admin={admin} />
+                        </ProtectedFeatureRoute>
+                      } 
+                    />
                     <Route path="/developer-api" element={<DeveloperApi admin={admin} />} />
                     <Route path="/whatsapp-connect" element={<WhatsAppConnect />} />
                     <Route path="/templates" element={<Templates />} />
-                    <Route path="/abandoned-carts" element={<AbandonedCarts admin={admin} />} />
+                    <Route 
+                      path="/abandoned-carts" 
+                      element={
+                        <ProtectedFeatureRoute pageKey="abandoned_carts" title="Abandoned Carts" requiredFeature="Cart Recovery">
+                          <AbandonedCarts admin={admin} />
+                        </ProtectedFeatureRoute>
+                      } 
+                    />
                     <Route path="/billing" element={<Billing />} />
                     <Route path="/profile" element={<Profile admin={admin} onUpdateAdmin={handleUpdateAdmin} />} />
 

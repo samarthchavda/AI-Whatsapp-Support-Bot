@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import api from '../../../services/api';
-import { FaSync, FaSearch, FaFilter, FaCheckCircle, FaExclamationCircle, FaProjectDiagram, FaInfoCircle, FaFileAlt, FaPlus, FaTimes, FaSpinner, FaWhatsapp, FaImage, FaLink, FaPhoneAlt } from 'react-icons/fa';
+import { FaSync, FaSearch, FaFilter, FaCheckCircle, FaExclamationCircle, FaProjectDiagram, FaInfoCircle, FaFileAlt, FaPlus, FaTimes, FaSpinner, FaWhatsapp, FaImage, FaLink, FaPhoneAlt, FaEye, FaTrash } from 'react-icons/fa';
 import './Templates.css';
 
 const createEmptyDraft = () => ({
@@ -37,6 +37,8 @@ function Templates() {
   const [createError, setCreateError] = useState('');
   const [toast, setToast] = useState('');
   const [draft, setDraft] = useState(createEmptyDraft);
+  const [previewTemplate, setPreviewTemplate] = useState(null);
+  const [deletingTemplateId, setDeletingTemplateId] = useState(null);
 
   useEffect(() => {
     fetchTemplates();
@@ -83,6 +85,27 @@ function Templates() {
     } catch (error) {
       console.error('Error mapping template:', error);
       alert(error.response?.data?.error || 'Failed to update template mapping');
+    }
+  };
+
+  const handleDeleteTemplate = async (template) => {
+    const confirmed = window.confirm(
+      `Remove “${template.name}” from the Kwickbot template list?\n\nThis does not delete the template in Meta Business Manager. Syncing with Meta can add it back.`
+    );
+    if (!confirmed) return;
+
+    try {
+      setDeletingTemplateId(template._id);
+      await api.delete(`/whatsapp/templates/${template._id}`);
+      if (previewTemplate?._id === template._id) setPreviewTemplate(null);
+      setToast('Template removed from your Kwickbot list.');
+      setTimeout(() => setToast(''), 5000);
+      await fetchTemplates();
+    } catch (error) {
+      console.error('Error deleting template:', error);
+      alert(error.response?.data?.error || 'Failed to remove the template. Please try again.');
+    } finally {
+      setDeletingTemplateId(null);
     }
   };
 
@@ -283,7 +306,7 @@ function Templates() {
         </div>
       </div>
 
-      {/* Grid List */}
+      {/* Template list */}
       {loading ? (
         <div style={{ padding: '60px', textAlign: 'center', color: '#71717a' }}>
           <div className="spinner" style={{ margin: '0 auto 16px' }}></div>
@@ -310,9 +333,27 @@ function Templates() {
               <div className="template-card-header">
                 <div className="template-title-wrapper">
                   <h3 className="template-name">{tpl.name}</h3>
-                  <span className="template-category-tag">{tpl.category}</span>
+                  <div className="template-list-meta">
+                    <span className="template-category-tag">{tpl.category}</span>
+                    <span className="template-language-label">{tpl.language}</span>
+                    {tpl.mappedEvent && <span className="mapping-active-badge"><FaCheckCircle /> Trigger mapped</span>}
+                  </div>
                 </div>
-                {getStatusBadge(tpl.status)}
+                <div className="template-list-actions">
+                  {getStatusBadge(tpl.status)}
+                  <button type="button" className="template-action-button preview" onClick={() => setPreviewTemplate(tpl)}>
+                    <FaEye /> Preview
+                  </button>
+                  <button
+                    type="button"
+                    className="template-action-button delete"
+                    onClick={() => handleDeleteTemplate(tpl)}
+                    disabled={deletingTemplateId === tpl._id}
+                  >
+                    {deletingTemplateId === tpl._id ? <FaSpinner className="spinning" /> : <FaTrash />}
+                    {deletingTemplateId === tpl._id ? 'Removing…' : 'Delete'}
+                  </button>
+                </div>
               </div>
 
               {/* Mapped Event Config */}
@@ -334,22 +375,6 @@ function Templates() {
                 </select>
               </div>
 
-              {/* Preview Box */}
-              <div className="template-preview-box">
-                <div className="preview-label">Live Preview</div>
-                <div className="preview-bubble">
-                  {tpl.components.map(renderComponent)}
-                </div>
-              </div>
-
-              <div className="template-card-footer">
-                <span className="template-lang-badge">Language: <code>{tpl.language}</code></span>
-                {tpl.mappedEvent && (
-                  <span className="mapping-active-badge">
-                    <FaCheckCircle /> Active Notification Mapping
-                  </span>
-                )}
-              </div>
             </div>
           ))}
         </div>
@@ -364,6 +389,42 @@ function Templates() {
       </div>
 
       {toast && <div className="template-toast"><FaCheckCircle /> {toast}</div>}
+
+      {previewTemplate && (
+        <div className="template-modal-overlay" role="dialog" aria-modal="true" aria-label={`Preview ${previewTemplate.name}`}>
+          <div className="template-preview-modal">
+            <div className="template-modal-header">
+              <div>
+                <h2><FaWhatsapp /> {previewTemplate.name}</h2>
+                <p>{previewTemplate.category} · {previewTemplate.language} · {getStatusBadge(previewTemplate.status)}</p>
+              </div>
+              <button type="button" className="template-modal-close" onClick={() => setPreviewTemplate(null)} aria-label="Close template preview"><FaTimes /></button>
+            </div>
+            <div className="template-preview-modal-content">
+              <div className="template-phone-preview">
+                <div className="template-preview-title"><FaEye /> WhatsApp message preview</div>
+                <div className="template-phone-screen">
+                  <div className="template-phone-topbar"><span>Business</span><span>● ● ●</span></div>
+                  <div className="template-chat-bubble template-saved-chat-bubble">
+                    {previewTemplate.components.map(renderComponent)}
+                    <time>10:30 AM ✓✓</time>
+                  </div>
+                </div>
+              </div>
+              <aside className="template-preview-details">
+                <span className="preview-label">Template details</span>
+                <div><strong>Status</strong>{getStatusBadge(previewTemplate.status)}</div>
+                <div><strong>Category</strong><span>{previewTemplate.category}</span></div>
+                <div><strong>Language</strong><code>{previewTemplate.language}</code></div>
+                <div><strong>Trigger</strong><span>{previewTemplate.mappedEvent ? previewTemplate.mappedEvent.replaceAll('_', ' ') : 'Manual dispatch only'}</span></div>
+                <button type="button" className="template-action-button delete preview-delete" onClick={() => handleDeleteTemplate(previewTemplate)} disabled={deletingTemplateId === previewTemplate._id}>
+                  <FaTrash /> Remove from Kwickbot list
+                </button>
+              </aside>
+            </div>
+          </div>
+        </div>
+      )}
 
       {showCreateModal && (
         <div className="template-modal-overlay" role="dialog" aria-modal="true" aria-label="Create WhatsApp message template">

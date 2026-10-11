@@ -651,3 +651,70 @@ body.dark-theme .template-lang-badge code {
   background-color: var(--bg-input) !important;
   color: var(--text-primary) !important;
 }
+
+/* Public-site visual language: concise list rows rather than oversized previews. */
+.tmpl-filter-bar {
+  background: #fff;
+  border-color: #d8e8fb;
+  border-radius: 16px;
+  box-shadow: 0 8px 24px rgba(32, 95, 166, 0.07);
+  padding: 18px 20px;
+}
+
+.tmpl-search-input,
+.tmpl-filter-select,
+.mapping-select {
+  background: #fff;
+  border-color: #cfe2f8;
+  color: #25354c;
+}
+
+.tmpl-search-input:focus,
+.tmpl-filter-select:focus,
+.mapping-select:focus { border-color: #438dff; box-shadow: 0 0 0 3px rgba(22,119,255,.1); }
+
+.templates-grid { display: flex; flex-direction: column; gap: 12px; margin-bottom: 24px; }
+
+.template-card {
+  background: linear-gradient(90deg, #fff 0%, #fbfdff 100%);
+  border: 1px solid #d8e8fb;
+  border-radius: 16px;
+  box-shadow: 0 6px 18px rgba(32, 95, 166, 0.06);
+  display: grid;
+  gap: 14px;
+  padding: 18px 20px;
+}
+
+.template-card:hover { border-color: #acd1ff; box-shadow: 0 12px 24px rgba(32, 95, 166, 0.11); transform: translateY(-1px); }
+.template-card-header { align-items: center; margin: 0; }
+.template-title-wrapper { gap: 7px; min-width: 0; }
+.template-name { color: #17253b; font-size: 17px; overflow-wrap: anywhere; }
+.template-list-meta { align-items: center; display: flex; flex-wrap: wrap; gap: 7px; }
+.template-category-tag { background: #eaf3ff; color: #2677cf; font-size: 10px; letter-spacing: .03em; padding: 4px 8px; }
+.template-language-label { background: #f1f5fa; border-radius: 99px; color: #6d7d93; font-family: monospace; font-size: 11px; font-weight: 700; padding: 4px 8px; }
+.mapping-active-badge { align-items: center; color: #169866; display: inline-flex; font-size: 11px; font-weight: 700; gap: 4px; }
+.template-list-actions { align-items: center; display: flex; flex-shrink: 0; flex-wrap: wrap; gap: 8px; justify-content: flex-end; }
+.template-action-button { align-items: center; background: #fff; border: 1px solid #cfe2f8; border-radius: 9px; color: #3974b4; cursor: pointer; display: inline-flex; font-size: 12px; font-weight: 750; gap: 7px; padding: 9px 11px; transition: .2s ease; }
+.template-action-button.preview:hover { background: #eaf3ff; border-color: #91c1fb; color: #1269ce; }
+.template-action-button.delete { border-color: #ffd0cc; color: #d85650; }
+.template-action-button.delete:hover { background: #fff2f1; border-color: #f6aaa4; }
+.template-action-button:disabled { cursor: wait; opacity: .6; }
+.template-mapping-section { background: #f7fbff; border-color: #d4e6fa; display: grid; gap: 10px; grid-template-columns: minmax(180px, .52fr) minmax(260px, 1fr); margin: 0; padding: 12px 14px; }
+.mapping-label { color: #5b718c; font-size: 12px; }
+
+.template-preview-modal { background: #fff; border: 1px solid #d5e6fa; border-radius: 20px; box-shadow: 0 24px 70px rgba(15,23,42,.28); max-width: 820px; overflow: hidden; width: 100%; }
+.template-preview-modal-content { display: grid; gap: 22px; grid-template-columns: minmax(320px, 1fr) minmax(210px, .55fr); padding: 24px; }
+.template-preview-modal .template-phone-preview { background: linear-gradient(145deg,#edf6ff,#f8fbff); min-height: 380px; }
+.template-preview-details { align-self: start; background: #f7fbff; border: 1px solid #dbeafb; border-radius: 14px; display: grid; gap: 14px; padding: 16px; }
+.template-preview-details > div { align-items: center; border-bottom: 1px solid #e3edf8; color: #60728b; display: flex; font-size: 12px; gap: 10px; justify-content: space-between; padding-bottom: 11px; text-transform: capitalize; }
+.template-preview-details > div strong { color: #263852; font-size: 11px; text-transform: uppercase; }
+.template-preview-details code { background: #eaf3ff; border-radius: 5px; color: #286fb9; padding: 3px 5px; }
+.preview-delete { justify-content: center; margin-top: 4px; width: 100%; }
+.template-saved-chat-bubble { min-height: 110px; }
+.template-saved-chat-bubble .template-preview-body p { margin: 0; white-space: pre-wrap; }
+
+@media (max-width: 720px) {
+  .template-card-header { align-items: flex-start; flex-direction: column; }
+  .template-list-actions { justify-content: flex-start; }
+  .template-mapping-section, .template-preview-modal-content { grid-template-columns: 1fr; }
+}

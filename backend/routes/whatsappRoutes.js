@@ -9,6 +9,9 @@ router.use(verifyToken);
 // List all templates cached locally
 router.get('/templates', whatsappController.getTemplates);
 
+// Create a template directly in the connected merchant's Meta WABA
+router.post('/templates', whatsappController.createTemplate);
+
 // Trigger a live templates sync with Meta Graph API
 router.post('/templates/sync', whatsappController.syncTemplates);
 

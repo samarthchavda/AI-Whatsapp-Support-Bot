@@ -2824,7 +2824,7 @@ exports.deleteAnnouncement = async (req, res) => {
 // Get Feature Flags using GlobalSettings
 exports.getFeatureFlags = async (req, res) => {
   try {
-    const predefinedFlags = ['webBotEnabled', 'shopifySyncEnabled', 'wooSyncEnabled', 'aiAutoResponseEnabled'];
+    const predefinedFlags = ['webBotEnabled', 'shopifySyncEnabled', 'wooSyncEnabled', 'aiAutoResponseEnabled', 'merchantTemplateCreationEnabled'];
     
     // Explicit security whitelist: fetch only the predefined flags to protect other sensitive settings/secrets
     const settings = await GlobalSettings.find({ key: { $in: predefinedFlags } });
@@ -2856,6 +2856,12 @@ exports.getFeatureFlags = async (req, res) => {
         key: 'aiAutoResponseEnabled',
         name: 'AI Auto-Response Engine',
         description: 'Controls whether Gemini AI answers incoming messages without human agent escalation.',
+        scope: 'Global'
+      },
+      {
+        key: 'merchantTemplateCreationEnabled',
+        name: 'Merchant Template Creation',
+        description: 'Allows merchants to create and submit WhatsApp message templates to their own Meta Business account for review.',
         scope: 'Global'
       }
     ];
@@ -2900,7 +2906,7 @@ exports.getFeatureFlags = async (req, res) => {
 // Toggle a Feature Flag value in GlobalSettings
 exports.toggleFeatureFlag = async (req, res) => {
   try {
-    const predefinedFlags = ['webBotEnabled', 'shopifySyncEnabled', 'wooSyncEnabled', 'aiAutoResponseEnabled'];
+    const predefinedFlags = ['webBotEnabled', 'shopifySyncEnabled', 'wooSyncEnabled', 'aiAutoResponseEnabled', 'merchantTemplateCreationEnabled'];
     const { key, isEnabled } = req.body;
 
     if (!key) {

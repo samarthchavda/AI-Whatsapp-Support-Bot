@@ -136,7 +136,7 @@ describe('Super Admin Feature Flags Backend Enforcement', () => {
       await getFeatureFlags(req, res);
 
       expect(GlobalSettings.find).toHaveBeenCalledWith({
-        key: { $in: ['webBotEnabled', 'shopifySyncEnabled', 'wooSyncEnabled', 'aiAutoResponseEnabled'] }
+        key: { $in: ['webBotEnabled', 'shopifySyncEnabled', 'wooSyncEnabled', 'aiAutoResponseEnabled', 'merchantTemplateCreationEnabled'] }
       });
     });
 

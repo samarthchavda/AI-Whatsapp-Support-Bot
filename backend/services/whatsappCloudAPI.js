@@ -614,6 +614,42 @@ class WhatsAppCloudAPI {
     }
   }
 
+  // Submit a message template for Meta review. Template creation is deliberately
+  // scoped to the merchant's own WABA credentials; there is no platform-token
+  // fallback because that could create a template in another business account.
+  async createTemplate(templateData, customCredentials = null) {
+    const accessToken = customCredentials?.accessToken;
+    const businessAccountId = customCredentials?.businessAccountId;
+
+    if (!accessToken || !businessAccountId) {
+      const error = new Error('Connect your WhatsApp Business account before creating a template.');
+      error.statusCode = 400;
+      throw error;
+    }
+
+    try {
+      const response = await axios.post(
+        `https://graph.facebook.com/v20.0/${businessAccountId}/message_templates`,
+        templateData,
+        {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+
+      return response.data;
+    } catch (error) {
+      const metaError = error.response?.data?.error;
+      const safeError = new Error(metaError?.message || 'Meta could not create this template.');
+      safeError.statusCode = error.response?.status || 502;
+      safeError.metaCode = metaError?.code;
+      safeError.metaDetails = metaError?.error_user_msg || metaError?.error_data?.details;
+      throw safeError;
+    }
+  }
+
   // Seed default templates for demo/development
   getSeededTemplates() {
     return [

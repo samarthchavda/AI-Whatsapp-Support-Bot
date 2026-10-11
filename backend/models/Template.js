@@ -39,7 +39,13 @@ const templateSchema = new mongoose.Schema({
     },
     format: {
       type: String
-    }
+    },
+    example: {
+      type: mongoose.Schema.Types.Mixed
+    },
+    buttons: [{
+      type: mongoose.Schema.Types.Mixed
+    }]
   }],
   mappedEvent: {
     type: String,

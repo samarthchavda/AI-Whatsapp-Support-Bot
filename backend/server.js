@@ -221,6 +221,10 @@ mongoose.connect(mongoUri, {
       checkAndResetMonthlyTokens();
     });
 
+    // Removes Kwickbot-only chat records after 24 hours without activity.
+    const { startConversationRetentionScheduler } = require('./services/conversationRetentionService');
+    startConversationRetentionScheduler(cron);
+
     // Schedule Shopify order sync for all active Shopify integrations
     const shopifyOrderSyncService = require('./services/shopifyOrderSyncService');
     const shopifySyncSchedule = process.env.SHOPIFY_SYNC_CRON || '*/15 * * * *';

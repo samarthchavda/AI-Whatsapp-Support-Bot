@@ -215,6 +215,9 @@ function LiveChat() {
             {activeCount} active · {escalatedCount} escalated · {conversations.length} total
           </p>
         </div>
+        <div className="retention-notice" title="Only Kwickbot records are removed. WhatsApp chat history is not changed.">
+          <FaCircle /> Privacy mode · chats are deleted 24h after last activity
+        </div>
       </div>
 
       <div className="live-chat-container">

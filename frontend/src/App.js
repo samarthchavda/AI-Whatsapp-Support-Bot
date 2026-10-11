@@ -335,8 +335,8 @@ function Sidebar({ admin, onLogout, isOpen, onToggle, pendingDemoRequestsCount }
             </div>
           )}
 
-          {/* Client Pages */}
-          {admin && admin.role !== 'super_admin' && (
+          {/* Legacy full merchant navigation is retained below for future rollout; it is intentionally not rendered. */}
+          {false && admin && admin.role !== 'super_admin' && (
             <>
               {(isPageAllowed('dashboard') || isPageAllowed('conversations') || isPageAllowed('live_chat') || isPageAllowed('orders') || isPageAllowed('products') || isPageAllowed('leads') || isPageAllowed('abandoned_carts') || isPageAllowed('escalations')) && (
                 <div className="nav-section">
@@ -646,6 +646,86 @@ function Sidebar({ admin, onLogout, isOpen, onToggle, pendingDemoRequestsCount }
                     {isPageAllowed('profile') && (
                       <li>
                         <Link to="/dashboard/profile" className={isActive('/dashboard/profile')} title="Profile & Store">
+                          <FaUser />
+                          <span className="nav-label">Profile</span>
+                        </Link>
+                      </li>
+                    )}
+                  </ul>
+                </div>
+              )}
+            </>
+          )}
+
+          {/* Streamlined merchant navigation: keep the product focused on the six day-to-day actions. */}
+          {admin && admin.role !== 'super_admin' && (
+            <>
+              {(isPageAllowed('live_chat') || isPageAllowed('broadcast') || canUseTemplates) && (
+                <div className="nav-section">
+                  {isOpen && <div className="nav-section-title">Customer Messaging</div>}
+                  <ul className="nav-links">
+                    {isPageAllowed('live_chat') && (
+                      <li>
+                        <Link to="/dashboard/live-chat" className={isActive('/dashboard/live-chat')} title="Live Chat">
+                          <FaCommentDots />
+                          <span className="nav-label">Live Chat</span>
+                        </Link>
+                      </li>
+                    )}
+                    {isPageAllowed('broadcast') && (
+                      <li>
+                        <Link to="/dashboard/broadcast" className={isActive('/dashboard/broadcast')} title="Broadcast">
+                          <FaBroadcastTower />
+                          <span className="nav-label">Broadcast</span>
+                        </Link>
+                      </li>
+                    )}
+                    {canUseTemplates && (
+                      <li>
+                        <Link to="/dashboard/templates" className={isActive('/dashboard/templates')} title="Templates">
+                          <FaFileAlt />
+                          <span className="nav-label">Templates</span>
+                        </Link>
+                      </li>
+                    )}
+                  </ul>
+                </div>
+              )}
+
+              {(isPageAllowed('wa_connect') || isPageAllowed('whatsapp-connection')) && (
+                <div className="nav-section">
+                  {isOpen && <div className="nav-section-title">WhatsApp Setup</div>}
+                  <ul className="nav-links">
+                    <li>
+                      <Link to="/dashboard/whatsapp-connect" className={isActive('/dashboard/whatsapp-connect')} title="WhatsApp Connect">
+                        <div style={{ position: 'relative', display: 'inline-flex' }}>
+                          <FaWhatsapp />
+                          <span className="ai-status-indicator" style={{ position: 'absolute', top: '-2px', right: '-4px' }}>
+                            <span className="ai-status-dot"></span>
+                          </span>
+                        </div>
+                        <span className="nav-label">WhatsApp Connect</span>
+                      </Link>
+                    </li>
+                  </ul>
+                </div>
+              )}
+
+              {(isPageAllowed('billing') || isPageAllowed('profile')) && (
+                <div className="nav-section">
+                  {isOpen && <div className="nav-section-title">Account</div>}
+                  <ul className="nav-links">
+                    {isPageAllowed('billing') && (
+                      <li>
+                        <Link to="/dashboard/billing" className={isActive('/dashboard/billing')} title="Billing & Plans">
+                          <FaCrown style={{ color: '#f59e0b' }} />
+                          <span className="nav-label">Billing</span>
+                        </Link>
+                      </li>
+                    )}
+                    {isPageAllowed('profile') && (
+                      <li>
+                        <Link to="/dashboard/profile" className={isActive('/dashboard/profile')} title="Profile">
                           <FaUser />
                           <span className="nav-label">Profile</span>
                         </Link>

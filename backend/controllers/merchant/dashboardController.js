@@ -2,6 +2,8 @@ const Escalation = require('../../models/Escalation');
 const Conversation = require('../../models/Conversation');
 const Order = require('../../models/Order');
 const Announcement = require('../../models/Announcement');
+const Broadcast = require('../../models/Broadcast');
+const { getAdminPricingPlan } = require('../../services/permissionService');
 
 // Get dashboard statistics
 exports.getDashboardStats = async (req, res) => {
@@ -25,7 +27,9 @@ exports.getDashboardStats = async (req, res) => {
       recentConversations,
       recentEscalations,
       intentDistribution,
-      satisfactionAgg
+      satisfactionAgg,
+      recentBroadcasts,
+      pricingPlan
     ] = await Promise.all([
       Order.countDocuments(adminQuery),
       Order.countDocuments({ ...adminQuery, status: 'pending' }),
@@ -62,7 +66,13 @@ exports.getDashboardStats = async (req, res) => {
       Conversation.aggregate([
         { $match: { admin: req.admin._id, satisfaction: { $exists: true, $ne: null } } },
         { $group: { _id: null, avgSatisfaction: { $avg: '$satisfaction' } } }
-      ])
+      ]),
+      Broadcast.find(adminQuery)
+        .sort({ createdAt: -1 })
+        .limit(4)
+        .select('title status sentCount failedCount createdAt')
+        .lean(),
+      getAdminPricingPlan(req.admin)
     ]);
 
     const avgSatisfaction = satisfactionAgg.length > 0 
@@ -90,7 +100,32 @@ exports.getDashboardStats = async (req, res) => {
       },
       recentConversations,
       recentEscalations,
-      intentDistribution
+      intentDistribution,
+      recentBroadcasts,
+      usage: {
+        planName: pricingPlan?.displayName || req.admin.subscriptionPlan || 'Current plan',
+        planCategory: pricingPlan?.category || null,
+        billingCycle: req.admin.billingCycle || 'monthly',
+        subscriptionStatus: req.admin.subscriptionStatus || 'trial',
+        periodStartedAt: req.admin.lastTokenReset || null,
+        // These counters are reset together every 30 days by subscriptionService.
+        conversations: req.admin.monthlyConversationsCount || 0,
+        aiRepliesProcessed: req.admin.totalMessagesProcessed || 0,
+        broadcastMessagesSent: req.admin.broadcastMessagesUsed || 0,
+        broadcastCampaignsCreated: req.admin.broadcastCampaignsUsed || 0,
+        limits: {
+          conversations: pricingPlan?.usageLimits?.monthlyConversations ?? null,
+          messages: pricingPlan?.usageLimits?.monthlyMessages ?? null,
+          broadcastMessages: pricingPlan?.usageLimits?.maxBroadcastMessages ?? null,
+          broadcastCampaigns: pricingPlan?.usageLimits?.maxBroadcastCampaigns ?? null
+        },
+        charges: {
+          currency: pricingPlan?.currency || 'INR',
+          configuredMonthlyRate: req.admin.monthlyPrice ?? pricingPlan?.monthlyPrice ?? null,
+          // Meta bills the merchant separately; no actual Meta billing feed is stored here.
+          metaActual: null
+        }
+      }
     });
   } catch (error) {
     res.status(500).json({ error: error.message });

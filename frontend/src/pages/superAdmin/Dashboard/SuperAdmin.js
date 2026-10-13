@@ -39,6 +39,8 @@ const CATEGORY_LABELS = {
   enterprise_custom: 'Enterprise & Custom'
 };
 
+const isLegacyEcommercePlan = (plan) => ['starter', 'growth', 'scale'].includes(String(plan?.name || '').toLowerCase());
+
 const getPlanMonthlyEquivalent = (plan, cycle = 'monthly') => {
   if (!plan) return 0;
   if (cycle === 'yearly' && plan.yearlyPrice !== null && plan.yearlyPrice !== undefined && Number.isFinite(Number(plan.yearlyPrice))) {
@@ -155,12 +157,12 @@ function SuperAdmin() {
 
       try {
         const plansRes = await getSuperAdminPlans();
-        const availablePlans = (plansRes.data.data || []).filter((plan) => plan.isActive !== false);
+        const availablePlans = (plansRes.data.data || []).filter((plan) => plan.isActive !== false && !isLegacyEcommercePlan(plan));
         setPlans(availablePlans);
         setPlansError(availablePlans.length === 0 ? 'No active pricing plans are available.' : '');
         setNewUser((current) => {
           if (current.pricingPlanId || availablePlans.length === 0) return current;
-          const defaultPlan = availablePlans.find((plan) => plan.name === 'starter') || availablePlans[0];
+          const defaultPlan = availablePlans.find((plan) => plan.name === 'crm_connect') || availablePlans[0];
           const defaultCycle = defaultPlan.allowedBillingCycles?.includes('monthly') ? 'monthly' : (defaultPlan.allowedBillingCycles?.[0] || 'monthly');
           return {
             ...current,

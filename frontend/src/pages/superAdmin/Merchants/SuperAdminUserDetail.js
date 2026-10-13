@@ -36,9 +36,10 @@ const getRoleBadgeStyle = (role) => {
 };
 
 const ALL_PLAN_OPTIONS = [
-  { value: 'starter', label: 'Starter Plan (₹1,499/mo)', category: 'Kwickbot CRM' },
-  { value: 'growth', label: 'Growth Plan (₹2,999/mo)', category: 'Kwickbot CRM' },
-  { value: 'scale', label: 'Scale Enterprise (₹5,999/mo)', category: 'Kwickbot CRM' },
+  // Legacy Shopify/WooCommerce plans are hidden from manual assignment for now.
+  // { value: 'starter', label: 'Starter Plan (₹1,499/mo)', category: 'Kwickbot CRM' },
+  // { value: 'growth', label: 'Growth Plan (₹2,999/mo)', category: 'Kwickbot CRM' },
+  // { value: 'scale', label: 'Scale Enterprise (₹5,999/mo)', category: 'Kwickbot CRM' },
   { value: 'crm_connect', label: 'CRM Connect (₹2,999/mo)', category: 'CRM Integration' },
   { value: 'crm_automation', label: 'CRM Automation (₹5,999/mo)', category: 'CRM Integration' },
   { value: 'crm_enterprise', label: 'CRM Enterprise (₹9,999/mo)', category: 'CRM Integration' },

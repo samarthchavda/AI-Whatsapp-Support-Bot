@@ -26,13 +26,7 @@ import {
 import './CustomerOnboardWizard.css';
 
 const SOLUTION_CATEGORIES = [
-  {
-    id: 'kwickbot_crm',
-    name: 'Kwickbot CRM',
-    description: 'All-in-one conversational AI support, live chat, broadcasts, and AI knowledge base.',
-    icon: FaUser,
-    color: '#1677ff'
-  },
+  // Legacy Shopify/WooCommerce tier onboarding is intentionally disabled for now.
   {
     id: 'crm_integration',
     name: 'CRM Integration',
@@ -159,7 +153,7 @@ export default function CustomerOnboardWizard() {
 
   // When solution type changes, auto-select first matching plan and profile
   const handleSolutionTypeChange = (catId) => {
-    const matchingPlans = plans.filter(p => p.category === catId);
+    const matchingPlans = plans.filter(p => p.category === catId && !['starter', 'growth', 'scale'].includes(String(p.name || '').toLowerCase()));
     const firstPlan = matchingPlans[0];
     const matchingProfile = profiles.find(p => p.category === catId);
 
@@ -237,7 +231,7 @@ export default function CustomerOnboardWizard() {
   };
 
   // Filtered plans for chosen solution type
-  const availablePlans = plans.filter(p => p.category === formData.solutionType);
+  const availablePlans = plans.filter(p => p.category === formData.solutionType && !['starter', 'growth', 'scale'].includes(String(p.name || '').toLowerCase()));
 
   // Calculate final discounted price
   const basePrice = Number(formData.monthlyPrice) || 0;

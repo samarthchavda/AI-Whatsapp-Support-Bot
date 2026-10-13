@@ -597,7 +597,13 @@ exports.getPlans = async (req, res) => {
 exports.getPublicPlans = async (req, res) => {
   try {
     const PricingPlan = require('../../models/PricingPlan');
-    const plans = await PricingPlan.find({ isActive: true, isPublished: true })
+    // Legacy Shopify/WooCommerce tiers are retained for existing subscribers but
+    // are temporarily not offered on the public pricing page.
+    const plans = await PricingPlan.find({
+      isActive: true,
+      isPublished: true,
+      name: { $nin: ['starter', 'growth', 'scale'] }
+    })
       .select('-__v -createdAt -updatedAt')
       .sort({ category: 1, displayOrder: 1 });
 

@@ -6,7 +6,8 @@ import { safeJsonStringify } from '../../utils/jsonSanitizer';
 import { FaCheck, FaTimes, FaChevronDown, FaChevronUp, FaInfoCircle } from 'react-icons/fa';
 
 const CATEGORIES = [
-  { id: 'kwickbot_crm', label: 'Kwickbot CRM' },
+  // Legacy Shopify/WooCommerce tiers are intentionally hidden for now.
+  // { id: 'kwickbot_crm', label: 'Kwickbot CRM' },
   { id: 'crm_integration', label: 'Connect Your CRM' },
   { id: 'whatsapp_api', label: 'WhatsApp API' },
   { id: 'enterprise_custom', label: 'Enterprise' }
@@ -137,7 +138,7 @@ export default function PricingPage() {
   const [openFaqIndex, setOpenFaqIndex] = useState(null);
   const [showFullComparison, setShowFullComparison] = useState(true);
   const [billingCycle, setBillingCycle] = useState('monthly'); // 'monthly' | 'yearly'
-  const [activeCategory, setActiveCategory] = useState('kwickbot_crm');
+  const [activeCategory, setActiveCategory] = useState('crm_integration');
   const [plans, setPlans] = useState([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState('');

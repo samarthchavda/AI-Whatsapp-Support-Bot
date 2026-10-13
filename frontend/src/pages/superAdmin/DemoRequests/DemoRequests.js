@@ -9,6 +9,8 @@ const CATEGORY_LABELS = {
   enterprise_custom: 'Enterprise & Custom'
 };
 
+const isLegacyEcommercePlan = (plan) => ['starter', 'growth', 'scale'].includes(String(plan?.name || '').toLowerCase());
+
 const monthlyEquivalent = (plan, cycle) => {
   if (!plan) return 0;
   if (cycle === 'yearly' && plan.yearlyPrice !== null && plan.yearlyPrice !== undefined && Number.isFinite(Number(plan.yearlyPrice))) {
@@ -44,11 +46,11 @@ function DemoRequests() {
     const fetchPlans = async () => {
       try {
         const response = await api.get('/super-admin/plans');
-        const availablePlans = (response.data.data || []).filter((plan) => plan.isActive !== false);
+        const availablePlans = (response.data.data || []).filter((plan) => plan.isActive !== false && !isLegacyEcommercePlan(plan));
         setPlans(availablePlans);
         setPlansError('');
-        const starter = availablePlans.find((plan) => plan.name === 'starter') || availablePlans[0];
-        if (starter) configureApprovalPlan(starter._id, 'monthly', availablePlans);
+        const defaultPlan = availablePlans.find((plan) => plan.name === 'crm_connect') || availablePlans[0];
+        if (defaultPlan) configureApprovalPlan(defaultPlan._id, 'monthly', availablePlans);
       } catch (error) {
         console.error('Error fetching pricing plans:', error);
         setPlansError('Pricing plans could not be loaded. Refresh before approving this request.');

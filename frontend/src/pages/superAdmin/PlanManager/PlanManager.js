@@ -17,7 +17,8 @@ const CATEGORY_MAP = {
 };
 
 const CATEGORY_OPTIONS = [
-  { id: 'kwickbot_crm', name: 'Kwickbot CRM' },
+  // Legacy Shopify/WooCommerce tiers are retained in the database but hidden from management for now.
+  // { id: 'kwickbot_crm', name: 'Kwickbot CRM' },
   { id: 'crm_integration', name: 'CRM Integration' },
   { id: 'whatsapp_api', name: 'WhatsApp API' },
   { id: 'enterprise_custom', name: 'Enterprise Custom' }
@@ -87,7 +88,7 @@ const DEFAULT_FORM_DATA = {
   displayName: '',
   shortDescription: '',
   detailedDescription: '',
-  category: 'kwickbot_crm',
+  category: 'crm_integration',
   currency: 'INR',
   monthlyPrice: 0,
   yearlyPrice: 0,
@@ -459,7 +460,9 @@ function PlanManager() {
   };
 
   // Filter & Search Logic
-  const filteredPlans = plans.filter(p => {
+  const visiblePlans = plans.filter((plan) => !['starter', 'growth', 'scale'].includes(String(plan.name || '').toLowerCase()));
+
+  const filteredPlans = visiblePlans.filter(p => {
     // 1. Search term match
     if (searchTerm.trim()) {
       const q = searchTerm.toLowerCase();
@@ -495,9 +498,9 @@ function PlanManager() {
   });
 
   // Summary Metrics
-  const publishedCount = plans.filter(p => p.isPublished).length;
-  const draftCount = plans.filter(p => !p.isPublished).length;
-  const totalSubscribers = plans.reduce((sum, p) => sum + (p.activeSubscribersCount || 0), 0);
+  const publishedCount = visiblePlans.filter(p => p.isPublished).length;
+  const draftCount = visiblePlans.filter(p => !p.isPublished).length;
+  const totalSubscribers = visiblePlans.reduce((sum, p) => sum + (p.activeSubscribersCount || 0), 0);
 
   if (loading) {
     return (
@@ -543,7 +546,7 @@ function PlanManager() {
             <FaLayerGroup />
           </div>
           <div>
-            <div className="plan-summary-val">{plans.length}</div>
+            <div className="plan-summary-val">{visiblePlans.length}</div>
             <div className="plan-summary-lbl">Total Tiers</div>
           </div>
         </div>
@@ -586,7 +589,7 @@ function PlanManager() {
             onClick={() => setActiveTab('plans')}
             className={`plan-tab-btn ${activeTab === 'plans' ? 'active' : ''}`}
           >
-            Pricing Plans ({plans.length})
+            Pricing Plans ({visiblePlans.length})
           </button>
           <button
             onClick={() => setActiveTab('coupons')}

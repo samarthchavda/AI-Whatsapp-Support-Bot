@@ -879,7 +879,8 @@ exports.getAllPlans = async (req, res) => {
     });
 
     const enrichedPlans = plans.map(p => {
-      const pObj = p.toObject();
+      const { withoutRetiredPlanSettings } = require('../../constants/retiredCrmConfig');
+      const pObj = withoutRetiredPlanSettings(p.toObject());
       const byId = subCountMap[p._id.toString()] || 0;
       const byName = subCountMap[p.name] || 0;
       pObj.activeSubscribersCount = Math.max(byId, byName);
@@ -906,7 +907,8 @@ exports.createOrUpdatePlan = async (req, res) => {
     const PricingPlan = require('../../models/PricingPlan');
     const auditLogService = require('../../services/auditLogService');
     const { id } = req.params;
-    const planData = req.body;
+    const { withoutRetiredPlanSettings } = require('../../constants/retiredCrmConfig');
+    const planData = withoutRetiredPlanSettings(req.body);
 
     // Validation 1: Required fields
     if (!planData.name || !planData.displayName) {
@@ -1001,7 +1003,8 @@ exports.duplicatePlan = async (req, res) => {
       return res.status(404).json({ success: false, error: 'Original plan not found' });
     }
 
-    const dupObj = original.toObject();
+    const { withoutRetiredPlanSettings } = require('../../constants/retiredCrmConfig');
+    const dupObj = withoutRetiredPlanSettings(original.toObject());
     delete dupObj._id;
     delete dupObj.createdAt;
     delete dupObj.updatedAt;
@@ -3013,7 +3016,6 @@ exports.getUserEffectiveAccess = async (req, res) => {
 
     const permissionService = require('../../services/permissionService');
     const PermissionProfile = require('../../models/PermissionProfile');
-    const CRMConnection = require('../../models/CRMConnection');
     const { PERMISSION_PROFILES } = require('../../constants/permissionProfiles');
 
     // 1. Calculate standard effective access payload
@@ -3032,14 +3034,9 @@ exports.getUserEffectiveAccess = async (req, res) => {
 
     // 3. Plan details
     const plan = await permissionService.getAdminPricingPlan(user);
+    const { withoutRetiredPages, withoutRetiredPermissions, withoutRetiredPlanSettings } = require('../../constants/retiredCrmConfig');
 
-    // 4. Integrations summary
-    let crmConnections = [];
-    try {
-      crmConnections = await CRMConnection.find({ adminId: user._id }).select('provider displayName status lastSuccessfulSyncAt');
-    } catch (e) {}
-
-    // 5. Diagnostics Breakdown
+    // 4. Diagnostics Breakdown
     const diagnostics = {
       user: {
         _id: user._id,
@@ -3061,22 +3058,22 @@ exports.getUserEffectiveAccess = async (req, res) => {
         displayName: plan.displayName,
         category: plan.category,
         permissionProfile: plan.permissionProfile,
-        allowedPages: plan.allowedPages || [],
-        features: plan.features || {},
-        usageLimits: plan.usageLimits || {}
+        allowedPages: withoutRetiredPages(plan.allowedPages),
+        features: withoutRetiredPlanSettings({ features: plan.features?.toObject?.() || plan.features || {} }).features,
+        usageLimits: withoutRetiredPlanSettings({ usageLimits: plan.usageLimits?.toObject?.() || plan.usageLimits || {} }).usageLimits
       } : null,
       baseProfile: {
         key: profileKey,
         name: dbProfile?.name || profileKey,
         isCustomProfile: Boolean(user.customPermissionProfile),
-        pages: baseProfilePages,
-        permissions: baseProfilePermissions
+        pages: withoutRetiredPages(baseProfilePages),
+        permissions: withoutRetiredPermissions(baseProfilePermissions)
       },
       overrides: {
-        allowedPages: user.allowedPages || [],
-        allowedPermissions: user.allowedPermissions || [],
-        deniedPages: user.deniedPages || [],
-        deniedPermissions: user.deniedPermissions || [],
+        allowedPages: withoutRetiredPages(user.allowedPages),
+        allowedPermissions: withoutRetiredPermissions(user.allowedPermissions),
+        deniedPages: withoutRetiredPages(user.deniedPages),
+        deniedPermissions: withoutRetiredPermissions(user.deniedPermissions),
         customPermissionProfile: user.customPermissionProfile || null,
         hasOverrides: Boolean(
           (user.allowedPages && user.allowedPages.length > 0) ||
@@ -3088,9 +3085,7 @@ exports.getUserEffectiveAccess = async (req, res) => {
       },
       effectiveAccess: effectivePayload.data,
       integrations: {
-        whatsappConnected: Boolean(user.whatsappConnected),
-        crmConnectionsCount: crmConnections.length,
-        crmConnections
+        whatsappConnected: Boolean(user.whatsappConnected)
       }
     };
 

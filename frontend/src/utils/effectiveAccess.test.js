@@ -6,18 +6,18 @@ describe('extractEffectiveAccessPayload', () => {
       data: {
         success: true,
         data: {
-          effectivePages: ['integration-dashboard', 'crm-connection'],
-          effectivePermissions: ['crmConnection.view'],
-          usageLimits: { maxCrmConnections: 1 },
+          effectivePages: ['dashboard', 'whatsapp-connection'],
+          effectivePermissions: ['whatsappConnection.view'],
+          usageLimits: { maxWhatsAppConnections: 1 },
           subscription: { planSlug: 'crm-connect' },
           user: { role: 'admin' }
         }
       }
     });
 
-    expect(parsed.effectivePages).toEqual(['integration-dashboard', 'crm-connection']);
-    expect(parsed.effectivePermissions).toEqual(['crmConnection.view']);
-    expect(parsed.usageLimits.maxCrmConnections).toBe(1);
+    expect(parsed.effectivePages).toEqual(['dashboard', 'whatsapp-connection']);
+    expect(parsed.effectivePermissions).toEqual(['whatsappConnection.view']);
+    expect(parsed.usageLimits.maxWhatsAppConnections).toBe(1);
     expect(parsed.subscription.planSlug).toBe('crm-connect');
   });
 

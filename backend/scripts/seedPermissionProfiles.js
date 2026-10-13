@@ -37,7 +37,7 @@ const DEFAULT_PROFILES_META = [
   {
     key: 'crm_connect',
     name: 'CRM Connect Profile',
-    description: 'Basic Odoo/CRM Sync + WhatsApp Support with Live Chat handoff.',
+    description: 'WhatsApp messaging and Live Chat access.',
     category: 'crm_integration',
     isSystemDefault: true,
     pages: PERMISSION_PROFILES.crm_connect.pages,
@@ -46,13 +46,6 @@ const DEFAULT_PROFILES_META = [
       dashboardAccess: true,
       conversations: true,
       whatsappConnection: true,
-      crmConnection: true,
-      contactSync: true,
-      leadSync: true,
-      productLookup: true,
-      orderStatusSync: true,
-      fieldMapping: true,
-      integrationLogs: true,
       aiAutomation: true,
       knowledgeBase: true,
       humanHandoff: true
@@ -61,22 +54,22 @@ const DEFAULT_PROFILES_META = [
   {
     key: 'crm_automation',
     name: 'CRM Automation Profile',
-    description: 'Full CRM integration plus event-triggered automated WhatsApp workflows and dead-letter replay.',
+    description: 'WhatsApp messaging, templates, broadcasts, and Live Chat access.',
     category: 'crm_integration',
     isSystemDefault: true,
     pages: PERMISSION_PROFILES.crm_automation.pages,
     permissions: PERMISSION_PROFILES.crm_automation.permissions,
-    features: { crmConnection: true, fieldMapping: true, automationRules: true, integrationLogs: true, failedEventReplay: true, whatsappConnection: true }
+    features: { broadcasts: true, failedEventReplay: true, whatsappConnection: true }
   },
   {
     key: 'crm_enterprise',
     name: 'CRM Enterprise Profile',
-    description: 'Enterprise ERP/CRM connectors, custom webhooks, unlimited automations, and dedicated SLA.',
+    description: 'WhatsApp messaging, developer webhooks, and dedicated SLA.',
     category: 'crm_integration',
     isSystemDefault: true,
     pages: PERMISSION_PROFILES.crm_enterprise.pages,
     permissions: PERMISSION_PROFILES.crm_enterprise.permissions,
-    features: { crmConnection: true, fieldMapping: true, automationRules: true, customWebhooks: true, integrationLogs: true, failedEventReplay: true, whatsappConnection: true, customSla: true }
+    features: { customWebhooks: true, failedEventReplay: true, whatsappConnection: true, customSla: true }
   },
   {
     key: 'api_starter',

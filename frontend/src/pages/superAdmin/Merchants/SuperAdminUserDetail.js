@@ -319,7 +319,6 @@ export default function SuperAdminUserDetail() {
   const effectivePermissions = effectiveAccessData?.effectiveAccess?.effectivePermissions || [];
   const baseProfile = effectiveAccessData?.baseProfile;
   const overrides = effectiveAccessData?.overrides;
-  const integrations = effectiveAccessData?.integrations;
 
   return (
     <div className="container">
@@ -690,18 +689,6 @@ export default function SuperAdminUserDetail() {
                   <span>Connected Phone Number:</span>
                   <strong>{user.whatsappPhoneNumber || 'N/A'}</strong>
                 </div>
-                <div className="detail-row">
-                  <span>Active CRM Connectors:</span>
-                  <strong>{integrations?.crmConnectionsCount || 0} configured</strong>
-                </div>
-                {integrations?.crmConnections?.map(conn => (
-                  <div key={conn._id} className="detail-row">
-                    <span>{conn.provider?.toUpperCase()} ({conn.displayName}):</span>
-                    <strong style={{ color: conn.status === 'connected' ? '#10b981' : '#f59e0b' }}>
-                      {conn.status?.toUpperCase()}
-                    </strong>
-                  </div>
-                ))}
               </div>
             </div>
           )}

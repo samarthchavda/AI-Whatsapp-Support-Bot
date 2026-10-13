@@ -6,6 +6,8 @@ const whatsappController = require('../controllers/merchant/whatsappController')
 // Require authentication for all template management endpoints
 router.use(verifyToken);
 
+router.get('/analytics/costs', whatsappController.getCostAnalytics);
+
 // List all templates cached locally
 router.get('/templates', whatsappController.getTemplates);
 

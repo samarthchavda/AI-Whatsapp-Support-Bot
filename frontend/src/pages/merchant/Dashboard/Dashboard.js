@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import io from 'socket.io-client';
 import { FaArrowRight, FaBroadcastTower, FaChartLine, FaComments, FaFileAlt, FaPaperPlane, FaSyncAlt, FaWhatsapp } from 'react-icons/fa';
 import { getDashboardStats } from '../../../services/api';
+import MetaCostTracker from './MetaCostTracker';
 import './Dashboard.css';
 
 const SOCKET_URL = process.env.REACT_APP_API_URL?.replace('/api', '') ||
@@ -78,9 +79,9 @@ function Dashboard() {
         <div>
           <div className="merchant-dashboard-eyebrow"><FaChartLine /> MERCHANT OVERVIEW</div>
           <h1>Dashboard</h1>
-          <p>Live activity, plan usage and costs for your own Kwickbot workspace.</p>
+          <p>Messages, conversations, usage and costs for your Kwickbot workspace.</p>
           <div className="merchant-dashboard-plan">
-            <span>{usage.planName || 'Current plan'}</span><span>·</span>
+            <span>Workspace overview</span><span>·</span>
             <span>{usage.subscriptionStatus || 'Active'}</span><span>·</span>
             <span>{usage.billingCycle || 'monthly'} billing</span>
           </div>
@@ -106,13 +107,14 @@ function Dashboard() {
         </section>
 
         <section className="merchant-dashboard-panel merchant-dashboard-cost">
-          <div className="merchant-dashboard-panel-header"><div><span className="merchant-dashboard-kicker">COSTS</span><h2>Plan & Meta charges</h2></div></div>
+          <div className="merchant-dashboard-panel-header"><div><span className="merchant-dashboard-kicker">SUBSCRIPTION</span><h2>Kwickbot plan rate</h2></div></div>
           <div className="merchant-dashboard-cost-row"><span>Configured Kwickbot plan rate <small>Monthly equivalent</small></span><strong>{charges.configuredMonthlyRate == null ? 'Not set' : formatMoney(charges.configuredMonthlyRate, charges.currency)}</strong></div>
-          <div className="merchant-dashboard-cost-row"><span>Actual Meta WhatsApp charges <small>Billed directly by Meta</small></span><strong className="merchant-dashboard-unavailable">Not available</strong></div>
-          <p className="merchant-dashboard-cost-note">Meta billing is not connected to Kwickbot, so this page cannot show or estimate your actual Meta charges. Check your Meta Business billing statement for the payable amount.</p>
+          <p className="merchant-dashboard-cost-note">This is your Kwickbot subscription rate. Meta messaging charges are separate and shown in the tracker below.</p>
           <Link to="/dashboard/billing" className="merchant-dashboard-text-link">View billing & plan <FaArrowRight /></Link>
         </section>
       </div>
+
+      <MetaCostTracker />
 
       <div className="merchant-dashboard-panels">
         <section className="merchant-dashboard-panel">
@@ -126,7 +128,6 @@ function Dashboard() {
           <div className="merchant-dashboard-shortcuts"><Link to="/dashboard/templates"><FaFileAlt /> Templates</Link><Link to="/dashboard/whatsapp-connect"><FaWhatsapp /> WhatsApp connection</Link></div>
         </section>
       </div>
-      {usage.planCategory === 'crm_integration' && <p className="merchant-dashboard-footnote">Your CRM remains connected in the background. This dashboard shows Kwickbot messaging usage, not your CRM's own records or charges.</p>}
     </div>
   );
 }

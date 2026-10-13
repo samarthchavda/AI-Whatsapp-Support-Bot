@@ -42,7 +42,6 @@ const INITIAL_FORM_DATA = {
     monthlyWebhookDeliveries: 5000,
     monthlyAutomationExecutions: 1000,
     maxWhatsAppConnections: 1,
-    maxCrmConnections: 1,
     maxActiveAutomations: 5,
     maxApiKeys: 2,
     geminiTokensPerMonth: 50000
@@ -789,17 +788,6 @@ export default function PermissionProfiles() {
                         />
                       </div>
                       <div className="prof-form-group">
-                        <label>Max CRM Connections</label>
-                        <input
-                          type="number"
-                          value={formData.usageLimitDefaults?.maxCrmConnections ?? 1}
-                          onChange={(e) => setFormData(prev => ({
-                            ...prev,
-                            usageLimitDefaults: { ...prev.usageLimitDefaults, maxCrmConnections: Number(e.target.value) }
-                          }))}
-                        />
-                      </div>
-                      <div className="prof-form-group">
                         <label>Max Active Automations</label>
                         <input
                           type="number"
@@ -851,9 +839,9 @@ export default function PermissionProfiles() {
                             );
                           })}
 
-                          {/* CRM Integration Section */}
-                          <div className="prof-mock-divider">CRM INTEGRATION</div>
-                          {['integration-dashboard', 'crm-connection', 'field-mapping', 'automation-rules', 'whatsapp-templates', 'integration-logs', 'failed-events'].map(pg => {
+                          {/* WhatsApp setup */}
+                          <div className="prof-mock-divider">WHATSAPP SETUP</div>
+                          {['whatsapp-templates', 'whatsapp-connection'].map(pg => {
                             const isAllowed = formData.pages?.includes(pg);
                             return (
                               <div key={pg} className={`prof-mock-item ${isAllowed ? 'allowed' : 'hidden'}`}>

@@ -15,7 +15,7 @@ import {
 import { getDeveloperUsage, getDeveloperWebhooks } from '../../../services/api';
 import { useEffectiveAccess } from '../../../context/EffectiveAccessContext';
 import './DeveloperPlatform.css';
-import '../../../features/merchant/crm/IntegrationDashboard.css';
+import './PlatformDashboard.css';
 
 function ApiDashboard() {
   const { usageLimits, getUsageLimit } = useEffectiveAccess();

@@ -2,6 +2,7 @@ const Admin = require('../models/Admin');
 const PricingPlan = require('../models/PricingPlan');
 const { CANONICAL_PAGES, CANONICAL_PERMISSIONS } = require('../constants/permissions');
 const { PERMISSION_PROFILES } = require('../constants/permissionProfiles');
+const { withoutRetiredPages, withoutRetiredPermissions } = require('../constants/retiredCrmConfig');
 const { normalizePlanName } = require('../config/planConstants');
 
 /**
@@ -124,20 +125,7 @@ async function resolveEffectivePermissions(adminDoc) {
   // Step 3: Entitlement-to-Permission mapping from plan.features
   if (plan && plan.features) {
     const feat = plan.features;
-    if (feat.crmConnection) {
-      effectivePermissions.add(CANONICAL_PERMISSIONS.CRM_CONNECTION_VIEW);
-      effectivePermissions.add(CANONICAL_PERMISSIONS.CRM_CONNECTION_MANAGE);
-    }
-    if (feat.fieldMapping) {
-      effectivePermissions.add(CANONICAL_PERMISSIONS.FIELD_MAPPING_VIEW);
-      effectivePermissions.add(CANONICAL_PERMISSIONS.FIELD_MAPPING_MANAGE);
-    }
-    if (feat.automationRules) {
-      effectivePermissions.add(CANONICAL_PERMISSIONS.AUTOMATION_RULES_VIEW);
-      effectivePermissions.add(CANONICAL_PERMISSIONS.AUTOMATION_RULES_MANAGE);
-    }
     if (feat.failedEventReplay) {
-      effectivePermissions.add(CANONICAL_PERMISSIONS.FAILED_EVENTS_RETRY);
       effectivePermissions.add(CANONICAL_PERMISSIONS.FAILED_WEBHOOKS_RETRY);
     }
     if (feat.developerApi || feat.apiKeys) {
@@ -167,8 +155,8 @@ async function resolveEffectivePermissions(adminDoc) {
   }
 
   return {
-    pages: Array.from(effectivePages),
-    permissions: Array.from(effectivePermissions),
+    pages: withoutRetiredPages(Array.from(effectivePages)),
+    permissions: withoutRetiredPermissions(Array.from(effectivePermissions)),
     plan,
     profile: profileKey
   };
@@ -182,20 +170,20 @@ async function getEffectiveAccessPayload(adminDoc) {
   const { pages, permissions, plan, profile } = await resolveEffectivePermissions(adminDoc);
 
   // Compute usage limits
-  const usageLimits = plan?.usageLimits || {
+  const usageLimits = plan?.usageLimits ? (plan.usageLimits.toObject?.() || { ...plan.usageLimits }) : {
     monthlyConversations: 500,
     monthlyMessages: 2000,
     monthlyApiRequests: 10000,
     monthlyWebhookDeliveries: 5000,
     monthlyAutomationExecutions: 1000,
     maxWhatsAppConnections: 1,
-    maxCrmConnections: 0,
     maxActiveAutomations: 0,
     maxApiKeys: 0,
     maxTeamMembers: 1,
     logRetentionDays: 30,
     geminiTokensPerMonth: 50000
   };
+  delete usageLimits.maxCrmConnections;
 
   // Compute current usage snapshot
   const currentUsage = {

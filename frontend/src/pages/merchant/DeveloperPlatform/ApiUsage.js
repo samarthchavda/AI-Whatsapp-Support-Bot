@@ -9,7 +9,7 @@ import {
 import { getDeveloperUsage } from '../../../services/api';
 import { useEffectiveAccess } from '../../../context/EffectiveAccessContext';
 import './DeveloperPlatform.css';
-import '../../../features/merchant/crm/IntegrationDashboard.css';
+import './PlatformDashboard.css';
 
 function ApiUsage() {
   const { usageLimits, getUsageLimit } = useEffectiveAccess();

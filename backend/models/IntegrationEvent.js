@@ -7,12 +7,6 @@ const integrationEventSchema = new mongoose.Schema({
     required: true,
     index: true
   },
-  connectionId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'CRMConnection',
-    default: null,
-    index: true
-  },
   provider: {
     type: String,
     lowercase: true,

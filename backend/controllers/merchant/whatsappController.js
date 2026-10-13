@@ -5,6 +5,20 @@ const GlobalSettings = require('../../models/GlobalSettings');
 const TEMPLATE_NAME_PATTERN = /^[a-z0-9_]+$/;
 const ALLOWED_CATEGORIES = new Set(['MARKETING', 'UTILITY', 'AUTHENTICATION']);
 
+exports.getCostAnalytics = async (req, res) => {
+  const period = req.query.period || 'this_month';
+  if (!['today', 'last_7_days', 'this_month'].includes(period)) {
+    return res.status(400).json({ success: false, error: 'Choose today, last_7_days, or this_month.' });
+  }
+  try {
+    const data = await whatsappCloudAPI.getEstimatedCosts(req.admin._id, period);
+    return res.json({ success: true, data });
+  } catch (error) {
+    console.error('Error loading Meta cost analytics:', error);
+    return res.status(500).json({ success: false, error: 'Unable to load Meta cost analytics.' });
+  }
+};
+
 const getTemplateVariables = (text = '') => [...new Set(
   [...String(text).matchAll(/\{\{(\d+)\}\}/g)].map((match) => Number(match[1]))
 )].sort((a, b) => a - b);

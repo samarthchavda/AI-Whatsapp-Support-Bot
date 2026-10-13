@@ -8,7 +8,7 @@ import {
   FaExternalLinkAlt
 } from 'react-icons/fa';
 import './DeveloperPlatform.css';
-import '../../../features/merchant/crm/IntegrationDashboard.css';
+import './PlatformDashboard.css';
 
 const API_ENDPOINTS = [
   {

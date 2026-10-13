@@ -28,9 +28,8 @@ const AVAILABLE_PAGES = [
   // Core / CRM Standard
   'dashboard', 'conversations', 'knowledge-base', 'broadcast', 'analytics',
   'escalations', 'templates', 'integrations', 'orders', 'leads', 'api-keys', 'profile', 'billing',
-  // CRM Integration
-  'integration-dashboard', 'crm-connection', 'field-mapping', 'automation-rules',
-  'whatsapp-templates', 'integration-logs', 'failed-events', 'whatsapp-connection', 'usage', 'settings',
+  // WhatsApp account pages
+  'whatsapp-templates', 'whatsapp-connection', 'usage', 'settings',
   // WhatsApp API Platform
   'api-dashboard', 'api-documentation', 'webhook-configuration', 'api-logs', 'failed-webhooks', 'api-usage'
 ];
@@ -42,20 +41,9 @@ const FEATURE_KEYS = [
   { key: 'internalInvoices', label: 'Internal Invoices Management' },
   { key: 'internalLeads', label: 'Internal Leads CRM' },
   { key: 'whatsappConnection', label: 'WhatsApp Connection' },
-  { key: 'crmConnection', label: 'CRM / ERP Bi-directional Sync' },
-  { key: 'leadSync', label: 'Automated Lead Sync' },
-  { key: 'contactSync', label: 'Automated Contact Sync' },
-  { key: 'productLookup', label: 'Catalog / Product Lookup' },
-  { key: 'quotationCreation', label: 'Quotation Creation' },
-  { key: 'saleOrderCreation', label: 'Sale Order Creation' },
-  { key: 'orderStatusSync', label: 'Order Status Sync & Cancellations' },
-  { key: 'fieldMapping', label: 'Custom Field Mapping' },
-  { key: 'automationRules', label: 'Automation Rules Engine' },
   { key: 'customWebhooks', label: 'Custom Webhook Triggers' },
   { key: 'developerApi', label: 'Developer REST API Access' },
   { key: 'apiKeys', label: 'API Keys Management' },
-  { key: 'integrationLogs', label: 'Integration & Audit Logs' },
-  { key: 'failedEventReplay', label: 'Failed Event Replay' },
   { key: 'aiAutomation', label: 'AI Knowledge Base Support' },
   { key: 'knowledgeBase', label: 'Knowledge Base Uploads' },
   { key: 'broadcasts', label: 'WhatsApp Broadcast Campaigns' },
@@ -74,7 +62,6 @@ const USAGE_LIMIT_KEYS = [
   { key: 'monthlyWebhookDeliveries', label: 'Monthly Webhook Deliveries (-1 for unlimited)' },
   { key: 'monthlyAutomationExecutions', label: 'Monthly Automation Executions (-1 for unlimited)' },
   { key: 'maxWhatsAppConnections', label: 'Max WhatsApp Connections (-1 for unlimited)' },
-  { key: 'maxCrmConnections', label: 'Max CRM Connections (-1 for unlimited)' },
   { key: 'maxActiveAutomations', label: 'Max Active Automations (-1 for unlimited)' },
   { key: 'maxApiKeys', label: 'Max API Keys (-1 for unlimited)' },
   { key: 'maxTeamMembers', label: 'Max Team Members (-1 for unlimited)' },
@@ -114,7 +101,6 @@ const DEFAULT_FORM_DATA = {
     monthlyWebhookDeliveries: 5000,
     monthlyAutomationExecutions: 1000,
     maxWhatsAppConnections: 1,
-    maxCrmConnections: 0,
     maxActiveAutomations: 0,
     maxApiKeys: 0,
     maxTeamMembers: 1,
@@ -1561,7 +1547,6 @@ function PlanManager() {
                 <div>API Calls / mo: <strong>{previewPlan.usageLimits?.monthlyApiRequests ?? 'N/A'}</strong></div>
                 <div>Webhooks / mo: <strong>{previewPlan.usageLimits?.monthlyWebhookDeliveries ?? 'N/A'}</strong></div>
                 <div>WhatsApp Connections: <strong>{previewPlan.usageLimits?.maxWhatsAppConnections ?? 1}</strong></div>
-                <div>CRM Connections: <strong>{previewPlan.usageLimits?.maxCrmConnections ?? 0}</strong></div>
                 <div>Active Automations: <strong>{previewPlan.usageLimits?.maxActiveAutomations ?? 0}</strong></div>
                 <div>Gemini AI Tokens: <strong>{(previewPlan.usageLimits?.geminiTokensPerMonth || 0).toLocaleString()}</strong></div>
               </div>

@@ -4,6 +4,18 @@ const Admin = require('../../models/Admin');
 const { CANONICAL_PAGES, CANONICAL_PERMISSIONS } = require('../../constants/permissions');
 const { PERMISSION_PROFILES } = require('../../constants/permissionProfiles');
 const auditLogService = require('../../services/auditLogService');
+const { withoutRetiredPages, withoutRetiredPermissions, withoutRetiredFeatures, withoutRetiredUsageLimits } = require('../../constants/retiredCrmConfig');
+
+const publicProfile = (profile) => {
+  const data = profile.toObject();
+  return {
+    ...data,
+    pages: withoutRetiredPages(data.pages),
+    permissions: withoutRetiredPermissions(data.permissions),
+    features: withoutRetiredFeatures(data.features),
+    usageLimitDefaults: withoutRetiredUsageLimits(data.usageLimitDefaults)
+  };
+};
 
 /**
  * Super Admin Permission Profiles Controller
@@ -44,7 +56,7 @@ exports.getAllPermissionProfiles = async (req, res) => {
     });
 
     const enriched = profiles.map(prof => {
-      const p = prof.toObject();
+      const p = publicProfile(prof);
       p.assignedPlansCount = planCountMap[p.key] || 0;
       p.assignedUsersCount = userCountMap[p.key] || 0;
       return p;
@@ -79,13 +91,8 @@ exports.getCanonicalMetadata = async (req, res) => {
         { key: CANONICAL_PAGES.LEADS, label: 'Leads CRM', description: 'Capture and manage leads' }
       ],
       crm_integration: [
-        { key: CANONICAL_PAGES.INTEGRATION_DASHBOARD, label: 'Integration Dashboard', description: 'Sync metrics, event throughput, and health' },
-        { key: CANONICAL_PAGES.CRM_CONNECTION, label: 'CRM / ERP Connections', description: 'Configure external CRM credentials & sync' },
-        { key: CANONICAL_PAGES.FIELD_MAPPING, label: 'Field Mapping', description: 'Bi-directional field schema transformer' },
-        { key: CANONICAL_PAGES.AUTOMATION_RULES, label: 'Automation Rules', description: 'Workflow trigger and action rule engine' },
-        { key: CANONICAL_PAGES.WHATSAPP_TEMPLATES, label: 'WhatsApp Templates', description: 'Template mapping for CRM automation' },
-        { key: CANONICAL_PAGES.INTEGRATION_LOGS, label: 'Integration Logs', description: 'Real-time sync and payload audit logs' },
-        { key: CANONICAL_PAGES.FAILED_EVENTS, label: 'Failed Events Queue', description: 'Replay and inspect sync errors' },
+        { key: CANONICAL_PAGES.DASHBOARD, label: 'Merchant Dashboard', description: 'Messaging activity and charges' },
+        { key: CANONICAL_PAGES.WHATSAPP_TEMPLATES, label: 'WhatsApp Templates', description: 'Message templates' },
         { key: CANONICAL_PAGES.WHATSAPP_CONNECTION, label: 'WhatsApp Connection', description: 'Cloud API connection setup' }
       ],
       whatsapp_api: [
@@ -108,16 +115,6 @@ exports.getCanonicalMetadata = async (req, res) => {
 
     const permissionGroups = {
       crm_integration: [
-        { key: CANONICAL_PERMISSIONS.INTEGRATION_DASHBOARD_VIEW, label: 'View Integration Dashboard' },
-        { key: CANONICAL_PERMISSIONS.CRM_CONNECTION_VIEW, label: 'View CRM Connections' },
-        { key: CANONICAL_PERMISSIONS.CRM_CONNECTION_MANAGE, label: 'Create/Edit CRM Connections' },
-        { key: CANONICAL_PERMISSIONS.FIELD_MAPPING_VIEW, label: 'View Field Mappings' },
-        { key: CANONICAL_PERMISSIONS.FIELD_MAPPING_MANAGE, label: 'Modify Field Mappings' },
-        { key: CANONICAL_PERMISSIONS.AUTOMATION_RULES_VIEW, label: 'View Automation Rules' },
-        { key: CANONICAL_PERMISSIONS.AUTOMATION_RULES_MANAGE, label: 'Create/Edit Automation Rules' },
-        { key: CANONICAL_PERMISSIONS.INTEGRATION_LOGS_VIEW, label: 'View Integration Sync Logs' },
-        { key: CANONICAL_PERMISSIONS.FAILED_EVENTS_VIEW, label: 'View Failed Events' },
-        { key: CANONICAL_PERMISSIONS.FAILED_EVENTS_RETRY, label: 'Retry / Replay Failed Events' },
         { key: CANONICAL_PERMISSIONS.WHATSAPP_CONNECTION_VIEW, label: 'View WhatsApp Connection' },
         { key: CANONICAL_PERMISSIONS.WHATSAPP_CONNECTION_MANAGE, label: 'Manage WhatsApp Connection' },
         { key: CANONICAL_PERMISSIONS.WHATSAPP_TEMPLATES_VIEW, label: 'View WhatsApp Templates' },
@@ -193,7 +190,7 @@ exports.getPermissionProfileById = async (req, res) => {
     res.json({
       success: true,
       data: {
-        profile,
+        profile: publicProfile(profile),
         assignedPlans,
         assignedUsersCount
       }
@@ -231,10 +228,10 @@ exports.createPermissionProfile = async (req, res) => {
       key: formattedKey,
       description: description || '',
       category: category || 'system',
-      pages: Array.isArray(pages) ? pages : [],
-      permissions: Array.isArray(permissions) ? permissions : [],
-      features: features || {},
-      usageLimitDefaults: usageLimitDefaults || {},
+      pages: withoutRetiredPages(pages),
+      permissions: withoutRetiredPermissions(permissions),
+      features: withoutRetiredFeatures(features),
+      usageLimitDefaults: withoutRetiredUsageLimits(usageLimitDefaults),
       isSystemDefault: false,
       isArchived: false
     });
@@ -250,7 +247,7 @@ exports.createPermissionProfile = async (req, res) => {
     res.status(201).json({
       success: true,
       message: 'Permission profile created successfully',
-      data: newProfile
+      data: publicProfile(newProfile)
     });
   } catch (error) {
     console.error('Error creating permission profile:', error);
@@ -275,10 +272,10 @@ exports.updatePermissionProfile = async (req, res) => {
     if (name) profile.name = name.trim();
     if (description !== undefined) profile.description = description;
     if (category) profile.category = category;
-    if (Array.isArray(pages)) profile.pages = pages;
-    if (Array.isArray(permissions)) profile.permissions = permissions;
-    if (features) profile.features = features;
-    if (usageLimitDefaults) profile.usageLimitDefaults = usageLimitDefaults;
+    if (Array.isArray(pages)) profile.pages = withoutRetiredPages(pages);
+    if (Array.isArray(permissions)) profile.permissions = withoutRetiredPermissions(permissions);
+    if (features) profile.features = withoutRetiredFeatures(features);
+    if (usageLimitDefaults) profile.usageLimitDefaults = withoutRetiredUsageLimits(usageLimitDefaults);
 
     await profile.save();
 
@@ -291,7 +288,7 @@ exports.updatePermissionProfile = async (req, res) => {
     res.json({
       success: true,
       message: 'Permission profile updated successfully',
-      data: profile
+      data: publicProfile(profile)
     });
   } catch (error) {
     console.error('Error updating permission profile:', error);
@@ -321,10 +318,10 @@ exports.duplicatePermissionProfile = async (req, res) => {
       key: newKey,
       description: `Cloned from ${original.name}`,
       category: original.category,
-      pages: [...(original.pages || [])],
-      permissions: [...(original.permissions || [])],
-      features: original.features ? new Map(original.features) : {},
-      usageLimitDefaults: original.usageLimitDefaults ? new Map(original.usageLimitDefaults) : {},
+      pages: withoutRetiredPages(original.pages),
+      permissions: withoutRetiredPermissions(original.permissions),
+      features: withoutRetiredFeatures(original.features),
+      usageLimitDefaults: withoutRetiredUsageLimits(original.usageLimitDefaults),
       isSystemDefault: false,
       isArchived: false
     });
@@ -340,7 +337,7 @@ exports.duplicatePermissionProfile = async (req, res) => {
     res.status(201).json({
       success: true,
       message: 'Permission profile duplicated successfully',
-      data: duplicated
+      data: publicProfile(duplicated)
     });
   } catch (error) {
     console.error('Error duplicating permission profile:', error);

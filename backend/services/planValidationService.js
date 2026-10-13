@@ -65,20 +65,7 @@ function validatePlanReadiness(plan, existingProfiles = []) {
   const effectivePages = new Set([...allowedPages, ...profilePages]);
 
   // 5. Category-Specific Compatibility Checks
-  if (plan.category === 'crm_integration') {
-    const crmPages = [
-      CANONICAL_PAGES.INTEGRATION_DASHBOARD,
-      CANONICAL_PAGES.CRM_CONNECTION,
-      CANONICAL_PAGES.FIELD_MAPPING,
-      CANONICAL_PAGES.AUTOMATION_RULES,
-      CANONICAL_PAGES.INTEGRATION_LOGS,
-      CANONICAL_PAGES.FAILED_EVENTS
-    ];
-    const hasCrmPage = crmPages.some(p => effectivePages.has(p));
-    if (!hasCrmPage) {
-      issues.push('Plan is categorized as CRM Integration, but does not include any CRM Integration pages.');
-    }
-  } else if (plan.category === 'whatsapp_api') {
+  if (plan.category === 'whatsapp_api') {
     const apiPages = [
       CANONICAL_PAGES.API_DASHBOARD,
       CANONICAL_PAGES.API_KEYS,

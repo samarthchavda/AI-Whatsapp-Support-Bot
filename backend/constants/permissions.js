@@ -19,14 +19,8 @@ const CANONICAL_PAGES = {
   PROFILE: 'profile',
   BILLING: 'billing',
 
-  // 2. New CRM Integration Modules
-  INTEGRATION_DASHBOARD: 'integration-dashboard',
-  CRM_CONNECTION: 'crm-connection',
-  FIELD_MAPPING: 'field-mapping',
-  AUTOMATION_RULES: 'automation-rules',
+  // 2. Shared WhatsApp Modules
   WHATSAPP_TEMPLATES: 'whatsapp-templates',
-  INTEGRATION_LOGS: 'integration-logs',
-  FAILED_EVENTS: 'failed-events',
   WHATSAPP_CONNECTION: 'whatsapp-connection',
   USAGE: 'usage',
   SETTINGS: 'settings',
@@ -42,17 +36,6 @@ const CANONICAL_PAGES = {
 
 // Canonical Granular Machine-Readable Permission Keys
 const CANONICAL_PERMISSIONS = {
-  // CRM Integration Permissions
-  INTEGRATION_DASHBOARD_VIEW: 'integrationDashboard.view',
-  CRM_CONNECTION_VIEW: 'crmConnection.view',
-  CRM_CONNECTION_MANAGE: 'crmConnection.manage',
-  FIELD_MAPPING_VIEW: 'fieldMapping.view',
-  FIELD_MAPPING_MANAGE: 'fieldMapping.manage',
-  AUTOMATION_RULES_VIEW: 'automationRules.view',
-  AUTOMATION_RULES_MANAGE: 'automationRules.manage',
-  INTEGRATION_LOGS_VIEW: 'integrationLogs.view',
-  FAILED_EVENTS_VIEW: 'failedEvents.view',
-  FAILED_EVENTS_RETRY: 'failedEvents.retry',
   WHATSAPP_CONNECTION_VIEW: 'whatsappConnection.view',
   WHATSAPP_CONNECTION_MANAGE: 'whatsappConnection.manage',
   WHATSAPP_TEMPLATES_VIEW: 'whatsappTemplates.view',

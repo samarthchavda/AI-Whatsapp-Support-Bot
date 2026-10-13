@@ -5,15 +5,10 @@ const { resolveEffectivePermissions, validateAccountSubscription } = require('..
 
 describe('Super Admin Permission System & 10 Standard Plans Verification', () => {
   describe('1. Canonical Pages & Permissions Invariants', () => {
-    test('Canonical pages contain all expected CRM Integration and WhatsApp API module keys', () => {
-      // CRM Integration pages
-      expect(CANONICAL_PAGES.INTEGRATION_DASHBOARD).toBe('integration-dashboard');
-      expect(CANONICAL_PAGES.CRM_CONNECTION).toBe('crm-connection');
-      expect(CANONICAL_PAGES.FIELD_MAPPING).toBe('field-mapping');
-      expect(CANONICAL_PAGES.AUTOMATION_RULES).toBe('automation-rules');
+    test('Canonical pages retain WhatsApp modules without retired CRM setup pages', () => {
       expect(CANONICAL_PAGES.WHATSAPP_TEMPLATES).toBe('whatsapp-templates');
-      expect(CANONICAL_PAGES.INTEGRATION_LOGS).toBe('integration-logs');
-      expect(CANONICAL_PAGES.FAILED_EVENTS).toBe('failed-events');
+      expect(Object.values(CANONICAL_PAGES)).not.toContain('crm-connection');
+      expect(Object.values(CANONICAL_PAGES)).not.toContain('field-mapping');
 
       // WhatsApp API pages
       expect(CANONICAL_PAGES.API_DASHBOARD).toBe('api-dashboard');
@@ -26,11 +21,8 @@ describe('Super Admin Permission System & 10 Standard Plans Verification', () =>
     });
 
     test('Canonical permissions define granular machine-readable permission keys', () => {
-      expect(CANONICAL_PERMISSIONS.INTEGRATION_DASHBOARD_VIEW).toBe('integrationDashboard.view');
-      expect(CANONICAL_PERMISSIONS.CRM_CONNECTION_MANAGE).toBe('crmConnection.manage');
-      expect(CANONICAL_PERMISSIONS.FIELD_MAPPING_MANAGE).toBe('fieldMapping.manage');
-      expect(CANONICAL_PERMISSIONS.AUTOMATION_RULES_MANAGE).toBe('automationRules.manage');
-      expect(CANONICAL_PERMISSIONS.FAILED_EVENTS_RETRY).toBe('failedEvents.retry');
+      expect(CANONICAL_PERMISSIONS.WHATSAPP_CONNECTION_MANAGE).toBe('whatsappConnection.manage');
+      expect(Object.values(CANONICAL_PERMISSIONS)).not.toContain('crmConnection.manage');
       expect(CANONICAL_PERMISSIONS.API_KEYS_MANAGE).toBe('apiKeys.manage');
       expect(CANONICAL_PERMISSIONS.WEBHOOK_CONFIGURATION_MANAGE).toBe('webhookConfiguration.manage');
       expect(CANONICAL_PERMISSIONS.FAILED_WEBHOOKS_RETRY).toBe('failedWebhooks.retry');
@@ -66,32 +58,30 @@ describe('Super Admin Permission System & 10 Standard Plans Verification', () =>
     });
 
     // 4. CRM Connect
-    test('CRM Connect profile includes CRM integration pages and permissions', () => {
+    test('CRM Connect profile retains messaging pages without retired CRM setup', () => {
       const connect = PERMISSION_PROFILES.crm_connect;
-      expect(connect.pages).toContain('integration-dashboard');
-      expect(connect.pages).toContain('crm-connection');
-      expect(connect.pages).toContain('field-mapping');
-      expect(connect.pages).toContain('integration-logs');
+      expect(connect.pages).toContain('dashboard');
+      expect(connect.pages).toContain('live-chat');
+      expect(connect.pages).toContain('whatsapp-connection');
+      expect(connect.pages).not.toContain('crm-connection');
       expect(connect.pages).not.toContain('automation-rules');
-      expect(connect.permissions).toContain(CANONICAL_PERMISSIONS.CRM_CONNECTION_VIEW);
-      expect(connect.permissions).toContain(CANONICAL_PERMISSIONS.CRM_CONNECTION_MANAGE);
+      expect(connect.permissions).toContain(CANONICAL_PERMISSIONS.WHATSAPP_CONNECTION_VIEW);
     });
 
     // 5. CRM Automation
-    test('CRM Automation profile includes automation rules and failed event retry', () => {
+    test('CRM Automation profile retains broadcasting without old rule editor', () => {
       const automation = PERMISSION_PROFILES.crm_automation;
-      expect(automation.pages).toContain('automation-rules');
-      expect(automation.pages).toContain('failed-events');
-      expect(automation.permissions).toContain(CANONICAL_PERMISSIONS.AUTOMATION_RULES_MANAGE);
-      expect(automation.permissions).toContain(CANONICAL_PERMISSIONS.FAILED_EVENTS_RETRY);
+      expect(automation.pages).toContain('broadcast');
+      expect(automation.pages).not.toContain('automation-rules');
+      expect(automation.pages).not.toContain('failed-events');
     });
 
     // 6. CRM Enterprise
-    test('CRM Enterprise profile includes webhooks and full CRM integration suite', () => {
+    test('CRM Enterprise profile retains webhooks without retired CRM setup', () => {
       const enterprise = PERMISSION_PROFILES.crm_enterprise;
       expect(enterprise.pages).toContain('webhook-configuration');
-      expect(enterprise.pages).toContain('automation-rules');
-      expect(enterprise.pages).toContain('failed-events');
+      expect(enterprise.pages).not.toContain('automation-rules');
+      expect(enterprise.pages).not.toContain('failed-events');
       expect(enterprise.permissions).toContain(CANONICAL_PERMISSIONS.WEBHOOK_CONFIGURATION_MANAGE);
     });
 
@@ -140,20 +130,21 @@ describe('Super Admin Permission System & 10 Standard Plans Verification', () =>
       };
       const result = await resolveEffectivePermissions(superAdminUser);
       expect(result.profile).toBe('super_admin');
-      expect(result.pages).toEqual(expect.arrayContaining([CANONICAL_PAGES.DASHBOARD, CANONICAL_PAGES.CRM_CONNECTION]));
+      expect(result.pages).toEqual(expect.arrayContaining([CANONICAL_PAGES.DASHBOARD, CANONICAL_PAGES.WHATSAPP_CONNECTION]));
     });
 
     test('Customer Allow Overrides grant access beyond base profile', async () => {
       const merchant = {
         role: 'admin',
         subscriptionPlan: 'starter',
-        allowedPages: ['integration-dashboard', 'crm-connection'],
-        allowedPermissions: ['crmConnection.view']
+        allowedPages: ['whatsapp-connection', 'crm-connection'],
+        allowedPermissions: ['whatsappConnection.view', 'crmConnection.view']
       };
       const result = await resolveEffectivePermissions(merchant);
-      expect(result.pages).toContain('integration-dashboard');
-      expect(result.pages).toContain('crm-connection');
-      expect(result.permissions).toContain('crmConnection.view');
+      expect(result.pages).toContain('whatsapp-connection');
+      expect(result.pages).not.toContain('crm-connection');
+      expect(result.permissions).toContain('whatsappConnection.view');
+      expect(result.permissions).not.toContain('crmConnection.view');
       // Still retains base starter pages
       expect(result.pages).toContain('conversations');
     });
@@ -222,7 +213,7 @@ describe('Super Admin Permission System & 10 Standard Plans Verification', () =>
         monthlyPrice: 2999,
         allowedBillingCycles: ['monthly', 'yearly'],
         permissionProfile: 'crm_connect',
-        allowedPages: ['integration-dashboard', 'crm-connection'],
+        allowedPages: ['dashboard', 'whatsapp-connection'],
         isActive: true,
         isPublished: true
       };
@@ -244,21 +235,21 @@ describe('Super Admin Permission System & 10 Standard Plans Verification', () =>
       expect(result.issues.length).toBeGreaterThan(0);
     });
 
-    test('CRM Integration plan without any CRM pages returns Warning status', () => {
+    test('legacy CRM category does not require retired connector pages', () => {
       const mismatchedPlan = {
         name: 'crm_empty',
         displayName: 'CRM Empty',
         category: 'crm_integration',
         monthlyPrice: 1999,
         allowedBillingCycles: ['monthly'],
-        permissionProfile: 'starter', // starter has no CRM pages
+        permissionProfile: 'starter',
         allowedPages: ['dashboard', 'conversations'],
         isActive: true,
         isPublished: true
       };
       const result = validatePlanReadiness(mismatchedPlan);
-      expect(result.status).toBe('Warning');
-      expect(result.issues).toContain('Plan is categorized as CRM Integration, but does not include any CRM Integration pages.');
+      expect(result.status).toBe('Ready');
+      expect(result.issues).toEqual([]);
     });
   });
 });

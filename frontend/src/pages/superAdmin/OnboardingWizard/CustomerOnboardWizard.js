@@ -30,7 +30,7 @@ const SOLUTION_CATEGORIES = [
   {
     id: 'crm_integration',
     name: 'CRM Integration',
-    description: 'Bi-directional CRM/ERP sync (Odoo, HubSpot, Salesforce, Zoho) with automation rules.',
+    description: 'WhatsApp messaging, templates, live chat, and broadcasts for merchants.',
     icon: FaNetworkWired,
     color: '#0d9488'
   },
@@ -56,9 +56,8 @@ const STEPS = [
   { step: 3, title: 'Plan & Billing', icon: FaTag },
   { step: 4, title: 'Access & Overrides', icon: FaShieldAlt },
   { step: 5, title: 'WhatsApp Setup', icon: FaWhatsapp },
-  { step: 6, title: 'CRM Integration', icon: FaNetworkWired },
-  { step: 7, title: 'Review & Verify', icon: FaSlidersH },
-  { step: 8, title: 'Activation Mode', icon: FaCheckCircle }
+  { step: 6, title: 'Review & Verify', icon: FaSlidersH },
+  { step: 7, title: 'Activation Mode', icon: FaCheckCircle }
 ];
 
 export default function CustomerOnboardWizard() {
@@ -103,14 +102,7 @@ export default function CustomerOnboardWizard() {
     wabaId: '',
     phoneNumberId: '',
 
-    // Step 6: CRM Config
-    crmProvider: 'odoo',
-    crmApiUrl: '',
-    crmApiKey: '',
-    crmDatabase: '',
-    crmUsername: '',
-
-    // Step 7/8: Activation
+    // Step 7: Activation
     isDraft: false,
     subscriptionStatus: 'active',
     sendWelcomeEmail: true
@@ -263,12 +255,6 @@ export default function CustomerOnboardWizard() {
               <span>Monthly Billed:</span>
               <strong>₹{createdResult.merchant.monthlyPrice} / month</strong>
             </div>
-            {createdResult.crmConnection && (
-              <div className="onboard-detail-row">
-                <span>CRM Connector:</span>
-                <strong>{createdResult.crmConnection.provider.toUpperCase()} (Configured)</strong>
-              </div>
-            )}
             <div className="onboard-detail-row">
               <span>Effective Pages:</span>
               <strong>{createdResult.effectiveAccess?.effectivePages?.length || 0} pages enabled</strong>
@@ -315,7 +301,7 @@ export default function CustomerOnboardWizard() {
             Customer Onboarding Wizard
           </h1>
           <p className="onboard-subtitle">
-            Provision merchant accounts, assign tailored plans & permission profiles, configure CRM connections, and activate live access in one seamless workflow.
+            Provision merchant accounts, assign plans and permission profiles, configure WhatsApp access, and activate live access.
           </p>
         </div>
       </div>
@@ -650,89 +636,10 @@ export default function CustomerOnboardWizard() {
               </div>
             )}
 
-            {/* STEP 6: CRM INTEGRATION */}
+            {/* STEP 6: REVIEW & VERIFY */}
             {currentStep === 6 && (
               <div className="onboard-step-content">
-                <h2 className="onboard-step-title">Step 6: CRM Connector Setup (Optional)</h2>
-                <p className="onboard-step-desc">Provision an initial CRM connection for synchronization (e.g. Odoo, HubSpot, Salesforce):</p>
-
-                <div className="onboard-form-grid" data-lpignore="true">
-                  <div className="onboard-form-group">
-                    <label>CRM Provider</label>
-                    <select
-                      value={formData.crmProvider}
-                      onChange={(e) => setFormData({ ...formData, crmProvider: e.target.value })}
-                    >
-                      <option value="odoo">Odoo ERP</option>
-                      <option value="hubspot">HubSpot CRM</option>
-                      <option value="salesforce">Salesforce CRM</option>
-                      <option value="zoho">Zoho CRM</option>
-                      <option value="custom">Custom REST CRM / Webhook</option>
-                    </select>
-                  </div>
-
-                  <div className="onboard-form-group">
-                    <label>CRM API Base URL</label>
-                    <input
-                      type="text"
-                      name="onboard_crm_api_url"
-                      placeholder="https://mycompany.odoo.com"
-                      value={formData.crmApiUrl}
-                      onChange={(e) => setFormData({ ...formData, crmApiUrl: e.target.value })}
-                      autoComplete="off"
-                      data-lpignore="true"
-                    />
-                  </div>
-
-                  <div className="onboard-form-group">
-                    <label>API Key / Access Token</label>
-                    <input
-                      type="password"
-                      name="onboard_crm_api_secret_key"
-                      placeholder="Secret API key or token"
-                      value={formData.crmApiKey}
-                      onChange={(e) => setFormData({ ...formData, crmApiKey: e.target.value })}
-                      autoComplete="new-password"
-                      data-lpignore="true"
-                      data-form-type="other"
-                    />
-                  </div>
-
-                  <div className="onboard-form-group">
-                    <label>Database Name (for Odoo)</label>
-                    <input
-                      type="text"
-                      name="onboard_crm_database_name"
-                      placeholder="e.g., mycompany-db"
-                      value={formData.crmDatabase}
-                      onChange={(e) => setFormData({ ...formData, crmDatabase: e.target.value })}
-                      autoComplete="new-password"
-                      data-lpignore="true"
-                      data-form-type="other"
-                    />
-                  </div>
-
-                  <div className="onboard-form-group">
-                    <label>Username / Login Email (for Odoo)</label>
-                    <input
-                      type="text"
-                      name="onboard_crm_login_user"
-                      placeholder="admin@mycompany.com"
-                      value={formData.crmUsername}
-                      onChange={(e) => setFormData({ ...formData, crmUsername: e.target.value })}
-                      autoComplete="off"
-                      data-lpignore="true"
-                      data-form-type="other"
-                    />
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* STEP 7: REVIEW & VERIFY */}
-            {currentStep === 7 && (
-              <div className="onboard-step-content">
-                <h2 className="onboard-step-title">Step 7: Verification & Summary Checklist</h2>
+                <h2 className="onboard-step-title">Step 6: Verification & Summary Checklist</h2>
                 <p className="onboard-step-desc">Review the configuration before activating the customer:</p>
 
                 <div className="onboard-review-grid">
@@ -761,16 +668,15 @@ export default function CustomerOnboardWizard() {
                   <div className="onboard-review-card">
                     <h4>Integrations</h4>
                     <p><strong>WhatsApp:</strong> {formData.whatsappPhoneNumber ? 'Configured' : 'Pending'}</p>
-                    <p><strong>CRM Provider:</strong> {formData.crmApiUrl ? `${formData.crmProvider.toUpperCase()} (Set)` : 'None'}</p>
                   </div>
                 </div>
               </div>
             )}
 
-            {/* STEP 8: ACTIVATION MODE */}
-            {currentStep === 8 && (
+            {/* STEP 7: ACTIVATION MODE */}
+            {currentStep === 7 && (
               <div className="onboard-step-content">
-                <h2 className="onboard-step-title">Step 8: Final Activation & Notifications</h2>
+                <h2 className="onboard-step-title">Step 7: Final Activation & Notifications</h2>
                 <p className="onboard-step-desc">Choose how the merchant account should be published and activated:</p>
 
                 <div className="onboard-activation-options">

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Link, useLocation, Navigate } from 'react-router-dom';
-import { FaHome, FaComments, FaBox, FaExclamationTriangle, FaPlug, FaSearch, FaBell, FaSignOutAlt, FaUser, FaBrain, FaCommentDots, FaBroadcastTower, FaChartLine, FaCog, FaCrown, FaFileAlt, FaShoppingCart, FaCoins, FaUserSecret, FaHeartbeat, FaBullhorn, FaBlog, FaBars, FaWhatsapp, FaShieldAlt, FaToggleOn, FaTimes, FaTags, FaUserTag, FaCode, FaNetworkWired, FaBookOpen, FaKey, FaUserPlus, FaDatabase, FaProjectDiagram, FaClipboardList } from 'react-icons/fa';
+import { FaHome, FaComments, FaBox, FaExclamationTriangle, FaPlug, FaSearch, FaBell, FaSignOutAlt, FaUser, FaBrain, FaCommentDots, FaBroadcastTower, FaChartLine, FaCog, FaCrown, FaFileAlt, FaShoppingCart, FaCoins, FaUserSecret, FaHeartbeat, FaBullhorn, FaBlog, FaBars, FaWhatsapp, FaShieldAlt, FaToggleOn, FaTimes, FaTags, FaUserTag, FaCode, FaBookOpen, FaKey, FaUserPlus } from 'react-icons/fa';
 import api, { clearAuthState, refreshAuth } from './services/api';
 import io from 'socket.io-client';
 import Dashboard from './pages/merchant/Dashboard/Dashboard';
@@ -44,16 +44,6 @@ import NotificationDropdown from './components/NotificationDropdown/Notification
 // Access Control & Platform Module Imports
 import { EffectiveAccessProvider, useEffectiveAccess } from './context/EffectiveAccessContext';
 import ProtectedFeatureRoute from './components/ProtectedFeatureRoute/ProtectedFeatureRoute';
-
-// CRM Integration Platform Pages
-import IntegrationDashboard from './pages/merchant/IntegrationPlatform/IntegrationDashboard';
-import CRMConnections from './pages/merchant/IntegrationPlatform/CRMConnections';
-import CRMConnectionDetail from './pages/merchant/IntegrationPlatform/CRMConnectionDetail';
-import FieldMapping from './pages/merchant/IntegrationPlatform/FieldMapping';
-// AI automation page is temporarily hidden; the implementation remains in the repository.
-// import AutomationRules from './pages/merchant/IntegrationPlatform/AutomationRules';
-import IntegrationLogs from './pages/merchant/IntegrationPlatform/IntegrationLogs';
-import FailedEvents from './pages/merchant/IntegrationPlatform/FailedEvents';
 
 // WhatsApp API / Developer Platform Pages
 import ApiDashboard from './pages/merchant/DeveloperPlatform/ApiDashboard';
@@ -434,63 +424,6 @@ function Sidebar({ admin, onLogout, isOpen, onToggle, pendingDemoRequestsCount }
                         <Link to="/dashboard/templates" className={isActive('/dashboard/templates')} title="Templates">
                           <FaFileAlt />
                           <span className="nav-label">Templates</span>
-                        </Link>
-                      </li>
-                    )}
-                  </ul>
-                </div>
-              )}
-
-              {/* CRM Integration Section */}
-              {(isPageAllowed('integration-dashboard') || isPageAllowed('crm-connection') || isPageAllowed('field-mapping') || isPageAllowed('automation-rules') || isPageAllowed('integration-logs') || isPageAllowed('failed-events')) && (
-                <div className="nav-section">
-                  {isOpen && <div className="nav-section-title">CRM Integration</div>}
-                  <ul className="nav-links">
-                    {isPageAllowed('integration-dashboard') && (
-                      <li>
-                        <Link to="/dashboard/integration" className={isActive('/dashboard/integration')} title="Integration Dashboard">
-                          <FaNetworkWired />
-                          <span className="nav-label">Integration Hub</span>
-                        </Link>
-                      </li>
-                    )}
-                    {isPageAllowed('crm-connection') && (
-                      <li>
-                        <Link to="/dashboard/integration/connections" className={isActive('/dashboard/integration/connections')} title="CRM Connections">
-                          <FaDatabase />
-                          <span className="nav-label">CRM Connections</span>
-                        </Link>
-                      </li>
-                    )}
-                    {isPageAllowed('field-mapping') && (
-                      <li>
-                        <Link to="/dashboard/integration/field-mapping" className={isActive('/dashboard/integration/field-mapping')} title="Field Mapping">
-                          <FaProjectDiagram />
-                          <span className="nav-label">Field Mapping</span>
-                        </Link>
-                      </li>
-                    )}
-                    {isPageAllowed('automation-rules') && (
-                      <li>
-                        <Link to="/dashboard/integration/automations" className={isActive('/dashboard/integration/automations')} title="Automation Rules">
-                          <FaCog />
-                          <span className="nav-label">Automations</span>
-                        </Link>
-                      </li>
-                    )}
-                    {isPageAllowed('integration-logs') && (
-                      <li>
-                        <Link to="/dashboard/integration/logs" className={isActive('/dashboard/integration/logs')} title="Integration Logs">
-                          <FaClipboardList />
-                          <span className="nav-label">Integration Logs</span>
-                        </Link>
-                      </li>
-                    )}
-                    {isPageAllowed('failed-events') && (
-                      <li>
-                        <Link to="/dashboard/integration/failed-events" className={isActive('/dashboard/integration/failed-events')} title="Failed Events">
-                          <FaExclamationTriangle />
-                          <span className="nav-label">Failed Events</span>
                         </Link>
                       </li>
                     )}
@@ -1254,66 +1187,6 @@ function App() {
                     />
                     <Route path="/billing" element={<Billing />} />
                     <Route path="/profile" element={<Profile admin={admin} onUpdateAdmin={handleUpdateAdmin} />} />
-
-                    {/* CRM Integration Routes */}
-                    <Route 
-                      path="/integration" 
-                      element={
-                        <ProtectedFeatureRoute pageKey="integration-dashboard" title="CRM Integration Hub" requiredFeature="CRM Integration Plan">
-                          <IntegrationDashboard />
-                        </ProtectedFeatureRoute>
-                      } 
-                    />
-                    <Route 
-                      path="/integration/connections" 
-                      element={
-                        <ProtectedFeatureRoute pageKey="crm-connection" title="CRM Connections" requiredFeature="CRM Integration Plan">
-                          <CRMConnections />
-                        </ProtectedFeatureRoute>
-                      } 
-                    />
-                    <Route 
-                      path="/integration/connections/:id" 
-                      element={
-                        <ProtectedFeatureRoute pageKey="crm-connection" title="CRM Connection Details" requiredFeature="CRM Integration Plan">
-                          <CRMConnectionDetail />
-                        </ProtectedFeatureRoute>
-                      } 
-                    />
-                    <Route 
-                      path="/integration/field-mapping" 
-                      element={
-                        <ProtectedFeatureRoute pageKey="field-mapping" title="Field Mapping Studio" requiredFeature="CRM Integration Plan">
-                          <FieldMapping />
-                        </ProtectedFeatureRoute>
-                      } 
-                    />
-                    {/* AI automation page temporarily hidden. Preserve its route and component for later rollout.
-                    <Route
-                      path="/integration/automations"
-                      element={
-                        <ProtectedFeatureRoute pageKey="automation-rules" title="Automation Rules" requiredFeature="CRM Automation Plan">
-                          <AutomationRules />
-                        </ProtectedFeatureRoute>
-                      }
-                    />
-                    */}
-                    <Route 
-                      path="/integration/logs" 
-                      element={
-                        <ProtectedFeatureRoute pageKey="integration-logs" title="Integration Logs" requiredFeature="CRM Integration Plan">
-                          <IntegrationLogs />
-                        </ProtectedFeatureRoute>
-                      } 
-                    />
-                    <Route 
-                      path="/integration/failed-events" 
-                      element={
-                        <ProtectedFeatureRoute pageKey="failed-events" title="Failed Events Queue" requiredFeature="CRM Integration Plan">
-                          <FailedEvents />
-                        </ProtectedFeatureRoute>
-                      } 
-                    />
 
                     {/* WhatsApp API Developer Routes */}
                     <Route 

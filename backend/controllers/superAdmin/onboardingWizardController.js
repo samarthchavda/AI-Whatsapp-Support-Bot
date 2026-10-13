@@ -1,6 +1,5 @@
 const Admin = require('../../models/Admin');
 const PricingPlan = require('../../models/PricingPlan');
-const CRMConnection = require('../../models/CRMConnection');
 const permissionService = require('../../services/permissionService');
 const auditLogService = require('../../services/auditLogService');
 const emailService = require('../../services/emailService');
@@ -30,13 +29,7 @@ exports.onboardCustomer = async (req, res) => {
       geminiTokensLimit,
       isDraft,
       subscriptionStatus,
-      sendWelcomeEmail,
-      // Optional initial CRM Connection
-      crmProvider,
-      crmApiUrl,
-      crmApiKey,
-      crmDatabase,
-      crmUsername
+      sendWelcomeEmail
     } = req.body;
 
     // 1. Validation
@@ -118,28 +111,7 @@ exports.onboardCustomer = async (req, res) => {
 
     await newMerchant.save();
 
-    // 5. Initial CRM Connection Provisioning (if details provided)
-    let createdCrmConnection = null;
-    if (crmProvider && (crmApiUrl || crmApiKey)) {
-      try {
-        createdCrmConnection = new CRMConnection({
-          merchantId: newMerchant._id,
-          provider: crmProvider,
-          name: `${name}'s ${crmProvider.toUpperCase()} Connection`,
-          apiUrl: crmApiUrl || '',
-          apiKey: crmApiKey || '',
-          database: crmDatabase || '',
-          username: crmUsername || '',
-          connectionStatus: 'pending',
-          syncDirection: 'bi-directional'
-        });
-        await createdCrmConnection.save();
-      } catch (crmErr) {
-        console.error('Failed to create initial CRM Connection during onboarding:', crmErr);
-      }
-    }
-
-    // 6. Audit Trail Logging
+    // 5. Audit Trail Logging
     await auditLogService.logAction(
       req.admin?.email || 'super_admin',
       'customer_onboarded',
@@ -147,12 +119,11 @@ exports.onboardCustomer = async (req, res) => {
         merchantId: newMerchant._id,
         email: newMerchant.email,
         plan: finalPlanName,
-        status,
-        hasCrmConfig: Boolean(createdCrmConnection)
+        status
       }
     );
 
-    // 7. Optional Welcome / Setup Email Notification
+    // 6. Optional Welcome / Setup Email Notification
     if (sendWelcomeEmail && emailService && typeof emailService.sendEmail === 'function') {
       try {
         const emailContent = `
@@ -172,7 +143,7 @@ exports.onboardCustomer = async (req, res) => {
       }
     }
 
-    // 8. Compute effective access for response payload
+    // 7. Compute effective access for response payload
     const effectiveAccess = await permissionService.getEffectiveAccessPayload(newMerchant);
 
     res.status(201).json({
@@ -190,7 +161,6 @@ exports.onboardCustomer = async (req, res) => {
           isActive: newMerchant.isActive,
           createdAt: newMerchant.createdAt
         },
-        crmConnection: createdCrmConnection,
         effectiveAccess: effectiveAccess.data
       }
     });

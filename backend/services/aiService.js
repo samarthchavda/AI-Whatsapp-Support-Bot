@@ -883,94 +883,11 @@ STRICT KNOWLEDGE BASE GROUNDING RULES:
       let listMessage = null;
       let buttons = [];
 
-      // CRM Connect & Odoo Sync Flow
+      // CRM-plan order changes remain restricted while the old connector is retired.
       const rawPlan = (adminDoc?.subscriptionPlan || '').toLowerCase().replace(/-/g, '_');
       const isCrmConnectPlan = (rawPlan === 'crm_connect' || rawPlan === 'crm_automation' || rawPlan === 'crm_enterprise');
 
-      let activeCrmConnection = null;
-      if (adminDoc && adminDoc._id) {
-        try {
-          const CRMConnection = require('../models/CRMConnection');
-          if (mongoose.connection.readyState === 1 || (typeof CRMConnection.findOne === 'function' && (CRMConnection.findOne._isMockFunction || typeof CRMConnection.findOne.mockResolvedValue === 'function'))) {
-            activeCrmConnection = await CRMConnection.findOne({
-              adminId: adminDoc._id,
-              isActive: true,
-              status: 'connected'
-            });
-          }
-        } catch (crmErr) {
-          console.error('Error fetching active CRM connection:', crmErr.message);
-        }
-      }
-
-      // 1. WhatsApp enquiry to lead sync flow (deduplicated & idempotent with product price & revenue sync)
-      let crmProducts = null;
-      let matchedCrmProduct = null;
-      if (isCrmConnectPlan && activeCrmConnection && activeCrmConnection.provider === 'odoo') {
-        try {
-          const crmProviderRegistry = require('./crmProviders/crmProviderRegistry');
-          const provider = crmProviderRegistry.get('odoo');
-          if (provider) {
-            // Pre-fetch products to detect if customer is asking about a specific product
-            try {
-              crmProducts = await provider.searchProducts(activeCrmConnection, null, '', { limit: 50 });
-              if (crmProducts && crmProducts.length > 0) {
-                matchedCrmProduct = this.matchProductFromCatalog(crmProducts, message);
-                if (!matchedCrmProduct && conversation && conversation.messages) {
-                  const recentUserMsgs = conversation.messages
-                    .filter(m => m.role === 'user')
-                    .slice(-2);
-                  for (let i = recentUserMsgs.length - 1; i >= 0; i--) {
-                    matchedCrmProduct = this.matchProductFromCatalog(crmProducts, recentUserMsgs[i].content);
-                    if (matchedCrmProduct) break;
-                  }
-                }
-              }
-            } catch (prodFetchErr) {
-              console.warn('Failed to fetch CRM products for lead sync:', prodFetchErr.message);
-            }
-
-            const { registerEvent, markEventCompleted, markEventFailed } = require('./eventPipelineService');
-            const idempotencyKey = `odoo_lead_${adminDoc._id}_${customerPhone}_${messageId || (Math.floor(Date.now() / 60000))}`;
-            const { event, isDuplicate } = await registerEvent({
-              adminId: adminDoc._id,
-              connectionId: activeCrmConnection._id,
-              provider: 'odoo',
-              eventType: 'lead_sync',
-              direction: 'outbound',
-              idempotencyKey,
-              requestPayload: {
-                customerPhone,
-                customerName,
-                enquiryMessage: message,
-                productName: matchedCrmProduct?.name || null,
-                productPrice: (matchedCrmProduct && typeof matchedCrmProduct.price === 'number') ? matchedCrmProduct.price : null
-              }
-            });
-
-            if (!isDuplicate) {
-              const syncRes = await provider.syncLead(activeCrmConnection, null, {
-                customerPhone,
-                customerName,
-                enquiryMessage: message,
-                idempotencyKey,
-                productName: matchedCrmProduct?.name || null,
-                productPrice: (matchedCrmProduct && typeof matchedCrmProduct.price === 'number') ? matchedCrmProduct.price : null,
-                productSku: matchedCrmProduct?.sku || null
-              });
-              if (syncRes && syncRes.success) {
-                await markEventCompleted(event, syncRes);
-              } else if (syncRes && syncRes.error) {
-                await markEventFailed(event, new Error(syncRes.error));
-              }
-            }
-          }
-        } catch (leadSyncErr) {
-          console.error('CRM Connect lead sync error:', leadSyncErr.message);
-        }
-      }
-
-      // 2. Unsupported actions on crm_connect: immediately route to Live Chat handoff and leave order untouched
+      // Unsupported actions on crm_connect: route to Live Chat and leave orders untouched.
       if (isCrmConnectPlan && (intent === 'cancel_order' || intent === 'refund_request' || intent === 'complaint' || /cancel|cancle|refund|dispute|return\s*order/i.test(message))) {
         conversation.botPaused = true;
         conversation.status = 'escalated';
@@ -1055,125 +972,6 @@ STRICT KNOWLEDGE BASE GROUNDING RULES:
 
         case 'faq_products':
         case 'faq_products_all':
-          if (activeCrmConnection && activeCrmConnection.provider === 'odoo') {
-            const crmProviderRegistry = require('./crmProviders/crmProviderRegistry');
-            const provider = crmProviderRegistry.get('odoo');
-            if (provider) {
-              const allProducts = crmProducts || await provider.searchProducts(activeCrmConnection, null, '', { limit: 50 });
-              const isGeneralCatalog = intent === 'faq_products_all' ||
-                /^(what\s*(kind\s*of\s*)?products?\s*(do\s*you\s*(have|sell)|are\s*available)?|what\s*do\s*you\s*(sell|have)|show\s*(all\s*)?products?|view\s*all\s*products?|all\s*products?|list\s*products?|do\s*you\s*have\s*(any\s*)?products?|products?|\ud83d\udecd\ufe0f\s*products?)\s*\??$/i.test(message.trim());
-
-              if (isGeneralCatalog) {
-                if (allProducts && allProducts.length > 0) {
-                  const displayLimit = 6;
-                  const displayProducts = allProducts.slice(0, displayLimit);
-                  const remainingCount = allProducts.length - displayProducts.length;
-
-                  const itemsList = displayProducts.map(p => {
-                    const priceStr = p.price ? ` - ₹${Number(p.price).toLocaleString('en-IN')}` : '';
-                    return `• *${p.name}*${priceStr} (${p.availability})`;
-                  }).join('\n');
-
-                  const moreText = remainingCount > 0 ? `\n_...and ${remainingCount} more items in catalog._` : '';
-                  response = `🛍️ *Available Products*\n\n${itemsList}${moreText}\n\nType any product name for full specifications and pricing!`;
-                  buttons = ['📋 More FAQs'];
-                  break;
-                } else {
-                  response = `🛍️ We are currently updating our product catalog. Please check back shortly or ask our team!`;
-                  buttons = ['📋 More FAQs'];
-                  break;
-                }
-              }
-
-              // Specific product or specification inquiry
-              let matchedProduct = matchedCrmProduct || this.matchProductFromCatalog(allProducts, message);
-              if (!matchedProduct && conversation && conversation.messages) {
-                const recentUserMsgs = conversation.messages
-                  .filter(m => m.role === 'user')
-                  .slice(-2);
-                for (let i = recentUserMsgs.length - 1; i >= 0; i--) {
-                  matchedProduct = this.matchProductFromCatalog(allProducts, recentUserMsgs[i].content);
-                  if (matchedProduct) break;
-                }
-              }
-
-              if (matchedProduct) {
-                const cleanDesc = (matchedProduct.description || '')
-                  .replace(/^demo\s*product\s*\d+\s*:\s*/i, '')
-                  .trim();
-                const productContext = `PRODUCT INFORMATION FROM STORE CATALOG:
-• Product Name: ${matchedProduct.name}
-• Model / SKU: ${matchedProduct.sku || 'N/A'}
-• Price: ₹${Number(matchedProduct.price).toLocaleString('en-IN')}
-• Availability: ${matchedProduct.availability}
-• Specifications & Highlights: ${cleanDesc || 'Standard business configuration'}`;
-
-                if (this.gemini) {
-                  try {
-                    const prompt = `You are a helpful customer support assistant for ${adminDoc?.businessName || 'our store'}.
-A customer on WhatsApp asked: "${message}"
-
-Official Product Details:
-- Name: ${matchedProduct.name}
-- Model / SKU: ${matchedProduct.sku || 'N/A'}
-- Price: ₹${Number(matchedProduct.price).toLocaleString('en-IN')}
-- Availability: ${matchedProduct.availability}
-- Base Details: ${cleanDesc || 'Standard configuration'}
-
-STRICT FORMATTING REQUIREMENTS:
-1. Output MUST follow this exact clean, structured WhatsApp card format:
-*${matchedProduct.name}*
-
-• *Price:* ₹${Number(matchedProduct.price).toLocaleString('en-IN')}
-• *Model / SKU:* ${matchedProduct.sku || 'N/A'}
-• *Availability:* ${matchedProduct.availability}
-• *Specifications:* [Provide 1-2 concise, clear sentences summarizing features based on the product name and details, such as resolution, connectivity, or build quality. Do NOT mention internal words like 'demo product', and do NOT give disclaimers about what is missing.]
-
-Feel free to ask any other questions or place an order!
-
-2. DO NOT include any greeting, preamble, or conversational intro (NO "Certainly!", NO "Here is the information:", NO conversational chatter).
-3. DO NOT include loose or dangling asterisks (*).
-4. DO NOT write meta-disclaimers or discuss what technical details are missing in the catalog.
-5. Keep it concise (under 350 characters total) so it fits comfortably on mobile screens without requiring "Read more".
-6. STRICT RULE: Do not use any emojis in your response.`;
-
-                    const modelClient = this.gemini.getGenerativeModel({ model: this.geminiModelName });
-                    const result = await modelClient.generateContent(prompt);
-                    let aiText = result?.response?.text();
-                    if (aiText && aiText.trim()) {
-                      aiText = aiText.trim()
-                        .replace(/^(certainly!?|sure!?|hello!?|hi!?|here is the information[^:\n]*:?\s*\*?|i can provide[^:\n]*:?\s*\*?)[^\n]*\n+/i, '')
-                        .replace(/^\*\s*\n/m, '')
-                        .replace(/^•\s*\*Product Name:\*[^\n]*\n+/im, '')
-                        .replace(/^(\*[^*]+\*)\s*•/m, '$1\n\n•')
-                        .replace(/(•\s*\*Specifications:\*[^\n]+)\s+(Feel free[^\n]*)/i, '$1\n\n$2')
-                        .trim();
-
-                      response = aiText;
-                      usedAI = true;
-                      aiModel = this.geminiModelName;
-                      modelUsed = 'Gemini';
-                      buttons = ['🛍️ View Products', '📋 More FAQs'];
-                      break;
-                    }
-                  } catch (geminiErr) {
-                    console.error('Error generating AI product specification response:', geminiErr.message);
-                  }
-                }
-
-                // Fallback structured specification response:
-                const skuLine = matchedProduct.sku ? `\n• *Model / SKU:* ${matchedProduct.sku}` : '';
-                const descLine = cleanDesc ? `\n• *Specifications:* ${cleanDesc}` : '';
-                response = `*${matchedProduct.name}*\n\n• *Price:* ₹${Number(matchedProduct.price).toLocaleString('en-IN')}${skuLine}\n• *Availability:* ${matchedProduct.availability}${descLine}\n\nFeel free to ask if you have any questions or would like to place an order!`;
-                buttons = ['🛍️ View Products', '📋 More FAQs'];
-                break;
-              } else {
-                response = `I couldn't find a product matching your query. Would you like to view our full product catalog?`;
-                buttons = ['🛍️ View Products', '📋 More FAQs'];
-                break;
-              }
-            }
-          }
           if (intent === 'faq_products_all') {
             const allProdResult = await this.handleFaqAllProducts(message, adminDoc, 1);
             response = allProdResult.message;
@@ -1195,29 +993,6 @@ Feel free to ask any other questions or place an order!
           break;
 
         case 'order_status':
-          if (isCrmConnectPlan && activeCrmConnection && activeCrmConnection.provider === 'odoo') {
-            const crmProviderRegistry = require('./crmProviders/crmProviderRegistry');
-            const provider = crmProviderRegistry.get('odoo');
-            if (provider) {
-              const requestedOrderId = this.extractOrderId(message) || message.trim();
-              const odooOrderRes = await provider.lookupOrderStatus(activeCrmConnection, null, {
-                customerPhone,
-                orderRef: requestedOrderId
-              });
-
-              if (odooOrderRes.success && odooOrderRes.verified) {
-                const dateStr = odooOrderRes.orderDate ? new Date(odooOrderRes.orderDate).toLocaleDateString('en-IN') : 'N/A';
-                response = `📦 *Order Status (${odooOrderRes.orderRef})*\n\n• Status: *${odooOrderRes.displayStatus}*\n• Date: ${dateStr}\n• Total: ₹${Number(odooOrderRes.totalAmount).toLocaleString('en-IN')}`;
-                buttons = ['📋 More FAQs'];
-                relatedOrderIds = [odooOrderRes.orderRef];
-                break;
-              } else if (odooOrderRes.verified === false) {
-                response = `I couldn't verify that order reference for this phone number. For security, order details can only be shared with the registered contact number.`;
-                buttons = ['📋 More FAQs'];
-                break;
-              }
-            }
-          }
           const orderResult = await this.handleOrderStatusQuery(customerPhone, message, adminDoc ? adminDoc._id : null);
           response = orderResult.message;
           relatedOrderIds = orderResult.orderIds || [];
@@ -1590,109 +1365,6 @@ Response format must be ONLY the product name or "NONE". Do not write any other 
     }
     
     return null;
-  }
-
-  /**
-   * Matches customer message against product catalog for specific inquiries.
-   * Returns matched product with price and name or null for general catalog/non-product queries.
-   */
-  matchProductFromCatalog(products, message) {
-    if (!Array.isArray(products) || products.length === 0 || !message) return null;
-    const lowerMsg = message.toLowerCase().trim();
-
-    // Skip general catalog inquiries (where customer asks for the entire list, not a specific product)
-    const isGeneralCatalog = /^(what\s*(kind\s*of\s*)?products?\s*(do\s*you\s*(have|sell)|are\s*available)?|what\s*do\s*you\s*(sell|have)|show\s*(all\s*)?products?|view\s*all\s*products?|all\s*products?|list\s*products?|do\s*you\s*have\s*(any\s*)?products?|products?|\ud83d\udecd\ufe0f\s*products?)\s*\??$/i.test(lowerMsg);
-    if (isGeneralCatalog) return null;
-
-    // Normalize compound/spaced words (e.g. "web cam" -> "webcam", "smart phone" -> "smartphone", etc.)
-    const normalizeCompound = (str) => {
-      return (str || '')
-        .toLowerCase()
-        .replace(/\bweb\s+cam\b/g, 'webcam')
-        .replace(/\bsmart\s+phone\b/g, 'smartphone')
-        .replace(/\blap\s+top\b/g, 'laptop')
-        .replace(/\bhead\s+set\b/g, 'headset')
-        .replace(/\bkey\s+board\b/g, 'keyboard')
-        .replace(/\bwi\s*[- ]\s*fi\b/g, 'wifi')
-        .replace(/\busb\s*[- ]\s*c\b/g, 'usb-c')
-        .replace(/\btype\s*[- ]\s*c\b/g, 'usb-c');
-    };
-
-    const canonMsg = normalizeCompound(lowerMsg);
-    const compactMsg = lowerMsg.replace(/[^a-z0-9]/g, '');
-
-    // Sort by name length descending so specific product names match before partials (e.g. "Office Chair Red" before "Office Chair")
-    const sortedProducts = [...products].sort((a, b) => (b.name || '').length - (a.name || '').length);
-
-    // 1. Direct name, SKU, or compact match
-    for (const p of sortedProducts) {
-      const pName = (p.name || '').toLowerCase().trim();
-      const pCanon = normalizeCompound(pName);
-      const pSku = (p.sku || '').toLowerCase().trim();
-      const pCompact = pName.replace(/[^a-z0-9]/g, '');
-
-      if (pName && pName.length > 2 && (lowerMsg.includes(pName) || canonMsg.includes(pCanon))) {
-        return p;
-      }
-      if (pCompact && pCompact.length >= 4 && compactMsg.includes(pCompact)) {
-        return p;
-      }
-      if (pSku && pSku.length > 2 && lowerMsg.includes(pSku)) {
-        return p;
-      }
-    }
-
-    // 2. Token overlap match for multi-word or fuzzy inquiries
-    let bestProduct = null;
-    let bestScore = 0;
-    const commonStopWords = new Set([
-      'and', 'the', 'for', 'with', 'about', 'details', 'tell', 'show', 'price',
-      'pricing', 'cost', 'specs', 'specification', 'specifications', 'what', 'which',
-      'have', 'does', 'much', 'please', 'give', 'more', 'info', 'information', 'rate',
-      'item', 'items', 'product', 'products', 'can', 'you', 'is', 'in', 'on', 'at', 'of'
-    ]);
-
-    // Build term frequency across products to identify unique identifying keywords
-    const termProductMap = new Map();
-    for (const p of sortedProducts) {
-      const pName = (p.name || '').toLowerCase().trim();
-      const pCanon = normalizeCompound(pName);
-      const pTokens = pCanon.split(/[\s\-_]+/).filter(w => w.length >= 2 && !commonStopWords.has(w));
-      for (const t of new Set(pTokens)) {
-        termProductMap.set(t, (termProductMap.get(t) || 0) + 1);
-      }
-    }
-
-    for (const p of sortedProducts) {
-      const pName = (p.name || '').toLowerCase().trim();
-      const pCanon = normalizeCompound(pName);
-      const pTokens = pCanon.split(/[\s\-_]+/).filter(w => w.length >= 2 && !commonStopWords.has(w));
-      if (pTokens.length === 0) continue;
-
-      let matchCount = 0;
-      let hasUniqueKeyword = false;
-      for (const token of pTokens) {
-        if (canonMsg.includes(token)) {
-          matchCount++;
-          if (termProductMap.get(token) === 1 && token.length >= 4) {
-            hasUniqueKeyword = true;
-          }
-        }
-      }
-
-      const isSignificantMatch = (pTokens.length === 1 && matchCount === 1) || 
-                                 (matchCount >= 2) || 
-                                 (matchCount === pTokens.length) || 
-                                 hasUniqueKeyword;
-
-      const score = matchCount + (hasUniqueKeyword ? 1.5 : 0);
-      if (isSignificantMatch && score > bestScore) {
-        bestScore = score;
-        bestProduct = p;
-      }
-    }
-
-    return bestProduct;
   }
 
   detectIntent(message) {
@@ -2361,30 +2033,6 @@ Response format must be ONLY the product name or "NONE". Do not write any other 
         }
       } catch (error) {
         console.error('Error querying knowledge base:', error);
-      }
-    }
-
-    // 1b) Fetch CRM Product details if query matches a product in the catalog
-    if (adminId) {
-      try {
-        const CRMConnection = require('../models/CRMConnection');
-        const crmConn = await CRMConnection.findOne({ adminId, isActive: true, status: 'connected' });
-        if (crmConn && crmConn.provider === 'odoo') {
-          const crmProviderRegistry = require('./crmProviders/crmProviderRegistry');
-          const provider = crmProviderRegistry.get('odoo');
-          if (provider) {
-            const products = await provider.searchProducts(crmConn, null, '', { limit: 50 });
-            if (products && products.length > 0) {
-              const matched = this.matchProductFromCatalog(products, queryText);
-              if (matched) {
-                const prodInfo = `\nPRODUCT DETAILS & SPECIFICATIONS FROM STORE CATALOG:\n• Product Name: ${matched.name}\n• Model/SKU: ${matched.sku || 'N/A'}\n• Price: ₹${matched.price}\n• Availability: ${matched.availability}\n• Description/Specs: ${matched.description || 'Standard business configuration'}\n`;
-                kbContext = kbContext ? `${kbContext}\n${prodInfo}` : prodInfo;
-              }
-            }
-          }
-        }
-      } catch (prodErr) {
-        console.error('Error fetching CRM product context in handleGeneralInquiry:', prodErr.message);
       }
     }
 

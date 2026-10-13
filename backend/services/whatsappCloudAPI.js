@@ -2,6 +2,7 @@
 // This is the real production integration with WhatsApp Business API
 
 const axios = require('axios');
+const { getPoints, getConfiguredInrRates, summarize } = require('./metaCostAnalytics');
 
 class WhatsAppCloudAPI {
   constructor() {
@@ -11,6 +12,135 @@ class WhatsAppCloudAPI {
     this.webhookVerifyToken = process.env.WEBHOOK_VERIFY_TOKEN || 'webhook_token_123';
     this.baseUrl = 'https://graph.facebook.com/v18.0';
     this.isConfigured = this.accessToken !== 'YOUR_ACCESS_TOKEN' && this.phoneNumberId !== 'YOUR_PHONE_NUMBER_ID';
+  }
+
+  // Meta now bills per delivered message. The older conversation_analytics
+  // field does not describe the current pricing categories/free messages.
+  async fetchConversationAnalytics(startDate, endDate, customCredentials) {
+    const { accessToken, businessAccountId } = customCredentials || {};
+    if (!accessToken || !/^\d+$/.test(String(businessAccountId || ''))) {
+      throw new Error('Merchant WhatsApp Business credentials are missing.');
+    }
+    const start = Math.floor(new Date(startDate).getTime() / 1000);
+    const end = Math.floor(new Date(endDate).getTime() / 1000);
+    if (!Number.isFinite(start) || !Number.isFinite(end) || start >= end) {
+      throw new Error('Invalid analytics date range.');
+    }
+    const fields = `currency,pricing_analytics.start(${start}).end(${end}).granularity(DAILY).metric_types(["COST","VOLUME"]).dimensions(["COUNTRY","PHONE","PRICING_CATEGORY","PRICING_TYPE"])`;
+    const config = {
+      params: { fields },
+      headers: { Authorization: `Bearer ${accessToken}` },
+      timeout: 12000
+    };
+    const response = await axios.get(`https://graph.facebook.com/v25.0/${businessAccountId}`, config);
+    const firstPage = response.data;
+    let next = firstPage?.pricing_analytics?.paging?.next;
+    if (!next) return firstPage;
+    const points = getPoints(firstPage);
+    let pages = 0;
+    while (next) {
+      if (++pages > 20) throw new Error('Meta analytics has more pages than this request can safely load.');
+      const pageUrl = new URL(next);
+      if (pageUrl.protocol !== 'https:' || pageUrl.hostname !== 'graph.facebook.com' ||
+          !pageUrl.pathname.split('/').includes(String(businessAccountId))) {
+        throw new Error('Meta returned an invalid analytics pagination URL.');
+      }
+      pageUrl.searchParams.delete('access_token');
+      const page = await axios.get(pageUrl.toString(), { headers: config.headers, timeout: config.timeout });
+      points.push(...getPoints(page.data));
+      next = page.data?.pricing_analytics?.paging?.next || page.data?.paging?.next;
+    }
+    return { ...firstPage, pricing_analytics: { data_points: points } };
+  }
+
+  async getEstimatedCosts(adminId, timeRange = 'this_month') {
+    const Admin = require('../models/Admin');
+    const Conversation = require('../models/Conversation');
+    const admin = await Admin.findById(adminId).select('+whatsappAccessToken +whatsappBusinessAccountId +whatsappPhoneNumberId');
+    if (!admin) throw new Error('Merchant account not found.');
+
+    const periods = new Set(['today', 'last_7_days', 'this_month']);
+    if (!periods.has(timeRange)) throw new Error('Unsupported analytics period.');
+    const now = new Date();
+    const monthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
+    const todayStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+    const start = timeRange === 'today' ? todayStart : timeRange === 'last_7_days'
+      ? new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - 6)) : monthStart;
+    const base = {
+      period: timeRange, currency: null, source: 'unavailable', totalEstimatedCost: null,
+      categories: {}, dailyBreakdown: [], freeTier: { used: 0, limit: 1000, phones: [] },
+      localDeliveredMessages: 0, reconciliation: null, metaBillingUrl: 'https://business.facebook.com/billing_hub'
+    };
+    if (!admin.whatsappConnected || !admin.whatsappAccessToken || !admin.whatsappBusinessAccountId) {
+      return { ...base, source: 'not_connected', warning: 'Connect your own Meta WhatsApp Business account to see messaging charges.' };
+    }
+
+    const credentials = { accessToken: admin.whatsappAccessToken, businessAccountId: admin.whatsappBusinessAccountId };
+    let localDeliveredMessages = 0;
+    try {
+      const local = await Conversation.aggregate([
+        { $match: { admin: admin._id } },
+        { $unwind: '$messages' },
+        { $match: { 'messages.role': 'assistant', 'messages.status': { $in: ['delivered', 'read'] }, 'messages.timestamp': { $gte: start, $lte: now } } },
+        { $count: 'count' }
+      ]);
+      localDeliveredMessages = local[0]?.count || 0;
+    } catch (_) {
+      // This is only a short-retention diagnostic, never a billing fallback.
+    }
+
+    try {
+      const current = await this.fetchConversationAnalytics(start, now, credentials);
+      if (!Object.prototype.hasOwnProperty.call(current || {}, 'pricing_analytics')) {
+        throw new Error('Meta did not return pricing_analytics.');
+      }
+      const points = getPoints(current);
+      const metaCurrency = String(current?.pricing_analytics?.currency || current?.currency || '').toUpperCase() || null;
+      const currency = metaCurrency;
+      const inrRates = getConfiguredInrRates();
+      const result = summarize(points, { currency, inrRates, period: timeRange, localDeliveredMessages, phoneNumberId: admin.whatsappPhoneNumberId });
+      result.reconciliation = {
+        metaDeliveredMessages: Object.values(result.categories).reduce((sum, item) => sum + item.count, 0),
+        localDeliveredReplies: localDeliveredMessages,
+        status: 'partial',
+        note: 'Kwickbot retains chats for only 24 hours and does not store Meta billing category per message. Local replies are diagnostic only, not an invoice reconciliation.'
+      };
+      result.currencySource = metaCurrency ? 'meta' : 'unavailable';
+      result.scope = 'connected_business_account';
+      if (timeRange !== 'this_month') {
+        try {
+          const monthly = await this.fetchConversationAnalytics(monthStart, now, credentials);
+          const monthSummary = summarize(getPoints(monthly), { currency, inrRates, period: 'this_month', phoneNumberId: admin.whatsappPhoneNumberId });
+          result.freeTier = monthSummary.freeTier;
+        } catch (_) {
+          result.freeTier = null;
+          result.warning = 'Monthly free-service allowance could not be loaded from Meta.';
+        }
+      }
+      if (!points.length) {
+        result.warning = 'Meta has not reported pricing activity for this period yet. Analytics may be delayed.';
+      } else if (result.source === 'unavailable') {
+        result.warning = 'Meta returned volume but not cost. No verified rate card is configured for this billing currency/market, so no amount is shown.';
+      } else if (result.source === 'rate_card_estimate') {
+        result.warning = `Estimate using configured Meta INR rate card effective ${inrRates.effectiveDate}; Meta invoice may differ due to tiers, taxes, and adjustments.`;
+      }
+      if (!currency) {
+        result.source = 'unavailable';
+        result.totalEstimatedCost = null;
+        Object.values(result.categories).forEach((item) => { item.cost = null; });
+        result.dailyBreakdown.forEach((item) => { item.cost = null; });
+        result.warning = 'Meta did not return the WhatsApp Business Account billing currency. Verify costs in Meta Business Suite.';
+      }
+      return result;
+    } catch (error) {
+      const status = error.response?.status;
+      return {
+        ...base, localDeliveredMessages,
+        warning: status === 401 || status === 403
+          ? 'Meta denied analytics access. Check your WhatsApp token and analytics permissions.'
+          : 'Meta pricing analytics is temporarily unavailable. Your Meta invoice remains the source of truth.'
+      };
+    }
   }
 
   // Initialize webhook

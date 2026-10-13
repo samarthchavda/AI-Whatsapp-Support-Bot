@@ -2,6 +2,7 @@ const whatsappService = require('../../services/whatsappService');
 const whatsappCloudAPI = require('../../services/whatsappCloudAPI');
 const aiService = require('../../services/aiService');
 const Conversation = require('../../models/Conversation');
+const webhookRelayService = require('../../services/webhookRelayService');
 
 // Simple in-memory deduplication set for incoming message IDs
 const processedMessageIds = new Set();
@@ -129,7 +130,7 @@ exports.handleWebhook = async (req, res) => {
       // Handle status updates
       if (webhookValue.statuses) {
         for (const status of webhookValue.statuses) {
-          handleStatusUpdate(status).catch(err => {
+          handleStatusUpdate(status, matchedAdmin).catch(err => {
             console.error('Error handling status update:', err);
           });
         }
@@ -158,6 +159,13 @@ async function handleIncomingMessage(message, contactName, matchedAdmin, request
       return;
     }
     processedMessageIds.add(messageId);
+
+    // Asynchronously relay incoming message to developer webhook if configured
+    if (matchedAdmin) {
+      webhookRelayService.relayIncomingMessage(matchedAdmin, message, contactName).catch(err => {
+        console.warn('⚠️ Webhook relay incoming message warning:', err.message);
+      });
+    }
 
     // Keep the set size under control (limit to last 1000 messages)
     if (processedMessageIds.size > 1000) {
@@ -331,13 +339,20 @@ async function handleIncomingMessage(message, contactName, matchedAdmin, request
 }
 
 // Handle status updates
-async function handleStatusUpdate(status) {
+async function handleStatusUpdate(status, matchedAdmin = null) {
   try {
     const messageId = status.id;
     const statusType = status.status; // sent, delivered, read, failed
     const recipientId = status.recipient_id;
 
     console.log(`📊 Message ${messageId} (Recipient: ${recipientId || 'N/A'}) - Status: ${statusType}`);
+
+    // Asynchronously relay status update to developer webhook if configured
+    if (matchedAdmin) {
+      webhookRelayService.relayStatusUpdate(matchedAdmin, status).catch(err => {
+        console.warn('⚠️ Webhook relay status update warning:', err.message);
+      });
+    }
 
     // Update conversation message status using messageId
     await Conversation.updateOne(

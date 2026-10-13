@@ -357,7 +357,7 @@ function Templates() {
               </div>
 
               {/* Mapped Event Config */}
-              <div className="template-mapping-section">
+              {/* <div className="template-mapping-section">
                 <label className="mapping-label">
                   <FaProjectDiagram /> Map to Trigger Event:
                 </label>
@@ -373,7 +373,7 @@ function Templates() {
                   <option value="order_cancelled">E-Commerce: Order Cancelled</option>
                   <option value="abandoned_cart">E-Commerce: Abandoned Cart</option>
                 </select>
-              </div>
+              </div> */}
 
             </div>
           ))}

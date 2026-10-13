@@ -115,7 +115,7 @@ app.use(cors({
   origin: corsOriginHelper,
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-KWICKBOT-API-KEY', 'X-API-KEY', 'X-Kwickbot-Signature']
 }));
 app.use(express.json({
   verify: (req, res, buf) => {
@@ -295,6 +295,7 @@ app.use('/api/abandoned-carts', abandonedCartRoutes);
 app.use('/api/blog', blogRoutes);
 app.use('/api/merchant-leads', require('./routes/merchantLeadRoutes'));
 app.use('/api/developer', require('./routes/developerRoutes'));
+app.use('/api/v1', require('./routes/developerApiRoutes'));
 
 // Error handling middleware
 app.use((err, req, res, next) => {

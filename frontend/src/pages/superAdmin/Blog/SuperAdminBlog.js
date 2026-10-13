@@ -348,7 +348,7 @@ function SuperAdminBlog() {
                     type="text"
                     value={formData.tags}
                     onChange={(e) => setFormData(prev => ({ ...prev, tags: e.target.value }))}
-                    placeholder="e.g. WhatsApp, Shopify, AI, Customer Support"
+                    placeholder="e.g. WhatsApp, Odoo, AI, Customer Support"
                     style={{ padding: '10px 14px', background: '#09090b', border: '1px solid #27272a', borderRadius: '8px', color: '#fafafa' }}
                   />
                 </div>

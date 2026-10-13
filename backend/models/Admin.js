@@ -82,6 +82,23 @@ const adminSchema = new mongoose.Schema({
     unique: true,
     sparse: true
   },
+  developerWebhookUrl: {
+    type: String,
+    default: null,
+    trim: true
+  },
+  developerWebhookSecret: {
+    type: String,
+    default: null
+  },
+  developerWebhookEvents: {
+    type: [String],
+    default: ['messages.received', 'messages.delivered', 'messages.read', 'messages.failed']
+  },
+  isDeveloperWebhookActive: {
+    type: Boolean,
+    default: true
+  },
   // Subscription fields
   pricingPlanId: {
     type: mongoose.Schema.Types.ObjectId,

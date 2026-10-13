@@ -233,6 +233,8 @@ function SuperAdminHealth() {
                   </span>
                   <span className="badge" style={getStatusBadgeStyle(services.gemini)}>{services.gemini}</span>
                 </div>
+                {/* Temporarily commented out Shopify & WooCommerce sync indicators in Super Admin System Health */}
+                {/*
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-subtle)', paddingBottom: '8px' }}>
                   <span style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-primary)' }}>
                     <FaShoppingBag style={{ color: '#38bdf8', fontSize: '14px' }} /> Shopify Sync
@@ -245,6 +247,7 @@ function SuperAdminHealth() {
                   </span>
                   <span className="badge" style={getStatusBadgeStyle(services.woocommerce)}>{services.woocommerce}</span>
                 </div>
+                */}
               </div>
             </div>
           </div>

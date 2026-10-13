@@ -92,6 +92,8 @@ function SuperAdminIntegrationHealth() {
 
       {/* KPI Stats Cards */}
       <div className="analytics-cards" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '20px', marginBottom: '24px' }}>
+        {/* Temporarily commented out Shopify & WooCommerce cards for Super Admin panel */}
+        {/*
         <div className="stat-card" style={{ background: 'var(--bg-card)', border: '1px solid var(--border-subtle)', borderRadius: '16px', padding: '20px', display: 'flex', alignItems: 'center', gap: '16px' }}>
           <div className="stat-icon" style={{ background: 'rgba(56, 189, 248, 0.1)', color: '#38bdf8', padding: '16px', borderRadius: '12px', fontSize: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <FaShoppingBag />
@@ -113,6 +115,7 @@ function SuperAdminIntegrationHealth() {
             <small style={{ color: 'var(--text-secondary)' }}>WooCommerce shops</small>
           </div>
         </div>
+        */}
 
         <div className="stat-card" style={{ background: 'var(--bg-card)', border: '1px solid var(--border-subtle)', borderRadius: '16px', padding: '20px', display: 'flex', alignItems: 'center', gap: '16px' }}>
           <div className="stat-icon" style={{ background: 'rgba(16, 185, 129, 0.1)', color: '#10b981', padding: '16px', borderRadius: '12px', fontSize: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -157,8 +160,8 @@ function SuperAdminIntegrationHealth() {
             <thead>
               <tr>
                 <th>Merchant</th>
-                <th>Shopify Status</th>
-                <th>WooCommerce Status</th>
+                {/* <th>Shopify Status</th> */}
+                {/* <th>WooCommerce Status</th> */}
                 <th>Last Sync</th>
                 <th>Status</th>
                 <th>Action</th>
@@ -167,7 +170,7 @@ function SuperAdminIntegrationHealth() {
             <tbody>
               {filteredMerchants.length === 0 ? (
                 <tr>
-                  <td colSpan="6" className="super-admin-empty">
+                  <td colSpan="4" className="super-admin-empty">
                     No merchants found matching &quot;{searchQuery}&quot;
                   </td>
                 </tr>
@@ -180,6 +183,7 @@ function SuperAdminIntegrationHealth() {
                         <span className="user-info-email">{merchant.email}</span>
                       </div>
                     </td>
+                    {/*
                     <td>
                       <span 
                         className="badge" 
@@ -202,6 +206,7 @@ function SuperAdminIntegrationHealth() {
                         {merchant.wooStatus}
                       </span>
                     </td>
+                    */}
                     <td>
                       {merchant.lastSync 
                         ? new Date(merchant.lastSync).toLocaleString() 

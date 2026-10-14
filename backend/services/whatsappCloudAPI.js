@@ -59,29 +59,58 @@ class WhatsAppCloudAPI {
     const admin = await Admin.findById(adminId).select('+whatsappAccessToken +whatsappBusinessAccountId +whatsappPhoneNumberId');
     if (!admin) throw new Error('Merchant account not found.');
 
-    const periods = new Set(['today', 'last_7_days', 'this_month']);
+    const periods = new Set(['today', 'last_7_days', 'last_30_days', 'this_month', 'last_month']);
     if (!periods.has(timeRange)) throw new Error('Unsupported analytics period.');
     const now = new Date();
     const monthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
     const todayStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
-    const start = timeRange === 'today' ? todayStart : timeRange === 'last_7_days'
-      ? new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - 6)) : monthStart;
+    let start = monthStart;
+    let end = now;
+    if (timeRange === 'today') {
+      start = todayStart;
+    } else if (timeRange === 'last_7_days') {
+      start = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - 6));
+    } else if (timeRange === 'last_30_days') {
+      start = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - 29));
+    } else if (timeRange === 'last_month') {
+      start = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 1, 1));
+      end = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 0, 23, 59, 59));
+    }
+
+    const billingUrl = admin.whatsappBusinessAccountId
+      ? `https://business.facebook.com/latest/billing_hub/accounts/?asset_id=${admin.whatsappBusinessAccountId}`
+      : 'https://business.facebook.com/latest/billing_hub/accounts';
+
     const base = {
       period: timeRange, currency: null, source: 'unavailable', totalEstimatedCost: null,
       categories: {}, dailyBreakdown: [], freeTier: { used: 0, limit: 1000, phones: [] },
-      localDeliveredMessages: 0, reconciliation: null, metaBillingUrl: 'https://business.facebook.com/billing_hub'
+      localDeliveredMessages: 0, reconciliation: null, metaBillingUrl: billingUrl,
+      wabaId: admin.whatsappBusinessAccountId || null,
+      accountName: null
     };
     if (!admin.whatsappConnected || !admin.whatsappAccessToken || !admin.whatsappBusinessAccountId) {
       return { ...base, source: 'not_connected', warning: 'Connect your own Meta WhatsApp Business account to see messaging charges.' };
     }
 
     const credentials = { accessToken: admin.whatsappAccessToken, businessAccountId: admin.whatsappBusinessAccountId };
+    
+    let accountName = null;
+    try {
+      const wabaInfo = await axios.get(`https://graph.facebook.com/v20.0/${admin.whatsappBusinessAccountId}`, {
+        params: { fields: 'id,name,currency,timezone_id' },
+        headers: { Authorization: `Bearer ${admin.whatsappAccessToken}` },
+        timeout: 5000
+      });
+      accountName = wabaInfo.data?.name || null;
+    } catch (_) {}
+    base.accountName = accountName;
+
     let localDeliveredMessages = 0;
     try {
       const local = await Conversation.aggregate([
         { $match: { admin: admin._id } },
         { $unwind: '$messages' },
-        { $match: { 'messages.role': 'assistant', 'messages.status': { $in: ['delivered', 'read'] }, 'messages.timestamp': { $gte: start, $lte: now } } },
+        { $match: { 'messages.role': 'assistant', 'messages.status': { $in: ['delivered', 'read'] }, 'messages.timestamp': { $gte: start, $lte: end } } },
         { $count: 'count' }
       ]);
       localDeliveredMessages = local[0]?.count || 0;
@@ -90,7 +119,7 @@ class WhatsAppCloudAPI {
     }
 
     try {
-      const current = await this.fetchConversationAnalytics(start, now, credentials);
+      const current = await this.fetchConversationAnalytics(start, end, credentials);
       if (!Object.prototype.hasOwnProperty.call(current || {}, 'pricing_analytics')) {
         throw new Error('Meta did not return pricing_analytics.');
       }
@@ -99,6 +128,9 @@ class WhatsAppCloudAPI {
       const currency = metaCurrency;
       const inrRates = getConfiguredInrRates();
       const result = summarize(points, { currency, inrRates, period: timeRange, localDeliveredMessages, phoneNumberId: admin.whatsappPhoneNumberId });
+      result.wabaId = admin.whatsappBusinessAccountId;
+      result.accountName = accountName;
+      result.metaBillingUrl = billingUrl;
       result.reconciliation = {
         metaDeliveredMessages: Object.values(result.categories).reduce((sum, item) => sum + item.count, 0),
         localDeliveredReplies: localDeliveredMessages,
@@ -118,7 +150,7 @@ class WhatsAppCloudAPI {
         }
       }
       if (!points.length) {
-        result.warning = 'Meta has not reported pricing activity for this period yet. Analytics may be delayed.';
+        result.warning = 'Meta has not reported pricing activity for this period yet. Analytics may be delayed, or usage occurred in an earlier billing period.';
       } else if (result.source === 'unavailable') {
         result.warning = 'Meta returned volume but not cost. No verified rate card is configured for this billing currency/market, so no amount is shown.';
       } else if (result.source === 'rate_card_estimate') {
@@ -134,10 +166,16 @@ class WhatsAppCloudAPI {
       return result;
     } catch (error) {
       const status = error.response?.status;
+      const metaErr = error.response?.data?.error;
+      const metaMsg = metaErr?.message || '';
+      const isPermError = status === 401 || status === 403 || metaMsg.toLowerCase().includes('permission') || metaMsg.toLowerCase().includes('management');
       return {
         ...base, localDeliveredMessages,
-        warning: status === 401 || status === 403
-          ? 'Meta denied analytics access. Check your WhatsApp token and analytics permissions.'
+        wabaId: admin.whatsappBusinessAccountId,
+        accountName,
+        metaBillingUrl: billingUrl,
+        warning: isPermError
+          ? 'Meta requires the "whatsapp_business_management" permission on your Access Token to load live pricing analytics. Please verify permissions in Meta Developer Console.'
           : 'Meta pricing analytics is temporarily unavailable. Your Meta invoice remains the source of truth.'
       };
     }

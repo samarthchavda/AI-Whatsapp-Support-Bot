@@ -7,8 +7,8 @@ const ALLOWED_CATEGORIES = new Set(['MARKETING', 'UTILITY', 'AUTHENTICATION']);
 
 exports.getCostAnalytics = async (req, res) => {
   const period = req.query.period || 'this_month';
-  if (!['today', 'last_7_days', 'this_month'].includes(period)) {
-    return res.status(400).json({ success: false, error: 'Choose today, last_7_days, or this_month.' });
+  if (!['today', 'last_7_days', 'last_30_days', 'this_month', 'last_month'].includes(period)) {
+    return res.status(400).json({ success: false, error: 'Choose today, last_7_days, last_30_days, this_month, or last_month.' });
   }
   try {
     const data = await whatsappCloudAPI.getEstimatedCosts(req.admin._id, period);

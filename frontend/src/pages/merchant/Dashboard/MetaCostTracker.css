@@ -164,6 +164,23 @@
   color: #94a3b8 !important;
 }
 
+.meta-cost-account-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 11px;
+  border-radius: 20px;
+  background: rgba(99, 102, 241, 0.15);
+  border: 1px solid rgba(99, 102, 241, 0.35);
+  color: #c7d2fe !important;
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.meta-cost-account-pill strong {
+  color: #ffffff !important;
+}
+
 /* Metrics Grid (The 4 Cards) */
 .meta-cost-metrics {
   display: grid;
@@ -372,6 +389,39 @@
   color: #fbbf24 !important;
   font-size: 16px;
   flex-shrink: 0;
+}
+
+.meta-cost-billing-note {
+  margin-top: 16px;
+  padding: 14px 18px;
+  border-radius: 12px;
+  background: rgba(30, 41, 59, 0.7);
+  border: 1px solid #283955;
+  color: #cbd5e1 !important;
+  font-size: 13px;
+  line-height: 1.5;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.meta-cost-billing-note > svg {
+  color: #60a5fa !important;
+  font-size: 16px;
+  flex-shrink: 0;
+  margin-top: 3px;
+}
+
+.meta-cost-billing-note strong {
+  color: #ffffff !important;
+}
+
+.meta-cost-billing-note a {
+  color: #38bdf8 !important;
+  text-decoration: underline;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
 }
 
 /* Disclaimer at bottom */

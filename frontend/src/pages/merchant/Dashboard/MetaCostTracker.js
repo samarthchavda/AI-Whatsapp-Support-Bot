@@ -16,7 +16,9 @@ import './MetaCostTracker.css';
 const periods = [
   { value: 'today', label: 'Today' },
   { value: 'last_7_days', label: 'Last 7 days' },
-  { value: 'this_month', label: 'This month' }
+  { value: 'last_30_days', label: 'Last 30 days' },
+  { value: 'this_month', label: 'This month' },
+  { value: 'last_month', label: 'Last month' }
 ];
 
 const money = (value, currency = 'INR') => {
@@ -92,6 +94,9 @@ function MetaCostTracker() {
   const freeTier = analytics?.freeTier;
   const progress = freeTier?.used != null && freeTier?.limit ? Math.min(100, Math.round((freeTier.used / freeTier.limit) * 100)) : 0;
   const periodLabel = periods.find((item) => item.value === period)?.label || 'This month';
+  const metaBillingUrl = analytics?.metaBillingUrl || (analytics?.wabaId
+    ? `https://business.facebook.com/latest/billing_hub/accounts/?asset_id=${analytics.wabaId}`
+    : 'https://business.facebook.com/latest/billing_hub/accounts');
 
   return (
     <section className="meta-cost-tracker" aria-label="Meta WhatsApp messaging costs">
@@ -112,12 +117,12 @@ function MetaCostTracker() {
             <FaSyncAlt className={loading ? 'meta-cost-spin' : ''} /> Refresh
           </button>
           <a
-            href={analytics?.metaBillingUrl || 'https://business.facebook.com/billing_hub'}
+            href={metaBillingUrl}
             target="_blank"
             rel="noopener noreferrer"
             className="meta-cost-billing-link"
           >
-            View invoices in Meta Business Suite <FaExternalLinkAlt />
+            View invoices & balance in Meta <FaExternalLinkAlt />
           </a>
         </div>
       </div>
@@ -154,6 +159,16 @@ function MetaCostTracker() {
                 ? 'Rate-card estimated charges'
                 : 'Meta Cloud API Charges'}
             </span>
+            {analytics?.accountName && (
+              <span className="meta-cost-account-pill">
+                Account: <strong>{analytics.accountName}</strong> {analytics?.wabaId ? `(ID: ${analytics.wabaId})` : ''}
+              </span>
+            )}
+            {!analytics?.accountName && analytics?.wabaId && (
+              <span className="meta-cost-account-pill">
+                WABA ID: <strong>{analytics.wabaId}</strong>
+              </span>
+            )}
             <span className="meta-cost-source-period">· {periodLabel} (UTC)</span>
           </div>
 
@@ -240,7 +255,7 @@ function MetaCostTracker() {
                 </table>
               </div>
             ) : (
-              <p className="meta-cost-no-activity">No Meta messaging charges reported for this period yet.</p>
+              <p className="meta-cost-no-activity">No Meta messaging charges reported for this period ({periodLabel}) yet.</p>
             )}
           </div>
 
@@ -250,6 +265,13 @@ function MetaCostTracker() {
               <span>{analytics.warning}</span>
             </div>
           )}
+
+          <div className="meta-cost-billing-note">
+            <FaInfoCircle />
+            <div>
+              <strong>Billing Note:</strong> The current balance in your Meta Billing Hub (e.g. unbilled ₹22.44 on your Visa card) reflects total unpaid charges awaiting Meta's auto-debit threshold. The cards above show delivered message charges for the selected period (<strong>{periodLabel}</strong>).
+            </div>
+          </div>
         </>
       )}
 

@@ -41,17 +41,17 @@
 }
 
 .active-plan-card {
-  background: linear-gradient(135deg, #EEF6FF 0%, #E0EFFE 100%);
-  border-color: rgba(22, 119, 255, 0.3);
+  background: linear-gradient(135deg, #15171C 0%, #1A2230 100%);
+  border-color: rgba(40, 184, 242, 0.4);
 }
 
 .active-plan-card .card-badge {
   position: absolute;
   top: 24px;
   right: 28px;
-  background: rgba(22, 119, 255, 0.15);
-  border: 1px solid rgba(22, 119, 255, 0.3);
-  color: var(--brand, #1677FF);
+  background: rgba(40, 184, 242, 0.15);
+  border: 1px solid rgba(40, 184, 242, 0.4);
+  color: var(--brand, #28B8F2);
   font-size: 11px;
   padding: 4px 10px;
   border-radius: 20px;
@@ -180,7 +180,7 @@
 .progress-bar-container {
   width: 100%;
   height: 10px;
-  background: #E2E8F0;
+  background: #1A1D24;
   border-radius: 5px;
   overflow: hidden;
   margin-bottom: 20px;
@@ -189,6 +189,7 @@
 .progress-bar-fill {
   height: 100%;
   border-radius: 5px;
+  background: linear-gradient(90deg, #28B8F2, #38BDF8);
   transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
@@ -199,7 +200,7 @@
   font-size: 13px;
   background: rgba(245, 158, 11, 0.1);
   border: 1px solid rgba(245, 158, 11, 0.3);
-  color: #b45309;
+  color: #fbbf24;
   padding: 10px 14px;
   border-radius: 8px;
 }
@@ -211,7 +212,7 @@
   font-size: 13px;
   background: rgba(239, 68, 68, 0.1);
   border: 1px solid rgba(239, 68, 68, 0.3);
-  color: #dc2626;
+  color: #f87171;
   padding: 10px 14px;
   border-radius: 8px;
 }
@@ -224,12 +225,12 @@
 .section-title {
   font-size: 22px;
   font-weight: 700;
-  color: var(--text-primary, #101828);
+  color: var(--text-primary, #F8FAFC);
   margin: 0 0 6px 0;
 }
 
 .section-subtitle {
-  color: var(--text-secondary, #667085);
+  color: var(--text-secondary, #A1A1AA);
   font-size: 14px;
   margin: 0 0 28px 0;
 }
@@ -241,27 +242,27 @@
 }
 
 .upgrade-plan-card {
-  background: #FFFFFF;
-  border: 1px solid var(--border-subtle, #DCE6F2);
+  background: #15171C;
+  border: 1px solid var(--border-subtle, #292C33);
   border-radius: 16px;
   padding: 32px 28px;
   display: flex;
   flex-direction: column;
   position: relative;
   transition: all 0.25s ease;
-  box-shadow: 0 4px 20px rgba(16, 24, 40, 0.04);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
 }
 
 .upgrade-plan-card:hover {
   transform: translateY(-4px);
-  border-color: var(--brand, #1677FF);
-  box-shadow: 0 12px 30px rgba(22, 119, 255, 0.12);
+  border-color: var(--brand, #28B8F2);
+  box-shadow: 0 12px 30px rgba(40, 184, 242, 0.2);
 }
 
 .upgrade-plan-card.current {
-  border: 2px solid var(--brand, #1677FF);
-  background: linear-gradient(180deg, rgba(22, 119, 255, 0.04) 0%, #FFFFFF 100%);
-  box-shadow: 0 8px 30px rgba(22, 119, 255, 0.1);
+  border: 2px solid var(--brand, #28B8F2);
+  background: linear-gradient(180deg, rgba(40, 184, 242, 0.08) 0%, #15171C 100%);
+  box-shadow: 0 8px 30px rgba(40, 184, 242, 0.2);
 }
 
 .upgrade-badge {
@@ -351,20 +352,21 @@
 }
 
 .btn-upgrade {
-  background: var(--brand, #1677FF);
-  color: #ffffff;
+  background: var(--brand, #28B8F2);
+  color: #08090B;
+  font-weight: 700;
 }
 
 .btn-upgrade:hover:not(:disabled) {
-  background: var(--brand-dark, #0958D9);
+  background: var(--brand-dark, #0284C7);
   color: #ffffff;
-  box-shadow: 0 4px 12px rgba(22, 119, 255, 0.25);
+  box-shadow: 0 4px 12px rgba(40, 184, 242, 0.35);
 }
 
 .btn-current {
-  background: var(--brand-light, #EEF6FF);
-  color: var(--brand, #1677FF);
-  border: 1px solid rgba(22, 119, 255, 0.3);
+  background: rgba(40, 184, 242, 0.12);
+  color: var(--brand, #28B8F2);
+  border: 1px solid rgba(40, 184, 242, 0.3);
   cursor: default;
 }
 

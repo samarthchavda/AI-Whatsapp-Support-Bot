@@ -729,7 +729,7 @@ function ThemeHandler() {
   const location = useLocation();
 
   useEffect(() => {
-    document.body.classList.remove('dark-theme');
+    document.body.classList.add('dark-theme');
   }, [location.pathname]);
 
   return null;
@@ -770,7 +770,7 @@ function App() {
     return localStorage.getItem('sidebarOpen') === 'true';
   });
   const [theme, setTheme] = useState(() => {
-    return localStorage.getItem('dashboard-theme') || 'light';
+    return localStorage.getItem('dashboard-theme') || 'dark';
   });
 
   const handleToggleSidebar = () => {

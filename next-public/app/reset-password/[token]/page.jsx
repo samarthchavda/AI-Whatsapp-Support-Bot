@@ -113,7 +113,7 @@ export default function ResetPasswordPage() {
               <p style={{ color: '#a1a1aa', fontSize: '14px', marginBottom: '24px' }}>
                 Your password has been updated. Redirecting you to login...
               </p>
-              <Link href="/login" className="glowing-btn-white" style={{ display: 'inline-block', width: '100%', height: '44px', lineHeight: '44px', textAlign: 'center', fontSize: '14px' }}>
+              <Link href="/login" style={{ display: 'inline-block', width: '100%', height: '44px', lineHeight: '44px', textAlign: 'center', fontSize: '14px', fontWeight: '700', background: '#28B8F2', color: '#08090B', borderRadius: '12px', textDecoration: 'none', boxShadow: '0 4px 18px rgba(40, 184, 242, 0.35)' }}>
                 Go to Login Now
               </Link>
             </div>
@@ -184,12 +184,22 @@ export default function ResetPasswordPage() {
               <button
                 type="submit"
                 disabled={loading}
-                className="glowing-btn-white"
                 style={{
                   width: '100%',
                   marginTop: '10px',
                   height: '46px',
-                  fontSize: '15px'
+                  fontSize: '15px',
+                  fontWeight: '700',
+                  background: '#28B8F2',
+                  color: '#08090B',
+                  border: 'none',
+                  borderRadius: '12px',
+                  cursor: loading ? 'not-allowed' : 'pointer',
+                  boxShadow: '0 4px 18px rgba(40, 184, 242, 0.35)',
+                  transition: 'all 0.2s ease',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
                 }}
               >
                 {loading ? 'Updating password...' : 'Reset Password'}

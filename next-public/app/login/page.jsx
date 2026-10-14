@@ -177,12 +177,22 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={loading}
-              className="glowing-btn-white"
               style={{
                 width: '100%',
                 marginTop: '10px',
                 height: '46px',
-                fontSize: '15px'
+                fontSize: '15px',
+                fontWeight: '700',
+                background: '#28B8F2',
+                color: '#08090B',
+                border: 'none',
+                borderRadius: '12px',
+                cursor: loading ? 'not-allowed' : 'pointer',
+                boxShadow: '0 4px 18px rgba(40, 184, 242, 0.35)',
+                transition: 'all 0.2s ease',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
               }}
             >
               {loading ? 'Signing in...' : 'Sign in to Dashboard'}

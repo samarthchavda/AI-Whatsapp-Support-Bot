@@ -1152,11 +1152,7 @@ function App() {
                     />
                     <Route 
                       path="/broadcast" 
-                      element={
-                        <ProtectedFeatureRoute pageKey="broadcast" title="Broadcast Messages" requiredFeature="Broadcast Messaging">
-                          <Broadcast />
-                        </ProtectedFeatureRoute>
-                      } 
+                      element={<Broadcast />} 
                     />
                     <Route 
                       path="/knowledge-base" 

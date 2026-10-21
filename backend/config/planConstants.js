@@ -19,12 +19,12 @@ const PLAN_DEFINITIONS = {
       maxWhatsAppConnections: 1,
       maxKbUploads: 1,
       maxIntegrations: 1,
-      maxBroadcastMessages: 0,
-      maxBroadcastCampaigns: 0,
-      broadcastingAccess: false,
-      scheduledBroadcasts: false,
-      audienceSegmentation: false,
-      broadcastAnalytics: 'none',
+      maxBroadcastMessages: 5000,
+      maxBroadcastCampaigns: 20,
+      broadcastingAccess: true,
+      scheduledBroadcasts: true,
+      audienceSegmentation: true,
+      broadcastAnalytics: 'basic',
       advancedAnalytics: false,
       escalations: true,
       orderCancellation: false,
@@ -137,12 +137,12 @@ const PLAN_DEFINITIONS = {
       maxApiKeys: 0,
       maxKbUploads: 1,
       maxIntegrations: 1,
-      maxBroadcastMessages: 0,
-      maxBroadcastCampaigns: 0,
-      broadcastingAccess: false,
-      scheduledBroadcasts: false,
-      audienceSegmentation: false,
-      broadcastAnalytics: 'none',
+      maxBroadcastMessages: 5000,
+      maxBroadcastCampaigns: 20,
+      broadcastingAccess: true,
+      scheduledBroadcasts: true,
+      audienceSegmentation: true,
+      broadcastAnalytics: 'basic',
       advancedAnalytics: false,
       escalations: true,
       orderCancellation: false,
@@ -207,6 +207,10 @@ function normalizePlanName(planName) {
  * @returns {boolean}
  */
 function isFeatureAllowed(rawPlanName, featureKey) {
+  // Broadcasting is accessible to all admin users platform-wide
+  if (featureKey === 'broadcastingAccess') {
+    return true;
+  }
   const planKey = normalizePlanName(rawPlanName);
   const def = PLAN_DEFINITIONS[planKey] || PLAN_DEFINITIONS.starter;
   return Boolean(def.features[featureKey]);

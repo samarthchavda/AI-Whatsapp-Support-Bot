@@ -10,7 +10,7 @@ class WhatsAppCloudAPI {
     this.phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID || 'YOUR_PHONE_NUMBER_ID';
     this.businessAccountId = process.env.WHATSAPP_BUSINESS_ACCOUNT_ID || 'YOUR_BUSINESS_ACCOUNT_ID';
     this.webhookVerifyToken = process.env.WEBHOOK_VERIFY_TOKEN || 'webhook_token_123';
-    this.baseUrl = 'https://graph.facebook.com/v18.0';
+    this.baseUrl = 'https://graph.facebook.com/v21.0';
     this.isConfigured = this.accessToken !== 'YOUR_ACCESS_TOKEN' && this.phoneNumberId !== 'YOUR_PHONE_NUMBER_ID';
   }
 
@@ -258,6 +258,9 @@ class WhatsAppCloudAPI {
       const url = `${this.baseUrl}/${phoneNumberId}/messages`;
       
       let formattedPhone = phoneNumber.toString().replace(/\D/g, '');
+      if (formattedPhone.length === 11 && formattedPhone.startsWith('0')) {
+        formattedPhone = formattedPhone.substring(1);
+      }
       if (formattedPhone.length === 10 && /^[6-9]/.test(formattedPhone)) {
         formattedPhone = '91' + formattedPhone;
       }
@@ -419,6 +422,9 @@ class WhatsAppCloudAPI {
       const url = `${this.baseUrl}/${phoneNumberId}/messages`;
 
       let formattedPhone = phoneNumber.toString().replace(/\D/g, '');
+      if (formattedPhone.length === 11 && formattedPhone.startsWith('0')) {
+        formattedPhone = formattedPhone.substring(1);
+      }
       if (formattedPhone.length === 10 && /^[6-9]/.test(formattedPhone)) {
         formattedPhone = '91' + formattedPhone;
       }

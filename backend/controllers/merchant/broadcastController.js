@@ -34,6 +34,15 @@ exports.createBroadcast = async (req, res) => {
       });
     }
 
+    // Verify merchant WhatsApp connection upfront
+    if (!req.admin.whatsappConnected || !req.admin.whatsappAccessToken || !req.admin.whatsappPhoneNumberId) {
+      if (req.file) await fs.unlink(req.file.path).catch(() => {});
+      return res.status(400).json({
+        success: false,
+        error: 'Your WhatsApp Business account is not connected. Please connect your WhatsApp account in WhatsApp Connect before sending broadcasts.'
+      });
+    }
+
     const subscriptionService = require('../../services/subscriptionService');
     const isBroadcastingAllowed = subscriptionService.isFeatureAllowed(req.admin.subscriptionPlan, 'broadcastingAccess');
     if (!isBroadcastingAllowed) {
@@ -73,14 +82,6 @@ exports.createBroadcast = async (req, res) => {
         await fs.unlink(req.file.path).catch(() => {});
       }
 
-      // Check plan restriction: Starter plan is blocked from direct CRM import
-      if (req.admin.subscriptionPlan === 'starter') {
-        return res.status(403).json({
-          success: false,
-          error: 'Direct import from Orders is not available on the Starter plan. Please upgrade to a higher plan.'
-        });
-      }
-
       // Fetch from orders
       const Order = require('../../models/Order');
       const orders = await Order.find({ admin: req.admin._id });
@@ -88,9 +89,11 @@ exports.createBroadcast = async (req, res) => {
       const contactsMap = new Map();
       orders.forEach(order => {
         if (order.customerPhone) {
-          const phone = order.customerPhone.toString().trim().replace(/\s+/g, '');
+          let phone = order.customerPhone.toString().trim().replace(/\D/g, '');
+          if (phone.length === 11 && phone.startsWith('0')) phone = phone.substring(1);
+          if (phone.length === 10 && /^[6-9]/.test(phone)) phone = '91' + phone;
           // Filter out missing, invalid, or obviously placeholder numbers (e.g. less than 6 digits)
-          if (phone && phone.length > 5 && !phone.includes('undefined') && !phone.includes('null')) {
+          if (phone && phone.length > 7 && !phone.includes('undefined') && !phone.includes('null')) {
             const name = order.customerName || 'Customer';
             contactsMap.set(phone, name);
           }
@@ -115,14 +118,6 @@ exports.createBroadcast = async (req, res) => {
         await fs.unlink(req.file.path).catch(() => {});
       }
 
-      // Check plan restriction
-      if (req.admin.subscriptionPlan === 'starter') {
-        return res.status(403).json({
-          success: false,
-          error: 'Direct import from Abandoned Carts is not available on the Starter plan. Please upgrade to a higher plan.'
-        });
-      }
-
       // Fetch from abandoned carts
       const AbandonedCart = require('../../models/AbandonedCart');
       const carts = await AbandonedCart.find({ admin: req.admin._id });
@@ -130,8 +125,10 @@ exports.createBroadcast = async (req, res) => {
       const contactsMap = new Map();
       carts.forEach(cart => {
         if (cart.customerPhone) {
-          const phone = cart.customerPhone.toString().trim().replace(/\s+/g, '');
-          if (phone && phone.length > 5 && !phone.includes('undefined') && !phone.includes('null')) {
+          let phone = cart.customerPhone.toString().trim().replace(/\D/g, '');
+          if (phone.length === 11 && phone.startsWith('0')) phone = phone.substring(1);
+          if (phone.length === 10 && /^[6-9]/.test(phone)) phone = '91' + phone;
+          if (phone && phone.length > 7 && !phone.includes('undefined') && !phone.includes('null')) {
             const name = cart.customerName || 'Customer';
             // Only set if not already present (deduplication — first entry wins)
             if (!contactsMap.has(phone)) {
@@ -200,7 +197,7 @@ exports.createBroadcast = async (req, res) => {
     }
 
     let finalTemplateName = req.body.templateName || null;
-    let finalTemplateLanguage = req.body.templateLanguage || 'en';
+    let finalTemplateLanguage = req.body.templateLanguage || null;
     let finalTemplateParams = req.body.templateParams ? (Array.isArray(req.body.templateParams) ? req.body.templateParams : [req.body.templateParams]) : [];
 
     const Template = require('../../models/Template');
@@ -208,7 +205,16 @@ exports.createBroadcast = async (req, res) => {
       const foundTpl = await Template.findById(req.body.templateId).catch(() => null);
       if (foundTpl) {
         finalTemplateName = foundTpl.name;
-        finalTemplateLanguage = foundTpl.language || 'en';
+        finalTemplateLanguage = foundTpl.language || finalTemplateLanguage || 'en_US';
+      }
+    }
+
+    if (finalTemplateName && !finalTemplateLanguage) {
+      const foundByName = await Template.findOne({ adminId: req.admin._id, name: finalTemplateName }).catch(() => null);
+      if (foundByName) {
+        finalTemplateLanguage = foundByName.language || 'en_US';
+      } else {
+        finalTemplateLanguage = 'en_US';
       }
     }
 
@@ -229,13 +235,22 @@ exports.createBroadcast = async (req, res) => {
           if (score >= 3 && score > maxScore) {
             maxScore = score;
             finalTemplateName = tpl.name;
-            finalTemplateLanguage = tpl.language || 'en';
+            finalTemplateLanguage = tpl.language || 'en_US';
           }
         }
       }
       if (finalTemplateName) {
         console.log(`✨ Auto-matched message to approved template "${finalTemplateName}" (score: ${maxScore})`);
+      } else if (approvedTemplates.length === 1) {
+        // If merchant only has 1 approved template, safely default to it to guarantee 24h delivery
+        finalTemplateName = approvedTemplates[0].name;
+        finalTemplateLanguage = approvedTemplates[0].language || 'en_US';
+        console.log(`✨ Single approved template found: defaulting broadcast to "${finalTemplateName}" (${finalTemplateLanguage})`);
       }
+    }
+
+    if (!finalTemplateLanguage) {
+      finalTemplateLanguage = 'en_US';
     }
 
     let headerImageUrl = req.body.headerImageUrl || null;
@@ -372,8 +387,14 @@ async function parseCSVFile(filePath) {
 
         if (phone) {
           // Normalize phone number
-          const normalizedPhone = phone.toString().trim().replace(/\s+/g, '');
-          if (normalizedPhone) {
+          let normalizedPhone = phone.toString().trim().replace(/\D/g, '');
+          if (normalizedPhone.length === 11 && normalizedPhone.startsWith('0')) {
+            normalizedPhone = normalizedPhone.substring(1);
+          }
+          if (normalizedPhone.length === 10 && /^[6-9]/.test(normalizedPhone)) {
+            normalizedPhone = '91' + normalizedPhone;
+          }
+          if (normalizedPhone && normalizedPhone.length >= 8) {
             recipients.push({
               phone: normalizedPhone,
               name: name.toString().trim()

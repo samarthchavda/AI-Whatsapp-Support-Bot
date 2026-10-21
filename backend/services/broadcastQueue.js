@@ -31,15 +31,25 @@ async function sendBroadcastWithoutQueue(broadcastId) {
     broadcast.startedAt = new Date();
     await broadcast.save();
 
-    // Auto-detect templateName if not explicitly set
-    if (!broadcast.templateName) {
+    const Template = require('../models/Template');
+    let matchedTemplate = null;
+
+    if (broadcast.templateName) {
+      matchedTemplate = await Template.findOne({ adminId: broadcast.admin, name: broadcast.templateName });
+      if (!matchedTemplate) {
+        matchedTemplate = await Template.findOne({ name: broadcast.templateName });
+      }
+      if (matchedTemplate) {
+        broadcast.templateLanguage = matchedTemplate.language || broadcast.templateLanguage || 'en_US';
+        await broadcast.save().catch(() => {});
+      }
+    } else {
+      // Auto-detect templateName if not explicitly set
       try {
-        const Template = require('../models/Template');
         const approvedTemplates = await Template.find({ adminId: broadcast.admin, status: 'APPROVED' });
         const getKeywords = (txt) => (txt || '').toLowerCase().replace(/\{\{[^}]+\}\}/g, ' ').replace(/[^a-z0-9]/g, ' ').split(/\s+/).filter(w => w.length > 3);
         const msgWords = new Set(getKeywords(broadcast.message));
         let maxScore = 0;
-        let matchedTpl = null;
 
         for (const tpl of approvedTemplates) {
           const bodyComp = (tpl.components || []).find(c => c.type === 'BODY');
@@ -51,20 +61,37 @@ async function sendBroadcastWithoutQueue(broadcastId) {
             }
             if (score >= 3 && score > maxScore) {
               maxScore = score;
-              matchedTpl = tpl;
+              matchedTemplate = tpl;
             }
           }
         }
 
-        if (matchedTpl) {
-          broadcast.templateName = matchedTpl.name;
-          broadcast.templateLanguage = matchedTpl.language || 'en';
+        if (!matchedTemplate && approvedTemplates.length === 1) {
+          matchedTemplate = approvedTemplates[0];
+        }
+
+        if (matchedTemplate) {
+          broadcast.templateName = matchedTemplate.name;
+          broadcast.templateLanguage = matchedTemplate.language || 'en_US';
           await broadcast.save().catch(() => {});
-          console.log(`✨ Auto-detected Meta template "${matchedTpl.name}" for broadcast ${broadcast._id} (score: ${maxScore})`);
+          console.log(`✨ Using Meta template "${matchedTemplate.name}" (${broadcast.templateLanguage}) for broadcast ${broadcast._id}`);
         }
       } catch (detectErr) {
         console.error('Template auto-detection error:', detectErr.message);
       }
+    }
+
+    // Inspect template to know exact number of variables expected in body
+    let expectedParamCount = 0;
+    if (matchedTemplate && Array.isArray(matchedTemplate.components)) {
+      const bodyComp = matchedTemplate.components.find(c => c.type === 'BODY');
+      if (bodyComp && bodyComp.text) {
+        const varMatches = bodyComp.text.match(/\{\{\d+\}\}/g) || [];
+        expectedParamCount = varMatches.length;
+      }
+    } else if (broadcast.templateName) {
+      const hasPlaceholders = /\{\{(\d+|name)\}\}/i.test(broadcast.message || '');
+      expectedParamCount = hasPlaceholders ? 1 : 0;
     }
 
     // Send messages sequentially
@@ -76,35 +103,42 @@ async function sendBroadcastWithoutQueue(broadcastId) {
         continue;
       }
 
+      // Normalize recipient phone number
+      let targetPhone = (recipient.phone || '').toString().trim().replace(/\D/g, '');
+      if (targetPhone.length === 11 && targetPhone.startsWith('0')) {
+        targetPhone = targetPhone.substring(1);
+      }
+      if (targetPhone.length === 10 && /^[6-9]/.test(targetPhone)) {
+        targetPhone = '91' + targetPhone;
+      }
+
       try {
         let sendResult;
 
         if (broadcast.templateName) {
           let params = [];
-          const hasPlaceholders = /\{\{(\d+|name)\}\}/i.test(broadcast.message || '');
-          if (hasPlaceholders || (broadcast.templateParams && broadcast.templateParams.length > 0) || broadcast.templateName === 'studypoint_coding_offer') {
-            params = [
-              recipient.name || 'there',
-              ...(broadcast.templateParams || [])
-            ];
-            if (params.length === 1 && (broadcast.templateName === 'studypoint_coding_offer' || broadcast.message.includes('50%'))) {
-              params.push('All', '50%');
+          if (expectedParamCount > 0) {
+            params.push(recipient.name || 'there');
+            if (expectedParamCount > 1 && Array.isArray(broadcast.templateParams)) {
+              for (let pIdx = 0; pIdx < expectedParamCount - 1; pIdx++) {
+                params.push(broadcast.templateParams[pIdx] || '');
+              }
             }
           }
 
-          console.log(`📤 Sending WhatsApp TEMPLATE [${broadcast.templateName}] to ${recipient.phone}...`);
+          console.log(`📤 Sending WhatsApp TEMPLATE [${broadcast.templateName}] (${broadcast.templateLanguage || 'en_US'}) with ${params.length} params to ${targetPhone}...`);
           sendResult = await whatsappCloudAPI.sendTemplateMessage(
-            recipient.phone,
+            targetPhone,
             broadcast.templateName,
-            broadcast.templateLanguage || 'en',
+            broadcast.templateLanguage || 'en_US',
             params,
             customCredentials,
             broadcast.headerImageUrl
           );
         } else {
           const personalizedMessage = broadcast.message.replace(/{{name}}/gi, recipient.name || 'there');
-          console.log(`📤 Sending actual WhatsApp text broadcast to ${recipient.phone}: ${personalizedMessage.substring(0, 50)}...`);
-          sendResult = await whatsappCloudAPI.sendMessage(recipient.phone, personalizedMessage, customCredentials);
+          console.log(`📤 Sending actual WhatsApp text broadcast to ${targetPhone}: ${personalizedMessage.substring(0, 50)}...`);
+          sendResult = await whatsappCloudAPI.sendMessage(targetPhone, personalizedMessage, customCredentials);
         }
 
         if (sendResult && sendResult.success) {

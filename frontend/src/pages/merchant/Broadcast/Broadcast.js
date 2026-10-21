@@ -16,6 +16,7 @@ function Broadcast() {
   const [headerImageUrl, setHeaderImageUrl] = useState('');
   const [previewImageFileUrl, setPreviewImageFileUrl] = useState('');
   const [selectedTemplate, setSelectedTemplate] = useState(null);
+  const [syncingTemplates, setSyncingTemplates] = useState(false);
 
   const plan = (JSON.parse(localStorage.getItem('admin') || '{}')?.subscriptionPlan || 'starter').toLowerCase();
   // CRM Automation is intentionally CSV-only for now. CRM data imports and
@@ -70,6 +71,21 @@ function Broadcast() {
       }
     } catch (err) {
       // silent
+    }
+  };
+
+  const handleSyncTemplates = async () => {
+    try {
+      setSyncingTemplates(true);
+      const res = await api.post('/whatsapp/templates/sync');
+      if (res.data.success) {
+        await fetchApprovedTemplates();
+        alert('Templates successfully synced from Meta API! ✅');
+      }
+    } catch (err) {
+      alert(err.response?.data?.error || 'Failed to sync templates from Meta.');
+    } finally {
+      setSyncingTemplates(false);
     }
   };
 
@@ -331,7 +347,33 @@ function Broadcast() {
               </div>
 
               <div className="filter-group" style={{ gridColumn: 'span 2' }}>
-                <label>Select Meta Approved Template (Required for 24h+ Broadcasts)</label>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px', flexWrap: 'wrap', gap: '8px' }}>
+                  <label style={{ margin: 0 }}>Select Meta Approved Template (Required for 24h+ Broadcasts)</label>
+                  <button
+                    type="button"
+                    onClick={handleSyncTemplates}
+                    disabled={syncingTemplates}
+                    style={{
+                      background: 'rgba(99, 102, 241, 0.15)',
+                      border: '1px solid rgba(99, 102, 241, 0.4)',
+                      color: '#a5b4fc',
+                      borderRadius: '8px',
+                      padding: '4px 12px',
+                      fontSize: '12px',
+                      cursor: 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '6px'
+                    }}
+                  >
+                    <FaRedo className={syncingTemplates ? 'fa-spin' : ''} style={{ fontSize: '10px' }} />
+                    {syncingTemplates ? 'Syncing...' : 'Sync from Meta'}
+                  </button>
+                </div>
+
+                <input type="hidden" name="templateLanguage" value={selectedTemplate?.language || 'en_US'} />
+                <input type="hidden" name="templateId" value={selectedTemplate?._id || ''} />
+
                 <select
                   name="templateName"
                   onChange={(e) => {
@@ -368,14 +410,26 @@ function Broadcast() {
                     const isImageTpl = tpl.components?.some(c => c.type === 'HEADER' && (c.format === 'IMAGE' || c.text === '[IMAGE]'));
                     return (
                       <option key={tpl._id} value={tpl.name}>
-                        {isImageTpl ? '📸 ' : ''}{tpl.name} ({tpl.category}) {isImageTpl ? '[Image Template]' : ''}
+                        {isImageTpl ? '📸 ' : ''}{tpl.name} ({tpl.language || 'en_US'} · {tpl.category}) {isImageTpl ? '[Image Header]' : ''}
                       </option>
                     );
                   })}
                 </select>
-                <small style={{ color: '#a1a1aa', fontSize: '12px', marginTop: '4px', display: 'block' }}>
-                  Selecting a template auto-populates the message box and formats the payload for Meta API approval.
-                </small>
+
+                {selectedTemplate ? (
+                  <div style={{ marginTop: '8px', padding: '8px 12px', background: 'rgba(16, 185, 129, 0.1)', border: '1px solid rgba(16, 185, 129, 0.25)', borderRadius: '8px', fontSize: '12px', color: '#34d399', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <span>✅ Active Template: <strong>{selectedTemplate.name}</strong> ({selectedTemplate.language || 'en_US'})</span>
+                    <span>Category: {selectedTemplate.category}</span>
+                  </div>
+                ) : approvedTemplates.length === 0 ? (
+                  <small style={{ color: '#fbbf24', fontSize: '12px', marginTop: '6px', display: 'block' }}>
+                    ⚠️ No local templates found. Click <strong>"Sync from Meta"</strong> above to pull your approved WhatsApp templates.
+                  </small>
+                ) : (
+                  <small style={{ color: '#a1a1aa', fontSize: '12px', marginTop: '4px', display: 'block' }}>
+                    Selecting a template auto-populates the message box and guarantees 100% delivery outside the 24-hour service window.
+                  </small>
+                )}
               </div>
 
               {/* Header Image (Dynamically shown ONLY when an Image Template is selected or media attached) */}

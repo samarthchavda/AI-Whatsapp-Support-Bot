@@ -7,7 +7,7 @@ const { CANONICAL_PERMISSIONS } = require('./permissions');
 const PERMISSION_PROFILES = {
   // 1. Preserved Standard CRM Profiles (Starter, Growth, Scale)
   starter: {
-    pages: ['dashboard', 'conversations', 'knowledge-base', 'integrations', 'profile', 'billing'],
+    pages: ['dashboard', 'conversations', 'knowledge-base', 'broadcast', 'integrations', 'profile', 'billing'],
     permissions: [
       CANONICAL_PERMISSIONS.USAGE_VIEW,
       CANONICAL_PERMISSIONS.BILLING_VIEW,
@@ -51,6 +51,7 @@ const PERMISSION_PROFILES = {
       'live-chat',
       'whatsapp-connection',
       'conversations',
+      'broadcast',
       'usage',
       'billing',
       'settings'
@@ -213,7 +214,7 @@ const PERMISSION_PROFILES = {
 
   // Default Fallback Profile
   default: {
-    pages: ['dashboard', 'conversations', 'profile', 'billing'],
+    pages: ['dashboard', 'conversations', 'broadcast', 'profile', 'billing'],
     permissions: [
       CANONICAL_PERMISSIONS.USAGE_VIEW,
       CANONICAL_PERMISSIONS.BILLING_VIEW,

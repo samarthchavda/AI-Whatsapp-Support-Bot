@@ -16,7 +16,7 @@ async function main() {
   const twoYearsFuture = new Date();
   twoYearsFuture.setFullYear(twoYearsFuture.getFullYear() + 2);
 
-  // 1. Specifically update target user chavdasamarth4@gmail.com
+  // 1. Specifically update ONLY target user chavdasamarth4@gmail.com
   const user = await Admin.findOne({ email: targetEmail });
   if (user) {
     user.subscriptionPlan = 'scale';
@@ -32,25 +32,7 @@ async function main() {
     console.log(`⚠️ User ${targetEmail} not found in database.`);
   }
 
-  // 2. Also renew all other admin users whose subscription is marked expired
-  const now = new Date();
-  const res = await Admin.updateMany(
-    {
-      role: { $ne: 'super_admin' },
-      $or: [
-        { subscriptionEndDate: { $lt: now } },
-        { subscriptionStatus: 'inactive' },
-        { subscriptionStatus: 'expired' }
-      ]
-    },
-    {
-      $set: {
-        subscriptionStatus: 'active',
-        subscriptionEndDate: twoYearsFuture
-      }
-    }
-  );
-  console.log(`✅ Updated ${res.modifiedCount} expired admin accounts to active status.`);
+  console.log('🔒 Note: All other users remain completely untouched and isolated.');
 
   await mongoose.disconnect();
   console.log('🔌 Disconnected from MongoDB');

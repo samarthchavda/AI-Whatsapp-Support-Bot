@@ -541,11 +541,40 @@ exports.disconnectWhatsApp = async (req, res) => {
       return res.status(404).json({ success: false, error: 'Admin not found' });
     }
 
-    admin.whatsappConnected = false;
-    admin.whatsappConnectedAt = null;
-    admin.whatsappAccessToken = null;
-    admin.whatsappPhoneNumberId = null;
-    admin.whatsappBusinessAccountId = null;
+    const connections = admin.whatsappConnections || [];
+    const requestedPhoneId = String(req.body?.phoneNumberId || '').trim();
+    const primaryPhoneId = admin.whatsappPhoneNumberId || '';
+    const phoneNumberId = requestedPhoneId || primaryPhoneId ||
+      (connections.length === 1 ? connections[0].phoneNumberId : '');
+
+    if (!phoneNumberId && connections.length > 1) {
+      return res.status(400).json({
+        success: false,
+        error: 'More than one WhatsApp connection exists. Select a phone number to disconnect.'
+      });
+    }
+    if (requestedPhoneId && requestedPhoneId !== primaryPhoneId &&
+        !connections.some(connection => connection.phoneNumberId === requestedPhoneId)) {
+      return res.status(404).json({ success: false, error: 'WhatsApp connection not found' });
+    }
+
+    // Embedded signup stores a second copy of the token in this array. Clear
+    // that copy too; otherwise developer API calls can still use a supposedly
+    // disconnected phone number and the plan's connection slot stays occupied.
+    admin.whatsappConnections = connections.filter(connection => connection.phoneNumberId !== phoneNumberId);
+
+    if (!primaryPhoneId || primaryPhoneId === phoneNumberId) {
+      const nextConnection = admin.whatsappConnections.find(connection => connection.isActive !== false);
+      admin.whatsappConnected = Boolean(nextConnection);
+      admin.whatsappConnectedAt = nextConnection?.connectedAt || null;
+      admin.whatsappAccessToken = nextConnection?.accessToken || null;
+      admin.whatsappPhoneNumberId = nextConnection?.phoneNumberId || null;
+      admin.whatsappBusinessAccountId = nextConnection?.businessAccountId || null;
+      admin.whatsappBusinessId = null;
+      admin.whatsappAppId = null;
+      admin.whatsappDisplayPhoneNumber = nextConnection?.displayPhoneNumber || null;
+      admin.whatsappBusinessName = nextConnection?.businessName || null;
+    }
     await admin.save();
 
     res.json({

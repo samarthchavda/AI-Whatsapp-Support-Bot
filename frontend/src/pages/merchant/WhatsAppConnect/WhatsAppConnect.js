@@ -455,9 +455,13 @@ function WhatsAppConnect() {
       });
       if (response.ok) {
         alert('WhatsApp connection disconnected successfully!');
-        fetchCloudStatus();
+        setWhatsappAccessToken('');
+        setWhatsappPhoneNumberId('');
+        setWhatsappBusinessAccountId('');
+        await fetchCloudStatus();
       } else {
-        alert('Failed to disconnect WhatsApp');
+        const result = await response.json().catch(() => ({}));
+        alert(result.error || 'Failed to disconnect WhatsApp');
       }
     } catch (err) {
       console.error(err);

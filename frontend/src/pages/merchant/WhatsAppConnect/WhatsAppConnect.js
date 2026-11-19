@@ -573,11 +573,39 @@ function WhatsAppConnect() {
 
   return (
     <div className="container">
-      <div className="page-header">
-        <h1 className="page-title" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <FaWhatsapp style={{ color: '#25d366' }} /> WhatsApp Connection
-        </h1>
-        <p className="page-subtitle">Choose your preferred WhatsApp integration service to automate client interactions.</p>
+      <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
+        <div>
+          <h1 className="page-title" style={{ display: 'flex', alignItems: 'center', gap: '12px', margin: 0 }}>
+            <FaWhatsapp style={{ color: '#25d366' }} /> WhatsApp Connection
+          </h1>
+          <p className="page-subtitle" style={{ margin: '4px 0 0 0' }}>Choose your preferred WhatsApp integration service to automate client interactions.</p>
+        </div>
+        <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+          <button
+            type="button"
+            onClick={() => {
+              if (activeTab === 'widget') {
+                setIsWidgetGuideOpen(true);
+                setCurrentWidgetGuideStep(0);
+              } else {
+                setIsGuideOpen(true);
+                setCurrentGuideStep(0);
+              }
+            }}
+            className="btn btn-primary"
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '8px',
+              padding: '10px 18px',
+              fontWeight: '600',
+              fontSize: '14px',
+              boxShadow: 'var(--shadow-sm)'
+            }}
+          >
+            📖 {activeTab === 'widget' ? 'View Widget Guide' : 'View Step-by-Step Guide'}
+          </button>
+        </div>
       </div>
 
       {/* Tabs */}

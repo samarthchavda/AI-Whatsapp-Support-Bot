@@ -208,31 +208,42 @@ function Templates({ admin }) {
       : part);
 
   const getStatusBadge = (status) => {
-    const statusMap = {
-      APPROVED: { className: 'badge-active', label: 'Approved' },
-      PENDING: { className: 'badge-pending', label: 'Pending Meta Review' },
-      REJECTED: { className: 'badge-escalated', label: 'Rejected' },
-      PAUSED: { className: 'badge-cancelled', label: 'Paused' }
-    };
-    
-    const config = statusMap[status] || { className: 'badge-cancelled', label: status };
-    
+    const s = String(status || '').toUpperCase();
+    if (s === 'APPROVED') {
+      return (
+        <span className="tmpl-status-badge approved">
+          <span className="tmpl-status-dot" /> Approved
+        </span>
+      );
+    }
+    if (s === 'PENDING') {
+      return (
+        <span className="tmpl-status-badge pending">
+          <span className="tmpl-status-dot" /> Pending Review
+        </span>
+      );
+    }
+    if (s === 'REJECTED') {
+      return (
+        <span className="tmpl-status-badge rejected">
+          <span className="tmpl-status-dot" /> Rejected
+        </span>
+      );
+    }
     return (
-      <span className={`badge ${config.className}`}>
-        {config.label}
+      <span className="tmpl-status-badge paused">
+        <span className="tmpl-status-dot" /> {s || 'Paused'}
       </span>
     );
   };
 
   const getCategoryBadge = (category) => {
-    const cat = String(category || '').toUpperCase();
-    if (cat === 'MARKETING') {
-      return <span className="tmpl-category-badge marketing">MARKETING</span>;
-    }
-    if (cat === 'AUTHENTICATION') {
-      return <span className="tmpl-category-badge auth">AUTHENTICATION</span>;
-    }
-    return <span className="tmpl-category-badge utility">{cat || 'UTILITY'}</span>;
+    const cat = String(category || 'UTILITY').toUpperCase();
+    return (
+      <span className="tmpl-category-badge">
+        {cat}
+      </span>
+    );
   };
 
   const formatTemplateDate = (dateStr) => {

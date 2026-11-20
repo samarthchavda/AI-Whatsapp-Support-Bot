@@ -847,7 +847,7 @@ exports.getAllPlans = async (req, res) => {
     const PricingPlan = require('../../models/PricingPlan');
     const PermissionProfile = require('../../models/PermissionProfile');
     const { validatePlanReadiness } = require('../../services/planValidationService');
-    const { runMigration } = require('../../scripts/migratePlansToStandard');
+    const { runMigration } = require('../../database/migrations/migratePlansToStandard');
 
     // Run quiet idempotent migration check to ensure all standard draft plans exist
     await runMigration({ quiet: true }).catch(err => console.error('Idempotent migration check error:', err.message));

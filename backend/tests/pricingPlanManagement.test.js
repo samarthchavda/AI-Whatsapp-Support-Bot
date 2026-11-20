@@ -3,7 +3,7 @@ const crypto = require('crypto');
 const PricingPlan = require('../models/PricingPlan');
 const Admin = require('../models/Admin');
 const Invoice = require('../models/Invoice');
-const { defaultPlans, runMigration, requiresCanonicalAccessUpgrade } = require('../scripts/migratePlansToStandard');
+const { defaultPlans, runMigration, requiresCanonicalAccessUpgrade } = require('../database/migrations/migratePlansToStandard');
 const subscriptionService = require('../services/subscriptionService');
 
 describe('Dynamic Pricing Plan System & Security Tests', () => {

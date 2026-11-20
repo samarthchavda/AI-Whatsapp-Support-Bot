@@ -921,118 +921,50 @@ GET    /api/super-admin/analytics                - Get global analytics
 
 ```
 AI WhatsApp Support Bot/
-├── backend/
-│   ├── server.js                          # Main Express server
-│   ├── package.json                       # Backend dependencies
-│   ├── jest.config.js                     # Testing config
-│   ├── config/
-│   │   └── database.js                    # MongoDB connection
-│   ├── models/                            # Database schemas
-│   │   ├── Admin.js                       # Admin/user accounts
-│   │   ├── PricingPlan.js                 # Subscription plans
-│   │   ├── ClientUsage.js                 # Usage tracking
-│   │   ├── Conversation.js                # Chat messages
-│   │   ├── Order.js                       # Customer orders
-│   │   ├── Escalation.js                  # Priority escalations
-│   │   ├── Broadcast.js                   # Bulk message campaigns
-│   │   ├── Integration.js                 # Platform integrations
-│   │   ├── KnowledgeBase.js               # FAQ documents
-│   │   ├── DemoRequest.js                 # Demo bookings
-│   │   ├── AILog.js                       # AI interaction logs
-│   │   ├── Customer.js                    # Customer profiles
-│   │   ├── Invoice.js                     # Invoices
-│   │   ├── WebhookLog.js                  # Webhook logs
-│   │   ├── ReturnPolicy.js                # Return rules
-│   │   └── PaymentPolicy.js               # Payment rules
-│   ├── controllers/                       # Request handlers
-│   │   ├── aiController.js                # AI conversation logic
-│   │   ├── authController.js              # Login/registration
-│   │   ├── superAdminController.js        # Super admin operations
-│   │   ├── conversationController.js      # Chat management
-│   │   ├── orderController.js             # Order operations
-│   │   ├── escalationController.js        # Escalation handling
-│   │   ├── broadcastController.js         # Bulk messaging
-│   │   ├── knowledgeBaseController.js     # FAQ management
-│   │   ├── integrationController.js       # Platform connections
-│   │   ├── analyticsController.js         # Data analytics
-│   │   ├── demoRequestController.js       # Demo bookings
-│   │   ├── dashboardController.js         # Dashboard stats
-│   │   └── webhookController.js           # Webhook processing
-│   ├── routes/                            # API routes
-│   │   ├── authRoutes.js                  # /api/auth/*
-│   │   ├── aiRoutes.js                    # /api/ai/*
-│   │   ├── superAdminRoutes.js            # /api/super-admin/*
-│   │   ├── conversationRoutes.js          # /api/conversations/*
-│   │   ├── orderRoutes.js                 # /api/orders/*
-│   │   ├── escalationRoutes.js            # /api/escalations/*
-│   │   ├── broadcastRoutes.js             # /api/broadcasts/*
-│   │   ├── knowledgeBaseRoutes.js         # /api/knowledge-base/*
-│   │   ├── integrationRoutes.js           # /api/integrations/*
-│   │   ├── analyticsRoutes.js             # /api/analytics/*
-│   │   ├── webhookRoutes.js               # /api/webhooks/*
-│   │   └── dashboardRoutes.js             # /api/dashboard/*
-│   ├── middleware/
-│   │   ├── auth.js                        # JWT verification
-│   │   └── webhookAuth.js                 # Webhook secret verification
-│   ├── services/                          # Business logic
-│   │   ├── aiService.js                   # AI response generation
-│   │   ├── whatsappService.js             # WhatsApp API calls
-│   │   ├── whatsappWebBot.js              # WhatsApp Web automation
-│   │   ├── whatsappCloudAPI.js            # Cloud API integration
-│   │   ├── knowledgeBaseService.js        # FAQ search & query
-│   │   ├── broadcastQueue.js              # Message queue processing
-│   │   ├── broadcastScheduler.js          # Job scheduler
-│   │   ├── webhookService.js              # Webhook processing
-│   │   └── orderIdService.js              # Order ID generation
-│   ├── scripts/                           # Utility scripts
-│   │   ├── createAdmin.js                 # Create admin account
-│   │   ├── seedData.js                    # Seed demo data
-│   │   ├── testGemini.js                  # Test AI responses
-│   │   ├── verifyGeminiKey.js             # Verify API key
-│   │   ├── clearUserData.js               # Clear demo data
-│   │   └── testWebhook.js                 # Test webhooks
-│   ├── tests/
-│   │   └── orderIdService.test.js         # Unit tests
-│   └── uploads/                           # Uploaded files
-│       ├── broadcasts/
-│       ├── csv/
-│       └── knowledge-base/
+├── backend/                     # Express API (Node.js + MongoDB)
+│   ├── server.js                # App entry: middleware, routes, Socket.IO, cron jobs
+│   ├── config/                  # Swagger, plan & knowledge-base constants
+│   ├── constants/               # Permission keys and profiles
+│   ├── controllers/
+│   │   ├── merchant/            # Merchant dashboard features
+│   │   ├── public/              # Auth, webhooks, public/developer API
+│   │   ├── superAdmin/          # Platform administration
+│   │   └── developer/           # Developer platform
+│   ├── routes/                  # One router per feature, mounted at /api/*
+│   ├── middleware/              # Auth (JWT), RBAC, API keys, rate limiting, origin checks
+│   ├── models/                  # Mongoose schemas
+│   ├── services/                # Business logic (AI, WhatsApp, broadcasts, billing, sync)
+│   ├── utils/                   # Crypto, sanitizing, SSRF guard, signed URLs
+│   ├── database/
+│   │   ├── migrations/          # Data migrations run at startup / by super admin
+│   │   └── seeders/             # Startup seeders (blogs, permission profiles)
+│   ├── scripts/                 # Manual CLI tools (not loaded by the server)
+│   │   ├── admin/               # create / reset admin accounts
+│   │   ├── seed/                # demo data, demo PDFs, clear data
+│   │   └── dev/                 # webhook / Gemini test helpers
+│   ├── tests/                   # Jest tests
+│   └── uploads/                 # Runtime files (only blog/ and broadcast images are public)
 │
-├── frontend/
-│   ├── package.json                       # Frontend dependencies
-│   ├── public/
-│   │   └── index.html                     # HTML entry point
-│   ├── src/
-│   │   ├── index.js                       # React entry point
-│   │   ├── App.js                         # Main app component & routing
-│   │   ├── index.css                      # Global styles
-│   │   ├── App.css                        # App component styles
-│   │   ├── pages/                         # Page components
-│   │   │   ├── LandingPage.js             # Public landing page
-│   │   │   ├── Login.js                   # Login form
-│   │   │   ├── BookDemo.js                # Demo booking form
-│   │   │   ├── Dashboard.js               # Main dashboard
-│   │   │   ├── SuperAdmin.js              # Super admin user management
-│   │   │   ├── SuperAdminUserDetail.js    # User detail page
-│   │   │   ├── PlanManager.js             # Pricing plan management
-│   │   │   ├── Conversations.js           # Live chat interface
-│   │   │   ├── Orders.js                  # Order management
-│   │   │   ├── Escalations.js             # Escalation queue
-│   │   │   ├── Analytics.js               # Analytics dashboard
-│   │   │   ├── Broadcast.js               # Bulk messaging
-│   │   │   ├── KnowledgeBase.js           # FAQ management
-│   │   │   ├── Integrations.js            # Platform connections
-│   │   │   ├── WhatsAppConnect.js         # QR code display
-│   │   │   └── [components.js]            # Other components
-│   │   ├── services/
-│   │   │   └── api.js                     # API client
-│   │   └── styles/
-│   │       └── [component-specific.css]   # Component styles
-│   └── node_modules/
+├── frontend/                    # Merchant & super-admin dashboard (React, CRA)
+│   ├── public/                  # Static assets, guide images, docs PDFs
+│   └── src/
+│       ├── App.js               # Routing and app shell
+│       ├── components/
+│       │   ├── layout/          # Sidebar, TopBar
+│       │   └── ...              # Shared components
+│       ├── context/             # React context (effective access)
+│       ├── pages/
+│       │   ├── merchant/<Page>/ # One folder per merchant page (Page.js + Page.css)
+│       │   ├── superAdmin/<Area>/
+│       │   └── AccessRestricted/
+│       ├── services/api.js      # Axios client + auth refresh
+│       └── utils/
 │
-├── assets/                                # Static assets
-├── COMPREHENSIVE_README.md                # This file
-└── .env                                   # Environment variables
+├── next-public/                 # Public marketing site, blog, login (Next.js App Router)
+├── deploy/                      # nginx config and server install/deploy scripts
+├── docs/                        # Development notes
+├── .github/workflows/           # CI/CD (push to main deploys to the VPS)
+└── ecosystem.config.js          # PM2 process config
 ```
 
 ---

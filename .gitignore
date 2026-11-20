@@ -59,3 +59,7 @@ video .zip
 !frontend/public/blog/*
 !next-public/public/blog/*
 
+
+# Local Python env / one-off scratch scripts
+.venv/
+backend/scratch/

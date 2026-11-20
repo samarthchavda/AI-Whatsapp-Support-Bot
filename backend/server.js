@@ -183,7 +183,7 @@ mongoose.connect(mongoUri, {
 
     // Seed/update default blog posts on startup
     try {
-      const seedBlogs = require('./scripts/seedBlogs');
+      const seedBlogs = require('./database/seeders/seedBlogs');
       seedBlogs().catch(e => console.error('Blog auto-seed warning:', e.message));
     } catch (e) {
       // silent fallback
@@ -192,9 +192,9 @@ mongoose.connect(mongoUri, {
     // Keep standard plan access definitions and system permission profiles available.
     // Both operations are idempotent and preserve non-legacy Super Admin customizations.
     try {
-      const { runMigration } = require('./scripts/migratePlansToStandard');
+      const { runMigration } = require('./database/migrations/migratePlansToStandard');
       runMigration({ quiet: true }).catch(e => console.error('Plan access migration warning:', e.message));
-      const { seedProfiles } = require('./scripts/seedPermissionProfiles');
+      const { seedProfiles } = require('./database/seeders/seedPermissionProfiles');
       seedProfiles(false).catch(e => console.error('Permission profile auto-seed warning:', e.message));
     } catch (e) {
       console.error('Plan/profile startup initialization warning:', e.message);

@@ -26,7 +26,13 @@ import {
 import './CustomerOnboardWizard.css';
 
 const SOLUTION_CATEGORIES = [
-  // Legacy Shopify/WooCommerce tier onboarding is intentionally disabled for now.
+  {
+    id: 'kwickbot_crm',
+    name: 'E-commerce & Store CRM',
+    description: 'Shopify, WooCommerce, abandoned carts, order updates, and automated customer support.',
+    icon: FaBuilding,
+    color: '#0284c7'
+  },
   {
     id: 'crm_integration',
     name: 'CRM Integration',

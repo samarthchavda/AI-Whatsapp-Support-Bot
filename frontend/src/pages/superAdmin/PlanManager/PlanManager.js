@@ -17,8 +17,7 @@ const CATEGORY_MAP = {
 };
 
 const CATEGORY_OPTIONS = [
-  // Legacy Shopify/WooCommerce tiers are retained in the database but hidden from management for now.
-  // { id: 'kwickbot_crm', name: 'Kwickbot CRM' },
+  { id: 'kwickbot_crm', name: 'E-commerce CRM (Store & Orders)' },
   { id: 'crm_integration', name: 'CRM Integration' },
   { id: 'whatsapp_api', name: 'WhatsApp API' },
   { id: 'enterprise_custom', name: 'Enterprise Custom' }

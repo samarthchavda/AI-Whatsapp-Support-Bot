@@ -105,6 +105,10 @@ async function isPageAllowed(admin, pageKey) {
  * Check if a feature is allowed for a plan.
  */
 async function isFeatureAllowedDynamic(rawPlanName, featureKey) {
+  // Broadcasting is accessible to all admin users platform-wide
+  if (featureKey === 'broadcastingAccess') {
+    return true;
+  }
   const planName = normalizePlanName(rawPlanName);
   let plan = null;
 

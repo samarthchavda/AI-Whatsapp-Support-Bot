@@ -317,9 +317,9 @@ function KnowledgeBase() {
       {/* Test Query Form */}
       {showTestQuery && (
         <div className="table-container" style={{ marginBottom: '28px', background: 'rgba(16, 185, 129, 0.05)' }}>
-          {/* <div className="table-header" style={{ background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.2) 0%, rgba(5, 150, 105, 0.2) 100%)' }}>
+          <div className="table-header" style={{ background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.2) 0%, rgba(5, 150, 105, 0.2) 100%)' }}>
             <h2>🤖 Test Knowledge Base Query</h2>
-          </div> */}
+          </div>
           <form onSubmit={handleTestQuery} style={{ padding: '28px' }}>
             <div className="filter-group" style={{ marginBottom: '20px' }}>
               <label>Ask a Question</label>

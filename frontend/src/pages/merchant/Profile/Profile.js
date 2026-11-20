@@ -497,7 +497,7 @@ function Profile({ admin, onUpdateAdmin }) {
               </div>
             </div>
 
-            {/* AI Agent Settings temporarily disabled as per user request
+            {/* AI Agent Settings */}
             <div className="profile-card form-section-card">
               <div className="section-title-wrapper">
                 <FaRobot className="section-icon text-accent" />
@@ -525,7 +525,6 @@ function Profile({ admin, onUpdateAdmin }) {
                 </label>
               </div>
             </div>
-            */}
 
             {hasChanges() && (
               <div className="form-action-button-row form-action-slide-in">

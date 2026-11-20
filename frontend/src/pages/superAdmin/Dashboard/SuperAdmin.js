@@ -1228,8 +1228,7 @@ function SuperAdmin() {
                       </div>
                     )}
 
-                    {/* Temporarily commented out Shopify & WooCommerce integrations for Super Admin panel - focusing on Odoo & ChatterPillar model */}
-                    {/*
+                    {/* Shopify & WooCommerce Integration Toggles */}
                     <div className="form-group" style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '12px' }}>
                       <input
                         type="checkbox"
@@ -1265,7 +1264,6 @@ function SuperAdmin() {
                         Enable WooCommerce Integration
                       </label>
                     </div>
-                    */}
                   </>
                 )}
 

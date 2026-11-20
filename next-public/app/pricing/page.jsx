@@ -226,7 +226,7 @@ export default function PricingPage() {
       <main>
         <section className="page-hero">
           <div className="container">
-            <div className="section-head center">
+            <div data-reveal="up" className="section-head center">
               <span className="eyebrow">Pricing</span>
               <h1>Transparent support &amp; integration plans</h1>
               <p>Simple pricing for validating AI, connecting your CRM, developer APIs and enterprise operations.</p>
@@ -271,7 +271,7 @@ export default function PricingPage() {
               <span>Meta WhatsApp conversation charges and third-party CRM/Odoo subscription fees are charged separately by those providers. Connector maintenance fees apply where specified.</span>
             </div>
 
-            <div className="plan-grid" aria-busy={loading}>
+            <div className="plan-grid" data-stagger key={`${activeCategory}-${loading}`} aria-busy={loading}>
               {loading ? (
                 [0, 1, 2].map((index) => (
                   <div key={`pricing-skeleton-${index}`} className="plan-card" aria-hidden="true" style={{ minHeight: 430 }}>
@@ -328,7 +328,7 @@ export default function PricingPage() {
 
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                         <div className="plan-price">
-                          <strong style={isContactSales ? { fontSize: 32 } : undefined}>{priceDisplay}</strong>
+                          <strong key={billingCycle} className="price-swap" style={isContactSales ? { fontSize: 32 } : undefined}>{priceDisplay}</strong>
                           {subtext && <span>{subtext}</span>}
                         </div>
                         {savingsText && <span className="plan-note" style={{ fontWeight: 700, color: isPopularCard ? 'var(--pista)' : 'var(--leaf-strong)' }}>{savingsText}</span>}
@@ -430,12 +430,12 @@ export default function PricingPage() {
 
         <section className="section">
           <div className="container-narrow">
-            <div className="section-head center">
+            <div data-reveal="up" className="section-head center">
               <span className="eyebrow">FAQ</span>
               <h2>Frequently asked questions</h2>
               <p>Everything you need to know about setting up Kwickbot for your online business.</p>
             </div>
-            <div className="faq-list">
+            <div className="faq-list" data-stagger>
               {faqs.map((faq, idx) => {
                 const open = openFaqIndex === idx;
                 return (
@@ -450,7 +450,7 @@ export default function PricingPage() {
                       <span>{faq.question}</span>
                       <span className="faq-icon"><FaChevronDown aria-hidden="true" /></span>
                     </button>
-                    {open && <p id={`pricing-faq-${idx}`} className="faq-a">{faq.answer}</p>}
+                    <div className="faq-a-wrap" id={`pricing-faq-${idx}`} aria-hidden={!open}><div><p className="faq-a">{faq.answer}</p></div></div>
                   </div>
                 );
               })}

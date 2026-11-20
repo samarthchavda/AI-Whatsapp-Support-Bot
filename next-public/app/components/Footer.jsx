@@ -27,7 +27,8 @@ export default function Footer() {
   return (
     <footer className="site-footer">
       <div className="container" style={{ paddingTop: 64 }}>
-        <div className="band band-deep cta-band">
+        <div className="band band-deep cta-band" data-reveal="fade">
+          <BrandMark variant="dark" className="cta-mark" />
           <div className="cta-copy">
             <span className="eyebrow" style={{ color: 'var(--pista)' }}>14-day free trial</span>
             <h2>Automate WhatsApp support today</h2>

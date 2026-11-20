@@ -18,6 +18,7 @@ export default function Header() {
   const pathname = usePathname() || '/';
   const [isAdminPortal, setIsAdminPortal] = React.useState(false);
   const [menuOpen, setMenuOpen] = React.useState(false);
+  const [scrolled, setScrolled] = React.useState(false);
 
   React.useEffect(() => {
     if (typeof window !== 'undefined' && window.location.hostname.startsWith('admin.')) {
@@ -27,10 +28,17 @@ export default function Header() {
 
   React.useEffect(() => { setMenuOpen(false); }, [pathname]);
 
+  React.useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 12);
+    onScroll();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
+
   if (isAdminPortal) return null;
 
   return (
-    <header className="site-header">
+    <header className={`site-header ${scrolled ? 'scrolled' : ''}`}>
       <nav className="site-nav" aria-label="Main">
         <Link href="/" className="brand" aria-label="Kwickbot home">
           <BrandMark />

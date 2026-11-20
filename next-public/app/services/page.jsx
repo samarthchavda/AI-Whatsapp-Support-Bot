@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect } from 'react';
+import React from 'react';
 import Link from 'next/link';
 import { safeJsonStringify } from '../../utils/jsonSanitizer';
 import {
@@ -84,27 +84,6 @@ const developerArea = {
 const allAreas = [...serviceAreas, developerArea];
 
 export default function ServicesPage() {
-  useEffect(() => {
-    const elements = document.querySelectorAll('.reveal-on-scroll');
-    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-
-    if (reduceMotion) {
-      elements.forEach((element) => element.classList.add('is-visible'));
-      return undefined;
-    }
-
-    const observer = new IntersectionObserver((entries) => {
-      entries.forEach((entry) => {
-        if (entry.isIntersecting) {
-          entry.target.classList.add('is-visible');
-          observer.unobserve(entry.target);
-        }
-      });
-    }, { threshold: 0.12 });
-
-    elements.forEach((element) => observer.observe(element));
-    return () => observer.disconnect();
-  }, []);
 
   const breadcrumbSchema = {
     '@context': 'https://schema.org',
@@ -124,16 +103,16 @@ export default function ServicesPage() {
         <section className="hero">
           <div className="container hero-grid">
             <div className="hero-copy">
-              <span className="eyebrow">Implementation + automation</span>
-              <h1>Turn WhatsApp into an <span className="highlight">operating channel.</span></h1>
-              <p className="hero-lead">
+              <span className="eyebrow hero-fade" style={{ '--d': '0s' }}>Implementation + automation</span>
+              <h1 className="hero-fade" style={{ '--d': '.1s' }}>Turn WhatsApp into an <span className="highlight swipe">operating channel.</span></h1>
+              <p className="hero-lead hero-fade" style={{ '--d': '.35s' }}>
                 Kwickbot brings official WhatsApp infrastructure, store data, grounded AI, human handoff and outbound messaging into one implementation path.
               </p>
-              <div className="hero-actions">
+              <div className="hero-actions hero-fade" style={{ '--d': '.5s' }}>
                 <Link href="/demo" className="btn btn-primary">Discuss your workflow <FaArrowRight /></Link>
                 <a href="#service-areas" className="btn btn-secondary">Explore delivery areas</a>
               </div>
-              <div className="hero-tags">
+              <div className="hero-tags hero-fade" style={{ '--d': '.65s' }}>
                 <span className="pill pill-white"><FaCheck aria-hidden="true" /> Official Meta API</span>
                 <span className="pill pill-white"><FaCheck aria-hidden="true" /> Store-aware workflows</span>
                 <span className="pill pill-white"><FaCheck aria-hidden="true" /> Human control</span>
@@ -142,7 +121,7 @@ export default function ServicesPage() {
 
             <div className="hero-visual">
               <div className="preview-frame" aria-label="How the Kwickbot support stack connects">
-                <div className="flow">
+                <div className="flow" data-stagger>
                   <span className="eyebrow" style={{ color: 'var(--deep)' }}>Connected support stack</span>
                   <div className="flow-node">
                     <span className="icon-chip"><SiMeta aria-hidden="true" /></span>
@@ -175,20 +154,20 @@ export default function ServicesPage() {
         </section>
 
         {/* DELIVERY AREAS */}
-        <section id="service-areas" className="section reveal-on-scroll">
+        <section id="service-areas" className="section">
           <div className="container">
-            <div className="section-head-row">
-              <div className="section-head">
+            <div data-reveal="up" className="section-head-row">
+              <div data-reveal="up" className="section-head">
                 <span className="eyebrow">Delivery areas</span>
                 <h2>Everything required for a working support flow</h2>
               </div>
               <p>Each service area connects to an actual Kwickbot workflow, dashboard control or supported integration.</p>
             </div>
-            <div className="grid-3">
+            <div className="grid-3" data-stagger>
               {allAreas.map((service, index) => {
                 const Icon = service.icon;
                 return (
-                  <article className="card" key={service.title}>
+                  <article className="card lift" key={service.title}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <span className="icon-chip"><Icon aria-hidden="true" /></span>
                       <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--muted-2)' }}>{String(index + 1).padStart(2, '0')}</span>
@@ -209,17 +188,17 @@ export default function ServicesPage() {
         </section>
 
         {/* PROCESS */}
-        <section className="section reveal-on-scroll">
+        <section className="section">
           <div className="container">
-            <div className="band band-pista" style={{ flexDirection: 'column', flexWrap: 'nowrap' }}>
-              <div className="section-head-row" style={{ marginBottom: 0 }}>
-                <div className="section-head">
+            <div className="band band-pista" data-reveal="scale" style={{ flexDirection: 'column', flexWrap: 'nowrap' }}>
+              <div data-reveal="up" className="section-head-row" style={{ marginBottom: 0 }}>
+                <div data-reveal="up" className="section-head">
                   <span className="eyebrow" style={{ color: 'var(--deep)' }}>Implementation process</span>
                   <h2>A practical path from requirements to live operations</h2>
                 </div>
                 <p style={{ color: 'var(--deep)' }}>We configure around your real policies and customer journeys, then validate the high-risk paths before activation.</p>
               </div>
-              <div className="grid-4">
+              <div className="grid-4" data-stagger>
                 {implementationSteps.map((step, index) => {
                   const Icon = step.icon;
                   return (
@@ -239,9 +218,9 @@ export default function ServicesPage() {
         </section>
 
         {/* CUSTOM WORKFLOW */}
-        <section className="section reveal-on-scroll">
+        <section className="section">
           <div className="container">
-            <div className="card" style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 24, padding: 'clamp(24px, 4vw, 40px)' }}>
+            <div className="card" data-reveal="up" style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 24, padding: 'clamp(24px, 4vw, 40px)' }}>
               <span className="icon-chip" style={{ width: 64, height: 64, borderRadius: 20, fontSize: 26 }}><FaFileAlt aria-hidden="true" /></span>
               <div style={{ flex: '1 1 420px', display: 'flex', flexDirection: 'column', gap: 8 }}>
                 <span className="eyebrow">Have a non-standard workflow?</span>

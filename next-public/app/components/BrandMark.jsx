@@ -12,9 +12,9 @@ export default function BrandMark({ variant = 'light', className = 'brand-mark',
       aria-label={title}
       aria-hidden={title ? undefined : true}
     >
-      <rect x="8" y="7" width="13" height="50" rx="6.5" fill={colors.stem} />
-      <path d="M31 29L50 10" fill="none" stroke={colors.ai} strokeWidth="13" strokeLinecap="round" />
-      <path d="M31 36L51 55" fill="none" stroke={colors.low} strokeWidth="13" strokeLinecap="round" />
+      <rect className="bk-stem" x="8" y="7" width="13" height="50" rx="6.5" fill={colors.stem} />
+      <path className="bk-ai" d="M31 29L50 10" fill="none" stroke={colors.ai} strokeWidth="13" strokeLinecap="round" />
+      <path className="bk-low" d="M31 36L51 55" fill="none" stroke={colors.low} strokeWidth="13" strokeLinecap="round" />
     </svg>
   );
 }

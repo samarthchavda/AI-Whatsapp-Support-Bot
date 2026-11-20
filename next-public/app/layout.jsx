@@ -1,6 +1,7 @@
 import './globals.css';
 import Header from './components/Header';
 import Footer from './components/Footer';
+import MotionProvider from './components/MotionProvider';
 import { safeJsonStringify } from '../utils/jsonSanitizer';
 
 export const metadata = {
@@ -139,6 +140,7 @@ export default function RootLayout({ children }) {
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Space+Grotesk:wght@600&display=swap" rel="stylesheet" />
         <meta name="theme-color" content="#2A3D18" />
+        <script dangerouslySetInnerHTML={{ __html: "document.documentElement.classList.add('motion-ready')" }} />
 
         {/* Structured Data (JSON-LD Schemas for SEO) */}
         <script
@@ -159,6 +161,7 @@ export default function RootLayout({ children }) {
         <Header />
         <div id="main">{children}</div>
         <Footer />
+        <MotionProvider />
       </body>
     </html>
   );

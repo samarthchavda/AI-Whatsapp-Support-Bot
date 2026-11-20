@@ -40,9 +40,9 @@ export default function AboutPage() {
       <main>
         <section className="page-hero">
           <div className="container">
-            <div className="section-head center" style={{ maxWidth: 820 }}>
+            <div data-reveal="up" className="section-head center" style={{ maxWidth: 820 }}>
               <span className="eyebrow">About Kwickbot</span>
-              <h1>Empowering commerce with <span className="highlight">agentic support</span></h1>
+              <h1>Empowering commerce with <span className="highlight swipe">agentic support</span></h1>
               <p>
                 We are building the future of automated customer operations. Our mission is to give D2C brands startup speed and enterprise reliability through 24/7 intelligent WhatsApp support.
               </p>
@@ -52,7 +52,7 @@ export default function AboutPage() {
 
         <section className="section-tight">
           <div className="container">
-            <div className="stats-strip">
+            <div className="stats-strip" data-stagger>
               <div className="stat"><strong>Official</strong><span>Meta WhatsApp Cloud API</span></div>
               <div className="stat"><strong>2</strong><span>Commerce platforms</span></div>
               <div className="stat"><strong>24/7</strong><span>AI support coverage</span></div>
@@ -63,15 +63,15 @@ export default function AboutPage() {
 
         <section className="section">
           <div className="container">
-            <div className="section-head center">
+            <div data-reveal="up" className="section-head center">
               <span className="eyebrow">Our vision &amp; values</span>
               <h2>Bridging AI automation with human expertise</h2>
             </div>
-            <div className="grid-3">
+            <div className="grid-3" data-stagger>
               {values.map((item) => {
                 const Icon = item.icon;
                 return (
-                  <article className="card" key={item.title}>
+                  <article className="card lift" key={item.title}>
                     <span className="icon-chip"><Icon aria-hidden="true" /></span>
                     <h3>{item.title}</h3>
                     <p>{item.copy}</p>

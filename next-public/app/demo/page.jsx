@@ -103,9 +103,9 @@ export default function BookDemo() {
 
       <main className="container">
         <div className="form-shell">
-          <div className="form-intro">
+          <div className="form-intro" data-reveal="left">
             <span className="eyebrow">Book a live demo</span>
-            <h1>See Kwickbot answer <span className="highlight">your customers.</span></h1>
+            <h1>See Kwickbot answer <span className="highlight swipe">your customers.</span></h1>
             <p>We will walk through your real support questions, order flows and campaigns on WhatsApp, and show how much of the routine work Kwickbot can take off your team.</p>
             <ul className="checklist">
               <li><span className="check"><FaCheck aria-hidden="true" /></span>A 30-minute walkthrough tailored to your store</li>
@@ -114,7 +114,7 @@ export default function BookDemo() {
             </ul>
           </div>
 
-          <div className="form-card">
+          <div className="form-card" data-reveal="right">
             {success ? (
               <div className="success-panel" role="status">
                 <span className="icon-chip"><FaCheckCircle aria-hidden="true" /></span>

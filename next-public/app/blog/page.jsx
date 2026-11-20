@@ -138,7 +138,7 @@ export default async function BlogIndexPage({ searchParams }) {
       <main>
         <section className="page-hero">
           <div className="container">
-            <div className="section-head center">
+            <div data-reveal="up" className="section-head center">
               <span className="eyebrow">Kwickbot insights</span>
               <h1>Blog &amp; e-commerce guides</h1>
               <p>Tutorials, pricing breakdowns and automation strategies for WhatsApp AI support.</p>
@@ -148,7 +148,7 @@ export default async function BlogIndexPage({ searchParams }) {
 
         <section className="section-tight">
           <div className="container">
-            <div className="blog-grid">
+            <div className="blog-grid" data-stagger>
               {paginatedPosts.map((post) => (
                 <article key={post._id || post.slug} className="card card-link post-card">
                   {post.coverImage ? (

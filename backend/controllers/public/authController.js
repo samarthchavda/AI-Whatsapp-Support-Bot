@@ -151,6 +151,32 @@ const extractRefreshToken = (req) => {
   return cookieToken || req.body?.refreshToken || null;
 };
 
+
+/**
+ * Resolve Razorpay credentials from GlobalSettings (preferred) or env.
+ * Throws when not configured: there is deliberately NO fallback key, because a
+ * known fallback secret would let anyone forge payment signatures.
+ */
+async function getRazorpayCredentials() {
+  let keyId = process.env.RAZORPAY_KEY_ID;
+  let keySecret = process.env.RAZORPAY_KEY_SECRET;
+  try {
+    const GlobalSettings = require('../../models/GlobalSettings');
+    const [idSetting, secretSetting] = await Promise.all([
+      GlobalSettings.findOne({ key: 'razorpay_key_id' }),
+      GlobalSettings.findOne({ key: 'razorpay_key_secret' })
+    ]);
+    if (idSetting && idSetting.value) keyId = idSetting.value;
+    if (secretSetting && secretSetting.value) keySecret = secretSetting.value;
+  } catch (err) {
+    console.error('Error fetching Razorpay credentials from DB:', err.message);
+  }
+  if (!keyId || !keySecret) {
+    throw new Error('Razorpay key id/secret not configured');
+  }
+  return { keyId, keySecret };
+}
+
 /**
  * Login admin
  */
@@ -569,13 +595,11 @@ exports.getPlans = async (req, res) => {
     const plans = await PricingPlan.find({ isActive: true, isPublished: true })
       .sort({ category: 1, displayOrder: 1 });
     
-    let rzpKeyId = process.env.RAZORPAY_KEY_ID || 'rzp_test_mockkey';
+    let rzpKeyId = null;
     try {
-      const GlobalSettings = require('../../models/GlobalSettings');
-      const keyIdSetting = await GlobalSettings.findOne({ key: 'razorpay_key_id' });
-      if (keyIdSetting && keyIdSetting.value) rzpKeyId = keyIdSetting.value;
+      ({ keyId: rzpKeyId } = await getRazorpayCredentials());
     } catch (err) {
-      console.error('Error fetching dynamic Razorpay key ID from DB:', err.message);
+      console.error('Razorpay is not configured:', err.message);
     }
 
     res.json({
@@ -1060,16 +1084,12 @@ exports.createRazorpayOrder = async (req, res) => {
     const currency = planDetails.currency || 'INR';
 
     const Razorpay = require('razorpay');
-    let rzpKeyId = process.env.RAZORPAY_KEY_ID || 'rzp_test_mockkey';
-    let rzpKeySecret = process.env.RAZORPAY_KEY_SECRET || 'rzp_mocksecret';
+    let rzpKeyId, rzpKeySecret;
     try {
-      const GlobalSettings = require('../../models/GlobalSettings');
-      const keyIdSetting = await GlobalSettings.findOne({ key: 'razorpay_key_id' });
-      const keySecretSetting = await GlobalSettings.findOne({ key: 'razorpay_key_secret' });
-      if (keyIdSetting && keyIdSetting.value) rzpKeyId = keyIdSetting.value;
-      if (keySecretSetting && keySecretSetting.value) rzpKeySecret = keySecretSetting.value;
+      ({ keyId: rzpKeyId, keySecret: rzpKeySecret } = await getRazorpayCredentials());
     } catch (err) {
-      console.error('Error fetching dynamic Razorpay credentials from DB:', err.message);
+      console.error('Razorpay is not configured:', err.message);
+      return res.status(503).json({ success: false, error: 'Payments are temporarily unavailable. Please contact support.' });
     }
 
     const razorpay = new Razorpay({
@@ -1123,22 +1143,55 @@ exports.verifyRazorpayPayment = async (req, res) => {
       return res.status(400).json({ success: false, error: 'Missing payment details for verification' });
     }
 
-    // Verify signature
+    // Verify signature (never with a fallback secret)
     const crypto = require('crypto');
-    let keySecret = process.env.RAZORPAY_KEY_SECRET || 'rzp_mocksecret';
+    let keyId, keySecret;
     try {
-      const GlobalSettings = require('../../models/GlobalSettings');
-      const keySecretSetting = await GlobalSettings.findOne({ key: 'razorpay_key_secret' });
-      if (keySecretSetting && keySecretSetting.value) keySecret = keySecretSetting.value;
+      ({ keyId, keySecret } = await getRazorpayCredentials());
     } catch (err) {
-      console.error('Error fetching dynamic Razorpay secret from DB:', err.message);
+      console.error('Razorpay is not configured:', err.message);
+      return res.status(503).json({ success: false, error: 'Payments are temporarily unavailable. Please contact support.' });
     }
-    const hmac = crypto.createHmac('sha256', keySecret);
-    hmac.update(`${razorpay_order_id}|${razorpay_payment_id}`);
-    const generatedSignature = hmac.digest('hex');
+    const generatedSignature = crypto
+      .createHmac('sha256', keySecret)
+      .update(`${razorpay_order_id}|${razorpay_payment_id}`)
+      .digest('hex');
 
-    if (generatedSignature !== razorpay_signature) {
+    const sigBuf = Buffer.from(String(razorpay_signature));
+    const expectedBuf = Buffer.from(generatedSignature);
+    if (sigBuf.length !== expectedBuf.length || !crypto.timingSafeEqual(sigBuf, expectedBuf)) {
       return res.status(400).json({ success: false, error: 'Payment signature mismatch' });
+    }
+
+    // Block replay: a payment can only ever be applied once
+    const Invoice = require('../../models/Invoice');
+    const alreadyUsed = await Invoice.findOne({ razorpayPaymentId: String(razorpay_payment_id) }).select('_id');
+    if (alreadyUsed) {
+      return res.status(409).json({ success: false, error: 'This payment has already been applied' });
+    }
+
+    // Trust only the server-created order: plan, cycle and owner come from its notes, not the request body
+    const Razorpay = require('razorpay');
+    const razorpay = new Razorpay({ key_id: keyId, key_secret: keySecret });
+    let rzpOrder, rzpPayment;
+    try {
+      [rzpOrder, rzpPayment] = await Promise.all([
+        razorpay.orders.fetch(String(razorpay_order_id)),
+        razorpay.payments.fetch(String(razorpay_payment_id))
+      ]);
+    } catch (err) {
+      console.error('Failed to fetch Razorpay order/payment:', err.message || err);
+      return res.status(502).json({ success: false, error: 'Could not confirm payment with Razorpay. Please contact support.' });
+    }
+
+    const orderNotes = rzpOrder.notes || {};
+    if (
+      String(orderNotes.adminId) !== String(req.admin._id) ||
+      rzpPayment.order_id !== rzpOrder.id ||
+      !['captured', 'authorized'].includes(rzpPayment.status) ||
+      Number(rzpPayment.amount) !== Number(rzpOrder.amount)
+    ) {
+      return res.status(400).json({ success: false, error: 'Payment does not match this order' });
     }
 
     const admin = await Admin.findById(req.admin._id);
@@ -1147,23 +1200,13 @@ exports.verifyRazorpayPayment = async (req, res) => {
     }
 
     const PricingPlan = require('../../models/PricingPlan');
-    let planDetails = null;
-
-    if (planId) {
-      planDetails = await PricingPlan.findById(planId);
-    }
-    if (!planDetails && planName) {
-      planDetails = await PricingPlan.findOne({
-        $or: [{ name: planName }, { slug: planName }],
-        isActive: true
-      });
-    }
+    const planDetails = orderNotes.planId ? await PricingPlan.findById(orderNotes.planId) : null;
 
     if (!planDetails) {
       return res.status(404).json({ success: false, error: 'Selected pricing plan not found' });
     }
 
-    const cycle = (billingCycle === 'yearly') ? 'yearly' : 'monthly';
+    const cycle = (orderNotes.billingCycle === 'yearly') ? 'yearly' : 'monthly';
     const originalPrice = (cycle === 'yearly' && planDetails.yearlyPrice)
       ? planDetails.yearlyPrice
       : planDetails.monthlyPrice;
@@ -1189,7 +1232,6 @@ exports.verifyRazorpayPayment = async (req, res) => {
     await admin.save();
 
     // Create invoice history record
-    const Invoice = require('../../models/Invoice');
     const lastInvoice = await Invoice.findOne().sort({ createdAt: -1 });
     let nextNum = 1001;
     if (lastInvoice && lastInvoice.invoiceNumber) {
@@ -1208,6 +1250,8 @@ exports.verifyRazorpayPayment = async (req, res) => {
       status: 'paid',
       paymentStatus: 'completed',
       paymentTerms: 'Due on Receipt',
+      razorpayPaymentId: String(razorpay_payment_id),
+      razorpayOrderId: String(razorpay_order_id),
       dueDate: new Date(Date.now() + durationDays * 24 * 60 * 60 * 1000),
       items: [
         {
@@ -1239,8 +1283,11 @@ exports.verifyRazorpayPayment = async (req, res) => {
         return `${req.protocol}://${req.get('host')}`;
       };
       
-      pdfUrl = `${getBackendUrl(req)}/uploads/invoices/${invoice.invoiceNumber}.pdf`;
-      console.log(`✅ Invoice PDF generated successfully: ${pdfUrl}`);
+      // Short-lived signed link so Meta can fetch the PDF without exposing all invoices publicly
+      const { signResource } = require('../../utils/signedUrl');
+      const { exp, sig } = signResource(`invoice:${invoice.invoiceNumber}`, 24 * 60 * 60);
+      pdfUrl = `${getBackendUrl(req)}/api/invoices/signed/${encodeURIComponent(invoice.invoiceNumber)}/pdf?exp=${exp}&sig=${sig}`;
+      console.log(`✅ Invoice PDF generated successfully: ${invoice.invoiceNumber}`);
     } catch (pdfError) {
       console.error('❌ Error generating invoice PDF:', pdfError.message);
     }

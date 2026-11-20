@@ -2,6 +2,7 @@ require('dotenv').config();
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 const Admin = require('../models/Admin');
+const SEED_PASSWORD = process.env.SEED_ADMIN_PASSWORD || require('crypto').randomBytes(12).toString('base64url');
 
 async function createTestAdmin() {
   try {
@@ -23,7 +24,7 @@ async function createTestAdmin() {
     const testAdmin = new Admin({
       name: 'Test User',
       email: 'test@gmail.com',
-      password: 'test@123',
+      password: SEED_PASSWORD,
       role: 'admin'
     });
 
@@ -33,7 +34,7 @@ async function createTestAdmin() {
     console.log('✅ Test Admin Created Successfully!');
     console.log('============================================================');
     console.log('Email:    test@gmail.com');
-    console.log('Password: test@123');
+    console.log(`Password: ${SEED_PASSWORD}`);
     console.log('Name:     Test User');
     console.log('Role:     admin');
     console.log('============================================================\n');

@@ -1,6 +1,7 @@
 const mongoose = require('mongoose');
 const Admin = require('../models/Admin');
 require('dotenv').config();
+const SEED_PASSWORD = process.env.SEED_ADMIN_PASSWORD || require('crypto').randomBytes(12).toString('base64url');
 
 async function createDefaultAdmin() {
   try {
@@ -26,7 +27,7 @@ async function createDefaultAdmin() {
     // Create default admin (with super_admin role for full access)
     const admin = new Admin({
       email: 'admin@gmail.com',
-      password: 'Admin@123',
+      password: SEED_PASSWORD,
       name: 'Admin',
       role: 'super_admin',  // Changed from 'admin' to 'super_admin'
       isActive: true,
@@ -40,7 +41,7 @@ async function createDefaultAdmin() {
     console.log('✅ Admin Account Created Successfully!');
     console.log('='.repeat(60));
     console.log('📧 Email:    admin@gmail.com');
-    console.log('🔑 Password: Admin@123');
+    console.log(`🔑 Password: ${SEED_PASSWORD}`);
     console.log('👤 Name:     Admin');
     console.log('⭐ Role:     super_admin');
     console.log('='.repeat(60));

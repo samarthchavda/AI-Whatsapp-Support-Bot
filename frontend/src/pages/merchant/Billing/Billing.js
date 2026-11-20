@@ -116,7 +116,7 @@ function Billing() {
       }
 
       const options = {
-        key: razorpayKeyId || process.env.REACT_APP_RAZORPAY_KEY_ID || 'rzp_test_mockkey',
+        key: razorpayKeyId || process.env.REACT_APP_RAZORPAY_KEY_ID,
         amount: amount,
         currency: currency,
         name: 'Kwickbot AI',

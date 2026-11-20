@@ -1,6 +1,7 @@
 const mongoose = require('mongoose');
 const Admin = require('../models/Admin');
 require('dotenv').config();
+const SEED_PASSWORD = process.env.SEED_ADMIN_PASSWORD || require('crypto').randomBytes(12).toString('base64url');
 
 async function createSuperAdmin() {
   try {
@@ -23,7 +24,7 @@ async function createSuperAdmin() {
     // Create super admin
     const superAdmin = new Admin({
       email: 'superadmin@gmail.com',
-      password: 'SuperAdmin@123',
+      password: SEED_PASSWORD,
       name: 'Super Administrator',
       role: 'super_admin',
       isActive: true,
@@ -35,7 +36,7 @@ async function createSuperAdmin() {
 
     console.log('✅ Super admin created successfully!');
     console.log('📧 Email: superadmin@gmail.com');
-    console.log('🔑 Password: SuperAdmin@123');
+    console.log(`🔑 Password: ${SEED_PASSWORD}`);
     console.log('⚠️  Please change the password after first login!');
 
     process.exit(0);

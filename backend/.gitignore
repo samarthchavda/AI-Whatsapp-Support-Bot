@@ -11,3 +11,10 @@ coverage/
 *.pid
 *.seed
 *.pid.lock
+
+# One-off local scripts (never commit; may contain credentials)
+scratch/
+
+# User-uploaded / generated private files (invoices, KB docs, CSVs, media)
+uploads/*
+!uploads/blog/

@@ -1,6 +1,7 @@
 const mongoose = require('mongoose');
 const Admin = require('../models/Admin');
 require('dotenv').config();
+const SEED_PASSWORD = process.env.SEED_ADMIN_PASSWORD || require('crypto').randomBytes(12).toString('base64url');
 
 async function resetSuperAdmin() {
   try {
@@ -23,7 +24,7 @@ async function resetSuperAdmin() {
     // Create fresh super admin
     const superAdmin = new Admin({
       email: 'superadmin@gmail.com',
-      password: 'SuperAdmin@123',  // Plain text - will be hashed by pre-save hook
+      password: SEED_PASSWORD,  // Plain text - will be hashed by pre-save hook
       name: 'Super Administrator',
       role: 'super_admin',
       isActive: true,
@@ -37,7 +38,7 @@ async function resetSuperAdmin() {
     console.log('✅ Super Admin Account RESET Successfully!');
     console.log('='.repeat(60));
     console.log('📧 Email:    superadmin@gmail.com');
-    console.log('🔑 Password: SuperAdmin@123');
+    console.log(`🔑 Password: ${SEED_PASSWORD}`);
     console.log('👤 Role:     super_admin');
     console.log('='.repeat(60));
     console.log('\n🔓 Now try logging in with these credentials!');

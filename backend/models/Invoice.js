@@ -86,6 +86,13 @@ const invoiceSchema = new mongoose.Schema({
   },
   remainingAmount: {
     type: Number
+  },
+  // Razorpay references for subscription invoices (used to block payment replay)
+  razorpayPaymentId: {
+    type: String
+  },
+  razorpayOrderId: {
+    type: String
   }
 }, { 
   timestamps: true 
@@ -94,6 +101,8 @@ const invoiceSchema = new mongoose.Schema({
 // Index for faster queries
 invoiceSchema.index({ customerPhone: 1, issuedDate: -1 });
 invoiceSchema.index({ status: 1, dueDate: 1 });
+invoiceSchema.index({ razorpayPaymentId: 1 }, { unique: true, sparse: true });
+invoiceSchema.index({ customerId: 1, issuedDate: -1 });
 
 // Calculate remaining amount before saving
 invoiceSchema.pre('save', function(next) {

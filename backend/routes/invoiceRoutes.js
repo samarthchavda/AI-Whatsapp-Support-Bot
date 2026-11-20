@@ -2,6 +2,10 @@ const express = require('express');
 const router = express.Router();
 const invoiceController = require('../controllers/merchant/invoiceController');
 const { verifyToken } = require('../middleware/auth');
+const { requireSuperAdmin } = require('../controllers/superAdmin/superAdminController');
+
+// Public, but only with a valid short-lived HMAC signature (Meta fetches invoice PDFs from here).
+router.get('/signed/:id/pdf', invoiceController.downloadSignedInvoicePdf);
 
 /**
  * @openapi
@@ -26,7 +30,7 @@ const { verifyToken } = require('../middleware/auth');
  *         description: Invoice created
  */
 router.get('/', verifyToken, invoiceController.getAllInvoices);
-router.post('/', verifyToken, invoiceController.createInvoice);
+router.post('/', verifyToken, requireSuperAdmin, invoiceController.createInvoice);
 
 /**
  * @openapi
@@ -92,8 +96,9 @@ router.get('/overdue', verifyToken, invoiceController.getOverdueInvoices);
  *       200:
  *         description: Invoice updated
  */
+router.get('/:id/pdf', verifyToken, invoiceController.downloadInvoicePdf);
 router.get('/:id', verifyToken, invoiceController.getInvoiceById);
-router.put('/:id', verifyToken, invoiceController.updateInvoice);
+router.put('/:id', verifyToken, requireSuperAdmin, invoiceController.updateInvoice);
 
 /**
  * @openapi
@@ -114,6 +119,6 @@ router.put('/:id', verifyToken, invoiceController.updateInvoice);
  *       200:
  *         description: Payment recorded
  */
-router.post('/:id/payment', verifyToken, invoiceController.recordPayment);
+router.post('/:id/payment', verifyToken, requireSuperAdmin, invoiceController.recordPayment);
 
 module.exports = router;

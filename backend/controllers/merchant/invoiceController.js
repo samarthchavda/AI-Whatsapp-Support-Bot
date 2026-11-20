@@ -1,23 +1,51 @@
+const fs = require('fs');
+const path = require('path');
 const Invoice = require('../../models/Invoice');
 const Customer = require('../../models/Customer');
+const { verifyResourceSignature } = require('../../utils/signedUrl');
+
+const INVOICES_DIR = path.join(__dirname, '../../uploads/invoices');
+const INVOICE_NUMBER_RE = /^[A-Za-z0-9_-]{1,64}$/;
+
+// Merchants only ever see their own invoices; super admins see all.
+const tenantScope = (req) => (
+  req.admin && req.admin.role === 'super_admin' ? {} : { customerId: req.admin._id }
+);
+
+const escapeRegex = (value) => String(value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+const streamInvoicePdf = (res, invoiceNumber) => {
+  if (!INVOICE_NUMBER_RE.test(invoiceNumber)) {
+    return res.status(400).json({ error: 'Invalid invoice number' });
+  }
+  const filePath = path.join(INVOICES_DIR, `${invoiceNumber}.pdf`);
+  if (!fs.existsSync(filePath)) {
+    return res.status(404).json({ error: 'Invoice PDF not found' });
+  }
+  res.setHeader('Content-Type', 'application/pdf');
+  res.setHeader('Content-Disposition', `inline; filename="Invoice-${invoiceNumber}.pdf"`);
+  res.setHeader('Cache-Control', 'private, no-store');
+  return res.sendFile(filePath);
+};
 
 // Get all invoices
 exports.getAllInvoices = async (req, res) => {
   try {
     const { page = 1, limit = 10, status, search } = req.query;
     
-    let query = {};
+    let query = { ...tenantScope(req) };
     
     if (status) {
-      query.status = status;
+      query.status = String(status);
     }
     
     if (search) {
+      const pattern = new RegExp(escapeRegex(search), 'i');
       query.$or = [
-        { invoiceNumber: new RegExp(search, 'i') },
-        { customerName: new RegExp(search, 'i') },
-        { customerPhone: new RegExp(search, 'i') },
-        { customerEmail: new RegExp(search, 'i') }
+        { invoiceNumber: pattern },
+        { customerName: pattern },
+        { customerPhone: pattern },
+        { customerEmail: pattern }
       ];
     }
 
@@ -43,7 +71,7 @@ exports.getAllInvoices = async (req, res) => {
 // Get invoice by ID
 exports.getInvoiceById = async (req, res) => {
   try {
-    const invoice = await Invoice.findOne({ invoiceNumber: req.params.id });
+    const invoice = await Invoice.findOne({ invoiceNumber: String(req.params.id), ...tenantScope(req) });
     
     if (!invoice) {
       return res.status(404).json({ error: 'Invoice not found' });
@@ -60,7 +88,7 @@ exports.getInvoiceByPhone = async (req, res) => {
   try {
     const { phone } = req.params;
     
-    const invoices = await Invoice.find({ customerPhone: phone })
+    const invoices = await Invoice.find({ customerPhone: String(phone), ...tenantScope(req) })
       .sort({ issuedDate: -1 });
 
     res.json(invoices);
@@ -194,8 +222,9 @@ exports.getOverdueInvoices = async (req, res) => {
     today.setHours(0, 0, 0, 0);
 
     const overdueInvoices = await Invoice.find({
+      ...tenantScope(req),
       dueDate: { $lt: today },
-      status: { $ne: 'paid', $ne: 'cancelled' }
+      status: { $nin: ['paid', 'cancelled'] }
     }).sort({ dueDate: 1 });
 
     res.json({
@@ -207,10 +236,36 @@ exports.getOverdueInvoices = async (req, res) => {
   }
 };
 
+// Download invoice PDF (authenticated: owner or super admin)
+exports.downloadInvoicePdf = async (req, res) => {
+  try {
+    const invoiceNumber = String(req.params.id);
+    const invoice = await Invoice.findOne({ invoiceNumber, ...tenantScope(req) }).select('invoiceNumber');
+    if (!invoice) {
+      return res.status(404).json({ error: 'Invoice not found' });
+    }
+    return streamInvoicePdf(res, invoice.invoiceNumber);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to load invoice PDF' });
+  }
+};
+
+// Download invoice PDF via short-lived signed link (used by WhatsApp document delivery)
+exports.downloadSignedInvoicePdf = async (req, res) => {
+  const invoiceNumber = String(req.params.id);
+  const { exp, sig } = req.query;
+  if (!verifyResourceSignature(`invoice:${invoiceNumber}`, exp, sig)) {
+    return res.status(403).json({ error: 'Link invalid or expired' });
+  }
+  return streamInvoicePdf(res, invoiceNumber);
+};
+
 // Get invoice statistics
 exports.getInvoiceStats = async (req, res) => {
   try {
+    const scopeMatch = tenantScope(req);
     const stats = await Invoice.aggregate([
+      { $match: scopeMatch },
       {
         $group: {
           _id: '$status',
@@ -221,7 +276,7 @@ exports.getInvoiceStats = async (req, res) => {
     ]);
 
     const totalRevenue = await Invoice.aggregate([
-      { $match: { status: 'paid' } },
+      { $match: { ...scopeMatch, status: 'paid' } },
       { $group: { _id: null, total: { $sum: '$totalAmount' } } }
     ]);
 

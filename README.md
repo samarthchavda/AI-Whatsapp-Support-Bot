@@ -673,18 +673,7 @@ GET    /api/auth/me                    - Get current user info
 PUT    /api/auth/profile               - Update profile
 ```
 
-**Default Admin Accounts:**
-```
-Email: admin@gmail.com
-Password: Admin@123
-
-Email: superadmin@gmail.com
-Password: SuperAdmin@123
-Role: super_admin
-
-Email: test@gmail.com
-Password: test@123
-```
+**Admin accounts:** create them with `npm run create-admin` (see [Admin Credentials](#admin-credentials)). No default passwords are shipped.
 
 ---
 
@@ -1785,11 +1774,7 @@ async incrementCounter(name)
 - Back to home button
 - Glassmorphism design
 
-**Credentials:**
-```
-Email: admin@gmail.com
-Password: Admin@123
-```
+**Credentials:** use an account created with `npm run create-admin`.
 
 ---
 
@@ -2098,32 +2083,16 @@ PORT=5002 npm run dev
 
 ## 👤 Admin Credentials
 
-### Default Admin Account
-```
-Email: admin@gmail.com
-Password: Admin@123
-Name: Admin
-Role: admin
-Subscription: Trial
-```
+No default credentials are shipped. The seed scripts use `SEED_ADMIN_PASSWORD` from the environment, or generate a random password and print it once in your terminal.
 
-### Test Admin Account
-```
-Email: test@gmail.com
-Password: test@123
-Name: Test User
-Role: admin
-Subscription: Trial
-```
+> ⚠️ If any account using an old default password (e.g. `admin@gmail.com`, `superadmin@gmail.com`, `test@gmail.com`) exists in production, change its password or delete it.
 
 ### Create New Admin Account
 
 ```bash
 cd backend
-npm run create-admin
+SEED_ADMIN_PASSWORD='choose-a-strong-password' npm run create-admin
 ```
-
-Follow the prompts to create a new admin account.
 
 ---
 

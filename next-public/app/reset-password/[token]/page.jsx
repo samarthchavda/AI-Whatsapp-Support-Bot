@@ -3,7 +3,8 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
-import { FaArrowLeft, FaCheckCircle, FaEye, FaEyeSlash } from 'react-icons/fa';
+import { FaArrowLeft, FaCheckCircle, FaEye, FaEyeSlash, FaExclamationCircle } from 'react-icons/fa';
+import BrandMark from '../../components/BrandMark';
 
 export default function ResetPasswordPage() {
   const params = useParams();
@@ -58,153 +59,71 @@ export default function ResetPasswordPage() {
   };
 
   return (
-    <div className="retro-page-container">
-      <div className="bg-video-wrapper">
-        <video className="bg-video" autoPlay muted loop playsInline>
-          <source
-            src="https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260809_012548_ef22562c-c0ae-4816-ad9d-f8922af4e6a7.mp4"
-            type="video/mp4"
-          />
-        </video>
-        <div className="bg-overlay-gradient"></div>
-      </div>
-
-      <main style={{ position: 'relative', zIndex: 1, minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '40px 20px' }}>
-        <div style={{
-          width: '100%',
-          maxWidth: '460px',
-          background: 'rgba(18, 18, 21, 0.92)',
-          border: '1px solid rgba(255, 255, 255, 0.15)',
-          borderRadius: '24px',
-          padding: '36px 32px',
-          backdropFilter: 'blur(16px)',
-          boxShadow: '0 20px 50px rgba(0,0,0,0.6)'
-        }}>
-          <Link href="/login" style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', color: '#a1a1aa', fontSize: '13.5px', textDecoration: 'none', marginBottom: '24px' }}>
-            <FaArrowLeft /> Back to login
-          </Link>
-
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px' }}>
-            <img src="/app-icon.png" alt="Kwickbot" style={{ width: '40px', height: '40px', borderRadius: '10px' }} />
-            <div>
-              <h2 style={{ color: '#ffffff', fontSize: '22px', fontWeight: '800', margin: 0, letterSpacing: '-0.02em' }}>New Password</h2>
-              <p style={{ color: '#a1a1aa', fontSize: '13.5px', margin: 0 }}>Create a strong password for your account</p>
-            </div>
-          </div>
-
-          {error && (
-            <div style={{
-              background: 'rgba(239, 68, 68, 0.15)',
-              border: '1px solid rgba(239, 68, 68, 0.4)',
-              color: '#f87171',
-              padding: '12px 16px',
-              borderRadius: '12px',
-              fontSize: '13.5px',
-              marginBottom: '20px'
-            }}>
-              {error}
-            </div>
-          )}
+    <div className="page">
+      <main className="auth-wrap">
+        <div className="form-card">
+          <Link href="/login" className="back-link"><FaArrowLeft aria-hidden="true" /> Back to sign in</Link>
 
           {success ? (
-            <div style={{ textAlign: 'center', padding: '20px 0' }}>
-              <FaCheckCircle style={{ color: '#4ade80', fontSize: '48px', marginBottom: '16px' }} />
-              <h3 style={{ color: '#ffffff', fontSize: '18px', fontWeight: '700', marginBottom: '8px' }}>Password Reset Successful!</h3>
-              <p style={{ color: '#a1a1aa', fontSize: '14px', marginBottom: '24px' }}>
-                Your password has been updated. Redirecting you to login...
-              </p>
-              <Link href="/login" style={{ display: 'inline-block', width: '100%', height: '44px', lineHeight: '44px', textAlign: 'center', fontSize: '14px', fontWeight: '700', background: '#28B8F2', color: '#08090B', borderRadius: '12px', textDecoration: 'none', boxShadow: '0 4px 18px rgba(40, 184, 242, 0.35)' }}>
-                Go to Login Now
-              </Link>
+            <div className="success-panel" role="status">
+              <span className="icon-chip"><FaCheckCircle aria-hidden="true" /></span>
+              <h1 style={{ fontSize: 24, fontWeight: 800 }}>Password updated</h1>
+              <p style={{ color: 'var(--muted)' }}>Your password has been reset. Taking you to sign in…</p>
+              <Link href="/login" className="btn btn-primary btn-block">Sign in now</Link>
             </div>
           ) : (
-            <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
-              <div>
-                <label style={{ display: 'block', color: '#d4d4d8', fontSize: '13px', fontWeight: '600', marginBottom: '6px' }}>New Password</label>
-                <div style={{ position: 'relative' }}>
-                  <input
-                    type={showPassword ? 'text' : 'password'}
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                    placeholder="••••••••"
-                    style={{
-                      width: '100%',
-                      padding: '12px 16px',
-                      paddingRight: '44px',
-                      borderRadius: '12px',
-                      background: '#27272a',
-                      border: '1px solid rgba(255, 255, 255, 0.15)',
-                      color: '#ffffff',
-                      fontSize: '14px',
-                      outline: 'none'
-                    }}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    style={{
-                      position: 'absolute',
-                      right: '12px',
-                      top: '50%',
-                      transform: 'translateY(-50%)',
-                      background: 'none',
-                      border: 'none',
-                      color: '#a1a1aa',
-                      cursor: 'pointer',
-                      fontSize: '16px'
-                    }}
-                  >
-                    {showPassword ? <FaEyeSlash /> : <FaEye />}
-                  </button>
+            <>
+              <div className="auth-head">
+                <BrandMark className="brand-mark" />
+                <h1 style={{ fontSize: 26, fontWeight: 800 }}>Choose a new password</h1>
+                <p className="form-sub" style={{ marginTop: 0 }}>Use at least 6 characters. A longer passphrase is safer.</p>
+              </div>
+              {error && (
+                <div className="alert alert-error" role="alert">
+                  <FaExclamationCircle aria-hidden="true" style={{ flex: 'none', marginTop: 3 }} /> <span>{error}</span>
                 </div>
-              </div>
-
-              <div>
-                <label style={{ display: 'block', color: '#d4d4d8', fontSize: '13px', fontWeight: '600', marginBottom: '6px' }}>Confirm New Password</label>
-                <input
-                  type={showPassword ? 'text' : 'password'}
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  required
-                  placeholder="••••••••"
-                  style={{
-                    width: '100%',
-                    padding: '12px 16px',
-                    borderRadius: '12px',
-                    background: '#27272a',
-                    border: '1px solid rgba(255, 255, 255, 0.15)',
-                    color: '#ffffff',
-                    fontSize: '14px',
-                    outline: 'none'
-                  }}
-                />
-              </div>
-
-              <button
-                type="submit"
-                disabled={loading}
-                style={{
-                  width: '100%',
-                  marginTop: '10px',
-                  height: '46px',
-                  fontSize: '15px',
-                  fontWeight: '700',
-                  background: '#28B8F2',
-                  color: '#08090B',
-                  border: 'none',
-                  borderRadius: '12px',
-                  cursor: loading ? 'not-allowed' : 'pointer',
-                  boxShadow: '0 4px 18px rgba(40, 184, 242, 0.35)',
-                  transition: 'all 0.2s ease',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center'
-                }}
-              >
-                {loading ? 'Updating password...' : 'Reset Password'}
-              </button>
-            </form>
+              )}
+              <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                <div className="field">
+                  <label htmlFor="reset-password">New password</label>
+                  <div className="input-wrap">
+                    <input
+                      id="reset-password"
+                      type={showPassword ? 'text' : 'password'}
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      autoComplete="new-password"
+                      minLength={6}
+                      required
+                    />
+                    <button
+                      type="button"
+                      className="input-btn"
+                      onClick={() => setShowPassword(!showPassword)}
+                      aria-label={showPassword ? 'Hide passwords' : 'Show passwords'}
+                      aria-pressed={showPassword}
+                    >
+                      {showPassword ? <FaEyeSlash aria-hidden="true" /> : <FaEye aria-hidden="true" />}
+                    </button>
+                  </div>
+                </div>
+                <div className="field">
+                  <label htmlFor="reset-confirm">Confirm new password</label>
+                  <input
+                    id="reset-confirm"
+                    type={showPassword ? 'text' : 'password'}
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    autoComplete="new-password"
+                    minLength={6}
+                    required
+                  />
+                </div>
+                <button type="submit" disabled={loading} className="btn btn-primary btn-block">
+                  {loading ? 'Updating…' : 'Update password'}
+                </button>
+              </form>
+            </>
           )}
         </div>
       </main>

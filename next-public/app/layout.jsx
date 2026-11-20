@@ -137,8 +137,8 @@ export default function RootLayout({ children }) {
         <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
-        <link href="https://db.onlinewebfonts.com/c/8cb707a9b8a73f8a7403336b861c3074?family=BubbledotICG-FinePos" rel="stylesheet" />
+        <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Space+Grotesk:wght@600&display=swap" rel="stylesheet" />
+        <meta name="theme-color" content="#2A3D18" />
 
         {/* Structured Data (JSON-LD Schemas for SEO) */}
         <script
@@ -155,8 +155,9 @@ export default function RootLayout({ children }) {
         />
       </head>
       <body>
+        <a href="#main" className="sr-only">Skip to content</a>
         <Header />
-        {children}
+        <div id="main">{children}</div>
         <Footer />
       </body>
     </html>

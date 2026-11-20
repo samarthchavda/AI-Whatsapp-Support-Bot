@@ -3,7 +3,7 @@
 import React, { useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { FaTrashAlt, FaChevronLeft, FaEnvelope } from 'react-icons/fa';
+import { FaTrashAlt, FaEnvelope } from 'react-icons/fa';
 
 export default function DataDeletion() {
   const router = useRouter();
@@ -13,19 +13,11 @@ export default function DataDeletion() {
   }, []);
 
   return (
-    <div className="privacy-container">
-      <header className="privacy-header">
-        <Link href="/" className="back-btn">
-          <FaChevronLeft /> Back to Home
-        </Link>
-        <Link href="/" className="privacy-logo" style={{ cursor: 'pointer' }}>
-          <img src="/logo.png" className="header-logo-img" alt="Kwickbot Logo" />
-        </Link>
-      </header>
+    <div className="privacy-container page-end">
 
       <main className="privacy-content">
-        <div className="privacy-hero" style={{ background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.15) 0%, rgba(15, 23, 42, 0.4) 100%)' }}>
-          <FaTrashAlt className="hero-icon" style={{ color: '#ef4444' }} />
+        <div className="privacy-hero">
+          <FaTrashAlt className="hero-icon" />
           <h1>User Data Deletion Instructions</h1>
           <p className="hero-date">Last Updated: July 7, 2026</p>
           <p className="hero-sub">
@@ -71,11 +63,11 @@ export default function DataDeletion() {
               <p style={{ marginTop: '10px' }}>
                 Send a data deletion request email to our Data Protection Officer at:
               </p>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'rgba(255, 255, 255, 0.05)', padding: '12px', borderRadius: '8px', marginTop: '8px', fontWeight: '600' }}>
-                <FaEnvelope style={{ color: '#6366f1' }} />
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'var(--mist)', padding: '12px', borderRadius: '8px', marginTop: '8px', fontWeight: '600' }}>
+                <FaEnvelope aria-hidden="true" style={{ color: 'var(--olive)' }} />
                 <span>chavdasamarth007@gmail.com</span>
               </div>
-              <p style={{ marginTop: '10px', fontSize: '13px', color: '#94a3b8' }}>
+              <p style={{ marginTop: '10px', fontSize: '13px', color: 'var(--muted)' }}>
                 *Note: Please send the request from the email address or phone number you wish to delete. We will process your request and delete all records from our database within 24 hours.
               </p>
             </div>
@@ -94,10 +86,6 @@ export default function DataDeletion() {
           </ul>
         </section>
       </main>
-
-      <footer className="privacy-footer">
-        <p>&copy; 2026 Kwickbot. All rights reserved. Securely integrated with Meta Business API.</p>
-      </footer>
     </div>
   );
 }

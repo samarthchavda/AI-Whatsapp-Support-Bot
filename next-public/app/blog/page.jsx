@@ -127,126 +127,80 @@ export default async function BlogIndexPage({ searchParams }) {
   const startIndex = (validPage - 1) * POSTS_PER_PAGE;
   const paginatedPosts = posts.slice(startIndex, startIndex + POSTS_PER_PAGE);
 
+  const formatDate = (value) => {
+    if (!value) return null;
+    const d = new Date(value);
+    return Number.isNaN(d.getTime()) ? null : d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+  };
+
   return (
-    <div className="retro-page-container">
-      <div className="bg-video-wrapper">
-        <video className="bg-video" autoPlay muted loop playsInline>
-          <source
-            src="https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260809_012548_ef22562c-c0ae-4816-ad9d-f8922af4e6a7.mp4"
-            type="video/mp4"
-          />
-        </video>
-        <div className="bg-overlay-gradient"></div>
-      </div>
-
-      <main style={{ position: 'relative', zIndex: 1, padding: '40px 20px 80px' }}>
-        <section className="dark-section-card">
-          <div className="dark-heading-center">
-            <span>KWICKBOT INSIGHTS</span>
-            <h1 className="retro-dot-headline" style={{ fontSize: 'clamp(28px, 5vw, 56px)', margin: '16px auto' }}>
-              Blog &amp; E-Commerce Guides
-            </h1>
-            <p className="retro-subhead" style={{ margin: '0 auto' }}>
-              Tutorials, pricing breakdown guides, and automation strategies for WhatsApp AI support.
-            </p>
+    <div className="page">
+      <main>
+        <section className="page-hero">
+          <div className="container">
+            <div className="section-head center">
+              <span className="eyebrow">Kwickbot insights</span>
+              <h1>Blog &amp; e-commerce guides</h1>
+              <p>Tutorials, pricing breakdowns and automation strategies for WhatsApp AI support.</p>
+            </div>
           </div>
+        </section>
 
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))',
-            gap: '24px',
-            maxWidth: '1120px',
-            margin: '40px auto 0'
-          }}>
-            {paginatedPosts.map((post) => (
-              <article key={post._id || post.slug} className="dark-pricing-card" style={{ padding: 0, overflow: 'hidden', height: '100%' }}>
-                {post.coverImage && (
-                  <img 
-                    src={post.coverImage} 
-                    alt={post.title} 
-                    style={{ width: '100%', height: '190px', objectFit: 'cover', display: 'block' }} 
-                  />
-                )}
-                <div style={{ padding: '24px', display: 'flex', flexDirection: 'column', flex: 1 }}>
-                  <div style={{ fontSize: '11px', color: '#38bdf8', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '8px' }}>
-                    {post.tags && post.tags.length ? post.tags.join(' • ') : 'Guide'}
-                  </div>
-                  <h3 style={{ fontSize: '18px', fontWeight: '700', color: '#ffffff', marginBottom: '12px', lineHeight: '1.4' }}>
-                    <Link href={`/blog/${post.slug}`} style={{ textDecoration: 'none', color: '#ffffff' }}>
-                      {post.title}
+        <section className="section-tight">
+          <div className="container">
+            <div className="blog-grid">
+              {paginatedPosts.map((post) => (
+                <article key={post._id || post.slug} className="card card-link post-card">
+                  {post.coverImage ? (
+                    <img src={post.coverImage} alt="" className="post-cover" loading="lazy" />
+                  ) : (
+                    <div className="post-cover-fallback" aria-hidden="true" />
+                  )}
+                  <div className="post-body">
+                    <div className="post-meta">
+                      <span className="pill" style={{ padding: '4px 10px', fontSize: 12 }}>
+                        {post.tags && post.tags.length ? post.tags[0] : 'Guide'}
+                      </span>
+                      {formatDate(post.createdAt) && <span>{formatDate(post.createdAt)}</span>}
+                    </div>
+                    <h2>
+                      <Link href={`/blog/${post.slug}`} style={{ color: 'inherit' }}>{post.title}</Link>
+                    </h2>
+                    <p>{post.summary}</p>
+                    <Link href={`/blog/${post.slug}`} className="text-link" aria-label={`Read: ${post.title}`}>
+                      Read article <span aria-hidden="true">→</span>
                     </Link>
-                  </h3>
-                  <p style={{ fontSize: '14px', color: '#a1a1aa', lineHeight: '1.6', marginBottom: '20px', flex: 1 }}>
-                    {post.summary}
-                  </p>
-                  <Link href={`/blog/${post.slug}`} style={{
-                    color: '#38bdf8',
-                    fontWeight: '600',
-                    textDecoration: 'none',
-                    fontSize: '14px',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '6px'
-                  }}>
-                    Read Full Article →
-                  </Link>
-                </div>
-              </article>
-            ))}
-          </div>
+                  </div>
+                </article>
+              ))}
+            </div>
 
-          {totalPages > 1 && (
-            <div style={{
-              display: 'flex',
-              justifyContent: 'center',
-              alignItems: 'center',
-              gap: '12px',
-              marginTop: '48px',
-              flexWrap: 'wrap'
-            }}>
-              {validPage > 1 ? (
-                <Link href={`/blog?page=${validPage - 1}`} className="glowing-btn-white small" style={{ fontSize: '14px', textDecoration: 'none' }}>
-                  ← Previous
-                </Link>
-              ) : (
-                <span style={{ padding: '8px 16px', color: '#52525b', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '100px', fontSize: '14px' }}>
-                  ← Previous
-                </span>
-              )}
-
-              <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+            {totalPages > 1 && (
+              <nav aria-label="Blog pages" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 8, marginTop: 48, flexWrap: 'wrap' }}>
+                {validPage > 1 ? (
+                  <Link href={`/blog?page=${validPage - 1}`} className="btn btn-secondary btn-sm">← Previous</Link>
+                ) : (
+                  <span className="btn btn-secondary btn-sm" aria-disabled="true">← Previous</span>
+                )}
                 {Array.from({ length: totalPages }, (_, i) => i + 1).map((pageNum) => (
                   <Link
                     key={pageNum}
                     href={`/blog?page=${pageNum}`}
-                    style={{
-                      padding: '8px 14px',
-                      borderRadius: '100px',
-                      background: pageNum === validPage ? '#ffffff' : 'rgba(255, 255, 255, 0.05)',
-                      color: pageNum === validPage ? '#09090b' : '#a1a1aa',
-                      fontWeight: pageNum === validPage ? '700' : '500',
-                      textDecoration: 'none',
-                      fontSize: '14px',
-                      border: pageNum === validPage ? 'none' : '1px solid rgba(255, 255, 255, 0.1)',
-                      transition: 'all 0.2s ease'
-                    }}
+                    aria-current={pageNum === validPage ? 'page' : undefined}
+                    className={`btn btn-sm ${pageNum === validPage ? 'btn-primary' : 'btn-secondary'}`}
+                    style={{ minWidth: 42, padding: '0 12px' }}
                   >
                     {pageNum}
                   </Link>
                 ))}
-              </div>
-
-              {validPage < totalPages ? (
-                <Link href={`/blog?page=${validPage + 1}`} className="glowing-btn-white small" style={{ fontSize: '14px', textDecoration: 'none' }}>
-                  Next →
-                </Link>
-              ) : (
-                <span style={{ padding: '8px 16px', color: '#52525b', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '100px', fontSize: '14px' }}>
-                  Next →
-                </span>
-              )}
-            </div>
-          )}
+                {validPage < totalPages ? (
+                  <Link href={`/blog?page=${validPage + 1}`} className="btn btn-secondary btn-sm">Next →</Link>
+                ) : (
+                  <span className="btn btn-secondary btn-sm" aria-disabled="true">Next →</span>
+                )}
+              </nav>
+            )}
+          </div>
         </section>
       </main>
     </div>

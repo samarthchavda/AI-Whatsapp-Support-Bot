@@ -3,7 +3,7 @@
 import React, { useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { FaUndo, FaChevronLeft, FaRegHandshake } from 'react-icons/fa';
+import { FaUndo, FaRegHandshake } from 'react-icons/fa';
 
 export default function RefundPolicy() {
   const router = useRouter();
@@ -13,15 +13,7 @@ export default function RefundPolicy() {
   }, []);
 
   return (
-    <div className="privacy-container">
-      <header className="privacy-header">
-        <Link href="/" className="back-btn">
-          <FaChevronLeft /> Back to Home
-        </Link>
-        <Link href="/" className="privacy-logo" style={{ cursor: 'pointer' }}>
-          <img src="/logo.png" className="header-logo-img" alt="Kwickbot Logo" />
-        </Link>
-      </header>
+    <div className="privacy-container page-end">
 
       <main className="privacy-content">
         <div className="privacy-hero">
@@ -61,7 +53,7 @@ export default function RefundPolicy() {
         <section className="privacy-section-card">
           <h2>3. Refund Processing Timelines</h2>
           <div className="legal-callout">
-            <FaRegHandshake className="callout-icon" style={{ color: '#34d399' }} />
+            <FaRegHandshake className="callout-icon" />
             <div>
               <h3>How refunds are processed (Razorpay rules)</h3>
               <p>

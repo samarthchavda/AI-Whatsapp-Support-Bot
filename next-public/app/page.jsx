@@ -11,6 +11,7 @@ import {
   FaCheck,
   FaTimes,
   FaChartLine,
+  FaCode,
   FaComments,
   FaHeadset,
   FaPlug,
@@ -19,15 +20,15 @@ import {
   FaPaperPlane,
   FaMobileAlt,
   FaShoppingBag,
-  FaStore,
   FaSyncAlt,
   FaUserCheck,
   FaCoins,
   FaChevronDown,
   FaChevronUp
 } from 'react-icons/fa';
-import { SiWhatsapp, SiMeta, SiShopify, SiWoocommerce } from 'react-icons/si';
+import { SiWhatsapp, SiShopify, SiWoocommerce } from 'react-icons/si';
 import { getGroundedWebsiteAnswer } from './services/websiteKnowledge';
+import BrandMark from './components/BrandMark';
 
 const faqs = [
   {
@@ -130,11 +131,111 @@ const advantages = [
   { icon: FaChartLine, title: 'Operational Visibility', copy: 'Dashboards expose conversations, orders, escalations, broadcasts, integrations, usage, and audit activity in one place.' }
 ];
 
+const servicePaths = [
+  {
+    icon: FaHeadset,
+    title: 'Support automation for stores',
+    copy: 'AI answers order, policy and product questions on WhatsApp, with live chat handoff to your team when it matters.',
+    href: '/services',
+    cta: 'Explore support plans'
+  },
+  {
+    icon: FaCode,
+    title: 'WhatsApp API for your software',
+    copy: 'Connect the official WhatsApp Cloud API to your own systems with API keys, webhooks and delivery logs.',
+    href: '/services',
+    cta: 'See the developer API'
+  },
+  {
+    icon: FaBroadcastTower,
+    title: 'Broadcasts & cart recovery',
+    copy: 'Send approved templates, scheduled campaigns and abandoned-cart reminders, and see what was delivered.',
+    href: '/services',
+    cta: 'See campaign tools'
+  }
+];
+
+const plans = [
+  {
+    name: 'Starter',
+    price: '₹1,499',
+    desc: 'For small stores validating AI support.',
+    cta: 'Start with a demo',
+    included: [
+      'Up to 500 WhatsApp conversations / month',
+      'Up to 2,000 messages / month',
+      '1 active WhatsApp connection',
+      '1 knowledge base PDF',
+      '1 store integration (Shopify or WooCommerce)',
+      'Knowledge base retrieval & live chat CRM'
+    ],
+    excluded: [
+      'WhatsApp broadcasting',
+      'Advanced analytics dashboard',
+      'Live chat handoff escalations',
+      'Automated order cancellations',
+      'Custom branding',
+      'Developer API & webhooks',
+      'Priority support'
+    ]
+  },
+  {
+    name: 'Growth',
+    price: '₹2,999',
+    desc: 'For stores managing regular order and support volume.',
+    cta: 'Book a demo',
+    featured: true,
+    included: [
+      'Up to 3,000 WhatsApp conversations / month',
+      'Up to 15,000 messages / month',
+      'Up to 2 active WhatsApp connections',
+      'Up to 3 knowledge base PDFs',
+      '1 store integration (Shopify or WooCommerce)',
+      'Knowledge base retrieval & live chat CRM',
+      'Broadcasting: 5,000 messages & 10 campaigns / month',
+      'Advanced analytics dashboard',
+      'Live chat handoff escalations',
+      'Automated order cancellations',
+      'Priority email & chat support (under 4 hours)'
+    ],
+    excluded: ['Custom branding', 'Developer API & webhooks']
+  },
+  {
+    name: 'Scale',
+    price: '₹9,999',
+    desc: 'For teams needing higher limits and custom workflows.',
+    cta: 'Talk to sales',
+    included: [
+      'Unlimited WhatsApp conversations & messages',
+      'Up to 5 active WhatsApp connections',
+      'Unlimited knowledge base PDFs',
+      'Shopify and WooCommerce together',
+      'Knowledge base retrieval & live chat CRM',
+      'Broadcasting: 25,000 messages & unlimited campaigns',
+      'Advanced analytics dashboard',
+      'Live chat handoff escalations',
+      'Automated order cancellations',
+      'Custom branding (your logo & name)',
+      'Developer API & webhooks',
+      'Premium support'
+    ],
+    excluded: []
+  }
+];
+
+const previewTabs = [
+  { id: 'support', label: 'Support', icon: FaComments },
+  { id: 'orders', label: 'Orders', icon: FaBox },
+  { id: 'handoff', label: 'Handoff', icon: FaHeadset },
+  { id: 'broadcast', label: 'Campaign', icon: FaBroadcastTower }
+];
+
 export default function LandingPage() {
-  const [openFaqIndex, setOpenFaqIndex] = useState(null);
+  const [openFaqIndex, setOpenFaqIndex] = useState(0);
   const [isChatOpen, setIsChatOpen] = useState(false);
-  const [showFullPricing, setShowFullPricing] = useState(true);
+  const [showFullPricing, setShowFullPricing] = useState(false);
   const [activePreview, setActivePreview] = useState('support');
+  const [autoPlay, setAutoPlay] = useState(true);
 
   const WELCOME_MESSAGE = "Hi! I'm the Kwickbot AI assistant. I can help you understand Kwickbot's features, setup process, integrations, and pricing. What would you like to know?";
 
@@ -146,12 +247,12 @@ export default function LandingPage() {
   const chatEndRef = useRef(null);
 
   const quickReplies = [
-    "What is Kwickbot?",
-    "How does it work?",
-    "Pricing",
-    "Shopify integration",
-    "WooCommerce integration",
-    "Book a demo"
+    'What is Kwickbot?',
+    'How does it work?',
+    'Pricing',
+    'Shopify integration',
+    'WooCommerce integration',
+    'Book a demo'
   ];
 
   useEffect(() => {
@@ -180,31 +281,35 @@ export default function LandingPage() {
     return () => observer.disconnect();
   }, []);
 
+  // Rotate the product preview until the visitor picks a tab themselves
   useEffect(() => {
+    if (!autoPlay) return undefined;
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return undefined;
 
-    const previewOrder = ['support', 'orders', 'handoff', 'broadcast'];
+    const order = previewTabs.map((tab) => tab.id);
     const interval = window.setInterval(() => {
-      setActivePreview((current) => {
-        const currentIndex = previewOrder.indexOf(current);
-        return previewOrder[(currentIndex + 1) % previewOrder.length];
-      });
+      setActivePreview((current) => order[(order.indexOf(current) + 1) % order.length]);
     }, 4800);
 
     return () => window.clearInterval(interval);
-  }, []);
+  }, [autoPlay]);
+
+  const pickPreview = (id) => {
+    setAutoPlay(false);
+    setActivePreview(id);
+  };
 
   const sendQuery = (queryText) => {
     const trimmed = queryText.trim();
     if (!trimmed || isTyping) return;
 
-    setChatMessages(prev => [...prev, { role: 'user', content: trimmed }]);
+    setChatMessages((prev) => [...prev, { role: 'user', content: trimmed }]);
     setChatInput('');
     setIsTyping(true);
 
     setTimeout(() => {
       const groundedAnswer = getGroundedWebsiteAnswer(trimmed);
-      setChatMessages(prev => [...prev, { role: 'assistant', content: groundedAnswer }]);
+      setChatMessages((prev) => [...prev, { role: 'assistant', content: groundedAnswer }]);
       setIsTyping(false);
     }, 600);
   };
@@ -217,500 +322,376 @@ export default function LandingPage() {
   const faqSchema = {
     '@context': 'https://schema.org',
     '@type': 'FAQPage',
-    mainEntity: faqs.map(faq => ({
+    mainEntity: faqs.map((faq) => ({
       '@type': 'Question',
       name: faq.question,
-      acceptedAnswer: {
-        '@type': 'Answer',
-        text: faq.answer
-      }
+      acceptedAnswer: { '@type': 'Answer', text: faq.answer }
     }))
   };
 
   return (
-    <div className="retro-page-container">
+    <div className="page">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: safeJsonStringify(faqSchema) }}
       />
-      {/* Background Video */}
-      <div className="bg-video-wrapper">
-        <video className="bg-video" autoPlay muted loop playsInline>
-          <source
-            src="https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260809_012548_ef22562c-c0ae-4816-ad9d-f8922af4e6a7.mp4"
-            type="video/mp4"
-          />
-        </video>
-        <div className="bg-overlay-gradient"></div>
-      </div>
 
       <main id="top">
-        {/* HERO SECTION */}
-        <section className="hero-retro-section">
-          {/* Platform stack */}
-          <div className="trust-row-wrapper">
-            <div className="trust-avatar-ring">
-              <div className="inner-white-circle">
-                <SiWhatsapp />
+        {/* HERO */}
+        <section className="hero">
+          <div className="container hero-grid">
+            <div className="hero-copy">
+              <span className="pill" style={{ alignSelf: 'flex-start' }}>
+                <span className="dot" /> Built for WhatsApp commerce operations
+              </span>
+              <h1>
+                Support that knows <span className="highlight">your store.</span>
+              </h1>
+              <p className="hero-lead">
+                Kwickbot connects WhatsApp, Gemini AI and your commerce data, so customers get useful answers while your team keeps control of every escalation.
+              </p>
+              <div className="hero-actions">
+                <Link href="/demo" className="btn btn-primary">Book a demo <FaArrowRight /></Link>
+                <Link href="/pricing" className="btn btn-secondary">See pricing</Link>
+              </div>
+              <div className="hero-tags">
+                <span className="pill pill-white"><SiWhatsapp aria-hidden="true" /> WhatsApp Cloud API</span>
+                <span className="pill pill-white"><SiShopify aria-hidden="true" /> Shopify</span>
+                <span className="pill pill-white"><SiWoocommerce aria-hidden="true" /> WooCommerce</span>
+                <span className="pill pill-white"><FaBrain aria-hidden="true" /> Gemini AI</span>
               </div>
             </div>
-            <div className="trust-avatar-ring">
-              <div className="inner-white-circle">
-                <SiMeta />
+
+            <div className="hero-visual">
+              <div className="preview-frame">
+                <div className="preview-card">
+                  <div className="preview-head">
+                    <span className="preview-avatar"><BrandMark variant="dark" className="" /></span>
+                    <div className="preview-title">
+                      <strong>Commerce support workspace</strong>
+                      <span>● AI active</span>
+                    </div>
+                  </div>
+
+                  <div className="preview-tabs" role="tablist" aria-label="Kwickbot workflow preview">
+                    {previewTabs.map((tab) => {
+                      const Icon = tab.icon;
+                      return (
+                        <button
+                          key={tab.id}
+                          type="button"
+                          role="tab"
+                          aria-selected={activePreview === tab.id}
+                          className={`preview-tab ${activePreview === tab.id ? 'active' : ''}`}
+                          onClick={() => pickPreview(tab.id)}
+                        >
+                          <Icon aria-hidden="true" /> {tab.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  <div className="preview-body" key={activePreview} role="tabpanel">
+                    {activePreview === 'support' && (
+                      <>
+                        <div className="bubble bubble-in">Where is my order #ORD-1024?</div>
+                        <span className="context-note"><FaCheck aria-hidden="true" /> Order matched in the connected store</span>
+                        <div className="bubble bubble-out">Your order has shipped. I found the latest fulfilment status and tracking reference for you.</div>
+                      </>
+                    )}
+                    {activePreview === 'orders' && (
+                      <>
+                        <div className="bubble bubble-in">Can I cancel this order?</div>
+                        <span className="context-note"><FaBox aria-hidden="true" /> Current status: processing</span>
+                        <div className="bubble bubble-out">The order is still eligible for the configured cancellation workflow. I can submit the request now.</div>
+                      </>
+                    )}
+                    {activePreview === 'handoff' && (
+                      <>
+                        <div className="bubble bubble-in">I need an agent to review my refund.</div>
+                        <span className="context-note"><FaHeadset aria-hidden="true" /> Human assistance requested</span>
+                        <div className="alert-note"><FaUserCheck aria-hidden="true" /> AI paused · conversation routed to Live Chat</div>
+                      </>
+                    )}
+                    {activePreview === 'broadcast' && (
+                      <>
+                        <div className="template-card">
+                          <span className="template-label">Abandoned cart follow-up · Approved WhatsApp template</span>
+                          <span>You left items in your cart. Complete your order when you are ready.</span>
+                        </div>
+                        <span className="context-note"><FaCheck aria-hidden="true" /> Campaign activity stays visible</span>
+                      </>
+                    )}
+                  </div>
+                  <div className="preview-foot">WhatsApp Cloud API · Shopify &amp; WooCommerce · Gemini AI</div>
+                </div>
               </div>
-            </div>
-            <div className="trust-avatar-ring">
-              <div className="inner-white-circle">
-                <SiShopify />
-              </div>
-            </div>
-            <div className="trust-text-pill">
-              Built for WhatsApp commerce operations
             </div>
           </div>
-
-          {/* Retro Dot-Matrix Headline with Interactive GET STARTED Hover Morph */}
-          <Link href="/demo" className="hero-headline-interactive-wrapper" aria-label="Get Started Demo">
-            <h1 className="retro-dot-headline default-headline">
-              Support That Knows<br />
-              Your Store
-            </h1>
-            <h1 className="retro-dot-headline hover-headline">
-              GET STARTED <FaArrowRight style={{ fontSize: '0.75em', marginLeft: '12px' }} />
-            </h1>
-          </Link>
-
-          <p className="retro-subhead">
-            Kwickbot connects WhatsApp, Gemini AI, and your commerce data so customers get useful answers while your team keeps control of every escalation.
-          </p>
-
-          <Link href="/demo" className="glowing-btn-white">
-            Get Started <FaArrowRight />
-          </Link>
         </section>
 
-        {/* Factual platform summary */}
-        <section className="retro-stats-grid reveal-on-scroll">
-          <div className="stat-dot-card">
-            <div className="stat-dot-icon"><SiMeta /></div>
-            <div className="stat-dot-value">Official</div>
-            <div className="stat-dot-label">Meta Cloud API</div>
+        {/* FACTS */}
+        <section className="section-tight reveal-on-scroll">
+          <div className="container">
+            <div className="stats-strip">
+              <div className="stat"><strong>Official</strong><span>Meta WhatsApp Cloud API</span></div>
+              <div className="stat"><strong>2</strong><span>Commerce platforms</span></div>
+              <div className="stat"><strong>24/7</strong><span>AI availability</span></div>
+              <div className="stat accent"><strong>Live</strong><span>Human handoff</span></div>
+            </div>
           </div>
-          <div className="stat-dot-card">
-            <div className="stat-dot-icon"><FaStore /></div>
-            <div className="stat-dot-value">2</div>
-            <div className="stat-dot-label">Commerce Platforms</div>
-          </div>
-          <div className="stat-dot-card">
-            <div className="stat-dot-icon"><FaBrain /></div>
-            <div className="stat-dot-value">24/7</div>
-            <div className="stat-dot-label">AI Availability</div>
-          </div>
-          <div className="stat-dot-card">
-            <div className="stat-dot-icon"><FaHeadset /></div>
-            <div className="stat-dot-value">Live</div>
-            <div className="stat-dot-label">Human Handoff</div>
+        </section>
+
+        {/* WHAT WE OFFER */}
+        <section className="section reveal-on-scroll">
+          <div className="container">
+            <div className="section-head">
+              <span className="eyebrow">What Kwickbot does</span>
+              <h2>Three ways to run commerce on WhatsApp</h2>
+              <p>Use the full support platform, plug the WhatsApp API into your own software, or run campaigns. Most stores use all three.</p>
+            </div>
+            <div className="grid-3">
+              {servicePaths.map((item) => {
+                const Icon = item.icon;
+                return (
+                  <Link href={item.href} className="card card-link" key={item.title}>
+                    <span className="icon-chip"><Icon aria-hidden="true" /></span>
+                    <h3>{item.title}</h3>
+                    <p>{item.copy}</p>
+                    <span className="text-link" style={{ marginTop: 'auto' }}>{item.cta} <FaArrowRight aria-hidden="true" /></span>
+                  </Link>
+                );
+              })}
+            </div>
           </div>
         </section>
 
         {/* HOW IT WORKS */}
-        <section className="dark-section-card reveal-on-scroll">
-          <div className="dark-heading-center">
-            <span>FROM CONNECTION TO OPERATION</span>
-            <h2>Go Live in Four Clear Steps</h2>
-            <p>Connect the channels you already use, add the knowledge your team trusts, and manage every conversation from one workspace.</p>
-          </div>
-
-          <div className="workflow-grid">
-            {setupSteps.map((step, index) => {
-              const Icon = step.icon;
-              return (
-                <article className="workflow-step" key={step.title} style={{ '--reveal-delay': `${index * 90}ms` }}>
-                  <div className="workflow-step-top">
-                    <span className="workflow-number">0{index + 1}</span>
-                    <span className="workflow-icon"><Icon /></span>
-                  </div>
+        <section className="section reveal-on-scroll">
+          <div className="container">
+            <div className="section-head center">
+              <span className="eyebrow">From connection to operation</span>
+              <h2>Go live in four clear steps</h2>
+              <p>Connect the channels you already use, add the knowledge your team trusts, and manage every conversation from one workspace.</p>
+            </div>
+            <div className="grid-4">
+              {setupSteps.map((step, index) => (
+                <article className="card step-card" key={step.title}>
+                  <span className={`num-badge ${index === setupSteps.length - 1 ? 'dark' : ''}`}>{index + 1}</span>
                   <h3>{step.title}</h3>
                   <p>{step.copy}</p>
                 </article>
-              );
-            })}
+              ))}
+            </div>
           </div>
         </section>
 
-        {/* INTERACTIVE PRODUCT STORY */}
-        <section className="dark-section-card product-story-section reveal-on-scroll">
-          <div className="product-story-grid">
-            <div className="product-story-copy">
-              <span className="section-eyebrow">SEE THE WORKFLOW</span>
-              <h2>One WhatsApp conversation. Full store context.</h2>
-              <p>Kwickbot brings AI, order data, escalation controls, templates, and agent operations into the same customer journey.</p>
-              <div className="product-proof-list">
-                <div><FaCheck /> Answers can use approved merchant knowledge.</div>
-                <div><FaCheck /> Store data supports order-aware responses.</div>
-                <div><FaCheck /> AI pauses when a human should take over.</div>
-                <div><FaCheck /> Campaign and usage activity stays visible.</div>
+        {/* CAPABILITIES */}
+        <section className="section reveal-on-scroll">
+          <div className="container">
+            <div className="section-head-row">
+              <div className="section-head">
+                <span className="eyebrow">Platform capabilities</span>
+                <h2>Built around real commerce support</h2>
               </div>
-              <Link href="/demo" className="story-link">Walk through your use case <FaArrowRight /></Link>
+              <p>Every capability maps to a workflow available in Kwickbot, not a disconnected marketing add-on.</p>
             </div>
+            <div className="grid-3">
+              {capabilities.map((item) => {
+                const Icon = item.icon;
+                return (
+                  <article className="card" key={item.title}>
+                    <span className="icon-chip"><Icon aria-hidden="true" /></span>
+                    <h3>{item.title}</h3>
+                    <p>{item.copy}</p>
+                  </article>
+                );
+              })}
+            </div>
+          </div>
+        </section>
 
-            <div className="hero-product-preview-container">
-              <div className="hero-product-card">
-                <div className="hero-card-header">
-                  <div className="hero-header-brand">
-                    <img src="/app-icon.png" alt="Kwickbot" className="hero-brand-logo" />
-                    <div className="hero-brand-text">
-                      <span className="hero-brand-title">KWICKBOT OPERATIONS</span>
-                      <span className="hero-brand-sub">Commerce support workspace</span>
+        {/* ADVANTAGE */}
+        <section className="section reveal-on-scroll">
+          <div className="container">
+            <div className="band band-pista">
+              <div className="section-head" style={{ flex: '1 1 320px', marginBottom: 0 }}>
+                <span className="eyebrow" style={{ color: 'var(--deep)' }}>The Kwickbot advantage</span>
+                <h2>Automation without losing control</h2>
+                <p>AI handles repeatable work while people, policies, permissions and limits stay visible to your team.</p>
+              </div>
+              <div className="grid-2" style={{ flex: '2 1 520px', gap: 14 }}>
+                {advantages.map((item) => {
+                  const Icon = item.icon;
+                  return (
+                    <article className="card card-soft" key={item.title} style={{ padding: 22 }}>
+                      <h3 style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                        <Icon aria-hidden="true" style={{ color: 'var(--olive)', flex: 'none' }} /> {item.title}
+                      </h3>
+                      <p>{item.copy}</p>
+                    </article>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* WHO IT'S FOR */}
+        <section className="section reveal-on-scroll">
+          <div className="container">
+            <div className="section-head">
+              <span className="eyebrow">Who it is for</span>
+              <h2>Designed for commerce teams on WhatsApp</h2>
+              <p>Kwickbot fits businesses where customer questions, orders, campaigns and human support already meet inside WhatsApp.</p>
+            </div>
+            <div className="grid-3">
+              {audiences.map((item) => {
+                const Icon = item.icon;
+                return (
+                  <article className="card" key={item.title} style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 16 }}>
+                    <span className="icon-chip"><Icon aria-hidden="true" /></span>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                      <h3>{item.title}</h3>
+                      <p>{item.copy}</p>
                     </div>
+                  </article>
+                );
+              })}
+            </div>
+          </div>
+        </section>
+
+        {/* PRICING */}
+        <section id="pricing" className="section reveal-on-scroll">
+          <div className="container">
+            <div className="section-head center">
+              <span className="eyebrow">Pricing</span>
+              <h2>Plans built for growing WhatsApp volume</h2>
+              <p>Simple tiers for validating AI, active stores and high-volume operations.</p>
+              <button type="button" className="btn btn-soft btn-sm" onClick={() => setShowFullPricing((v) => !v)} aria-expanded={showFullPricing}>
+                {showFullPricing ? 'Show highlights only' : 'Compare every feature'}
+                {showFullPricing ? <FaChevronUp aria-hidden="true" /> : <FaChevronDown aria-hidden="true" />}
+              </button>
+            </div>
+            <div className="plan-grid">
+              {plans.map((plan) => (
+                <article key={plan.name} className={`plan-card ${plan.featured ? 'featured' : ''}`}>
+                  {plan.featured && <span className="plan-badge">Most popular</span>}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    <h3>{plan.name}</h3>
+                    <p className="plan-desc">{plan.desc}</p>
                   </div>
-                  <span className="hero-header-status"><span className="live-dot"></span> AI active</span>
-                </div>
-
-                <div className="hero-tab-bar" role="tablist" aria-label="Kwickbot workflow preview">
-                  <button className={`hero-tab-btn ${activePreview === 'support' ? 'active' : ''}`} onClick={() => setActivePreview('support')}><FaComments /> Support</button>
-                  <button className={`hero-tab-btn ${activePreview === 'orders' ? 'active' : ''}`} onClick={() => setActivePreview('orders')}><FaBox /> Orders</button>
-                  <button className={`hero-tab-btn ${activePreview === 'handoff' ? 'active' : ''}`} onClick={() => setActivePreview('handoff')}><FaHeadset /> Handoff</button>
-                  <button className={`hero-tab-btn ${activePreview === 'broadcast' ? 'active' : ''}`} onClick={() => setActivePreview('broadcast')}><FaBroadcastTower /> Campaign</button>
-                </div>
-
-                <div className="hero-card-body preview-panel" key={activePreview}>
-                  {activePreview === 'support' && (
-                    <>
-                      <div className="chat-msg customer-msg">Where is my order #ORD-1024?</div>
-                      <div className="hero-context-badge success"><FaCheck /> Order matched in the connected store</div>
-                      <div className="chat-msg ai-msg">Your order has shipped. I found the latest fulfilment status and tracking reference for you.</div>
-                    </>
-                  )}
-                  {activePreview === 'orders' && (
-                    <>
-                      <div className="chat-msg customer-msg">Can I cancel this order?</div>
-                      <div className="hero-context-badge success"><FaBox /> Current status: processing</div>
-                      <div className="chat-msg ai-msg">The order is still eligible for the configured cancellation workflow. I can submit the request now.</div>
-                    </>
-                  )}
-                  {activePreview === 'handoff' && (
-                    <>
-                      <div className="chat-msg customer-msg">I need an agent to review my refund.</div>
-                      <div className="hero-context-badge urgent"><FaHeadset /> Human assistance requested</div>
-                      <div className="hero-alert-badge">AI paused • Conversation routed to Live Chat</div>
-                    </>
-                  )}
-                  {activePreview === 'broadcast' && (
-                    <div className="hero-broadcast-card">
-                      <div className="broadcast-header"><FaBroadcastTower /><div><strong>Abandoned cart follow-up</strong><span>Approved WhatsApp template</span></div></div>
-                      <div className="broadcast-preview-bubble">You left items in your cart. Complete your order when you are ready.</div>
-                      <div className="hero-context-badge success"><FaCheck /> Campaign activity remains visible</div>
-                    </div>
-                  )}
-                </div>
-                <div className="hero-card-footer">WhatsApp Cloud API • Shopify &amp; WooCommerce • Gemini AI</div>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* PLATFORM CAPABILITIES */}
-        <section className="dark-section-card reveal-on-scroll">
-          <div className="dark-heading-center">
-            <span>PLATFORM CAPABILITIES</span>
-            <h2>Built Around Real Commerce Support</h2>
-            <p>Every capability maps to a workflow available in Kwickbot—not a disconnected marketing add-on.</p>
-          </div>
-          <div className="content-card-grid">
-            {capabilities.map((item, index) => {
-              const Icon = item.icon;
-              return (
-                <article className="content-info-card" key={item.title} style={{ '--reveal-delay': `${index * 70}ms` }}>
-                  <span className="content-card-icon"><Icon /></span>
-                  <h3>{item.title}</h3>
-                  <p>{item.copy}</p>
+                  <div className="plan-price"><strong>{plan.price}</strong><span>/ month</span></div>
+                  <ul className="checklist">
+                    {plan.included.map((feature) => (
+                      <li key={feature}><span className="check"><FaCheck aria-hidden="true" /></span>{feature}</li>
+                    ))}
+                    {showFullPricing && plan.excluded.map((feature) => (
+                      <li key={feature} className="off"><span className="check"><FaTimes aria-hidden="true" /></span><span><span className="sr-only">Not included: </span>{feature}</span></li>
+                    ))}
+                  </ul>
+                  <Link href="/demo" className={`btn btn-block ${plan.featured ? 'btn-pista' : 'btn-secondary'}`}>{plan.cta}</Link>
                 </article>
-              );
-            })}
-          </div>
-        </section>
-
-        {/* TARGET AUDIENCE */}
-        <section className="dark-section-card reveal-on-scroll">
-          <div className="dark-heading-center">
-            <span>WHO IT IS FOR</span>
-            <h2>Designed for Commerce Teams on WhatsApp</h2>
-            <p>Kwickbot fits businesses where customer questions, orders, campaigns, and human support already meet inside WhatsApp.</p>
-          </div>
-          <div className="content-card-grid audience-grid">
-            {audiences.map((item, index) => {
-              const Icon = item.icon;
-              return (
-                <article className="content-info-card audience-card" key={item.title} style={{ '--reveal-delay': `${index * 70}ms` }}>
-                  <span className="content-card-icon"><Icon /></span>
-                  <h3>{item.title}</h3>
-                  <p>{item.copy}</p>
-                </article>
-              );
-            })}
-          </div>
-        </section>
-
-        {/* KWICKBOT ADVANTAGES */}
-        <section className="dark-section-card reveal-on-scroll">
-          <div className="dark-heading-center">
-            <span>THE KWICKBOT ADVANTAGE</span>
-            <h2>Automation Without Losing Control</h2>
-            <p>AI handles repeatable work while people, policies, permissions, and operational limits remain visible to your team.</p>
-          </div>
-          <div className="content-card-grid">
-            {advantages.map((item, index) => {
-              const Icon = item.icon;
-              return (
-                <article className="content-info-card advantage-card" key={item.title} style={{ '--reveal-delay': `${index * 70}ms` }}>
-                  <span className="content-card-icon"><Icon /></span>
-                  <h3>{item.title}</h3>
-                  <p>{item.copy}</p>
-                </article>
-              );
-            })}
-          </div>
-        </section>
-
-        {/* PRICING SECTION */}
-        <section id="pricing" className="dark-section-card reveal-on-scroll">
-          <div className="dark-heading-center">
-            <span>PRICING TIERS</span>
-            <h2>Plans Built for Growing WhatsApp Volume</h2>
-            <p>Simple pricing tiers for validating AI, active stores, and high-volume operations.</p>
-
-            <button
-              onClick={() => setShowFullPricing(!showFullPricing)}
-              style={{
-                marginTop: '16px',
-                background: 'rgba(255, 255, 255, 0.08)',
-                border: '1px solid rgba(255, 255, 255, 0.2)',
-                color: '#ffffff',
-                padding: '8px 20px',
-                borderRadius: '999px',
-                fontSize: '13px',
-                fontWeight: '600',
-                cursor: 'pointer',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '8px',
-                transition: 'all 0.2s ease'
-              }}
-            >
-              {showFullPricing ? 'Show Highlights Only' : 'See Full Feature Comparison'}
-              {showFullPricing ? <FaChevronUp style={{ fontSize: '11px' }} /> : <FaChevronDown style={{ fontSize: '11px' }} />}
-            </button>
-          </div>
-
-          <div className="dark-pricing-grid" style={{ marginTop: '28px' }}>
-            <div className="dark-pricing-card">
-              <h3>Starter</h3>
-              <div className="dark-price">₹1499<span>/month</span></div>
-              <p style={{ color: '#a1a1aa', fontSize: '13px' }}>For small stores validating AI support.</p>
-              <ul>
-                <li><FaCheck style={{ color: '#4ade80', flexShrink: 0, marginTop: '3px' }} /> Up to 500 WhatsApp Conversations/mo (customer chats)</li>
-                <li><FaCheck style={{ color: '#4ade80', flexShrink: 0, marginTop: '3px' }} /> Up to 2,000 messages/mo (text bubbles)</li>
-                <li><FaCheck style={{ color: '#4ade80', flexShrink: 0, marginTop: '3px' }} /> 1 Active WhatsApp connection</li>
-                <li><FaCheck style={{ color: '#4ade80', flexShrink: 0, marginTop: '3px' }} /> Max 1 PDF document Knowledge Base upload</li>
-                <li><FaCheck style={{ color: '#4ade80', flexShrink: 0, marginTop: '3px' }} /> 1 Store Integration (Shopify OR WooCommerce)</li>
-                <li><FaCheck style={{ color: '#4ade80', flexShrink: 0, marginTop: '3px' }} /> Knowledge Base Retrieval &amp; Live Chat CRM</li>
-
-                {showFullPricing && (
-                  <>
-                    <li className="disabled"><FaTimes style={{ flexShrink: 0, marginTop: '3px' }} /> WhatsApp Broadcasting (0 Messages, 0 Campaigns)</li>
-                    <li className="disabled"><FaTimes style={{ flexShrink: 0, marginTop: '3px' }} /> Advanced Analytics Dashboard</li>
-                    <li className="disabled"><FaTimes style={{ flexShrink: 0, marginTop: '3px' }} /> Live Chat Handoff Escalations</li>
-                    <li className="disabled"><FaTimes style={{ flexShrink: 0, marginTop: '3px' }} /> Automated Order Cancellations</li>
-                    <li className="disabled"><FaTimes style={{ flexShrink: 0, marginTop: '3px' }} /> Custom Branding (White Labeling)</li>
-                    <li className="disabled"><FaTimes style={{ flexShrink: 0, marginTop: '3px' }} /> Developer API &amp; Webhooks Access</li>
-                    <li className="disabled"><FaTimes style={{ flexShrink: 0, marginTop: '3px' }} /> Priority Support</li>
-                  </>
-                )}
-              </ul>
-              <Link href="/demo" className="glowing-btn-white" style={{ marginTop: 'auto', width: '100%' }}>
-                Start with demo
-              </Link>
+              ))}
             </div>
-
-            <div className="dark-pricing-card featured">
-              <div className="cta-sparkle" style={{ fontSize: '12px', marginBottom: '8px' }}>BEST FIT</div>
-              <h3>Growth</h3>
-              <div className="dark-price">₹2999<span>/month</span></div>
-              <p style={{ color: '#a1a1aa', fontSize: '13px' }}>For stores managing regular order and support volume.</p>
-              <ul>
-                <li><FaCheck style={{ color: '#4ade80', flexShrink: 0, marginTop: '3px' }} /> Up to 3,000 WhatsApp Conversations/mo (customer chats)</li>
-                <li><FaCheck style={{ color: '#4ade80', flexShrink: 0, marginTop: '3px' }} /> Up to 15,000 messages/mo (text bubbles)</li>
-                <li><FaCheck style={{ color: '#4ade80', flexShrink: 0, marginTop: '3px' }} /> Up to 2 Active WhatsApp connections</li>
-                <li><FaCheck style={{ color: '#4ade80', flexShrink: 0, marginTop: '3px' }} /> Max 3 PDF document Knowledge Base uploads</li>
-                <li><FaCheck style={{ color: '#4ade80', flexShrink: 0, marginTop: '3px' }} /> 1 Store Integration (Shopify OR WooCommerce)</li>
-                <li><FaCheck style={{ color: '#4ade80', flexShrink: 0, marginTop: '3px' }} /> Knowledge Base Retrieval &amp; Live Chat CRM</li>
-                <li><FaCheck style={{ color: '#4ade80', flexShrink: 0, marginTop: '3px' }} /> WhatsApp Broadcasting (5,000 Messages &amp; 10 Campaigns/mo)</li>
-                <li><FaCheck style={{ color: '#4ade80', flexShrink: 0, marginTop: '3px' }} /> Advanced Analytics Dashboard (view metrics &amp; logs)</li>
-                <li><FaCheck style={{ color: '#4ade80', flexShrink: 0, marginTop: '3px' }} /> Live Chat Handoff Escalations (automatic takeover)</li>
-                <li><FaCheck style={{ color: '#4ade80', flexShrink: 0, marginTop: '3px' }} /> Automated Order Cancellations via WhatsApp</li>
-
-                {showFullPricing && (
-                  <>
-                    <li className="disabled"><FaTimes style={{ flexShrink: 0, marginTop: '3px' }} /> Custom Branding (White Labeling)</li>
-                    <li className="disabled"><FaTimes style={{ flexShrink: 0, marginTop: '3px' }} /> Developer API &amp; Webhooks Access</li>
-                  </>
-                )}
-
-                <li><FaCheck style={{ color: '#4ade80', flexShrink: 0, marginTop: '3px' }} /> Priority Email &amp; Chat Support (under 4 hours)</li>
-              </ul>
-              <Link href="/demo" className="glowing-btn-white" style={{ marginTop: 'auto', width: '100%' }}>
-                Book demo
-              </Link>
-            </div>
-
-            <div className="dark-pricing-card">
-              <h3>Scale</h3>
-              <div className="dark-price">₹9999<span>/month</span></div>
-              <p style={{ color: '#a1a1aa', fontSize: '13px' }}>For teams needing higher limits and custom workflows.</p>
-              <ul>
-                <li><FaCheck style={{ color: '#4ade80', flexShrink: 0, marginTop: '3px' }} /> Unlimited WhatsApp Conversations &amp; Messages</li>
-                <li><FaCheck style={{ color: '#4ade80', flexShrink: 0, marginTop: '3px' }} /> Up to 5 Active WhatsApp connections simultaneously</li>
-                <li><FaCheck style={{ color: '#4ade80', flexShrink: 0, marginTop: '3px' }} /> Unlimited PDF document Knowledge Base uploads</li>
-                <li><FaCheck style={{ color: '#4ade80', flexShrink: 0, marginTop: '3px' }} /> Multiple Integrations (Shopify &amp; WooCommerce both)</li>
-                <li><FaCheck style={{ color: '#4ade80', flexShrink: 0, marginTop: '3px' }} /> Knowledge Base Retrieval &amp; Live Chat CRM</li>
-                <li><FaCheck style={{ color: '#4ade80', flexShrink: 0, marginTop: '3px' }} /> WhatsApp Broadcasting (25,000 Messages &amp; Unlimited Campaigns/mo)</li>
-                <li><FaCheck style={{ color: '#4ade80', flexShrink: 0, marginTop: '3px' }} /> Advanced Analytics Dashboard (view metrics &amp; logs)</li>
-                <li><FaCheck style={{ color: '#4ade80', flexShrink: 0, marginTop: '3px' }} /> Live Chat Handoff Escalations (automatic takeover)</li>
-                <li><FaCheck style={{ color: '#4ade80', flexShrink: 0, marginTop: '3px' }} /> Automated Order Cancellations via WhatsApp</li>
-
-                {showFullPricing && (
-                  <>
-                    <li><FaCheck style={{ color: '#4ade80', flexShrink: 0, marginTop: '3px' }} /> Custom Branding (rebrand console with logo &amp; name)</li>
-                    <li><FaCheck style={{ color: '#4ade80', flexShrink: 0, marginTop: '3px' }} /> Developer API &amp; Webhooks Access</li>
-                  </>
-                )}
-
-                <li><FaCheck style={{ color: '#4ade80', flexShrink: 0, marginTop: '3px' }} /> Premium Support</li>
-              </ul>
-              <Link href="/demo" className="glowing-btn-white" style={{ marginTop: 'auto', width: '100%' }}>
-                Talk to sales
-              </Link>
-            </div>
+            <p style={{ textAlign: 'center', marginTop: 24 }}>
+              <Link href="/pricing" className="text-link">See all plans, yearly prices and API plans <FaArrowRight aria-hidden="true" /></Link>
+            </p>
           </div>
         </section>
 
-        {/* FAQ ACCORDION */}
-        <section className="dark-section-card reveal-on-scroll">
-          <div className="dark-heading-center">
-            <span>FAQ</span>
-            <h2>Frequently Asked Questions</h2>
-            <p>Everything you need to know about setting up Kwickbot for your online business.</p>
-          </div>
-
-          <div style={{ maxWidth: '780px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-            {faqs.map((faq, idx) => (
-              <div
-                key={idx}
-                style={{
-                  background: 'rgba(24, 24, 27, 0.8)',
-                  border: '1px solid rgba(255, 255, 255, 0.1)',
-                  borderRadius: '14px',
-                  padding: '18px 20px',
-                  cursor: 'pointer'
-                }}
-                onClick={() => toggleFaq(idx)}
-              >
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontWeight: '600', color: '#ffffff', fontSize: '15px' }}>
-                  <span>{faq.question}</span>
-                  <span style={{ color: '#38bdf8' }}>{openFaqIndex === idx ? '▲' : '▼'}</span>
-                </div>
-                {openFaqIndex === idx && (
-                  <p style={{ marginTop: '12px', color: '#a1a1aa', fontSize: '14px', lineHeight: 1.6, margin: '12px 0 0' }}>
-                    {faq.answer}
-                  </p>
-                )}
-              </div>
-            ))}
+        {/* FAQ */}
+        <section className="section reveal-on-scroll">
+          <div className="container-narrow">
+            <div className="section-head center">
+              <span className="eyebrow">FAQ</span>
+              <h2>Frequently asked questions</h2>
+              <p>Everything you need to know about setting up Kwickbot for your online business.</p>
+            </div>
+            <div className="faq-list">
+              {faqs.map((faq, idx) => {
+                const open = openFaqIndex === idx;
+                return (
+                  <div key={faq.question} className={`faq-item ${open ? 'open' : ''}`}>
+                    <button
+                      type="button"
+                      className="faq-q"
+                      aria-expanded={open}
+                      aria-controls={`faq-a-${idx}`}
+                      onClick={() => setOpenFaqIndex(open ? null : idx)}
+                    >
+                      <span>{faq.question}</span>
+                      <span className="faq-icon"><FaChevronDown aria-hidden="true" /></span>
+                    </button>
+                    {open && <p id={`faq-a-${idx}`} className="faq-a">{faq.answer}</p>}
+                  </div>
+                );
+              })}
+            </div>
           </div>
         </section>
       </main>
 
-      {/* Floating WhatsApp Demo Widget */}
-      <div className={`floating-chat-widget ${isChatOpen ? 'open' : ''}`}>
-        {!isChatOpen ? (
-          <button
-            className="chat-trigger-button"
-            onClick={() => setIsChatOpen(true)}
-            aria-label="Open Kwickbot AI Assistant"
-            title="Ask Kwickbot AI Assistant"
-          >
-            <FaWhatsapp />
-          </button>
-        ) : (
-          <div className="widget-chat-window" style={{ background: '#121215', border: '1px solid rgba(255,255,255,0.15)', color: '#ffffff' }}>
-            <div className="widget-chat-header" style={{ background: '#18181b', borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
-              <div className="widget-header-brand">
-                <img src="/app-icon.png" alt="Kwickbot App Icon" className="widget-header-avatar" onError={(e) => { e.target.src = '/logo.png'; }} />
+      {/* Website assistant */}
+      {!isChatOpen ? (
+        <button
+          type="button"
+          className="chat-fab"
+          onClick={() => setIsChatOpen(true)}
+          aria-label="Open Kwickbot website assistant"
+          title="Ask the Kwickbot assistant"
+        >
+          <FaComments aria-hidden="true" />
+        </button>
+      ) : (
+        <div className="chat-window" role="dialog" aria-label="Kwickbot website assistant">
+          <div className="chat-head">
+            <span className="preview-avatar" style={{ background: 'var(--olive)' }}><BrandMark variant="dark" className="" /></span>
+            <div>
+              <strong>Kwickbot assistant</strong>
+              <span>● Online · answers about Kwickbot</span>
+            </div>
+            <button type="button" className="chat-close" onClick={() => setIsChatOpen(false)} aria-label="Close assistant">×</button>
+          </div>
+          <div className="chat-messages" aria-live="polite">
+            {chatMessages.map((msg, i) => (
+              <div key={i} className={`bubble ${msg.role}`}>{msg.content}</div>
+            ))}
+            {chatMessages.length <= 2 && !isTyping && (
+              <div className="quick-replies">
+                <span>Suggested questions</span>
                 <div>
-                  <h4 style={{ color: '#ffffff' }}>Kwickbot AI Assistant</h4>
-                  <span className="header-status-badge"><span className="status-dot"></span> Online • Website Assistant</span>
+                  {quickReplies.map((chip) => (
+                    <button type="button" key={chip} onClick={() => sendQuery(chip)}>{chip}</button>
+                  ))}
                 </div>
               </div>
-              <button className="widget-chat-close-btn" onClick={() => setIsChatOpen(false)} title="Close Chat" style={{ color: '#ffffff' }}>×</button>
-            </div>
-
-            <div className="widget-chat-messages" style={{ background: '#09090b' }}>
-              {chatMessages.map((msg, i) => (
-                <div key={i} className={`widget-chat-bubble ${msg.role}`}>
-                  <p style={{ margin: 0, whiteSpace: 'pre-line' }}>{msg.content}</p>
-                </div>
-              ))}
-
-              {chatMessages.length <= 2 && !isTyping && (
-                <div className="quick-replies-container">
-                  <span className="quick-replies-label" style={{ color: '#a1a1aa' }}>Suggested Questions:</span>
-                  <div className="quick-replies-grid">
-                    {quickReplies.map((chip, idx) => (
-                      <button
-                        key={idx}
-                        className="quick-reply-chip"
-                        onClick={() => sendQuery(chip)}
-                        style={{ background: '#27272a', border: '1px solid rgba(255,255,255,0.1)', color: '#ffffff' }}
-                      >
-                        {chip}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {isTyping && (
-                <div className="widget-chat-bubble assistant typing-bubble">
-                  <div className="typing-dots">
-                    <span></span>
-                    <span></span>
-                    <span></span>
-                  </div>
-                  <span className="typing-text">Kwickbot AI is thinking...</span>
-                </div>
-              )}
-
-              <div ref={chatEndRef} />
-            </div>
-
-            <form onSubmit={handleChatSubmit} className="widget-chat-input" style={{ background: '#18181b', borderTop: '1px solid rgba(255,255,255,0.1)' }}>
-              <input
-                type="text"
-                value={chatInput}
-                onChange={(e) => setChatInput(e.target.value)}
-                placeholder="Ask about features, pricing, setup..."
-                disabled={isTyping}
-                required
-                style={{ background: '#27272a', color: '#ffffff', border: '1px solid rgba(255,255,255,0.1)' }}
-              />
-              <button type="submit" disabled={isTyping || !chatInput.trim()} aria-label="Send message" style={{ background: '#ffffff', color: '#000000' }}>
-                <FaPaperPlane />
-              </button>
-            </form>
+            )}
+            {isTyping && (
+              <div className="bubble assistant" aria-label="Assistant is typing">
+                <span className="typing"><i /><i /><i /></span>
+              </div>
+            )}
+            <div ref={chatEndRef} />
           </div>
-        )}
-      </div>
+          <form onSubmit={handleChatSubmit} className="chat-input">
+            <label htmlFor="assistant-input" className="sr-only">Ask a question</label>
+            <input
+              id="assistant-input"
+              type="text"
+              value={chatInput}
+              onChange={(e) => setChatInput(e.target.value)}
+              placeholder="Ask about features, pricing, setup…"
+              disabled={isTyping}
+              required
+            />
+            <button type="submit" disabled={isTyping || !chatInput.trim()} aria-label="Send message">
+              <FaPaperPlane aria-hidden="true" />
+            </button>
+          </form>
+        </div>
+      )}
     </div>
   );
 }

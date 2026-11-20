@@ -16,7 +16,9 @@ import {
   FaCheck,
   FaSearch,
   FaRocket,
-  FaCogs
+  FaCogs,
+  FaCode,
+  FaArrowDown
 } from 'react-icons/fa';
 import { SiMeta, SiShopify, SiWoocommerce } from 'react-icons/si';
 
@@ -71,6 +73,15 @@ const implementationSteps = [
   { icon: FaCogs, number: '03', title: 'Configure & test', copy: 'Load approved knowledge, validate representative questions, and test order and agent-handoff paths.' },
   { icon: FaRocket, number: '04', title: 'Launch with visibility', copy: 'Activate the workflow, monitor usage and conversations, and refine knowledge or rules as operations evolve.' }
 ];
+const developerArea = {
+  icon: FaCode,
+  category: 'Developer API',
+  title: 'WhatsApp API for Your Software',
+  description: 'Use Kwickbot as the WhatsApp layer for your own CRM, ERP or app, with keys, logs and webhooks managed from the dashboard.',
+  deliverables: ['API keys with usage tracking', 'Send messages, templates and media over REST', 'Signed webhooks with test events, logs and failed-event review']
+};
+
+const allAreas = [...serviceAreas, developerArea];
 
 export default function ServicesPage() {
   useEffect(() => {
@@ -99,129 +110,147 @@ export default function ServicesPage() {
     '@context': 'https://schema.org',
     '@type': 'BreadcrumbList',
     itemListElement: [
-      {
-        '@type': 'ListItem',
-        position: 1,
-        name: 'Home',
-        item: 'https://kwickbot.in'
-      },
-      {
-        '@type': 'ListItem',
-        position: 2,
-        name: 'Services & Setup',
-        item: 'https://kwickbot.in/services'
-      }
+      { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://kwickbot.in' },
+      { '@type': 'ListItem', position: 2, name: 'Services & Setup', item: 'https://kwickbot.in/services' }
     ]
   };
 
   return (
-    <div className="retro-page-container">
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: safeJsonStringify(breadcrumbSchema) }}
-      />
-      <div className="bg-video-wrapper">
-        <video className="bg-video" autoPlay muted loop playsInline>
-          <source
-            src="https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260809_012548_ef22562c-c0ae-4816-ad9d-f8922af4e6a7.mp4"
-            type="video/mp4"
-          />
-        </video>
-        <div className="bg-overlay-gradient"></div>
-      </div>
+    <div className="page">
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: safeJsonStringify(breadcrumbSchema) }} />
 
-      <main className="services-main">
-        <section className="services-hero-shell">
-          <div className="services-hero-copy">
-            <span className="section-eyebrow">IMPLEMENTATION + AUTOMATION</span>
-            <h1>Turn WhatsApp into an operating channel.</h1>
-            <p>
-              Kwickbot brings official WhatsApp infrastructure, store data, grounded AI, human handoff, and outbound messaging into one implementation path.
-            </p>
-            <div className="services-hero-actions">
-              <Link href="/demo" className="glowing-btn-white">Discuss your workflow <FaArrowRight /></Link>
-              <a href="#service-areas" className="services-secondary-link">Explore delivery areas</a>
+      <main>
+        {/* HERO */}
+        <section className="hero">
+          <div className="container hero-grid">
+            <div className="hero-copy">
+              <span className="eyebrow">Implementation + automation</span>
+              <h1>Turn WhatsApp into an <span className="highlight">operating channel.</span></h1>
+              <p className="hero-lead">
+                Kwickbot brings official WhatsApp infrastructure, store data, grounded AI, human handoff and outbound messaging into one implementation path.
+              </p>
+              <div className="hero-actions">
+                <Link href="/demo" className="btn btn-primary">Discuss your workflow <FaArrowRight /></Link>
+                <a href="#service-areas" className="btn btn-secondary">Explore delivery areas</a>
+              </div>
+              <div className="hero-tags">
+                <span className="pill pill-white"><FaCheck aria-hidden="true" /> Official Meta API</span>
+                <span className="pill pill-white"><FaCheck aria-hidden="true" /> Store-aware workflows</span>
+                <span className="pill pill-white"><FaCheck aria-hidden="true" /> Human control</span>
+              </div>
             </div>
-            <div className="services-proof-row">
-              <span><FaCheck /> Official Meta API</span>
-              <span><FaCheck /> Store-aware workflows</span>
-              <span><FaCheck /> Human control</span>
-            </div>
-          </div>
 
-          <div className="services-system-map" aria-label="Kwickbot connected system flow">
-            <div className="system-map-glow"></div>
-            <div className="system-map-label">CONNECTED SUPPORT STACK</div>
-            <div className="system-node primary-node"><span><SiMeta /></span><div><strong>WhatsApp Cloud API</strong><small>Customer conversations & templates</small></div></div>
-            <div className="system-connector"><span></span></div>
-            <div className="system-node ai-node"><span><FaBrain /></span><div><strong>Kwickbot AI Layer</strong><small>Knowledge, rules & routing</small></div></div>
-            <div className="system-branch">
-              <div className="system-node compact-node"><span><SiShopify /></span><div><strong>Shopify</strong><small>Orders & fulfilments</small></div></div>
-              <div className="system-node compact-node"><span><SiWoocommerce /></span><div><strong>WooCommerce</strong><small>Store operations</small></div></div>
-            </div>
-            <div className="system-connector"><span></span></div>
-            <div className="system-node human-node"><span><FaHeadset /></span><div><strong>Human Operations</strong><small>Live chat, escalation & oversight</small></div><em>LIVE</em></div>
-          </div>
-        </section>
-
-        <section id="service-areas" className="dark-section-card reveal-on-scroll services-section-card">
-          <div className="dark-heading-center">
-            <span>DELIVERY AREAS</span>
-            <h2>Everything Required for a Working Support Flow</h2>
-            <p>Each service area connects to an actual Kwickbot workflow, dashboard control, or supported integration.</p>
-          </div>
-
-          <div className="services-card-grid">
-            {serviceAreas.map((service, index) => {
-              const Icon = service.icon;
-              return (
-                <article className="service-detail-card" key={service.title} style={{ '--reveal-delay': `${index * 80}ms` }}>
-                  <div className="service-card-top">
-                    <span className="service-card-number">0{index + 1}</span>
-                    <span className="service-detail-icon"><Icon /></span>
+            <div className="hero-visual">
+              <div className="preview-frame" aria-label="How the Kwickbot support stack connects">
+                <div className="flow">
+                  <span className="eyebrow" style={{ color: 'var(--deep)' }}>Connected support stack</span>
+                  <div className="flow-node">
+                    <span className="icon-chip"><SiMeta aria-hidden="true" /></span>
+                    <div>WhatsApp Cloud API<small>Customer conversations &amp; templates</small></div>
                   </div>
-                  <span className="service-category">{service.category}</span>
-                  <h3>{service.title}</h3>
-                  <p>{service.description}</p>
-                  <ul>
-                    {service.deliverables.map((item) => <li key={item}><FaCheck /> {item}</li>)}
-                  </ul>
-                </article>
-              );
-            })}
-          </div>
-        </section>
-
-        <section className="dark-section-card reveal-on-scroll services-process-section">
-          <div className="services-process-heading">
-            <div>
-              <span className="section-eyebrow">IMPLEMENTATION PROCESS</span>
-              <h2>A Practical Path from Requirements to Live Operations</h2>
+                  <FaArrowDown className="flow-arrow" aria-hidden="true" />
+                  <div className="flow-node ai">
+                    <span className="icon-chip" style={{ background: '#FFFFFF' }}><FaBrain aria-hidden="true" /></span>
+                    <div>Kwickbot AI layer<small>Knowledge, rules &amp; routing</small></div>
+                  </div>
+                  <div className="flow-row">
+                    <div className="flow-node">
+                      <span className="icon-chip"><SiShopify aria-hidden="true" /></span>
+                      <div>Shopify<small>Orders &amp; fulfilments</small></div>
+                    </div>
+                    <div className="flow-node">
+                      <span className="icon-chip"><SiWoocommerce aria-hidden="true" /></span>
+                      <div>WooCommerce<small>Store operations</small></div>
+                    </div>
+                  </div>
+                  <FaArrowDown className="flow-arrow" aria-hidden="true" />
+                  <div className="flow-node human">
+                    <span className="icon-chip"><FaHeadset aria-hidden="true" /></span>
+                    <div>Human operations<small>Live chat, escalation &amp; oversight</small></div>
+                  </div>
+                </div>
+              </div>
             </div>
-            <p>We configure around your real policies and customer journeys, then validate the high-risk paths before activation.</p>
-          </div>
-          <div className="services-process-grid">
-            {implementationSteps.map((step, index) => {
-              const Icon = step.icon;
-              return (
-                <article className="services-process-step" key={step.title} style={{ '--reveal-delay': `${index * 90}ms` }}>
-                  <div className="process-step-header"><span>{step.number}</span><Icon /></div>
-                  <h3>{step.title}</h3>
-                  <p>{step.copy}</p>
-                </article>
-              );
-            })}
           </div>
         </section>
 
-        <section className="services-cta reveal-on-scroll">
-          <div className="services-cta-icon"><FaFileAlt /></div>
-          <div>
-            <span>HAVE A NON-STANDARD WORKFLOW?</span>
-            <h2>Let’s map the integration before making promises.</h2>
-            <p>Share the platform, events, data fields, and actions you need. We will assess the safest path through supported APIs or scoped webhooks.</p>
+        {/* DELIVERY AREAS */}
+        <section id="service-areas" className="section reveal-on-scroll">
+          <div className="container">
+            <div className="section-head-row">
+              <div className="section-head">
+                <span className="eyebrow">Delivery areas</span>
+                <h2>Everything required for a working support flow</h2>
+              </div>
+              <p>Each service area connects to an actual Kwickbot workflow, dashboard control or supported integration.</p>
+            </div>
+            <div className="grid-3">
+              {allAreas.map((service, index) => {
+                const Icon = service.icon;
+                return (
+                  <article className="card" key={service.title}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span className="icon-chip"><Icon aria-hidden="true" /></span>
+                      <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--muted-2)' }}>{String(index + 1).padStart(2, '0')}</span>
+                    </div>
+                    <span className="eyebrow" style={{ fontSize: 12 }}>{service.category}</span>
+                    <h3>{service.title}</h3>
+                    <p>{service.description}</p>
+                    <ul className="checklist" style={{ marginTop: 6 }}>
+                      {service.deliverables.map((item) => (
+                        <li key={item}><span className="check"><FaCheck aria-hidden="true" /></span>{item}</li>
+                      ))}
+                    </ul>
+                  </article>
+                );
+              })}
+            </div>
           </div>
-          <Link href="/demo" className="glowing-btn-white">Book a technical demo <FaArrowRight /></Link>
+        </section>
+
+        {/* PROCESS */}
+        <section className="section reveal-on-scroll">
+          <div className="container">
+            <div className="band band-pista" style={{ flexDirection: 'column', flexWrap: 'nowrap' }}>
+              <div className="section-head-row" style={{ marginBottom: 0 }}>
+                <div className="section-head">
+                  <span className="eyebrow" style={{ color: 'var(--deep)' }}>Implementation process</span>
+                  <h2>A practical path from requirements to live operations</h2>
+                </div>
+                <p style={{ color: 'var(--deep)' }}>We configure around your real policies and customer journeys, then validate the high-risk paths before activation.</p>
+              </div>
+              <div className="grid-4">
+                {implementationSteps.map((step, index) => {
+                  const Icon = step.icon;
+                  return (
+                    <article className="card card-soft" key={step.title} style={{ padding: 24 }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span className={`num-badge ${index === implementationSteps.length - 1 ? 'dark' : ''}`}>{index + 1}</span>
+                        <Icon aria-hidden="true" style={{ color: 'var(--olive)', fontSize: 20 }} />
+                      </div>
+                      <h3>{step.title}</h3>
+                      <p>{step.copy}</p>
+                    </article>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* CUSTOM WORKFLOW */}
+        <section className="section reveal-on-scroll">
+          <div className="container">
+            <div className="card" style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 24, padding: 'clamp(24px, 4vw, 40px)' }}>
+              <span className="icon-chip" style={{ width: 64, height: 64, borderRadius: 20, fontSize: 26 }}><FaFileAlt aria-hidden="true" /></span>
+              <div style={{ flex: '1 1 420px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+                <span className="eyebrow">Have a non-standard workflow?</span>
+                <h2 style={{ fontSize: 'clamp(24px, 3vw, 32px)', fontWeight: 800 }}>Let’s map the integration before making promises.</h2>
+                <p>Share the platform, events, data fields and actions you need. We will assess the safest path through supported APIs or scoped webhooks.</p>
+              </div>
+              <Link href="/demo" className="btn btn-primary">Book a technical demo <FaArrowRight /></Link>
+            </div>
+          </div>
         </section>
       </main>
     </div>

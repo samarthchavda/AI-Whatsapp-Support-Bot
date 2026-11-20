@@ -3,7 +3,7 @@
 import React, { useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { FaShieldAlt, FaUserShield, FaChevronLeft } from 'react-icons/fa';
+import { FaShieldAlt, FaUserShield } from 'react-icons/fa';
 
 export default function PrivacyPolicy() {
   const router = useRouter();
@@ -13,15 +13,7 @@ export default function PrivacyPolicy() {
   }, []);
 
   return (
-    <div className="privacy-container">
-      <header className="privacy-header">
-        <Link href="/" className="back-btn">
-          <FaChevronLeft /> Back to Home
-        </Link>
-        <Link href="/" className="privacy-logo" style={{ cursor: 'pointer' }}>
-          <img src="/logo.png" className="header-logo-img" alt="Kwickbot Logo" />
-        </Link>
-      </header>
+    <div className="privacy-container page-end">
 
       <main className="privacy-content">
         <div className="privacy-hero">
@@ -162,10 +154,6 @@ export default function PrivacyPolicy() {
           </div>
         </section>
       </main>
-
-      <footer className="privacy-footer">
-        <p>&copy; 2026 Kwickbot. All rights reserved. Securely integrated with Meta Business API.</p>
-      </footer>
     </div>
   );
 }

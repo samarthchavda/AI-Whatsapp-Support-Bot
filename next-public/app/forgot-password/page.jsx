@@ -2,7 +2,8 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
-import { FaArrowLeft, FaCheckCircle, FaPaperPlane } from 'react-icons/fa';
+import { FaArrowLeft, FaPaperPlane, FaExclamationCircle } from 'react-icons/fa';
+import BrandMark from '../components/BrandMark';
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState('');
@@ -37,112 +38,50 @@ export default function ForgotPasswordPage() {
   };
 
   return (
-    <div className="retro-page-container">
-      <div className="bg-video-wrapper">
-        <video className="bg-video" autoPlay muted loop playsInline>
-          <source
-            src="https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260809_012548_ef22562c-c0ae-4816-ad9d-f8922af4e6a7.mp4"
-            type="video/mp4"
-          />
-        </video>
-        <div className="bg-overlay-gradient"></div>
-      </div>
-
-      <main style={{ position: 'relative', zIndex: 1, minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '40px 20px' }}>
-        <div style={{
-          width: '100%',
-          maxWidth: '460px',
-          background: 'rgba(18, 18, 21, 0.92)',
-          border: '1px solid rgba(255, 255, 255, 0.15)',
-          borderRadius: '24px',
-          padding: '36px 32px',
-          backdropFilter: 'blur(16px)',
-          boxShadow: '0 20px 50px rgba(0,0,0,0.6)'
-        }}>
-          <Link href="/login" style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', color: '#a1a1aa', fontSize: '13.5px', textDecoration: 'none', marginBottom: '24px' }}>
-            <FaArrowLeft /> Back to login
-          </Link>
-
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px' }}>
-            <img src="/app-icon.png" alt="Kwickbot" style={{ width: '40px', height: '40px', borderRadius: '10px' }} />
-            <div>
-              <h2 style={{ color: '#ffffff', fontSize: '22px', fontWeight: '800', margin: 0, letterSpacing: '-0.02em' }}>Reset Password</h2>
-              <p style={{ color: '#a1a1aa', fontSize: '13.5px', margin: 0 }}>Enter your registered email to receive a reset link</p>
-            </div>
-          </div>
-
-          {error && (
-            <div style={{
-              background: 'rgba(239, 68, 68, 0.15)',
-              border: '1px solid rgba(239, 68, 68, 0.4)',
-              color: '#f87171',
-              padding: '12px 16px',
-              borderRadius: '12px',
-              fontSize: '13.5px',
-              marginBottom: '20px'
-            }}>
-              {error}
-            </div>
-          )}
+    <div className="page">
+      <main className="auth-wrap">
+        <div className="form-card">
+          <Link href="/login" className="back-link"><FaArrowLeft aria-hidden="true" /> Back to sign in</Link>
 
           {success ? (
-            <div style={{ textAlign: 'center', padding: '20px 0' }}>
-              <FaCheckCircle style={{ color: '#4ade80', fontSize: '48px', marginBottom: '16px' }} />
-              <h3 style={{ color: '#ffffff', fontSize: '18px', fontWeight: '700', marginBottom: '8px' }}>Check Your Email</h3>
-              <p style={{ color: '#a1a1aa', fontSize: '14px', lineHeight: '1.5', marginBottom: '24px' }}>
-                We have sent a password reset link to <strong style={{ color: '#ffffff' }}>{email}</strong>. Please check your inbox and follow the instructions.
+            <div className="success-panel" role="status">
+              <span className="icon-chip"><FaPaperPlane aria-hidden="true" /></span>
+              <h1 style={{ fontSize: 24, fontWeight: 800 }}>Check your email</h1>
+              <p style={{ color: 'var(--muted)' }}>
+                If an account exists for <strong style={{ color: 'var(--ink)' }}>{email}</strong>, we have sent a password reset link. Follow the instructions in that email.
               </p>
-              <Link href="/login" style={{ display: 'inline-block', width: '100%', height: '44px', lineHeight: '44px', textAlign: 'center', fontSize: '14px', fontWeight: '700', background: '#28B8F2', color: '#08090B', borderRadius: '12px', textDecoration: 'none', boxShadow: '0 4px 18px rgba(40, 184, 242, 0.35)' }}>
-                Return to Login
-              </Link>
+              <Link href="/login" className="btn btn-primary btn-block">Return to sign in</Link>
             </div>
           ) : (
-            <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
-              <div>
-                <label style={{ display: 'block', color: '#d4d4d8', fontSize: '13px', fontWeight: '600', marginBottom: '6px' }}>Email Address</label>
-                <input
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                  placeholder="admin@store.com"
-                  style={{
-                    width: '100%',
-                    padding: '12px 16px',
-                    borderRadius: '12px',
-                    background: '#27272a',
-                    border: '1px solid rgba(255, 255, 255, 0.15)',
-                    color: '#ffffff',
-                    fontSize: '14px',
-                    outline: 'none'
-                  }}
-                />
+            <>
+              <div className="auth-head">
+                <BrandMark className="brand-mark" />
+                <h1 style={{ fontSize: 26, fontWeight: 800 }}>Reset your password</h1>
+                <p className="form-sub" style={{ marginTop: 0 }}>Enter your registered email and we will send you a reset link.</p>
               </div>
-
-              <button
-                type="submit"
-                disabled={loading}
-                style={{
-                  width: '100%',
-                  marginTop: '10px',
-                  height: '46px',
-                  fontSize: '15px',
-                  fontWeight: '700',
-                  background: '#28B8F2',
-                  color: '#08090B',
-                  border: 'none',
-                  borderRadius: '12px',
-                  cursor: loading ? 'not-allowed' : 'pointer',
-                  boxShadow: '0 4px 18px rgba(40, 184, 242, 0.35)',
-                  transition: 'all 0.2s ease',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center'
-                }}
-              >
-                {loading ? 'Sending link...' : 'Send Reset Link'}
-              </button>
-            </form>
+              {error && (
+                <div className="alert alert-error" role="alert">
+                  <FaExclamationCircle aria-hidden="true" style={{ flex: 'none', marginTop: 3 }} /> <span>{error}</span>
+                </div>
+              )}
+              <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                <div className="field">
+                  <label htmlFor="forgot-email">Email address</label>
+                  <input
+                    id="forgot-email"
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="you@store.com"
+                    autoComplete="email"
+                    required
+                  />
+                </div>
+                <button type="submit" disabled={loading} className="btn btn-primary btn-block">
+                  {loading ? 'Sending link…' : 'Send reset link'}
+                </button>
+              </form>
+            </>
           )}
         </div>
       </main>

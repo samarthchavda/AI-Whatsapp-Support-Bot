@@ -3,7 +3,7 @@
 import React, { useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { FaFileSignature, FaChevronLeft, FaBalanceScale } from 'react-icons/fa';
+import { FaFileSignature, FaBalanceScale } from 'react-icons/fa';
 
 export default function TermsOfService() {
   const router = useRouter();
@@ -13,15 +13,7 @@ export default function TermsOfService() {
   }, []);
 
   return (
-    <div className="privacy-container">
-      <header className="privacy-header">
-        <Link href="/" className="back-btn">
-          <FaChevronLeft /> Back to Home
-        </Link>
-        <Link href="/" className="privacy-logo" style={{ cursor: 'pointer' }}>
-          <img src="/logo.png" className="header-logo-img" alt="Kwickbot Logo" />
-        </Link>
-      </header>
+    <div className="privacy-container page-end">
 
       <main className="privacy-content">
         <div className="privacy-hero">
@@ -59,7 +51,7 @@ export default function TermsOfService() {
             Our software runs on a recurring subscription model (Starter: ₹1499/mo, Growth: ₹2999/mo, Scale: ₹9999/mo).
           </p>
           <div className="legal-callout">
-            <FaFileSignature className="callout-icon" style={{ color: '#34d399' }} />
+            <FaFileSignature className="callout-icon" />
             <div>
               <h3>Billing &amp; Automatic Renewal</h3>
               <p>

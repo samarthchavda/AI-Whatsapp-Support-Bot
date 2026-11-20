@@ -966,63 +966,43 @@ export default async function BlogPostPage({ params }) {
     ]
   };
 
+  const published = post.createdAt ? new Date(post.createdAt) : null;
+  const publishedLabel = published && !Number.isNaN(published.getTime())
+    ? published.toLocaleDateString('en-IN', { month: 'long', day: 'numeric', year: 'numeric' })
+    : null;
+
   return (
-    <div className="retro-page-container">
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: safeJsonStringify(blogPostingSchema) }}
-      />
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: safeJsonStringify(breadcrumbSchema) }}
-      />
-      <div className="bg-video-wrapper">
-        <video className="bg-video" autoPlay muted loop playsInline>
-          <source
-            src="https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260809_012548_ef22562c-c0ae-4816-ad9d-f8922af4e6a7.mp4"
-            type="video/mp4"
-          />
-        </video>
-        <div className="bg-overlay-gradient"></div>
-      </div>
+    <div className="page">
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: safeJsonStringify(blogPostingSchema) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: safeJsonStringify(breadcrumbSchema) }} />
 
-      <main style={{ position: 'relative', zIndex: 1, padding: '40px 20px 80px', maxWidth: '900px', margin: '0 auto' }}>
-        <article className="dark-section-card">
-          <div style={{ marginBottom: '24px' }}>
-            <Link href="/blog" style={{ color: '#38bdf8', textDecoration: 'none', fontWeight: '600', fontSize: '14px' }}>
-              ← Back to Blog Index
-            </Link>
-          </div>
-
-          <header style={{ marginBottom: '32px' }}>
-            <div style={{ fontSize: '12px', color: '#38bdf8', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '10px' }}>
-              {post.tags && post.tags.length ? post.tags.join(' • ') : 'E-Commerce Guide'}
+      <main>
+        <article className="container-narrow">
+          <header className="article-head">
+            <Link href="/blog" className="back-link">← All articles</Link>
+            <div className="post-meta">
+              {(post.tags && post.tags.length ? post.tags : ['E-commerce guide']).map((tag) => (
+                <span key={tag} className="pill" style={{ padding: '4px 10px', fontSize: 12 }}>{tag}</span>
+              ))}
             </div>
-            <h1 style={{ fontSize: 'clamp(24px, 4vw, 36px)', fontWeight: '800', color: '#ffffff', lineHeight: '1.3', marginBottom: '16px' }}>
-              {post.title}
-            </h1>
-            <div style={{ fontSize: '14px', color: '#a1a1aa', display: 'flex', gap: '16px', alignItems: 'center' }}>
-              <span>By <strong style={{ color: '#ffffff' }}>{post.author || 'Kwickbot Team'}</strong></span>
-              <span>•</span>
-              <span>{new Date(post.createdAt).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</span>
+            <h1>{post.title}</h1>
+            <div className="post-meta" style={{ fontSize: 14.5 }}>
+              <span>By <strong style={{ color: 'var(--ink)' }}>{post.author || 'Kwickbot Team'}</strong></span>
+              {publishedLabel && <><span aria-hidden="true">·</span><time dateTime={published.toISOString()}>{publishedLabel}</time></>}
             </div>
           </header>
 
-          {post.coverImage && (
-            <div style={{ marginBottom: '36px', borderRadius: '16px', overflow: 'hidden', border: '1px solid rgba(255,255,255,0.1)' }}>
-              <img 
-                src={post.coverImage} 
-                alt={post.title} 
-                style={{ width: '100%', maxHeight: '420px', objectFit: 'cover', display: 'block' }} 
-              />
-            </div>
-          )}
+          {post.coverImage && <img src={post.coverImage} alt="" className="article-cover" />}
 
-          <div 
-            className="blog-content-body"
-            style={{ fontSize: '16px', lineHeight: '1.8', color: '#d4d4d8' }}
-            dangerouslySetInnerHTML={{ __html: post.content }}
-          />
+          <div className="prose" style={{ marginTop: 40 }} dangerouslySetInnerHTML={{ __html: post.content }} />
+
+          <div className="card card-soft" style={{ marginTop: 56, flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+              <h3>Want this running on your store?</h3>
+              <p>See how Kwickbot handles your real customer questions on WhatsApp.</p>
+            </div>
+            <Link href="/demo" className="btn btn-primary btn-sm">Book a demo</Link>
+          </div>
         </article>
       </main>
     </div>

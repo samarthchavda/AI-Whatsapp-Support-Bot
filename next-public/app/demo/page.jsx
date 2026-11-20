@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
-import { FaArrowLeft, FaCheckCircle } from 'react-icons/fa';
+import { FaCheck, FaCheckCircle, FaExclamationCircle } from 'react-icons/fa';
 import axios from 'axios';
 import { safeJsonStringify } from '../../utils/jsonSanitizer';
 
@@ -73,136 +73,90 @@ export default function BookDemo() {
     ]
   };
 
-  return (
-    <div className="retro-page-container">
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: safeJsonStringify(breadcrumbSchema) }}
-      />
-      <div className="bg-video-wrapper">
-        <video className="bg-video" autoPlay muted loop playsInline>
-          <source
-            src="https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260809_012548_ef22562c-c0ae-4816-ad9d-f8922af4e6a7.mp4"
-            type="video/mp4"
-          />
-        </video>
-        <div className="bg-overlay-gradient"></div>
-      </div>
+  const fields = [
+    { name: 'name', label: 'Full name', type: 'text', placeholder: 'John Doe', autoComplete: 'name' },
+    { name: 'email', label: 'Work email', type: 'email', placeholder: 'john@company.com', autoComplete: 'email', half: true },
+    { name: 'phone', label: 'Phone number', type: 'tel', placeholder: '+91 98765 43210', autoComplete: 'tel', half: true },
+    { name: 'businessName', label: 'Business name', type: 'text', placeholder: 'Your store name', autoComplete: 'organization', half: true },
+    { name: 'websiteUrl', label: 'Website URL', type: 'text', placeholder: 'https://yourwebsite.com', autoComplete: 'url', half: true }
+  ];
 
-      <main style={{ position: 'relative', zIndex: 1, padding: '40px 20px 80px' }}>
-        <section className="dark-section-card" style={{ maxWidth: '680px' }}>
-          <div className="dark-heading-center" style={{ marginBottom: '24px' }}>
-            <span>SCHEDULE DEMO</span>
-            <h1 className="retro-dot-headline" style={{ fontSize: 'clamp(28px, 4vw, 44px)', margin: '12px auto' }}>
-              Book a Live Demo
-            </h1>
-            <p className="retro-subhead" style={{ margin: '0 auto', fontSize: '15px' }}>
-              See how Kwickbot can automate 80%+ of your WhatsApp customer support operations.
-            </p>
+  const renderField = (f) => (
+    <div className="field" key={f.name}>
+      <label htmlFor={`demo-${f.name}`}>{f.label} <span aria-hidden="true">*</span></label>
+      <input
+        id={`demo-${f.name}`}
+        type={f.type}
+        name={f.name}
+        value={formData[f.name]}
+        onChange={handleChange}
+        placeholder={f.placeholder}
+        autoComplete={f.autoComplete}
+        required
+      />
+    </div>
+  );
+
+  return (
+    <div className="page">
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: safeJsonStringify(breadcrumbSchema) }} />
+
+      <main className="container">
+        <div className="form-shell">
+          <div className="form-intro">
+            <span className="eyebrow">Book a live demo</span>
+            <h1>See Kwickbot answer <span className="highlight">your customers.</span></h1>
+            <p>We will walk through your real support questions, order flows and campaigns on WhatsApp, and show how much of the routine work Kwickbot can take off your team.</p>
+            <ul className="checklist">
+              <li><span className="check"><FaCheck aria-hidden="true" /></span>A 30-minute walkthrough tailored to your store</li>
+              <li><span className="check"><FaCheck aria-hidden="true" /></span>Shopify, WooCommerce or your own CRM / API</li>
+              <li><span className="check"><FaCheck aria-hidden="true" /></span>Setup plan for WhatsApp Cloud API and templates</li>
+            </ul>
           </div>
 
-          {success ? (
-            <div style={{ textAlignment: 'center', padding: '30px 20px', textAlign: 'center' }}>
-              <div style={{ fontSize: '48px', color: '#4ade80', marginBottom: '16px' }}><FaCheckCircle /></div>
-              <h2 style={{ color: '#ffffff', fontSize: '24px', marginBottom: '10px' }}>Request Submitted Successfully!</h2>
-              <p style={{ color: '#a1a1aa', fontSize: '15px', marginBottom: '24px' }}>Our engineering team will contact you within 24 hours to schedule your demo.</p>
-              <button onClick={() => setSuccess(false)} className="glowing-btn-white">
-                Submit Another Request
-              </button>
-            </div>
-          ) : (
-            <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              {error && (
-                <div style={{ background: 'rgba(239, 68, 68, 0.2)', border: '1px solid #ef4444', color: '#f87171', padding: '12px 16px', borderRadius: '10px', fontSize: '14px' }}>
-                  {error}
-                </div>
-              )}
-
-              <div>
-                <label style={{ display: 'block', color: '#ffffff', fontSize: '13px', fontWeight: 600, marginBottom: '6px' }}>Full Name *</label>
-                <input
-                  type="text"
-                  name="name"
-                  value={formData.name}
-                  onChange={handleChange}
-                  placeholder="John Doe"
-                  required
-                  style={{ width: '100%', height: '44px', background: '#18181b', border: '1px solid rgba(255,255,255,0.15)', borderRadius: '10px', padding: '0 14px', color: '#ffffff', fontSize: '14px', outline: 'none' }}
-                />
+          <div className="form-card">
+            {success ? (
+              <div className="success-panel" role="status">
+                <span className="icon-chip"><FaCheckCircle aria-hidden="true" /></span>
+                <h2>Request received</h2>
+                <p style={{ color: 'var(--muted)' }}>Our team will contact you within 24 hours to schedule your demo.</p>
+                <button type="button" onClick={() => setSuccess(false)} className="btn btn-secondary">Submit another request</button>
               </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+            ) : (
+              <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 16 }} noValidate={false}>
                 <div>
-                  <label style={{ display: 'block', color: '#ffffff', fontSize: '13px', fontWeight: 600, marginBottom: '6px' }}>Email Address *</label>
-                  <input
-                    type="email"
-                    name="email"
-                    value={formData.email}
+                  <h2>Tell us about your store</h2>
+                  <p className="form-sub" style={{ marginTop: 6 }}>All fields are required.</p>
+                </div>
+                {error && (
+                  <div className="alert alert-error" role="alert">
+                    <FaExclamationCircle aria-hidden="true" style={{ flex: 'none', marginTop: 3 }} /> <span>{error}</span>
+                  </div>
+                )}
+                {renderField(fields[0])}
+                <div className="field-row">{fields.slice(1, 3).map(renderField)}</div>
+                <div className="field-row">{fields.slice(3, 5).map(renderField)}</div>
+                <div className="field">
+                  <label htmlFor="demo-businessDetails">Business details &amp; expectations <span aria-hidden="true">*</span></label>
+                  <textarea
+                    id="demo-businessDetails"
+                    name="businessDetails"
+                    value={formData.businessDetails}
                     onChange={handleChange}
-                    placeholder="john@company.com"
+                    placeholder="Describe your current support challenges and monthly conversation volume…"
                     required
-                    style={{ width: '100%', height: '44px', background: '#18181b', border: '1px solid rgba(255,255,255,0.15)', borderRadius: '10px', padding: '0 14px', color: '#ffffff', fontSize: '14px', outline: 'none' }}
                   />
                 </div>
-                <div>
-                  <label style={{ display: 'block', color: '#ffffff', fontSize: '13px', fontWeight: 600, marginBottom: '6px' }}>Phone Number *</label>
-                  <input
-                    type="tel"
-                    name="phone"
-                    value={formData.phone}
-                    onChange={handleChange}
-                    placeholder="+91 98765 43210"
-                    required
-                    style={{ width: '100%', height: '44px', background: '#18181b', border: '1px solid rgba(255,255,255,0.15)', borderRadius: '10px', padding: '0 14px', color: '#ffffff', fontSize: '14px', outline: 'none' }}
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label style={{ display: 'block', color: '#ffffff', fontSize: '13px', fontWeight: 600, marginBottom: '6px' }}>Business Name *</label>
-                <input
-                  type="text"
-                  name="businessName"
-                  value={formData.businessName}
-                  onChange={handleChange}
-                  placeholder="Your Store Name"
-                  required
-                  style={{ width: '100%', height: '44px', background: '#18181b', border: '1px solid rgba(255,255,255,0.15)', borderRadius: '10px', padding: '0 14px', color: '#ffffff', fontSize: '14px', outline: 'none' }}
-                />
-              </div>
-
-              <div>
-                <label style={{ display: 'block', color: '#ffffff', fontSize: '13px', fontWeight: 600, marginBottom: '6px' }}>Website URL *</label>
-                <input
-                  type="text"
-                  name="websiteUrl"
-                  value={formData.websiteUrl}
-                  onChange={handleChange}
-                  placeholder="https://yourwebsite.com"
-                  required
-                  style={{ width: '100%', height: '44px', background: '#18181b', border: '1px solid rgba(255,255,255,0.15)', borderRadius: '10px', padding: '0 14px', color: '#ffffff', fontSize: '14px', outline: 'none' }}
-                />
-              </div>
-
-              <div>
-                <label style={{ display: 'block', color: '#ffffff', fontSize: '13px', fontWeight: 600, marginBottom: '6px' }}>Business Details &amp; Expectations *</label>
-                <textarea
-                  name="businessDetails"
-                  value={formData.businessDetails}
-                  onChange={handleChange}
-                  placeholder="Describe your current support challenges and monthly conversation volume..."
-                  rows="4"
-                  required
-                  style={{ width: '100%', background: '#18181b', border: '1px solid rgba(255,255,255,0.15)', borderRadius: '10px', padding: '12px 14px', color: '#ffffff', fontSize: '14px', outline: 'none', resize: 'vertical' }}
-                />
-              </div>
-
-              <button type="submit" disabled={loading} className="glowing-btn-white" style={{ marginTop: '10px', width: '100%' }}>
-                {loading ? 'Submitting...' : 'Submit Demo Request'}
-              </button>
-            </form>
-          )}
-        </section>
+                <button type="submit" disabled={loading} className="btn btn-primary btn-block">
+                  {loading ? 'Submitting…' : 'Request my demo'}
+                </button>
+                <p className="form-foot" style={{ fontSize: 13 }}>
+                  By submitting, you agree to our <Link href="/privacy">privacy policy</Link>.
+                </p>
+              </form>
+            )}
+          </div>
+        </div>
       </main>
     </div>
   );

@@ -2,7 +2,8 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
-import { FaArrowLeft, FaCheckCircle, FaEye, FaEyeSlash } from 'react-icons/fa';
+import { FaEye, FaEyeSlash, FaExclamationCircle } from 'react-icons/fa';
+import BrandMark from '../components/BrandMark';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -57,162 +58,72 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="retro-page-container">
-      <div className="bg-video-wrapper">
-        <video className="bg-video" autoPlay muted loop playsInline>
-          <source
-            src="https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260809_012548_ef22562c-c0ae-4816-ad9d-f8922af4e6a7.mp4"
-            type="video/mp4"
-          />
-        </video>
-        <div className="bg-overlay-gradient"></div>
-      </div>
-
-      <main style={{ position: 'relative', zIndex: 1, minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '40px 20px' }}>
-        <div style={{
-          width: '100%',
-          maxWidth: '460px',
-          background: 'rgba(18, 18, 21, 0.92)',
-          border: '1px solid rgba(255, 255, 255, 0.15)',
-          borderRadius: '24px',
-          padding: '36px 32px',
-          backdropFilter: 'blur(16px)',
-          boxShadow: '0 20px 50px rgba(0,0,0,0.6)'
-        }}>
-          {!isAdminPortal && (
-            <Link href="/" style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', color: '#a1a1aa', fontSize: '13.5px', textDecoration: 'none', marginBottom: '24px' }}>
-              <FaArrowLeft /> Back to home
-            </Link>
-          )}
-
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px' }}>
-            <img src="/app-icon.png" alt="Kwickbot" style={{ width: '40px', height: '40px', borderRadius: '10px' }} />
-            <div>
-              <h2 style={{ color: '#ffffff', fontSize: '22px', fontWeight: '800', margin: 0, letterSpacing: '-0.02em' }}>
-                {isAdminPortal ? 'Super Admin Portal' : 'Welcome back'}
-              </h2>
-              <p style={{ color: '#a1a1aa', fontSize: '13.5px', margin: 0 }}>
-                {isAdminPortal ? 'Sign in to Kwickbot Master Control' : 'Sign in to your Kwickbot dashboard'}
-              </p>
-            </div>
+    <div className="page">
+      <main className="auth-wrap">
+        <div className="form-card">
+          <div className="auth-head">
+            <BrandMark className="brand-mark" />
+            <h1 style={{ fontSize: 26, fontWeight: 800 }}>{isAdminPortal ? 'Super admin portal' : 'Welcome back'}</h1>
+            <p className="form-sub" style={{ marginTop: 0 }}>
+              {isAdminPortal ? 'Sign in to Kwickbot Master Control' : 'Sign in to your Kwickbot dashboard'}
+            </p>
           </div>
 
           {error && (
-            <div style={{
-              background: 'rgba(239, 68, 68, 0.15)',
-              border: '1px solid rgba(239, 68, 68, 0.4)',
-              color: '#f87171',
-              padding: '12px 16px',
-              borderRadius: '12px',
-              fontSize: '13.5px',
-              marginBottom: '20px'
-            }}>
-              {error}
+            <div className="alert alert-error" role="alert">
+              <FaExclamationCircle aria-hidden="true" style={{ flex: 'none', marginTop: 3 }} /> <span>{error}</span>
             </div>
           )}
 
-          <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
-            <div>
-              <label style={{ display: 'block', color: '#d4d4d8', fontSize: '13px', fontWeight: '600', marginBottom: '6px' }}>Email Address</label>
+          <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            <div className="field">
+              <label htmlFor="login-email">Email address</label>
               <input
+                id="login-email"
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
+                placeholder="you@store.com"
+                autoComplete="email"
                 required
-                placeholder="admin@store.com"
-                style={{
-                  width: '100%',
-                  padding: '12px 16px',
-                  borderRadius: '12px',
-                  background: '#27272a',
-                  border: '1px solid rgba(255, 255, 255, 0.15)',
-                  color: '#ffffff',
-                  fontSize: '14px',
-                  outline: 'none'
-                }}
               />
             </div>
-
-            <div>
-              <label style={{ display: 'block', color: '#d4d4d8', fontSize: '13px', fontWeight: '600', marginBottom: '6px' }}>Password</label>
-              <div style={{ position: 'relative' }}>
+            <div className="field">
+              <div className="form-row-between">
+                <label htmlFor="login-password">Password</label>
+                <Link href="/forgot-password" style={{ fontWeight: 600 }}>Forgot password?</Link>
+              </div>
+              <div className="input-wrap">
                 <input
+                  id="login-password"
                   type={showPassword ? 'text' : 'password'}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Your password"
+                  autoComplete="current-password"
                   required
-                  placeholder="••••••••"
-                  style={{
-                    width: '100%',
-                    padding: '12px 16px',
-                    paddingRight: '44px',
-                    borderRadius: '12px',
-                    background: '#27272a',
-                    border: '1px solid rgba(255, 255, 255, 0.15)',
-                    color: '#ffffff',
-                    fontSize: '14px',
-                    outline: 'none'
-                  }}
                 />
                 <button
                   type="button"
+                  className="input-btn"
                   onClick={() => setShowPassword(!showPassword)}
-                  style={{
-                    position: 'absolute',
-                    right: '12px',
-                    top: '50%',
-                    transform: 'translateY(-50%)',
-                    background: 'none',
-                    border: 'none',
-                    color: '#a1a1aa',
-                    cursor: 'pointer',
-                    fontSize: '16px'
-                  }}
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                  aria-pressed={showPassword}
                 >
-                  {showPassword ? <FaEyeSlash /> : <FaEye />}
+                  {showPassword ? <FaEyeSlash aria-hidden="true" /> : <FaEye aria-hidden="true" />}
                 </button>
               </div>
             </div>
-
-            <button
-              type="submit"
-              disabled={loading}
-              style={{
-                width: '100%',
-                marginTop: '10px',
-                height: '46px',
-                fontSize: '15px',
-                fontWeight: '700',
-                background: '#28B8F2',
-                color: '#08090B',
-                border: 'none',
-                borderRadius: '12px',
-                cursor: loading ? 'not-allowed' : 'pointer',
-                boxShadow: '0 4px 18px rgba(40, 184, 242, 0.35)',
-                transition: 'all 0.2s ease',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center'
-              }}
-            >
-              {loading ? 'Signing in...' : 'Sign in to Dashboard'}
+            <button type="submit" disabled={loading} className="btn btn-primary btn-block">
+              {loading ? 'Signing in…' : 'Sign in'}
             </button>
-
-            <div style={{ textAlign: 'center', marginTop: '4px' }}>
-              <Link href="/forgot-password" style={{ color: '#38bdf8', fontSize: '13.5px', textDecoration: 'none' }}>
-                Forgot password?
-              </Link>
-            </div>
           </form>
 
-          <div style={{ marginTop: '24px', paddingTop: '20px', borderTop: '1px solid rgba(255,255,255,0.1)', display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '13px', color: '#a1a1aa' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <FaCheckCircle style={{ color: '#4ade80' }} /> 24/7 AI WhatsApp Support &amp; Analytics
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <FaCheckCircle style={{ color: '#4ade80' }} /> Live Handoff &amp; Order Cancellations
-            </div>
-          </div>
+          {!isAdminPortal && (
+            <p className="form-foot">
+              New to Kwickbot? <Link href="/demo" style={{ fontWeight: 700 }}>Book a demo</Link>
+            </p>
+          )}
         </div>
       </main>
     </div>

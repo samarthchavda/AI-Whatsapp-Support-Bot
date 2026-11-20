@@ -1,24 +1,9 @@
 import './globals.css';
-import { Plus_Jakarta_Sans, Space_Grotesk } from 'next/font/google';
 import { SITE_URL, DEFAULT_OG_IMAGE } from './seo';
 import Header from './components/Header';
 import Footer from './components/Footer';
 import MotionProvider from './components/MotionProvider';
 import { safeJsonStringify } from '../utils/jsonSanitizer';
-
-const fontSans = Plus_Jakarta_Sans({
-  subsets: ['latin'],
-  weight: ['400', '500', '600', '700', '800'],
-  display: 'swap',
-  variable: '--font-jakarta'
-});
-
-const fontBrand = Space_Grotesk({
-  subsets: ['latin'],
-  weight: ['600'],
-  display: 'swap',
-  variable: '--font-space'
-});
 
 const HOME_TITLE = 'AI WhatsApp Support for Shopify & WooCommerce | Kwickbot';
 const HOME_DESCRIPTION = 'Kwickbot answers customers on WhatsApp with Gemini AI, sends order confirmations and shipping updates automatically, and hands chats to your team when needed.';
@@ -130,8 +115,11 @@ export default function RootLayout({ children }) {
   };
 
   return (
-    <html lang="en" className={`${fontSans.variable} ${fontBrand.variable}`}>
+    <html lang="en">
       <head>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Space+Grotesk:wght@600&display=swap" rel="stylesheet" />
         <script dangerouslySetInnerHTML={{ __html: "document.documentElement.classList.add('motion-ready')" }} />
 
         {/* Structured Data (JSON-LD Schemas for SEO) */}

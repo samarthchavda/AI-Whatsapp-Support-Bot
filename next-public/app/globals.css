@@ -34,8 +34,8 @@
   --ok-ink: #3D5A22;
 
   /* Type */
-  --font-sans: var(--font-jakarta), "Plus Jakarta Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
-  --font-brand: var(--font-space), "Space Grotesk", var(--font-jakarta), system-ui, sans-serif;
+  --font-sans: "Plus Jakarta Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-brand: "Space Grotesk", "Plus Jakarta Sans", system-ui, sans-serif;
 
   /* Shape */
   --r-sm: 12px;

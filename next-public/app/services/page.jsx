@@ -1,89 +1,147 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { safeJsonStringify } from '../../utils/jsonSanitizer';
 import {
-  FaArrowRight,
-  FaBrain,
-  FaPlug,
-  FaHeadset,
-  FaFileAlt,
-  FaWhatsapp,
-  FaStore,
-  FaBroadcastTower,
-  FaShieldAlt,
-  FaCheck,
-  FaSearch,
-  FaRocket,
-  FaCogs,
-  FaCode,
-  FaArrowDown
+  FaArrowRight, FaCheck, FaSearch, FaPlug, FaCogs, FaRocket, FaFileAlt,
+  FaComments, FaShoppingBag, FaBook, FaBullhorn, FaCode, FaChartBar, FaTools, FaClipboardList
 } from 'react-icons/fa';
-import { SiMeta, SiShopify, SiWoocommerce } from 'react-icons/si';
+import {
+  FlowHero, InboxMock, OrderTimelineMock, KnowledgeMock, CampaignMock, ApiMock, UsageMock
+} from '../components/ServiceMockups';
 
-const serviceAreas = [
+const SECTIONS = [
   {
-    icon: FaBrain,
-    category: 'AI KNOWLEDGE',
-    title: 'Business Knowledge Configuration',
-    description: 'Shape Gemini responses around the information your business approves instead of relying on generic chatbot answers.',
-    deliverables: ['FAQ and policy document ingestion', 'Merchant-specific retrieval context', 'Test-query review before launch']
+    id: 'support',
+    nav: 'Support',
+    icon: FaComments,
+    eyebrow: 'Customer support',
+    title: 'AI answers first. Your team takes over when it matters.',
+    copy: 'Every WhatsApp conversation lands in one Live Chat inbox. The AI replies from your store data and documents, and pauses itself the moment a customer needs a person.',
+    points: [
+      'Live Chat inbox with full conversation history',
+      'AI pauses on escalation, refund or “talk to a human” requests',
+      'Agents reply manually and hand the chat back to the AI',
+      'Escalations list so nothing urgent is missed'
+    ],
+    Mock: InboxMock
   },
   {
-    icon: FaWhatsapp,
-    category: 'META ONBOARDING',
-    title: 'WhatsApp Cloud API Setup',
-    description: 'Configure the Meta assets and webhook connection Kwickbot needs to receive conversations and send approved messages.',
-    deliverables: ['Business account and phone-number mapping', 'Cloud API credentials and webhooks', 'Template and coexistence guidance']
+    id: 'orders',
+    nav: 'Orders',
+    icon: FaShoppingBag,
+    eyebrow: 'Order automation',
+    title: 'Every order followed up on WhatsApp, automatically.',
+    copy: 'Connect Shopify or WooCommerce and Kwickbot receives orders by webhook, sends the templates you map to each order event, and answers tracking and cancellation questions with live order data.',
+    points: [
+      'Order sync from Shopify or WooCommerce',
+      'Templates mapped to order events (confirmation, shipped, delivered)',
+      'Order-status and tracking answers in chat',
+      'Supported cancellation workflow over WhatsApp'
+    ],
+    Mock: OrderTimelineMock
   },
   {
-    icon: FaStore,
-    category: 'COMMERCE DATA',
-    title: 'Shopify & WooCommerce Integration',
-    description: 'Connect store operations so support replies can use order, customer, fulfilment, and checkout context when it is available.',
-    deliverables: ['Shopify or WooCommerce connection', 'Order and fulfilment synchronization', 'Cancellation and cart-event workflows']
+    id: 'knowledge',
+    nav: 'Knowledge',
+    icon: FaBook,
+    eyebrow: 'AI knowledge base',
+    title: 'Answers grounded in your own policies.',
+    copy: 'Upload your FAQ and policy PDFs. Kwickbot uses them to answer customers, and you can test any question before going live, so replies match what your business actually says.',
+    points: [
+      'PDF upload for FAQs, return and shipping policies',
+      'Shopify product details synced into the knowledge base',
+      'Test-a-question panel before launch',
+      'Escalates instead of guessing when it is unsure'
+    ],
+    Mock: KnowledgeMock
   },
   {
-    icon: FaHeadset,
-    category: 'HUMAN OPERATIONS',
-    title: 'Live Chat & Escalation Design',
-    description: 'Define when AI should pause, what your agents need to see, and how the same conversation moves into human support.',
-    deliverables: ['Escalation and refund triggers', 'Agent takeover with conversation context', 'Manual reply and bot resume controls']
+    id: 'campaigns',
+    nav: 'Campaigns',
+    icon: FaBullhorn,
+    eyebrow: 'Broadcasts & cart recovery',
+    title: 'Approved campaigns, sent and tracked.',
+    copy: 'Import recipients from CSV, pick an approved WhatsApp template, schedule it, and see what was sent or failed. Bring back shoppers with abandoned-cart reminders.',
+    points: [
+      'Approved template selection with header images',
+      'CSV recipient import and scheduling',
+      'Sent and failed counts for every campaign',
+      'Abandoned-cart reminders from the dashboard'
+    ],
+    Mock: CampaignMock
   },
   {
-    icon: FaBroadcastTower,
-    category: 'OUTBOUND MESSAGING',
-    title: 'Templates & Broadcast Operations',
-    description: 'Prepare approved WhatsApp communication for targeted campaigns, operational updates, and supported follow-up journeys.',
-    deliverables: ['Template organization and selection', 'Recipient imports and scheduling', 'Campaign queue and activity visibility']
+    id: 'developer',
+    nav: 'Developer API',
+    icon: FaCode,
+    eyebrow: 'WhatsApp API for your software',
+    title: 'Plug WhatsApp into your own CRM, ERP or app.',
+    copy: 'Use Kwickbot as your WhatsApp layer through a simple REST API. Send templates, text and media, and receive incoming messages on your own webhook.',
+    points: [
+      'API keys with usage tracking',
+      'Send templates, text and media over REST',
+      'Signed webhooks with secret rotation and test events',
+      'Request logs and failed-webhook review'
+    ],
+    Mock: ApiMock
   },
   {
-    icon: FaShieldAlt,
-    category: 'PLATFORM CONTROL',
-    title: 'Analytics, Usage & Governance',
-    description: 'Give merchants and platform operators visibility into activity, limits, integration health, and important administrative actions.',
-    deliverables: ['Conversation and operations analytics', 'Plan, message, and token controls', 'Audit, health, and feature visibility']
+    id: 'governance',
+    nav: 'Usage & control',
+    icon: FaChartBar,
+    eyebrow: 'Analytics, usage & governance',
+    title: 'Always know what is running and what it costs.',
+    copy: 'See conversations, messages and AI token use against your plan limits, with WhatsApp connection status and analytics in one dashboard.',
+    points: [
+      'Conversation, message and AI token meters',
+      'Plan limits with clear usage visibility',
+      'Conversation and operations analytics',
+      'Integration and connection status'
+    ],
+    Mock: UsageMock
   }
 ];
 
 const implementationSteps = [
-  { icon: FaSearch, number: '01', title: 'Map the workflow', copy: 'Identify your high-volume questions, order actions, policies, escalation rules, and outbound use cases.' },
-  { icon: FaPlug, number: '02', title: 'Connect the stack', copy: 'Connect WhatsApp Cloud API and the supported commerce platform required for store-aware operations.' },
-  { icon: FaCogs, number: '03', title: 'Configure & test', copy: 'Load approved knowledge, validate representative questions, and test order and agent-handoff paths.' },
-  { icon: FaRocket, number: '04', title: 'Launch with visibility', copy: 'Activate the workflow, monitor usage and conversations, and refine knowledge or rules as operations evolve.' }
+  { icon: FaSearch, title: 'Map the workflow', copy: 'Identify your high-volume questions, order actions, policies, escalation rules and outbound use cases.' },
+  { icon: FaPlug, title: 'Connect the stack', copy: 'Connect WhatsApp Cloud API and the commerce platform needed for store-aware operations.' },
+  { icon: FaCogs, title: 'Configure & test', copy: 'Load approved knowledge, validate representative questions, and test order and agent-handoff paths.' },
+  { icon: FaRocket, title: 'Launch with visibility', copy: 'Go live, monitor usage and conversations, and refine knowledge or rules as operations evolve.' }
 ];
-const developerArea = {
-  icon: FaCode,
-  category: 'Developer API',
-  title: 'WhatsApp API for Your Software',
-  description: 'Use Kwickbot as the WhatsApp layer for your own CRM, ERP or app, with keys, logs and webhooks managed from the dashboard.',
-  deliverables: ['API keys with usage tracking', 'Send messages, templates and media over REST', 'Signed webhooks with test events, logs and failed-event review']
-};
 
-const allAreas = [...serviceAreas, developerArea];
+const WE_SET_UP = [
+  'WhatsApp Cloud API connection and webhooks',
+  'Shopify or WooCommerce connection and order sync',
+  'Knowledge base upload and test questions',
+  'Templates mapped to your order events',
+  'Live Chat escalation rules for your team',
+  'A walkthrough of the dashboard for your agents'
+];
+
+const YOU_BRING = [
+  'A Meta Business Manager account and the WhatsApp number to use',
+  'Admin access to your Shopify store, or WooCommerce REST API keys over HTTPS',
+  'Your FAQ, return and shipping policy documents (PDF)',
+  'The message templates you want to send (we help draft them for Meta approval)'
+];
 
 export default function ServicesPage() {
+  const [active, setActive] = useState(SECTIONS[0].id);
+
+  // Highlight the section currently in view in the sticky menu
+  useEffect(() => {
+    if (!('IntersectionObserver' in window)) return undefined;
+    const io = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => { if (entry.isIntersecting) setActive(entry.target.id); });
+    }, { rootMargin: '-40% 0px -55% 0px' });
+    SECTIONS.forEach((s) => {
+      const el = document.getElementById(s.id);
+      if (el) io.observe(el);
+    });
+    return () => io.disconnect();
+  }, []);
 
   const breadcrumbSchema = {
     '@context': 'https://schema.org',
@@ -103,87 +161,71 @@ export default function ServicesPage() {
         <section className="hero">
           <div className="container hero-grid">
             <div className="hero-copy">
-              <span className="eyebrow hero-fade" style={{ '--d': '0s' }}>Implementation + automation</span>
-              <h1 className="hero-fade" style={{ '--d': '.1s' }}>Turn WhatsApp into an <span className="highlight swipe">operating channel.</span></h1>
-              <p className="hero-lead hero-fade" style={{ '--d': '.35s' }}>
-                Kwickbot brings official WhatsApp infrastructure, store data, grounded AI, human handoff and outbound messaging into one implementation path.
+              <span className="eyebrow hero-fade" style={{ '--d': '0s' }}>Services for e-commerce on WhatsApp</span>
+              <h1 className="rise" aria-label="Turn WhatsApp into an operating channel.">
+                <span style={{ '--w': 0 }}>Turn</span>{' '}
+                <span style={{ '--w': 1 }}>WhatsApp</span>{' '}
+                <span style={{ '--w': 2 }}>into</span>{' '}
+                <span style={{ '--w': 3 }}>an</span>{' '}
+                <span style={{ '--w': 4 }} className="highlight swipe">operating</span>{' '}
+                <span style={{ '--w': 5 }} className="highlight swipe">channel.</span>
+              </h1>
+              <p className="hero-lead hero-fade" style={{ '--d': '.45s' }}>
+                Support automation, order follow-ups, campaigns and a WhatsApp API for your own software, set up on the official Meta Cloud API and connected to your store.
               </p>
-              <div className="hero-actions hero-fade" style={{ '--d': '.5s' }}>
+              <div className="hero-actions hero-fade" style={{ '--d': '.6s' }}>
                 <Link href="/demo" className="btn btn-primary">Discuss your workflow <FaArrowRight /></Link>
-                <a href="#service-areas" className="btn btn-secondary">Explore delivery areas</a>
+                <a href="#support" className="btn btn-secondary">See what’s included</a>
               </div>
-              <div className="hero-tags hero-fade" style={{ '--d': '.65s' }}>
+              <div className="hero-tags hero-fade" style={{ '--d': '.75s' }}>
                 <span className="pill pill-white"><FaCheck aria-hidden="true" /> Official Meta API</span>
-                <span className="pill pill-white"><FaCheck aria-hidden="true" /> Store-aware workflows</span>
+                <span className="pill pill-white"><FaCheck aria-hidden="true" /> Shopify &amp; WooCommerce</span>
                 <span className="pill pill-white"><FaCheck aria-hidden="true" /> Human control</span>
               </div>
             </div>
-
             <div className="hero-visual">
-              <div className="preview-frame" aria-label="How the Kwickbot support stack connects">
-                <div className="flow" data-stagger>
-                  <span className="eyebrow" style={{ color: 'var(--deep)' }}>Connected support stack</span>
-                  <div className="flow-node">
-                    <span className="icon-chip"><SiMeta aria-hidden="true" /></span>
-                    <div>WhatsApp Cloud API<small>Customer conversations &amp; templates</small></div>
-                  </div>
-                  <FaArrowDown className="flow-arrow" aria-hidden="true" />
-                  <div className="flow-node ai">
-                    <span className="icon-chip" style={{ background: '#FFFFFF' }}><FaBrain aria-hidden="true" /></span>
-                    <div>Kwickbot AI layer<small>Knowledge, rules &amp; routing</small></div>
-                  </div>
-                  <div className="flow-row">
-                    <div className="flow-node">
-                      <span className="icon-chip"><SiShopify aria-hidden="true" /></span>
-                      <div>Shopify<small>Orders &amp; fulfilments</small></div>
-                    </div>
-                    <div className="flow-node">
-                      <span className="icon-chip"><SiWoocommerce aria-hidden="true" /></span>
-                      <div>WooCommerce<small>Store operations</small></div>
-                    </div>
-                  </div>
-                  <FaArrowDown className="flow-arrow" aria-hidden="true" />
-                  <div className="flow-node human">
-                    <span className="icon-chip"><FaHeadset aria-hidden="true" /></span>
-                    <div>Human operations<small>Live chat, escalation &amp; oversight</small></div>
-                  </div>
-                </div>
-              </div>
+              <FlowHero />
             </div>
           </div>
         </section>
 
-        {/* DELIVERY AREAS */}
-        <section id="service-areas" className="section">
+        {/* STICKY SECTION MENU */}
+        <div className="svc-nav-wrap">
           <div className="container">
-            <div data-reveal="up" className="section-head-row">
-              <div data-reveal="up" className="section-head">
-                <span className="eyebrow">Delivery areas</span>
-                <h2>Everything required for a working support flow</h2>
-              </div>
-              <p>Each service area connects to an actual Kwickbot workflow, dashboard control or supported integration.</p>
-            </div>
-            <div className="grid-3" data-stagger>
-              {allAreas.map((service, index) => {
-                const Icon = service.icon;
+            <nav className="svc-nav" aria-label="Services sections">
+              {SECTIONS.map((s) => {
+                const Icon = s.icon;
                 return (
-                  <article className="card lift" key={service.title}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <span className="icon-chip"><Icon aria-hidden="true" /></span>
-                      <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--muted-2)' }}>{String(index + 1).padStart(2, '0')}</span>
-                    </div>
-                    <span className="eyebrow" style={{ fontSize: 12 }}>{service.category}</span>
-                    <h3>{service.title}</h3>
-                    <p>{service.description}</p>
-                    <ul className="checklist" style={{ marginTop: 6 }}>
-                      {service.deliverables.map((item) => (
-                        <li key={item}><span className="check"><FaCheck aria-hidden="true" /></span>{item}</li>
-                      ))}
-                    </ul>
-                  </article>
+                  <a key={s.id} href={`#${s.id}`} className={active === s.id ? 'active' : ''} aria-current={active === s.id ? 'true' : undefined}>
+                    <Icon aria-hidden="true" /> {s.nav}
+                  </a>
                 );
               })}
-            </div>
+            </nav>
+          </div>
+        </div>
+
+        {/* FEATURES */}
+        <section className="section-tight">
+          <div className="container">
+            {SECTIONS.map((s, index) => {
+              const Mock = s.Mock;
+              return (
+                <section key={s.id} id={s.id} className={`feature ${index % 2 ? 'reverse' : ''}`} aria-labelledby={`${s.id}-title`}>
+                  <div className="feature-copy" data-reveal={index % 2 ? 'right' : 'left'}>
+                    <span className="eyebrow">{s.eyebrow}</span>
+                    <h2 id={`${s.id}-title`}>{s.title}</h2>
+                    <p>{s.copy}</p>
+                    <ul className="checklist">
+                      {s.points.map((point) => (
+                        <li key={point}><span className="check"><FaCheck aria-hidden="true" /></span>{point}</li>
+                      ))}
+                    </ul>
+                  </div>
+                  <Mock />
+                </section>
+              );
+            })}
           </div>
         </section>
 
@@ -191,12 +233,12 @@ export default function ServicesPage() {
         <section className="section">
           <div className="container">
             <div className="band band-pista" data-reveal="scale" style={{ flexDirection: 'column', flexWrap: 'nowrap' }}>
-              <div data-reveal="up" className="section-head-row" style={{ marginBottom: 0 }}>
-                <div data-reveal="up" className="section-head">
+              <div className="section-head-row" style={{ marginBottom: 0 }}>
+                <div className="section-head">
                   <span className="eyebrow" style={{ color: 'var(--deep)' }}>Implementation process</span>
                   <h2>A practical path from requirements to live operations</h2>
                 </div>
-                <p style={{ color: 'var(--deep)' }}>We configure around your real policies and customer journeys, then validate the high-risk paths before activation.</p>
+                <p style={{ color: 'var(--deep)' }}>We configure around your real policies and customer journeys, then validate the high-risk paths before going live.</p>
               </div>
               <div className="grid-4" data-stagger>
                 {implementationSteps.map((step, index) => {
@@ -217,10 +259,37 @@ export default function ServicesPage() {
           </div>
         </section>
 
+        {/* SET UP vs BRING */}
+        <section className="section">
+          <div className="container">
+            <div data-reveal="up" className="section-head center">
+              <span className="eyebrow">Before you start</span>
+              <h2>What we set up, and what we need from you</h2>
+              <p>No surprises during onboarding. These are the pieces every working setup needs.</p>
+            </div>
+            <div className="grid-2" data-stagger>
+              <article className="card">
+                <span className="icon-chip"><FaTools aria-hidden="true" /></span>
+                <h3>We set up</h3>
+                <ul className="checklist">
+                  {WE_SET_UP.map((item) => <li key={item}><span className="check"><FaCheck aria-hidden="true" /></span>{item}</li>)}
+                </ul>
+              </article>
+              <article className="card" style={{ background: 'var(--pista-tint)', borderColor: 'transparent' }}>
+                <span className="icon-chip" style={{ background: '#FFFFFF' }}><FaClipboardList aria-hidden="true" /></span>
+                <h3>You bring</h3>
+                <ul className="checklist">
+                  {YOU_BRING.map((item) => <li key={item}><span className="check" style={{ background: '#FFFFFF' }}><FaCheck aria-hidden="true" /></span>{item}</li>)}
+                </ul>
+              </article>
+            </div>
+          </div>
+        </section>
+
         {/* CUSTOM WORKFLOW */}
         <section className="section">
           <div className="container">
-            <div className="card" data-reveal="up" style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 24, padding: 'clamp(24px, 4vw, 40px)' }}>
+            <div className="card lift" data-reveal="up" style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 24, padding: 'clamp(24px, 4vw, 40px)' }}>
               <span className="icon-chip" style={{ width: 64, height: 64, borderRadius: 20, fontSize: 26 }}><FaFileAlt aria-hidden="true" /></span>
               <div style={{ flex: '1 1 420px', display: 'flex', flexDirection: 'column', gap: 8 }}>
                 <span className="eyebrow">Have a non-standard workflow?</span>

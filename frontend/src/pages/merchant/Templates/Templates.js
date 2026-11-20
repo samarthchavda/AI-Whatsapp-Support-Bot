@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import api from '../../../services/api';
-import { FaSync, FaSearch, FaFilter, FaCheckCircle, FaExclamationCircle, FaProjectDiagram, FaInfoCircle, FaFileAlt, FaPlus, FaTimes, FaSpinner, FaWhatsapp, FaImage, FaLink, FaPhoneAlt, FaEye, FaTrash } from 'react-icons/fa';
+import { FaSync, FaSearch, FaFilter, FaCheckCircle, FaExclamationCircle, FaProjectDiagram, FaInfoCircle, FaFileAlt, FaPlus, FaTimes, FaSpinner, FaWhatsapp, FaImage, FaLink, FaPhoneAlt, FaEye, FaTrash, FaThList, FaThLarge } from 'react-icons/fa';
 import './Templates.css';
 
 const createEmptyDraft = () => ({
@@ -25,7 +25,7 @@ const sanitizeTemplateName = (value) => value
   .replace(/^_+|_+$/g, '')
   .slice(0, 512);
 
-function Templates() {
+function Templates({ admin }) {
   const [templates, setTemplates] = useState([]);
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
@@ -39,10 +39,27 @@ function Templates() {
   const [draft, setDraft] = useState(createEmptyDraft);
   const [previewTemplate, setPreviewTemplate] = useState(null);
   const [deletingTemplateId, setDeletingTemplateId] = useState(null);
+  const [hasStoreIntegration, setHasStoreIntegration] = useState(false);
+  const [viewMode, setViewMode] = useState('table'); // 'table' (Image 2 style) or 'grid'
 
   useEffect(() => {
     fetchTemplates();
+    fetchIntegrations();
   }, []);
+
+  const fetchIntegrations = async () => {
+    try {
+      const response = await api.get('/integrations');
+      const list = response.data?.data || response.data?.integrations || response.data || [];
+      const isConnected = (Array.isArray(list) && list.some(
+        i => (i.platform === 'shopify' || i.platform === 'woocommerce') && i.isActive !== false
+      )) || Boolean(admin?.shopifyStoreUrl || admin?.wooStoreUrl);
+      setHasStoreIntegration(Boolean(isConnected));
+    } catch (error) {
+      console.warn('Could not fetch store integrations in Templates:', error);
+      setHasStoreIntegration(Boolean(admin?.shopifyStoreUrl || admin?.wooStoreUrl));
+    }
+  };
 
   const fetchTemplates = async () => {
     try {
@@ -207,6 +224,28 @@ function Templates() {
     );
   };
 
+  const getCategoryBadge = (category) => {
+    const cat = String(category || '').toUpperCase();
+    if (cat === 'MARKETING') {
+      return <span className="tmpl-category-badge marketing">MARKETING</span>;
+    }
+    if (cat === 'AUTHENTICATION') {
+      return <span className="tmpl-category-badge auth">AUTHENTICATION</span>;
+    }
+    return <span className="tmpl-category-badge utility">{cat || 'UTILITY'}</span>;
+  };
+
+  const formatTemplateDate = (dateStr) => {
+    if (!dateStr) return '20 Nov 2026';
+    try {
+      const d = new Date(dateStr);
+      if (isNaN(d.getTime())) return '—';
+      return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+    } catch {
+      return '—';
+    }
+  };
+
   const filteredTemplates = templates.filter(tpl => {
     const matchesSearch = tpl.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
       tpl.components.some(c => c.text && c.text.toLowerCase().includes(searchQuery.toLowerCase()));
@@ -244,26 +283,45 @@ function Templates() {
 
   return (
     <div className="container">
-      <div className="page-header">
+      {/* Page Header (Matching Image 2) */}
+      <div className="page-header tmpl-page-header">
         <div className="page-header-info">
-          <h1 className="page-title">WhatsApp Templates</h1>
-          <p className="page-subtitle">Fetch real Meta-approved templates and map automation triggers.</p>
+          <span className="tmpl-breadcrumb-tag">WHATSAPP BUSINESS PLATFORM</span>
+          <h1 className="page-title">Message Templates</h1>
+          <p className="page-subtitle">Create templates, submit them to Meta, and track approval status.</p>
         </div>
         <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-          <button onClick={openCreateModal} className="btn btn-secondary" style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', fontWeight: '600' }}>
+          <button onClick={openCreateModal} className="btn btn-primary" style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', fontWeight: '600' }}>
             <FaPlus /> Create Template
-          </button>
-          <button
-            onClick={handleSync}
-            className="btn btn-primary sync-btn"
-            disabled={syncing}
-          >
-            <FaSync className={syncing ? 'spinning' : ''} /> {syncing ? 'Syncing...' : 'Sync with Meta'}
           </button>
         </div>
       </div>
 
-      {/* Filter and Search Bar */}
+      {/* Meta Template Connection Card (Matching Image 2) */}
+      <div className="meta-connection-banner">
+        <div className="meta-conn-icon">
+          <FaInfoCircle />
+        </div>
+        <div className="meta-conn-content">
+          <div className="meta-conn-header">
+            <h4>Meta template connection</h4>
+            <p>
+              Save a draft to finish later, or submit a completed template to Meta directly. Meta must approve it before it can be sent. Sync imports Meta templates and refreshes approval status.
+            </p>
+          </div>
+          <div className="meta-conn-actions">
+            <button
+              onClick={handleSync}
+              className="btn btn-secondary sync-meta-btn"
+              disabled={syncing}
+            >
+              <FaSync className={syncing ? 'spinning' : ''} /> {syncing ? 'Syncing...' : 'Sync from Meta'}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Filter and Search Bar with View Mode Toggle */}
       <div className="tmpl-filter-bar">
         <div className="tmpl-search-wrapper">
           <FaSearch className="tmpl-search-icon" />
@@ -303,6 +361,28 @@ function Templates() {
               <option value="REJECTED">Rejected</option>
             </select>
           </div>
+
+          {/* Table / Grid View Toggle */}
+          <div className="tmpl-view-toggle">
+            <button
+              type="button"
+              className={`tmpl-view-btn ${viewMode === 'table' ? 'active' : ''}`}
+              onClick={() => setViewMode('table')}
+              title="Table View (Normal List)"
+              aria-label="Table View"
+            >
+              <FaThList />
+            </button>
+            <button
+              type="button"
+              className={`tmpl-view-btn ${viewMode === 'grid' ? 'active' : ''}`}
+              onClick={() => setViewMode('grid')}
+              title="Card Grid View"
+              aria-label="Card Grid View"
+            >
+              <FaThLarge />
+            </button>
+          </div>
         </div>
       </div>
 
@@ -326,6 +406,94 @@ function Templates() {
             </button>
           </div>
         </div>
+      ) : viewMode === 'table' ? (
+        <div className="tmpl-table-card">
+          <div className="table-responsive">
+            <table className="tmpl-table">
+              <thead>
+                <tr>
+                  <th>NAME</th>
+                  <th>CATEGORY</th>
+                  <th>LANGUAGE</th>
+                  <th>MESSAGE</th>
+                  {hasStoreIntegration && <th>TRIGGER EVENT</th>}
+                  <th>STATUS</th>
+                  <th>UPDATED</th>
+                  <th style={{ textAlign: 'right' }}>ACTIONS</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredTemplates.map((tpl) => {
+                  const bodyText = tpl.components?.find(c => c.type === 'BODY')?.text || tpl.body || '—';
+                  const updatedDate = tpl.updatedAt || tpl.createdAt;
+                  return (
+                    <tr key={tpl._id} className="tmpl-table-row">
+                      <td className="tmpl-name-cell">
+                        <span className="tmpl-name-text">{tpl.name}</span>
+                        {hasStoreIntegration && tpl.mappedEvent && (
+                          <span className="tmpl-mapped-inline-tag" title={`Trigger: ${tpl.mappedEvent}`}>
+                            <FaCheckCircle /> {tpl.mappedEvent.replace(/^order_/, '').replace('_', ' ')}
+                          </span>
+                        )}
+                      </td>
+                      <td>{getCategoryBadge(tpl.category)}</td>
+                      <td>
+                        <span className="tmpl-lang-code">{tpl.language}</span>
+                      </td>
+                      <td className="tmpl-message-cell" title={bodyText}>
+                        <span className="tmpl-message-snippet">{bodyText}</span>
+                      </td>
+                      {hasStoreIntegration && (
+                        <td className="tmpl-trigger-cell">
+                          <select
+                            value={tpl.mappedEvent || 'none'}
+                            onChange={(e) => handleMapEvent(tpl._id, e.target.value)}
+                            className="tmpl-inline-trigger-select"
+                            aria-label={`Map trigger for ${tpl.name}`}
+                          >
+                            <option value="none">None (Manual)</option>
+                            <option value="order_confirmation">E-Commerce: Order Confirmed</option>
+                            <option value="order_shipped">E-Commerce: Order Shipped</option>
+                            <option value="order_delivered">E-Commerce: Order Delivered</option>
+                            <option value="order_cancelled">E-Commerce: Order Cancelled</option>
+                            <option value="abandoned_cart">E-Commerce: Abandoned Cart</option>
+                          </select>
+                        </td>
+                      )}
+                      <td>{getStatusBadge(tpl.status)}</td>
+                      <td className="tmpl-date-cell">
+                        {formatTemplateDate(updatedDate)}
+                      </td>
+                      <td style={{ textAlign: 'right' }}>
+                        <div className="tmpl-table-actions">
+                          <button
+                            type="button"
+                            className="tmpl-icon-action-btn preview"
+                            onClick={() => setPreviewTemplate(tpl)}
+                            title="Preview template"
+                            aria-label="Preview template"
+                          >
+                            <FaEye />
+                          </button>
+                          <button
+                            type="button"
+                            className="tmpl-icon-action-btn delete"
+                            onClick={() => handleDeleteTemplate(tpl)}
+                            disabled={deletingTemplateId === tpl._id}
+                            title="Delete template"
+                            aria-label="Delete template"
+                          >
+                            {deletingTemplateId === tpl._id ? <FaSpinner className="spinning" /> : <FaTrash />}
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
       ) : (
         <div className="templates-grid">
           {filteredTemplates.map((tpl) => (
@@ -334,9 +502,11 @@ function Templates() {
                 <div className="template-title-wrapper">
                   <h3 className="template-name">{tpl.name}</h3>
                   <div className="template-list-meta">
-                    <span className="template-category-tag">{tpl.category}</span>
+                    {getCategoryBadge(tpl.category)}
                     <span className="template-language-label">{tpl.language}</span>
-                    {tpl.mappedEvent && <span className="mapping-active-badge"><FaCheckCircle /> Trigger mapped</span>}
+                    {hasStoreIntegration && tpl.mappedEvent && (
+                      <span className="mapping-active-badge"><FaCheckCircle /> Trigger mapped</span>
+                    )}
                   </div>
                 </div>
                 <div className="template-list-actions">
@@ -356,25 +526,37 @@ function Templates() {
                 </div>
               </div>
 
-              {/* Mapped Event Config */}
-              <div className="template-mapping-section">
-                <label className="mapping-label">
-                  <FaProjectDiagram /> Map to Trigger Event:
-                </label>
-                <select
-                  value={tpl.mappedEvent || 'none'}
-                  onChange={(e) => handleMapEvent(tpl._id, e.target.value)}
-                  className="mapping-select"
-                >
-                  <option value="none">None (Manual Dispatch Only)</option>
-                  <option value="order_confirmation">E-Commerce: Order Confirmed</option>
-                  <option value="order_shipped">E-Commerce: Order Shipped</option>
-                  <option value="order_delivered">E-Commerce: Order Delivered</option>
-                  <option value="order_cancelled">E-Commerce: Order Cancelled</option>
-                  <option value="abandoned_cart">E-Commerce: Abandoned Cart</option>
-                </select>
-              </div>
+              {/* Message preview snippet in card */}
+              {(() => {
+                const bodyText = tpl.components?.find(c => c.type === 'BODY')?.text || tpl.body;
+                if (!bodyText) return null;
+                return (
+                  <div className="template-card-snippet">
+                    <p>{bodyText}</p>
+                  </div>
+                );
+              })()}
 
+              {/* Mapped Event Config — ONLY shown if Shopify or WooCommerce is connected! */}
+              {hasStoreIntegration && (
+                <div className="template-mapping-section">
+                  <label className="mapping-label">
+                    <FaProjectDiagram /> Map to Trigger Event:
+                  </label>
+                  <select
+                    value={tpl.mappedEvent || 'none'}
+                    onChange={(e) => handleMapEvent(tpl._id, e.target.value)}
+                    className="mapping-select"
+                  >
+                    <option value="none">None (Manual Dispatch Only)</option>
+                    <option value="order_confirmation">E-Commerce: Order Confirmed</option>
+                    <option value="order_shipped">E-Commerce: Order Shipped</option>
+                    <option value="order_delivered">E-Commerce: Order Delivered</option>
+                    <option value="order_cancelled">E-Commerce: Order Cancelled</option>
+                    <option value="abandoned_cart">E-Commerce: Abandoned Cart</option>
+                  </select>
+                </div>
+              )}
             </div>
           ))}
         </div>
@@ -384,7 +566,10 @@ function Templates() {
       <div className="info-notice-box">
         <FaInfoCircle />
         <div>
-          <strong>Info on Variables:</strong> Message templates use placeholders like <code>{"{{1}}"}</code> or <code>{"{{2}}"}</code>. During webhook events (like Shopify order confirmation), these variables are automatically populated with real-time merchant parameters (e.g., customer name, order number, tracking ID).
+          <strong>Info on Variables:</strong> Message templates use placeholders like <code>{"{{1}}"}</code> or <code>{"{{2}}"}</code>.
+          {hasStoreIntegration
+            ? ' During store webhook events (like Shopify/WooCommerce order confirmation), these variables are automatically populated with real-time customer and order parameters.'
+            : ' Connect your Shopify or WooCommerce store in Store Integrations to automatically trigger WhatsApp notification templates on order and cart events.'}
         </div>
       </div>
 

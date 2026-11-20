@@ -124,7 +124,20 @@ app.use(express.json({
 }));
 app.use(express.urlencoded({ extended: true }));
 const path = require('path');
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+// SECURITY: never expose the whole uploads/ directory. It holds private data
+// (invoice PDFs, knowledge-base documents, CSV imports, temp media).
+// Only these are public:
+//   - /uploads/blog/*             → blog cover images for the public site
+//   - /uploads/headerImage-*.ext  → broadcast header images (Meta must fetch them)
+// Invoice PDFs are served via authenticated / signed routes in /api/invoices.
+const UPLOADS_DIR = path.join(__dirname, 'uploads');
+app.use('/uploads/blog', express.static(path.join(UPLOADS_DIR, 'blog'), { dotfiles: 'deny', index: false }));
+app.get(/^\/uploads\/(headerImage-\d+-\d+\.(?:jpe?g|png|webp))$/i, (req, res) => {
+  res.sendFile(req.params[0], { root: UPLOADS_DIR, dotfiles: 'deny' }, (err) => {
+    if (err && !res.headersSent) res.status(404).end();
+  });
+});
+app.use('/uploads', (req, res) => res.status(404).json({ error: 'Not found' }));
 app.use(morgan('dev'));
 
 // Socket.IO connection handling

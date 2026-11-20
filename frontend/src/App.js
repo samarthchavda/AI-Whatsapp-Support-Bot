@@ -1111,7 +1111,7 @@ function App() {
                     />
                     <Route path="/developer-api" element={<DeveloperApi admin={admin} />} />
                     <Route path="/whatsapp-connect" element={<WhatsAppConnect />} />
-                    <Route path="/templates" element={<Templates />} />
+                    <Route path="/templates" element={<Templates admin={admin} />} />
                     <Route 
                       path="/abandoned-carts" 
                       element={

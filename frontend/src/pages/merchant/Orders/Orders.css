@@ -2,7 +2,13 @@
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
   gap: 14px;
-  margin-bottom: 28px;
+  margin-bottom: 6px;
+}
+
+.orders-page-scope {
+  margin: 0 0 24px;
+  color: var(--text-secondary, #667085);
+  font-size: 13px;
 }
 
 .orders-stat-pill {

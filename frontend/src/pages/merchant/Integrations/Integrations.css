@@ -4,6 +4,37 @@
   gap: 24px;
 }
 
+.integration-notice {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 14px 16px;
+  margin: 0 0 20px;
+  border: 1px solid var(--border-subtle, #DCE6F2);
+  border-radius: 10px;
+  color: var(--text-primary, #101828);
+  background: var(--bg-card, #fff);
+  line-height: 1.5;
+}
+
+.integration-notice-warning { border-color: #d9a83e; }
+.integration-notice-error { border-color: #d85c5c; }
+.integration-notice-success { border-color: #4aaf78; }
+.integration-notice ul { width: 100%; margin: 0 0 0 20px; }
+.integration-notice button { margin-left: auto; cursor: pointer; }
+
+.shopify-guide-body { grid-template-columns: minmax(0, 1.8fr) minmax(0, 1.2fr); }
+
+@media (max-width: 600px) {
+  .integrations-grid { grid-template-columns: minmax(0, 1fr); }
+  .integration-card { min-width: 0; padding: 18px; }
+  .detail-row { gap: 12px; flex-wrap: wrap; }
+  .shopify-guide-panel { height: min(92vh, 800px) !important; }
+  .shopify-guide-body { grid-template-columns: minmax(0, 1fr); }
+  .shopify-guide-body > div:first-child { max-height: 35vh; }
+}
+
 .integration-card {
   background: var(--bg-card, #FFFFFF);
   border: 1px solid var(--border-subtle, #DCE6F2);

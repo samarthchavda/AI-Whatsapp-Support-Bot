@@ -1,0 +1,338 @@
+jest.mock('../services/whatsappService', () => ({}));
+jest.mock('../services/whatsappCloudAPI', () => ({
+  markAsRead: jest.fn().mockResolvedValue({ success: true }),
+  sendMessage: jest.fn().mockResolvedValue({ success: true, messageId: 'wamid.123' })
+}));
+jest.mock('../services/aiService', () => ({
+  processMessage: jest.fn().mockResolvedValue({ message: 'AI response' })
+}));
+jest.mock('../services/webhookRelayService', () => ({
+  relayIncomingMessage: jest.fn().mockResolvedValue({})
+}));
+
+const mockAdminFindOne = jest.fn();
+const mockAdminFind = jest.fn();
+const mockAdminFindById = jest.fn();
+
+jest.mock('../models/Admin', () => ({
+  findOne: (...args) => mockAdminFindOne(...args),
+  find: (...args) => mockAdminFind(...args),
+  findById: (...args) => mockAdminFindById(...args)
+}));
+
+const mockConversationFindOne = jest.fn();
+const mockConversationCreate = jest.fn();
+
+function MockConversation(doc) {
+  Object.assign(this, doc);
+  this.save = jest.fn().mockResolvedValue(this);
+}
+MockConversation.findOne = (...args) => mockConversationFindOne(...args);
+MockConversation.create = (...args) => mockConversationCreate(...args);
+
+jest.mock('../models/Conversation', () => MockConversation);
+
+const { handleWebhook } = require('../controllers/public/webhookController');
+
+const makeResponse = () => {
+  const res = {
+    status: jest.fn().mockReturnThis(),
+    json: jest.fn().mockReturnThis(),
+    send: jest.fn().mockReturnThis()
+  };
+  return res;
+};
+
+describe('WhatsApp Coexistence Integration Tests', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    global.io = {
+      emit: jest.fn()
+    };
+  });
+
+  test('1. Handles account_update webhook for PARTNER_REMOVED and disconnects admin', async () => {
+    const mockAdmin = {
+      _id: 'admin_123',
+      whatsappBusinessAccountId: '102290129340398',
+      whatsappConnected: true,
+      whatsappStatus: 'connected',
+      save: jest.fn().mockResolvedValue(true)
+    };
+    mockAdminFindOne.mockResolvedValue(mockAdmin);
+
+    const req = {
+      method: 'POST',
+      body: {
+        object: 'whatsapp_business_account',
+        entry: [{
+          id: '2949482758682047',
+          time: 1739212624,
+          changes: [{
+            value: {
+              event: 'PARTNER_REMOVED',
+              waba_info: {
+                waba_id: '102290129340398',
+                owner_business_id: '2329417887457253'
+              },
+              disconnection_info: {
+                reason: 'PRIMARY_INACTIVITY',
+                initiated_by: 'SYSTEM'
+              }
+            },
+            field: 'account_update'
+          }]
+        }]
+      }
+    };
+    const res = makeResponse();
+
+    await handleWebhook(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(200);
+    expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ success: true, event: 'PARTNER_REMOVED' }));
+    expect(mockAdmin.whatsappConnected).toBe(false);
+    expect(mockAdmin.whatsappStatus).toBe('disconnected');
+    expect(mockAdmin.save).toHaveBeenCalled();
+  });
+
+  test('2. Handles smb_message_echoes webhook from mobile WhatsApp Business app and pauses bot', async () => {
+    const mockAdmin = {
+      _id: 'admin_123',
+      whatsappPhoneNumberId: '106540352242922',
+      whatsappConnected: true
+    };
+    mockAdminFind.mockResolvedValue([mockAdmin]);
+    mockAdminFindOne.mockResolvedValue(mockAdmin);
+
+    const mockConv = new MockConversation({
+      admin: 'admin_123',
+      customerPhone: '16505551234',
+      messages: [],
+      botPaused: false
+    });
+    mockConversationFindOne.mockResolvedValue(mockConv);
+
+    const req = {
+      method: 'POST',
+      body: {
+        object: 'whatsapp_business_account',
+        entry: [{
+          id: '102290129340398',
+          changes: [{
+            value: {
+              messaging_product: 'whatsapp',
+              metadata: {
+                display_phone_number: '15550783881',
+                phone_number_id: '106540352242922'
+              },
+              message_echoes: [{
+                from: '15550783881',
+                to: '16505551234',
+                id: 'wamid.HBgLMTY0NjcwNDM1OTUVAgARGBIyNDlBOEI5QUQ4NDc0N0FCNjMA',
+                timestamp: '1700255121',
+                type: 'text',
+                text: {
+                  body: "Hello from merchant's WhatsApp Business mobile phone!"
+                }
+              }]
+            },
+            field: 'smb_message_echoes'
+          }]
+        }]
+      }
+    };
+    const res = makeResponse();
+
+    await handleWebhook(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(200);
+    expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ success: true, count: 1 }));
+    expect(mockConv.messages.length).toBe(1);
+    expect(mockConv.messages[0].content).toBe("Hello from merchant's WhatsApp Business mobile phone!");
+    expect(mockConv.botPaused).toBe(true);
+    expect(mockConv.save).toHaveBeenCalled();
+    expect(global.io.emit).toHaveBeenCalledWith('new_message', expect.anything());
+  });
+
+  test('3. Handles smb_app_state_sync webhook to sync contacts from phone', async () => {
+    const mockAdmin = {
+      _id: 'admin_123',
+      whatsappPhoneNumberId: '106540352242922',
+      whatsappConnected: true
+    };
+    mockAdminFind.mockResolvedValue([mockAdmin]);
+    mockAdminFindOne.mockResolvedValue(mockAdmin);
+    mockConversationFindOne.mockResolvedValue(null);
+    mockConversationCreate.mockResolvedValue({});
+
+    const req = {
+      method: 'POST',
+      body: {
+        object: 'whatsapp_business_account',
+        entry: [{
+          id: '102290129340398',
+          changes: [{
+            value: {
+              messaging_product: 'whatsapp',
+              metadata: {
+                display_phone_number: '15550783881',
+                phone_number_id: '106540352242922'
+              },
+              state_sync: [{
+                type: 'contact',
+                contact: {
+                  full_name: 'Pablo Morales',
+                  first_name: 'Pablo',
+                  phone_number: '16505559876'
+                },
+                action: 'add',
+                metadata: {
+                  timestamp: '1738346006'
+                }
+              }]
+            },
+            field: 'smb_app_state_sync'
+          }]
+        }]
+      }
+    };
+    const res = makeResponse();
+
+    await handleWebhook(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(200);
+    expect(mockConversationCreate).toHaveBeenCalledWith(expect.objectContaining({
+      admin: 'admin_123',
+      customerPhone: '16505559876',
+      customerName: 'Pablo Morales'
+    }));
+  });
+
+  test('4. Handles message edit event and updates existing conversation message', async () => {
+    const mockAdmin = {
+      _id: 'admin_123',
+      whatsappPhoneNumberId: '106540352242922',
+      whatsappConnected: true,
+      role: 'merchant'
+    };
+    mockAdminFind.mockResolvedValue([mockAdmin]);
+
+    const mockConv = new MockConversation({
+      admin: 'admin_123',
+      customerPhone: '16505551234',
+      messages: [{
+        messageId: 'wamid.ORIGINAL_123',
+        content: 'Original message text'
+      }]
+    });
+    mockConversationFindOne.mockResolvedValue(mockConv);
+
+    const req = {
+      method: 'POST',
+      body: {
+        object: 'whatsapp_business_account',
+        entry: [{
+          id: '102290129340398',
+          changes: [{
+            value: {
+              messaging_product: 'whatsapp',
+              metadata: {
+                display_phone_number: '15550783881',
+                phone_number_id: '106540352242922'
+              },
+              messages: [{
+                from: '16505551234',
+                id: 'wamid.EDIT_EVENT_999',
+                timestamp: '1749854575',
+                type: 'edit',
+                edit: {
+                  original_message_id: 'wamid.ORIGINAL_123',
+                  message: {
+                    type: 'text',
+                    text: {
+                      body: 'Updated text after edit'
+                    }
+                  }
+                }
+              }]
+            },
+            field: 'messages'
+          }]
+        }]
+      }
+    };
+    const res = makeResponse();
+
+    await handleWebhook(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(200);
+    expect(mockConv.messages[0].content).toBe('Updated text after edit (edited)');
+    expect(mockConv.save).toHaveBeenCalled();
+  });
+
+  test('5. Handles history sync webhook and populates past messages', async () => {
+    const mockAdmin = {
+      _id: 'admin_123',
+      whatsappPhoneNumberId: '106540352242922',
+      whatsappConnected: true,
+      role: 'merchant'
+    };
+    mockAdminFind.mockResolvedValue([mockAdmin]);
+
+    const mockConv = new MockConversation({
+      admin: 'admin_123',
+      customerPhone: '16505551234',
+      messages: []
+    });
+    mockConversationFindOne.mockResolvedValue(mockConv);
+
+    const req = {
+      method: 'POST',
+      body: {
+        object: 'whatsapp_business_account',
+        entry: [{
+          id: '102290129340398',
+          changes: [{
+            value: {
+              messaging_product: 'whatsapp',
+              metadata: {
+                display_phone_number: '15550783881',
+                phone_number_id: '106540352242922'
+              },
+              history: [{
+                metadata: {
+                  phase: 0,
+                  chunk_order: 1,
+                  progress: 55
+                },
+                threads: [{
+                  id: '16505551234',
+                  messages: [{
+                    from: '16505551234',
+                    id: 'wamid.HIST_1',
+                    timestamp: '1739230955',
+                    type: 'text',
+                    text: {
+                      body: 'Historical message from customer'
+                    }
+                  }]
+                }]
+              }]
+            },
+            field: 'history'
+          }]
+        }]
+      }
+    };
+    const res = makeResponse();
+
+    await handleWebhook(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(200);
+    expect(mockConv.messages.length).toBe(1);
+    expect(mockConv.messages[0].content).toBe('Historical message from customer');
+    expect(mockConv.messages[0].role).toBe('user');
+    expect(mockConv.save).toHaveBeenCalled();
+  });
+});

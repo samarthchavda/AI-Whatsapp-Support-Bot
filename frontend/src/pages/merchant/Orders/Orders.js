@@ -325,8 +325,8 @@ Bob Johnson,+1234567892,bob@example.com,Standard Item,3,149.99,shipped`;
 
       <div className="orders-stats-row">
         <div className="orders-stat-pill">
-          <span className="label">Total</span>
-          <span className="value">{orderStats.total}</span>
+          <span className="label">Total orders</span>
+          <span className="value">{totalCount}</span>
         </div>
         <div className="orders-stat-pill pending">
           <span className="label">Pending</span>
@@ -345,6 +345,7 @@ Bob Johnson,+1234567892,bob@example.com,Standard Item,3,149.99,shipped`;
           <span className="value">{orderStats.delivered}</span>
         </div>
       </div>
+      <p className="orders-page-scope">Status counts show this page ({orderStats.total} orders).</p>
 
       {/* Bulk Upload Modal */}
       {showBulkUpload && (
@@ -363,10 +364,10 @@ Bob Johnson,+1234567892,bob@example.com,Standard Item,3,149.99,shipped`;
                   marginBottom: '20px'
                 }}>
                   <h3 style={{ color: '#f59e0b', fontSize: '14px', fontWeight: '600', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    💡 Shopify Basic & Starter Plan Sync:
+                    Shopify CSV import option
                   </h3>
                   <p style={{ color: '#d4d4d8', fontSize: '13px', lineHeight: '1.6', margin: 0 }}>
-                    Since you are on the <strong>Starter Plan</strong> and using <strong>Shopify Basic</strong>, automatic real-time sync via API webhook is restricted. You can easily sync your orders and keep your WhatsApp bot and broadcast notifications active by manually importing your Shopify orders:
+                    If automatic store sync is unavailable or you need to import historical orders, export a CSV from Shopify and upload it here. Check Store Integrations for the current connection and sync result.
                   </p>
                   <ol style={{ color: '#a1a1aa', fontSize: '12px', lineHeight: '1.7', paddingLeft: '20px', marginTop: '8px', marginBottom: 0 }}>
                     <li>Go to your <strong>Shopify Admin Panel</strong> ➔ <strong>Orders</strong>.</li>

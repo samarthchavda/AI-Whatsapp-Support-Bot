@@ -39,6 +39,7 @@ function AbandonedCarts({ admin }) {
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [reminderError, setReminderError] = useState(null);
   const [sendingReminderId, setSendingReminderId] = useState(null);
 
   const [filters, setFilters] = useState({
@@ -103,7 +104,13 @@ function AbandonedCarts({ admin }) {
   };
 
   const handleSendReminder = async (id) => {
+    const cart = carts.find(item => item._id === id);
+    if (!cart?.customerPhone || !cart?.checkoutUrl) {
+      setReminderError('A customer phone number and checkout link are required before sending a recovery reminder.');
+      return;
+    }
     try {
+      setReminderError(null);
       setSendingReminderId(id);
       const response = await sendAbandonedCartReminder(id);
       if (response.data && response.data.success) {
@@ -111,10 +118,10 @@ function AbandonedCarts({ admin }) {
         fetchCarts();
         fetchStats();
       } else {
-        alert(response.data.error || 'Failed to send WhatsApp reminder');
+        setReminderError(response.data.error || 'Failed to send WhatsApp reminder');
       }
     } catch (err) {
-      alert(err.response?.data?.error || 'Failed to send recovery message');
+      setReminderError(err.response?.data?.error || 'Failed to send recovery message');
       console.error(err);
     } finally {
       setSendingReminderId(null);
@@ -202,7 +209,7 @@ function AbandonedCarts({ admin }) {
         <div className="page-header">
           <div>
             <h1 className="page-title">Abandoned Cart Recovery</h1>
-            <p className="page-subtitle">Track, remind, and recover checkout abandonment automatically over WhatsApp.</p>
+            <p className="page-subtitle">Review abandoned checkouts and send WhatsApp recovery reminders.</p>
           </div>
         </div>
         
@@ -221,7 +228,7 @@ function AbandonedCarts({ admin }) {
             Abandoned Cart Recovery is Locked
           </h2>
           <p style={{ maxWidth: '550px', margin: '0 auto 24px', fontSize: '14px', color: '#cbd5e1', lineHeight: '1.6' }}>
-            Upgrade your plan to Professional or Enterprise tier to automatically track checkout drop-offs, dispatch automated WhatsApp recovery reminders, and boost your sales.
+            Upgrade to access abandoned checkout tracking and manual WhatsApp recovery reminders.
           </p>
           <Link to="/dashboard/billing" style={{
             display: 'inline-block',
@@ -247,7 +254,7 @@ function AbandonedCarts({ admin }) {
       <div className="page-header">
         <div>
           <h1 className="page-title">Abandoned Cart Recovery</h1>
-          <p className="page-subtitle">Track, remind, and recover checkout abandonment automatically over WhatsApp.</p>
+          <p className="page-subtitle">Review abandoned checkouts and send WhatsApp recovery reminders.</p>
         </div>
       </div>
 
@@ -332,6 +339,7 @@ function AbandonedCarts({ admin }) {
       </div>
 
       {/* Carts Table */}
+      {reminderError && <p role="alert" className="error-state">{reminderError}</p>}
       <div className="table-wrapper glassmorphism-card">
         {loading ? (
           <div className="loading-state">
@@ -416,7 +424,8 @@ function AbandonedCarts({ admin }) {
                       {cart.status !== 'recovered' && (
                         <button
                           onClick={() => handleSendReminder(cart._id)}
-                          disabled={sendingReminderId === cart._id}
+                          disabled={sendingReminderId === cart._id || !cart.customerPhone || !cart.checkoutUrl}
+                          title={!cart.customerPhone || !cart.checkoutUrl ? 'Customer phone and checkout link are required' : 'Send recovery reminder'}
                           className="btn-action btn-send-reminder"
                         >
                           {sendingReminderId === cart._id ? 'Sending...' : 'Send Reminder'}

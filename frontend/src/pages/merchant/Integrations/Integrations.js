@@ -1,107 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FaShopify, FaWordpress, FaPlug, FaCheck, FaTimes, FaCopy, FaTrash, FaSync, FaExternalLinkAlt, FaLock } from 'react-icons/fa';
+import { FaShopify, FaWordpress, FaPlug, FaCheck, FaTimes, FaCopy, FaSync, FaExternalLinkAlt, FaLock } from 'react-icons/fa';
 import api from '../../../services/api';
 import './Integrations.css';
-
-const SHOPIFY_GUIDE_STEPS = [
-  {
-    step: 1,
-    title: "Open Shopify Settings",
-    description: "Log in to your Shopify Store Admin. In the bottom-left corner of the dashboard sidebar, click on the Settings gear icon.",
-    image: "/guide/shopify/step-1.png"
-  },
-  {
-    step: 2,
-    title: "Apps and Sales Channels",
-    description: "In the Settings side menu, locate and click on Apps and sales channels to manage integrations.",
-    image: "/guide/shopify/step-2.png"
-  },
-  {
-    step: 3,
-    title: "Access Custom App Development",
-    description: "Click on the Develop apps button in the top right header to begin custom app configuration.",
-    image: "/guide/shopify/step-3.png"
-  },
-  {
-    step: 4,
-    title: "Create App Instance",
-    description: "Click Create an app. In the modal, specify an App name (e.g. 'Kwickbot') and select the Developer email. Click Create app.",
-    image: "/guide/shopify/step-4.png"
-  },
-  {
-    step: 5,
-    title: "Configure Admin API Scopes",
-    description: "In the App Configuration screen, locate Admin API integration and click on the Configure Admin API integration button.",
-    image: "/guide/shopify/step-5.png"
-  },
-  {
-    step: 6,
-    title: "Select Access Permissions",
-    description: "Check the boxes for read_orders, read_products, read_customers, and read_fulfillments. Scroll down and click Save.",
-    image: "/guide/shopify/step-6.png"
-  },
-  {
-    step: 7,
-    title: "Install Custom App",
-    description: "Go back to the top of the app overview tab. In the top-right corner of the page, click on the Install app button.",
-    image: "/guide/shopify/step-7.png"
-  },
-  {
-    step: 8,
-    title: "Confirm App Installation",
-    description: "Review the API access warnings and confirm installation by clicking Install in the modal popup dialog.",
-    image: "/guide/shopify/step-8.png"
-  },
-  {
-    step: 9,
-    title: "Retrieve API Credentials",
-    description: "Select the API credentials tab. Under the Admin API access token card, you will find the hidden token fields.",
-    image: "/guide/shopify/step-9.png"
-  },
-  {
-    step: 10,
-    title: "Reveal Access Token once",
-    description: "Click on the Reveal token once link to display your secure credentials. This will only be shown once.",
-    image: "/guide/shopify/step-10.png"
-  },
-  {
-    step: 11,
-    title: "Copy Admin Access Token",
-    description: "Copy the revealed access token (which begins with 'shpat_') and save it securely. Note: It cannot be displayed again.",
-    image: "/guide/shopify/step-11.png"
-  },
-  {
-    step: 12,
-    title: "Note API Keys",
-    description: "Under the API credentials card, you can also view and copy the API key and API secret key if required.",
-    image: "/guide/shopify/step-12.png"
-  },
-  {
-    step: 13,
-    title: "Connect on Kwickbot Dashboard",
-    description: "Open your Kwickbot Dashboard. Navigate to Integrations -> Shopify -> click Connect Shopify.",
-    image: "/guide/shopify/step-13.png"
-  },
-  {
-    step: 14,
-    title: "Input Store URL & Token",
-    description: "Enter your Shopify Store URL (e.g. https://your-store.myshopify.com) and paste the Admin API Token. Click Connect.",
-    image: "/guide/shopify/step-14.png"
-  },
-  {
-    step: 15,
-    title: "Retrieve unique Webhook URL",
-    description: "After connecting, your integration status will show 'Connected'. Copy the generated unique Webhook URL.",
-    image: "/guide/shopify/step-15.png"
-  },
-  {
-    step: 16,
-    title: "Configure Webhooks in Shopify Settings",
-    description: "In Shopify Admin -> Settings -> Notifications -> Webhooks -> click Create Webhook. Paste the copied URL, select Order update (orders/update), JSON, and click Save. No other events are required.",
-    image: "/guide/shopify/step-16.png"
-  }
-];
+import ShopifyGuide from './shopify/ShopifyGuide';
+import { SHOPIFY_GUIDE_STEPS } from './shopify/guideSteps';
+import { getSyncFeedback, isMountedCommerceWebhookUrl, validateShopifyStoreUrl } from './shopify/integrationUi';
 
 function Integrations({ admin, onUpdateAdmin }) {
   const navigate = useNavigate();
@@ -138,6 +42,9 @@ function Integrations({ admin, onUpdateAdmin }) {
   });
   const [submitting, setSubmitting] = useState(false);
   const [syncingIntegrationId, setSyncingIntegrationId] = useState(null);
+  const [notice, setNotice] = useState(null);
+  const [formError, setFormError] = useState('');
+  const [listError, setListError] = useState('');
 
   const platforms = [
     {
@@ -177,16 +84,20 @@ function Integrations({ admin, onUpdateAdmin }) {
   const fetchIntegrations = async () => {
     try {
       setLoading(true);
+      setListError('');
       const response = await api.get('/integrations');
-      setIntegrations(response.data.data);
+      setIntegrations(Array.isArray(response.data?.data) ? response.data.data : []);
     } catch (error) {
       console.error('Error fetching integrations:', error);
+      setListError('Could not load integrations. Check your connection and retry.');
     } finally {
       setLoading(false);
     }
   };
 
   const handleConnect = (platform) => {
+    setFormError('');
+    setNotice(null);
     setSelectedPlatform(platform);
     setFormData({ storeUrl: '', apiKey: '', consumerKey: '', consumerSecret: '', storeName: '' });
     setShowModal(true);
@@ -196,17 +107,23 @@ function Integrations({ admin, onUpdateAdmin }) {
     e.preventDefault();
 
     if (!isProfileComplete) {
-      alert('First complete your profile');
+      setFormError('Complete your Profile & Store settings before connecting.');
+      return;
+    }
+
+    if (selectedPlatform.id === 'shopify' && !validateShopifyStoreUrl(formData.storeUrl)) {
+      setFormError('Enter your HTTPS *.myshopify.com URL or Shopify Admin store URL.');
       return;
     }
 
     if (selectedPlatform.id === 'shopify' && formData.apiKey.trim().startsWith('shpss_')) {
-      alert('Error: The token you entered starts with "shpss_", which is a Shopify API Secret Key. You must enter the Admin API Access Token (which usually starts with "shpat_") instead. You can find this token under Shopify Admin → Apps → Develop apps.');
+      setFormError('This is an API secret key. Enter the Shopify Admin API access token instead.');
       return;
     }
 
     try {
       setSubmitting(true);
+      setFormError('');
       
       const payload = {
         platform: selectedPlatform.id,
@@ -217,20 +134,25 @@ function Integrations({ admin, onUpdateAdmin }) {
           : formData.apiKey
       };
 
-      await api.post(
+      const response = await api.post(
         '/integrations',
         payload
       );
 
-      alert('Integration connected successfully!');
+      const syncSummary = response.data?.data?.syncSummary;
+      setNotice(syncSummary?.error
+        ? { type: 'warning', message: `Store saved, but the first order sync failed: ${syncSummary.error}` }
+        : syncSummary
+          ? getSyncFeedback(selectedPlatform.name, syncSummary)
+          : { type: 'warning', message: 'Store saved. Order sync and webhook delivery have not been verified.' });
       setShowModal(false);
-      fetchIntegrations();
+      await fetchIntegrations();
     } catch (error) {
       const serverError = error.response?.data?.error || '';
       if (serverError.includes('complete your Profile & Store settings')) {
-        alert('First complete your profile');
+        setFormError('Complete your Profile & Store settings before connecting.');
       } else {
-        alert(serverError || 'Failed to connect integration');
+        setFormError(serverError || 'Failed to connect integration.');
       }
     } finally {
       setSubmitting(false);
@@ -249,9 +171,17 @@ function Integrations({ admin, onUpdateAdmin }) {
     }
   };
 
-  const handleCopyWebhook = (webhookUrl) => {
-    navigator.clipboard.writeText(webhookUrl);
-    alert('Webhook URL copied to clipboard!');
+  const handleCopyWebhook = async (webhookUrl, platform) => {
+    if (!isMountedCommerceWebhookUrl(webhookUrl, platform)) {
+      setNotice({ type: 'warning', message: 'This webhook URL is not available on the server yet. Do not add it to your store.' });
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(webhookUrl);
+      setNotice({ type: 'success', message: 'Webhook URL copied.' });
+    } catch {
+      setNotice({ type: 'error', message: 'Could not copy the webhook URL. Copy it manually.' });
+    }
   };
 
   const handleRegenerateSecret = async (id) => {
@@ -278,10 +208,10 @@ function Integrations({ admin, onUpdateAdmin }) {
       );
 
       const summary = response.data?.data || {};
-      alert(`Shopify sync completed. Fetched: ${summary.fetched || 0}, Created: ${summary.created || 0}, Updated: ${summary.updated || 0}`);
-      fetchIntegrations();
+      setNotice(getSyncFeedback('Shopify', summary));
+      await fetchIntegrations();
     } catch (error) {
-      alert(error.response?.data?.error || 'Failed to sync Shopify orders');
+      setNotice({ type: 'error', message: error.response?.data?.error || 'Failed to sync Shopify orders.' });
     } finally {
       setSyncingIntegrationId(null);
     }
@@ -296,10 +226,10 @@ function Integrations({ admin, onUpdateAdmin }) {
       );
 
       const summary = response.data?.data || {};
-      alert(`WooCommerce sync completed. Fetched: ${summary.fetched || 0}, Created: ${summary.created || 0}, Updated: ${summary.updated || 0}`);
-      fetchIntegrations();
+      setNotice(getSyncFeedback('WooCommerce', summary));
+      await fetchIntegrations();
     } catch (error) {
-      alert(error.response?.data?.error || 'Failed to sync WooCommerce orders');
+      setNotice({ type: 'error', message: error.response?.data?.error || 'Failed to sync WooCommerce orders.' });
     } finally {
       setSyncingIntegrationId(null);
     }
@@ -331,6 +261,15 @@ function Integrations({ admin, onUpdateAdmin }) {
           <p className="page-subtitle">Connect and manage your e-commerce platform integrations.</p>
         </div>
       </div>
+
+      {notice && (
+        <div className={`integration-notice integration-notice-${notice.type}`} role={notice.type === 'error' ? 'alert' : 'status'}>
+          <span>{notice.message}</span>
+          {notice.errors?.length > 0 && <ul>{notice.errors.map((error, index) => <li key={`${index}-${error}`}>{error}</li>)}</ul>}
+          <button type="button" onClick={() => setNotice(null)} aria-label="Dismiss integration message"><FaTimes /></button>
+        </div>
+      )}
+      {listError && <div className="integration-notice integration-notice-error" role="alert">{listError} <button type="button" onClick={fetchIntegrations}>Retry</button></div>}
 
       {!isProfileComplete && !loading && (
         <div style={{
@@ -431,7 +370,7 @@ function Integrations({ admin, onUpdateAdmin }) {
                       </div>
                     )}
                     <div className="connected-badge">
-                      <FaCheck /> Connected
+                      <FaCheck /> {integration.isActive ? 'Store saved · webhook not verified' : 'Store inactive'}
                     </div>
                     
                     <div className="integration-details">
@@ -449,6 +388,10 @@ function Integrations({ admin, onUpdateAdmin }) {
                           {integration.isActive ? 'Active' : 'Inactive'}
                         </span>
                       </div>
+                      <div className="detail-row">
+                        <span className="detail-label">Last order sync:</span>
+                        <span className="detail-value">{integration.lastSyncedAt ? new Date(integration.lastSyncedAt).toLocaleString() : 'Not yet synced'}</span>
+                      </div>
                     </div>
 
                     <div className="webhook-section">
@@ -461,15 +404,19 @@ function Integrations({ admin, onUpdateAdmin }) {
                           className="webhook-url-input"
                         />
                         <button
-                          onClick={() => handleCopyWebhook(integration.webhookUrl)}
+                          onClick={() => handleCopyWebhook(integration.webhookUrl, platform.id)}
                           className="btn-icon"
-                          title="Copy to clipboard"
+                          title="Copy webhook URL"
+                          aria-label={`Copy ${platform.name} webhook URL`}
+                          disabled={!isMountedCommerceWebhookUrl(integration.webhookUrl, platform.id)}
                         >
                           <FaCopy />
                         </button>
                       </div>
                       <small className="webhook-hint">
-                        Copy this URL and paste it in your {platform.name} webhook settings
+                        {isMountedCommerceWebhookUrl(integration.webhookUrl, platform.id)
+                          ? `Copy this URL into your ${platform.name} webhook settings.`
+                          : 'Webhook setup is pending: this generated URL is not mounted by the server. Order imports can still be run manually.'}
                       </small>
                     </div>
 
@@ -593,6 +540,7 @@ function Integrations({ admin, onUpdateAdmin }) {
             </div>
 
             <form onSubmit={handleSubmit} className="modal-form">
+              {formError && <div className="integration-notice integration-notice-error" role="alert">{formError}</div>}
               <div className="form-group">
                 <label>Store Name (Optional)</label>
                 <input
@@ -664,12 +612,11 @@ function Integrations({ admin, onUpdateAdmin }) {
               )}
 
               <div className="info-box">
-                <strong>📋 Next Steps:</strong>
+                <strong>Next Steps:</strong>
                 <ol>
-                  <li>After connecting, you'll receive a unique webhook URL</li>
-                  <li>Copy the webhook URL</li>
-                  <li>Add it to your {selectedPlatform.name} webhook settings</li>
-                  <li>Use Sync Orders to import existing Shopify orders</li>
+                  <li>Save your store credentials and review the first sync result.</li>
+                  <li>Use Sync Orders to import or refresh existing orders.</li>
+                  <li>Configure webhooks when the server reports a verified URL.</li>
                 </ol>
               </div>
 
@@ -694,263 +641,8 @@ function Integrations({ admin, onUpdateAdmin }) {
         </div>
       )}
 
-      {/* Interactive Onboarding Guide Modal */}
       {isGuideOpen && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          backgroundColor: 'rgba(9, 9, 11, 0.75)',
-          backdropFilter: 'blur(8px)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 9999,
-          padding: '20px'
-        }}>
-          <div style={{
-            backgroundColor: 'var(--bg-card)',
-            border: '1px solid var(--border)',
-            borderRadius: '20px',
-            width: '100%',
-            maxWidth: '1100px',
-            height: '85vh',
-            display: 'flex',
-            flexDirection: 'column',
-            boxShadow: 'var(--shadow-lg, 0 25px 50px -12px rgba(0, 0, 0, 0.5))',
-            overflow: 'hidden'
-          }}>
-            {/* Header */}
-            <div style={{
-              padding: '20px 24px',
-              borderBottom: '1px solid var(--border)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              backgroundColor: 'var(--bg-input)'
-            }}>
-              <div>
-                <h2 style={{ fontSize: '18px', fontWeight: '800', color: 'var(--text-primary)', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <FaShopify style={{ color: '#96bf48' }} /> Shopify App Integration Guide
-                </h2>
-                <p style={{ fontSize: '13px', color: 'var(--text-secondary)', margin: '4px 0 0 0' }}>
-                  Step {currentGuideStep + 1} of {SHOPIFY_GUIDE_STEPS.length}: {SHOPIFY_GUIDE_STEPS[currentGuideStep].title}
-                </p>
-              </div>
-              <button
-                onClick={() => setIsGuideOpen(false)}
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  fontSize: '24px',
-                  color: 'var(--text-muted)',
-                  cursor: 'pointer',
-                  padding: '4px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  borderRadius: '50%',
-                  width: '36px',
-                  height: '36px',
-                  transition: 'background-color 0.2s'
-                }}
-                onMouseOver={(e) => {
-                  e.currentTarget.style.backgroundColor = 'var(--bg-hover)';
-                  e.currentTarget.style.color = 'var(--text-primary)';
-                }}
-                onMouseOut={(e) => {
-                  e.currentTarget.style.backgroundColor = 'transparent';
-                  e.currentTarget.style.color = 'var(--text-muted)';
-                }}
-              >
-                &times;
-              </button>
-            </div>
-
-            {/* Progress Bar */}
-            <div style={{
-              width: '100%',
-              height: '4px',
-              backgroundColor: 'var(--border)'
-            }}>
-              <div style={{
-                height: '100%',
-                width: `${((currentGuideStep + 1) / SHOPIFY_GUIDE_STEPS.length) * 100}%`,
-                backgroundColor: '#96bf48',
-                transition: 'width 0.3s ease-out'
-              }} />
-            </div>
-
-            {/* Body */}
-            <div style={{
-              flex: 1,
-              display: 'grid',
-              gridTemplateColumns: 'minmax(0, 1.8fr) minmax(0, 1.2fr)',
-              overflow: 'hidden'
-            }}>
-              {/* Left Pane: Screenshot */}
-              <div style={{
-                backgroundColor: 'var(--bg-input)',
-                padding: '24px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                overflow: 'auto',
-                borderRight: '1px solid var(--border)',
-                position: 'relative'
-              }}>
-                <img
-                  src={SHOPIFY_GUIDE_STEPS[currentGuideStep].image}
-                  alt={SHOPIFY_GUIDE_STEPS[currentGuideStep].title}
-                  style={{
-                    maxWidth: '100%',
-                    maxHeight: '100%',
-                    objectFit: 'contain',
-                    borderRadius: '8px',
-                    boxShadow: 'var(--shadow-md)',
-                    backgroundColor: 'var(--bg-card)'
-                  }}
-                />
-              </div>
-
-              {/* Right Pane: Content / Description */}
-              <div style={{
-                padding: '32px 28px',
-                display: 'flex',
-                flexDirection: 'column',
-                justifyContent: 'space-between',
-                overflowY: 'auto',
-                backgroundColor: 'var(--bg-card)'
-              }}>
-                <div>
-                  <div style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    backgroundColor: 'rgba(16, 185, 129, 0.12)',
-                    color: '#10b981',
-                    padding: '6px 12px',
-                    borderRadius: '20px',
-                    fontSize: '12px',
-                    fontWeight: '700',
-                    marginBottom: '16px'
-                  }}>
-                    STEP {currentGuideStep + 1}
-                  </div>
-
-                  <h3 style={{ fontSize: '20px', fontWeight: '700', color: 'var(--text-primary)', marginBottom: '16px', lineHeight: '1.3' }}>
-                    {SHOPIFY_GUIDE_STEPS[currentGuideStep].title}
-                  </h3>
-
-                  <div style={{
-                    fontSize: '14px',
-                    color: 'var(--text-secondary)',
-                    lineHeight: '1.6',
-                    whiteSpace: 'pre-line'
-                  }}>
-                    {SHOPIFY_GUIDE_STEPS[currentGuideStep].description}
-                  </div>
-                </div>
-
-                {/* Quick Helper Tips */}
-                <div style={{
-                  marginTop: '24px',
-                  padding: '12px 16px',
-                  backgroundColor: 'var(--bg-input)',
-                  borderRadius: '8px',
-                  borderLeft: '4px solid #96bf48',
-                  fontSize: '13px',
-                  color: 'var(--text-secondary)'
-                }}>
-                  <strong>💡 Pro-Tip:</strong> Use Left & Right Arrow keys on your keyboard to navigate between steps.
-                </div>
-              </div>
-            </div>
-
-            {/* Footer */}
-            <div style={{
-              padding: '16px 24px',
-              borderTop: '1px solid var(--border)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              backgroundColor: 'var(--bg-input)'
-            }}>
-              <button
-                type="button"
-                onClick={() => setCurrentGuideStep((prev) => Math.max(prev - 1, 0))}
-                disabled={currentGuideStep === 0}
-                style={{
-                  padding: '10px 16px',
-                  backgroundColor: 'var(--bg-hover)',
-                  color: currentGuideStep === 0 ? 'var(--text-muted)' : 'var(--text-primary)',
-                  border: '1px solid var(--border)',
-                  borderRadius: '8px',
-                  fontWeight: '600',
-                  fontSize: '14px',
-                  cursor: currentGuideStep === 0 ? 'not-allowed' : 'pointer',
-                  transition: 'all 0.2s'
-                }}
-              >
-                Previous Step
-              </button>
-
-              {/* Dots */}
-              <div style={{
-                display: 'flex',
-                gap: '6px',
-                alignItems: 'center',
-                flexWrap: 'wrap',
-                justifyContent: 'center'
-              }}>
-                {SHOPIFY_GUIDE_STEPS.map((step, idx) => (
-                  <button
-                    type="button"
-                    key={idx}
-                    onClick={() => setCurrentGuideStep(idx)}
-                    style={{
-                      width: '10px',
-                      height: '10px',
-                      borderRadius: '50%',
-                      backgroundColor: currentGuideStep === idx ? '#96bf48' : 'var(--border)',
-                      border: 'none',
-                      padding: 0,
-                      cursor: 'pointer',
-                      transition: 'all 0.2s'
-                    }}
-                    title={`Step ${idx + 1}`}
-                  />
-                ))}
-              </div>
-
-              <button
-                type="button"
-                onClick={() => {
-                  if (currentGuideStep === SHOPIFY_GUIDE_STEPS.length - 1) {
-                    setIsGuideOpen(false);
-                  } else {
-                    setCurrentGuideStep((prev) => Math.min(prev + 1, SHOPIFY_GUIDE_STEPS.length - 1));
-                  }
-                }}
-                style={{
-                  padding: '10px 20px',
-                  backgroundColor: '#96bf48',
-                  color: '#ffffff',
-                  border: 'none',
-                  borderRadius: '8px',
-                  fontWeight: '600',
-                  fontSize: '14px',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s'
-                }}
-              >
-                {currentGuideStep === SHOPIFY_GUIDE_STEPS.length - 1 ? 'Finish Setup' : 'Next Step'}
-              </button>
-            </div>
-          </div>
-        </div>
+        <ShopifyGuide currentGuideStep={currentGuideStep} setCurrentGuideStep={setCurrentGuideStep} onClose={() => setIsGuideOpen(false)} />
       )}
     </div>
   );

@@ -47,9 +47,55 @@ exports.handleWebhook = async (req, res) => {
 
     // Handle incoming messages
     if (body.object === 'whatsapp_business_account') {
-      const entry = body.entry[0];
-      const changes = entry.changes[0];
+      const entry = body.entry?.[0];
+      if (!entry) {
+        return res.status(200).json({ success: true });
+      }
+      const changes = entry.changes?.[0];
+      if (!changes) {
+        return res.status(200).json({ success: true });
+      }
       const webhookValue = changes.value;
+
+      // 1. Handle Coexistence account_update webhook (PARTNER_REMOVED, ACCOUNT_OFFBOARDED, ACCOUNT_RECONNECTED)
+      if (changes.field === 'account_update') {
+        const eventType = webhookValue.event;
+        const wabaId = webhookValue.waba_info?.waba_id || entry.id;
+        console.log(`📢 [WhatsApp Account Update] Event: ${eventType} for WABA: ${wabaId}`);
+        
+        const Admin = require('../../models/Admin');
+        const { encrypt } = require('../../services/whatsappCredentialService');
+        const encWaba = encrypt(wabaId, true);
+        const adminDoc = await Admin.findOne({
+          $or: [
+            { whatsappBusinessAccountId: encWaba },
+            { whatsappBusinessAccountId: wabaId },
+            { 'whatsappConnections.businessAccountId': wabaId }
+          ]
+        });
+
+        if (adminDoc) {
+          if (eventType === 'PARTNER_REMOVED' || eventType === 'ACCOUNT_OFFBOARDED') {
+            adminDoc.whatsappConnected = false;
+            adminDoc.whatsappStatus = 'disconnected';
+            await adminDoc.save();
+            console.log(`🔌 [Coexistence] WhatsApp marked disconnected for admin ${adminDoc._id} due to ${eventType}`);
+            if (global.io) {
+              global.io.emit('whatsapp_status_updated', { adminId: adminDoc._id, connected: false });
+            }
+          } else if (eventType === 'ACCOUNT_RECONNECTED') {
+            adminDoc.whatsappConnected = true;
+            adminDoc.whatsappStatus = 'connected';
+            await adminDoc.save();
+            console.log(`🔌 [Coexistence] WhatsApp marked reconnected for admin ${adminDoc._id}`);
+            if (global.io) {
+              global.io.emit('whatsapp_status_updated', { adminId: adminDoc._id, connected: true });
+            }
+          }
+        }
+        res.status(200).json({ success: true, event: eventType });
+        return;
+      }
 
       // Extract customer name safely
       const contactName = webhookValue.contacts?.[0]?.profile?.name || 'Customer';
@@ -80,11 +126,11 @@ exports.handleWebhook = async (req, res) => {
       // number is connected to its current owner. Always prefer the active
       // account whose primary credential is this exact phone ID. This prevents
       // an inbound message being processed against the stale tenant.
-      const primaryActiveMatches = matchingAdmins.filter((admin) => (
+      const primaryActiveMatches = (matchingAdmins || []).filter((admin) => (
         admin.whatsappConnected === true &&
         admin.whatsappPhoneNumberId === incomingPhoneNumberId
       ));
-      const activeConnectionMatches = matchingAdmins.filter((admin) => (
+      const activeConnectionMatches = (matchingAdmins || []).filter((admin) => (
         admin.whatsappConnected === true &&
         (admin.whatsappConnections || []).some((connection) => (
           connection.phoneNumberId === incomingPhoneNumberId && connection.isActive !== false
@@ -101,6 +147,89 @@ exports.handleWebhook = async (req, res) => {
         const reason = matchingAdmins.length > 1 ? 'Ambiguous recipient connection' : 'Unrecognized recipient connection';
         console.warn(`🔒 [SECURITY] ${reason} (${incomingPhoneNumberId}). Fail-closed: skipping AI processing.`);
         res.status(200).json({ success: true, message: reason });
+        return;
+      }
+
+      // 2. Handle Coexistence smb_message_echoes (messages sent by merchant from WhatsApp Business app)
+      if (changes.field === 'smb_message_echoes' || webhookValue.message_echoes) {
+        const echoes = webhookValue.message_echoes || [];
+        console.log(`📱 [SMB Echoes] Processing ${echoes.length} message echo(s) for Admin: ${matchedAdmin._id}`);
+        for (const echo of echoes) {
+          await handleSmbMessageEcho(echo, matchedAdmin);
+        }
+        res.status(200).json({ success: true, count: echoes.length });
+        return;
+      }
+
+      // 3. Handle Coexistence smb_app_state_sync (contacts synced from WhatsApp Business app)
+      if (changes.field === 'smb_app_state_sync' || webhookValue.state_sync) {
+        const syncList = webhookValue.state_sync || [];
+        console.log(`👥 [SMB State Sync] Processing ${syncList.length} contact updates for Admin: ${matchedAdmin._id}`);
+        for (const item of syncList) {
+          if (item.type === 'contact' && item.contact && item.action !== 'remove') {
+            const cPhone = item.contact.phone_number || item.contact.wa_id;
+            const cName = item.contact.full_name || item.contact.first_name || cPhone;
+            if (cPhone) {
+              let conv = await Conversation.findOne({ admin: matchedAdmin._id, customerPhone: cPhone });
+              if (!conv) {
+                await Conversation.create({
+                  admin: matchedAdmin._id,
+                  customerPhone: cPhone,
+                  customerName: cName,
+                  messages: []
+                });
+                console.log(`👤 [Coexistence] Contact synced from WhatsApp Business app: ${cName} (${cPhone})`);
+              } else if (cName && conv.customerName === conv.customerPhone) {
+                conv.customerName = cName;
+                await conv.save();
+              }
+            }
+          }
+        }
+        res.status(200).json({ success: true, count: syncList.length });
+        return;
+      }
+
+      // 4. Handle Coexistence history (chat history synced from WhatsApp Business app)
+      if (changes.field === 'history' || webhookValue.history) {
+        const historyList = webhookValue.history || [];
+        console.log(`📜 [Coexistence History] Processing history sync for Admin: ${matchedAdmin._id}`);
+        for (const historyItem of historyList) {
+          const threads = historyItem.threads || [];
+          for (const thread of threads) {
+            const customerPhone = thread.id || thread.context?.wa_id;
+            if (!customerPhone) continue;
+            let conv = await Conversation.findOne({ admin: matchedAdmin._id, customerPhone });
+            if (!conv) {
+              conv = new Conversation({
+                admin: matchedAdmin._id,
+                customerPhone,
+                customerName: thread.context?.username || customerPhone,
+                messages: []
+              });
+            }
+            const threadMessages = thread.messages || [];
+            for (const m of threadMessages) {
+              const mId = m.id;
+              if (!mId || conv.messages.some(existing => existing.messageId === mId)) continue;
+              const isUser = m.from === customerPhone;
+              const textContent = m.text?.body || (m.type ? `[${m.type.toUpperCase()}]` : '');
+              conv.messages.push({
+                role: isUser ? 'user' : 'assistant',
+                content: textContent,
+                messageId: mId,
+                timestamp: m.timestamp ? new Date(parseInt(m.timestamp, 10) * 1000) : new Date(),
+                status: m.history_context?.status || 'read'
+              });
+            }
+            conv.messages.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+            if (conv.messages.length > 0) {
+              conv.lastMessageAt = conv.messages[conv.messages.length - 1].timestamp;
+            }
+            await conv.save();
+          }
+        }
+        res.status(200).json({ success: true });
         return;
       }
 
@@ -152,6 +281,43 @@ async function handleIncomingMessage(message, contactName, matchedAdmin, request
   try {
     const customerPhone = message.from;
     const messageId = message.id;
+
+    // Handle Coexistence Message Edit
+    if (message.type === 'edit' && message.edit?.original_message_id) {
+      const origId = message.edit.original_message_id;
+      const newText = message.edit.message?.text?.body || message.edit.message?.image?.caption || '[Edited Message]';
+      console.log(`✏️ [Message Edit] Original message ${origId} edited to: "${newText}"`);
+      const conv = await Conversation.findOne({ admin: matchedAdmin._id, customerPhone });
+      if (conv) {
+        const targetMsg = conv.messages.find(m => m.messageId === origId);
+        if (targetMsg) {
+          targetMsg.content = `${newText} (edited)`;
+          await conv.save();
+          if (global.io) {
+            global.io.emit('conversation_updated', conv);
+          }
+        }
+      }
+      return;
+    }
+
+    // Handle Coexistence Message Revoke (Delete)
+    if (message.type === 'revoke' && message.revoke?.original_message_id) {
+      const origId = message.revoke.original_message_id;
+      console.log(`🗑️ [Message Revoke] Original message ${origId} was deleted`);
+      const conv = await Conversation.findOne({ admin: matchedAdmin._id, customerPhone });
+      if (conv) {
+        const targetMsg = conv.messages.find(m => m.messageId === origId);
+        if (targetMsg) {
+          targetMsg.content = '[This message was deleted]';
+          await conv.save();
+          if (global.io) {
+            global.io.emit('conversation_updated', conv);
+          }
+        }
+      }
+      return;
+    }
     
     // Deduplication check
     if (processedMessageIds.has(messageId)) {
@@ -683,3 +849,58 @@ exports.saveCredentials = async (req, res) => {
     res.status(500).json({ success: false, error: error.message });
   }
 };
+
+// Handle Coexistence SMB Message Echoes (messages sent by merchant from WhatsApp Business app)
+async function handleSmbMessageEcho(echo, matchedAdmin) {
+  try {
+    const customerPhone = echo.to;
+    const messageId = echo.id;
+    if (!customerPhone || !messageId) return;
+
+    if (processedMessageIds.has(messageId)) return;
+    processedMessageIds.add(messageId);
+
+    const echoText = echo.text?.body || (echo.type ? `[${echo.type.toUpperCase()}] sent from mobile app` : '');
+    console.log(`📱 [SMB Echo] Merchant ${matchedAdmin._id} sent message to ${customerPhone}: "${echoText}"`);
+
+    let conversation = await Conversation.findOne({
+      admin: matchedAdmin._id,
+      customerPhone
+    });
+
+    if (!conversation) {
+      conversation = new Conversation({
+        admin: matchedAdmin._id,
+        customerPhone,
+        customerName: customerPhone,
+        messages: []
+      });
+    }
+
+    const isDuplicate = conversation.messages.some(m => m.messageId === messageId);
+    if (!isDuplicate) {
+      conversation.messages.push({
+        role: 'system',
+        content: echoText,
+        messageId,
+        timestamp: echo.timestamp ? new Date(parseInt(echo.timestamp, 10) * 1000) : new Date(),
+        status: 'sent'
+      });
+      // Pause AI bot since the human merchant is actively chatting with the customer on their phone
+      conversation.botPaused = true;
+      conversation.lastMessageAt = new Date();
+      await conversation.save();
+
+      if (global.io) {
+        global.io.emit('new_message', {
+          conversationId: conversation._id,
+          message: conversation.messages[conversation.messages.length - 1],
+          conversation
+        });
+        global.io.emit('conversation_updated', conversation);
+      }
+    }
+  } catch (echoErr) {
+    console.error('Error handling SMB message echo:', echoErr);
+  }
+}

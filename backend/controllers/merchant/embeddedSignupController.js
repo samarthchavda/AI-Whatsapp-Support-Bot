@@ -370,17 +370,40 @@ exports.handleEmbeddedSignup = async (req, res) => {
       }
     }
 
-    // 5. Automatically register phone number with Meta Cloud API if needed
+    // 4.5 Check Coexistence status (is_on_biz_app)
+    let isCoexistence = Boolean(req.body.isCoexistence);
     try {
-      console.log(`⚙️ Registering Phone Number ID ${phoneNumberId} with Meta Cloud Messaging Server...`);
-      await axios.post(
-        `https://graph.facebook.com/v25.0/${phoneNumberId}/register`,
-        { messaging_product: 'whatsapp', pin: '123456' },
-        { headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' } }
+      console.log(`🔍 Checking Coexistence status for Phone Number ID: ${phoneNumberId}...`);
+      const statusRes = await axios.get(
+        `https://graph.facebook.com/v25.0/${phoneNumberId}`,
+        {
+          params: { fields: 'is_on_biz_app,platform_type' },
+          headers: { Authorization: `Bearer ${accessToken}` }
+        }
       );
-      console.log('✅ Meta Phone Number Registration completed!');
-    } catch (regErr) {
-      console.warn('⚠️ Meta Phone Number Registration notice (non-blocking):', regErr.response?.data || regErr.message);
+      if (statusRes.data?.is_on_biz_app === true) {
+        isCoexistence = true;
+        console.log(`📱 [Coexistence] Phone Number ID ${phoneNumberId} is active on WhatsApp Business App!`);
+      }
+    } catch (checkErr) {
+      console.warn('⚠️ Error checking phone coexistence status (non-blocking):', checkErr.message);
+    }
+
+    // 5. Automatically register phone number with Meta Cloud API if needed (SKIP if Coexistence)
+    if (isCoexistence) {
+      console.log(`ℹ️ [Coexistence] Skipping phone number registration step as number is already registered on WhatsApp Business App.`);
+    } else {
+      try {
+        console.log(`⚙️ Registering Phone Number ID ${phoneNumberId} with Meta Cloud Messaging Server...`);
+        await axios.post(
+          `https://graph.facebook.com/v25.0/${phoneNumberId}/register`,
+          { messaging_product: 'whatsapp', pin: '123456' },
+          { headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' } }
+        );
+        console.log('✅ Meta Phone Number Registration completed!');
+      } catch (regErr) {
+        console.warn('⚠️ Meta Phone Number Registration notice (non-blocking):', regErr.response?.data || regErr.message);
+      }
     }
 
     // 6. Automatically register/subscribe webhook apps to the WABA
@@ -400,33 +423,40 @@ exports.handleEmbeddedSignup = async (req, res) => {
       console.error('⚠️ Webhook subscription warning (non-blocking):', subErr.response?.data || subErr.message);
     }
 
-    // 6. Trigger Coexistence Data Sync (Contacts & Message History)
-    try {
-      console.log(`🔄 Triggering Coexistence SMB App Data sync for Phone Number ID: ${phoneNumberId}...`);
-      await axios.post(
-        `https://graph.facebook.com/v25.0/${phoneNumberId}/smb_app_data`,
-        { messaging_product: 'whatsapp', sync_type: 'smb_app_state_sync' },
-        { headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' } }
-      );
-      await axios.post(
-        `https://graph.facebook.com/v25.0/${phoneNumberId}/smb_app_data`,
-        { messaging_product: 'whatsapp', sync_type: 'history' },
-        { headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' } }
-      );
-      console.log('✅ Coexistence history & contact sync initiated successfully!');
-    } catch (syncErr) {
-      console.warn('⚠️ Coexistence sync notice (non-blocking):', syncErr.response?.data || syncErr.message);
+    // 7. Trigger Coexistence Data Sync (Contacts & Message History)
+    if (isCoexistence) {
+      try {
+        console.log(`🔄 Triggering Coexistence SMB App Data sync for Phone Number ID: ${phoneNumberId}...`);
+        const contactSyncRes = await axios.post(
+          `https://graph.facebook.com/v25.0/${phoneNumberId}/smb_app_data`,
+          { messaging_product: 'whatsapp', sync_type: 'smb_app_state_sync' },
+          { headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' } }
+        );
+        console.log('✅ Coexistence contacts sync initiated, request_id:', contactSyncRes.data?.request_id);
+
+        const historySyncRes = await axios.post(
+          `https://graph.facebook.com/v25.0/${phoneNumberId}/smb_app_data`,
+          { messaging_product: 'whatsapp', sync_type: 'history' },
+          { headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' } }
+        );
+        console.log('✅ Coexistence history sync initiated, request_id:', historySyncRes.data?.request_id);
+      } catch (syncErr) {
+        console.warn('⚠️ Coexistence sync notice (non-blocking):', syncErr.response?.data || syncErr.message);
+      }
     }
 
     res.json({
       success: true,
-      message: 'WhatsApp Business API connected successfully via Embedded Signup!',
+      message: isCoexistence
+        ? 'WhatsApp Business App (Coexistence) connected successfully via Embedded Signup!'
+        : 'WhatsApp Business API connected successfully via Embedded Signup!',
       data: {
         displayName: verifiedName || wabaName,
         phoneNumber: displayPhoneNumber,
         wabaId: targetWabaId,
         phoneNumberId,
-        businessId
+        businessId,
+        isCoexistence
       }
     });
 

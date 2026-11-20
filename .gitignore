@@ -71,3 +71,6 @@ backend/scratch/
 !next-public/public/*.png
 !next-public/public/*.ico
 !next-public/public/*.jpg
+
+new-database/
+docs/postgres-migration-review.md

@@ -175,9 +175,13 @@ function WhatsAppConnect() {
           const data = typeof event.data === 'string' ? JSON.parse(event.data) : event.data;
           if (data && data.type === 'WA_EMBEDDED_SIGNUP') {
             console.log('📌 Received Meta Embedded Signup sessionInfo event', data);
-            if (data.event === 'FINISH' && data.data) {
+            if ((data.event === 'FINISH' || data.event === 'FINISH_WHATSAPP_BUSINESS_APP_ONBOARDING') && data.data) {
               if (data.data.waba_id) window.__metaWabaId = data.data.waba_id;
               if (data.data.phone_number_id) window.__metaPhoneNumberId = data.data.phone_number_id;
+              if (data.event === 'FINISH_WHATSAPP_BUSINESS_APP_ONBOARDING') {
+                window.__isCoexistence = true;
+                console.log('📱 WhatsApp Business App Coexistence onboarding detected');
+              }
             }
           }
         } catch (err) {
@@ -268,7 +272,8 @@ function WhatsAppConnect() {
           code, 
           redirectUri,
           wabaId: window.__metaWabaId || null,
-          phoneNumberId: window.__metaPhoneNumberId || null
+          phoneNumberId: window.__metaPhoneNumberId || null,
+          isCoexistence: Boolean(window.__isCoexistence)
         })
       });
 
@@ -298,7 +303,11 @@ function WhatsAppConnect() {
       const data = await res.json();
 
       if (data.success) {
-        alert('🎉 WhatsApp Business connected successfully via Meta Embedded Signup!');
+        if (data.data?.isCoexistence || window.__isCoexistence) {
+          alert('🎉 WhatsApp Business App (Coexistence) connected successfully! Your mobile WhatsApp Business app and Kwickbot Cloud API are now running in sync.');
+        } else {
+          alert('🎉 WhatsApp Business connected successfully via Meta Embedded Signup!');
+        }
         setShowCredentialsForm(false);
         fetchCloudStatus();
       } else {
@@ -708,7 +717,7 @@ function WhatsAppConnect() {
                       fontWeight: '500',
                       lineHeight: '1.4'
                     }}>
-                      💡 Connect your WhatsApp Business API automatically by clicking the button below. Your credentials will link instantly.
+                      💡 <strong>WhatsApp Coexistence Supported:</strong> Connect using your existing WhatsApp Business app phone number! You can continue chatting 1:1 on your mobile phone while Kwickbot automates customer support, orders & broadcasts simultaneously.
                     </div>
 
                     <div style={{

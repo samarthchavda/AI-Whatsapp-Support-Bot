@@ -1,56 +1,65 @@
 import './globals.css';
+import { Plus_Jakarta_Sans, Space_Grotesk } from 'next/font/google';
+import { SITE_URL, DEFAULT_OG_IMAGE } from './seo';
 import Header from './components/Header';
 import Footer from './components/Footer';
 import MotionProvider from './components/MotionProvider';
 import { safeJsonStringify } from '../utils/jsonSanitizer';
 
+const fontSans = Plus_Jakarta_Sans({
+  subsets: ['latin'],
+  weight: ['400', '500', '600', '700', '800'],
+  display: 'swap',
+  variable: '--font-jakarta'
+});
+
+const fontBrand = Space_Grotesk({
+  subsets: ['latin'],
+  weight: ['600'],
+  display: 'swap',
+  variable: '--font-space'
+});
+
+const HOME_TITLE = 'AI WhatsApp Support for Shopify & WooCommerce | Kwickbot';
+const HOME_DESCRIPTION = 'Kwickbot answers customers on WhatsApp with Gemini AI, sends order confirmations and shipping updates automatically, and hands chats to your team when needed.';
+
 export const metadata = {
-  metadataBase: new URL('https://kwickbot.in'),
+  metadataBase: new URL(SITE_URL),
   title: {
-    default: 'Kwickbot — AI WhatsApp Customer Support & Chatbot Automation',
-    template: '%s | Kwickbot AI'
+    default: HOME_TITLE,
+    template: '%s | Kwickbot'
   },
-  description: 'Automate e-commerce customer support 24/7 on WhatsApp using Google Gemini AI, Meta Cloud API, Shopify & WooCommerce integrations, order tracking, and live human handoff.',
+  description: HOME_DESCRIPTION,
+  applicationName: 'Kwickbot',
   keywords: [
-    'WhatsApp AI support',
+    'WhatsApp AI chatbot for Shopify',
+    'WooCommerce WhatsApp chatbot',
     'WhatsApp Cloud API',
-    'Shopify WhatsApp chatbot',
-    'WooCommerce WhatsApp bot',
-    'AI customer service automation',
-    'WhatsApp order tracking bot',
-    'WhatsApp human handoff',
-    'Kwickbot AI',
-    'E-commerce customer support',
-    'WhatsApp marketing automation'
+    'WhatsApp customer support automation',
+    'WhatsApp order confirmation message',
+    'WhatsApp shipping updates',
+    'WhatsApp Business API India',
+    'WhatsApp live chat human handoff',
+    'WhatsApp broadcast and abandoned cart'
   ],
-  authors: [{ name: 'Kwickbot AI Team', url: 'https://kwickbot.in' }],
-  creator: 'Kwickbot AI',
-  publisher: 'Kwickbot AI',
-  alternates: {
-    canonical: 'https://kwickbot.in',
-  },
+  authors: [{ name: 'Kwickbot', url: SITE_URL }],
+  creator: 'Kwickbot',
+  publisher: 'Kwickbot',
+  alternates: { canonical: SITE_URL },
   openGraph: {
-    title: 'Kwickbot — AI WhatsApp Customer Support & Chatbot Automation',
-    description: 'Automate customer support 24/7 with Google Gemini AI integrated directly into your WhatsApp Cloud API and Shopify/WooCommerce store.',
-    url: 'https://kwickbot.in',
-    siteName: 'Kwickbot AI',
-    images: [
-      {
-        url: 'https://kwickbot.in/og-image.jpg',
-        width: 1200,
-        height: 630,
-        alt: 'Kwickbot AI WhatsApp Support Platform',
-      }
-    ],
-    locale: 'en_US',
-    type: 'website',
+    title: HOME_TITLE,
+    description: HOME_DESCRIPTION,
+    url: SITE_URL,
+    siteName: 'Kwickbot',
+    images: [DEFAULT_OG_IMAGE],
+    locale: 'en_IN',
+    type: 'website'
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Kwickbot — AI WhatsApp Customer Support & Chatbot Automation',
-    description: 'Automate customer support 24/7 with Google Gemini AI integrated directly into your WhatsApp Cloud API.',
-    images: ['https://kwickbot.in/og-image.jpg'],
-    creator: '@kwickbot',
+    title: HOME_TITLE,
+    description: HOME_DESCRIPTION,
+    images: [DEFAULT_OG_IMAGE.url]
   },
   robots: {
     index: true,
@@ -60,8 +69,8 @@ export const metadata = {
       follow: true,
       'max-video-preview': -1,
       'max-image-preview': 'large',
-      'max-snippet': -1,
-    },
+      'max-snippet': -1
+    }
   },
   icons: {
     icon: [
@@ -69,23 +78,24 @@ export const metadata = {
       { url: '/favicon-32x32.png', type: 'image/png', sizes: '32x32' },
       { url: '/logo192.png', type: 'image/png', sizes: '192x192' }
     ],
-    apple: '/apple-touch-icon.png',
-  }
+    apple: '/apple-touch-icon.png'
+  },
+  manifest: '/manifest.json'
+};
+
+export const viewport = {
+  themeColor: '#2A3D18'
 };
 
 export default function RootLayout({ children }) {
   const organizationSchema = {
     '@context': 'https://schema.org',
     '@type': 'Organization',
-    name: 'Kwickbot AI',
+    name: 'Kwickbot',
     url: 'https://kwickbot.in',
     logo: 'https://kwickbot.in/logo.png',
     description: 'AI-powered WhatsApp customer support and chatbot automation platform for e-commerce stores (Shopify, WooCommerce).',
-    sameAs: [
-      'https://facebook.com/kwickbot',
-      'https://twitter.com/kwickbot',
-      'https://linkedin.com/company/kwickbot'
-    ],
+    sameAs: ['https://www.linkedin.com/company/kwickbot/'],
     contactPoint: {
       '@type': 'ContactPoint',
       email: 'hello@kwickbot.in',
@@ -97,7 +107,7 @@ export default function RootLayout({ children }) {
   const softwareAppSchema = {
     '@context': 'https://schema.org',
     '@type': 'SoftwareApplication',
-    name: 'Kwickbot AI',
+    name: 'Kwickbot',
     operatingSystem: 'All',
     applicationCategory: 'BusinessApplication',
     url: 'https://kwickbot.in',
@@ -109,37 +119,19 @@ export default function RootLayout({ children }) {
       lowPrice: '1499',
       highPrice: '9999',
       offerCount: '3'
-    },
-    aggregateRating: {
-      '@type': 'AggregateRating',
-      ratingValue: '4.9',
-      ratingCount: '128'
     }
   };
 
   const websiteSchema = {
     '@context': 'https://schema.org',
     '@type': 'WebSite',
-    name: 'Kwickbot AI',
-    url: 'https://kwickbot.in',
-    potentialAction: {
-      '@type': 'SearchAction',
-      target: 'https://kwickbot.in/blog?search={search_term_string}',
-      'query-input': 'required name=search_term_string'
-    }
+    name: 'Kwickbot',
+    url: 'https://kwickbot.in'
   };
 
   return (
-    <html lang="en">
+    <html lang="en" className={`${fontSans.variable} ${fontBrand.variable}`}>
       <head>
-        <link rel="icon" href="/favicon.ico" sizes="any" />
-        <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
-        <link rel="icon" type="image/png" sizes="192x192" href="/logo192.png" />
-        <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Space+Grotesk:wght@600&display=swap" rel="stylesheet" />
-        <meta name="theme-color" content="#2A3D18" />
         <script dangerouslySetInnerHTML={{ __html: "document.documentElement.classList.add('motion-ready')" }} />
 
         {/* Structured Data (JSON-LD Schemas for SEO) */}

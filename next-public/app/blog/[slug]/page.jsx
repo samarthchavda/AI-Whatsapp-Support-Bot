@@ -898,18 +898,20 @@ async function getPostBySlug(slug) {
 export async function generateMetadata({ params }) {
   const post = await getPostBySlug(params.slug);
   if (!post) {
-    return { title: 'Post Not Found | Kwickbot' };
+    return { title: 'Article not found', robots: { index: false, follow: true } };
   }
 
   return {
-    title: `${post.title} | Kwickbot Blog`,
+    title: post.title,
     description: post.summary,
     alternates: {
       canonical: `https://kwickbot.in/blog/${params.slug}`,
     },
     openGraph: {
-      title: `${post.title} | Kwickbot Blog`,
+      title: post.title,
       description: post.summary,
+      siteName: 'Kwickbot',
+      locale: 'en_IN',
       url: `https://kwickbot.in/blog/${params.slug}`,
       type: 'article',
       publishedTime: post.createdAt,
@@ -937,7 +939,7 @@ export default async function BlogPostPage({ params }) {
     '@type': 'BlogPosting',
     headline: post.title,
     description: post.summary,
-    image: post.coverImage || 'https://kwickbot.in/og-image.jpg',
+    image: post.coverImage ? (post.coverImage.startsWith('http') ? post.coverImage : `https://kwickbot.in${post.coverImage}`) : 'https://kwickbot.in/og-image.jpg',
     author: {
       '@type': 'Organization',
       name: post.author || 'Kwickbot Team',
@@ -945,7 +947,7 @@ export default async function BlogPostPage({ params }) {
     },
     publisher: {
       '@type': 'Organization',
-      name: 'Kwickbot AI',
+      name: 'Kwickbot',
       logo: {
         '@type': 'ImageObject',
         url: 'https://kwickbot.in/logo.png'
@@ -992,7 +994,7 @@ export default async function BlogPostPage({ params }) {
             </div>
           </header>
 
-          {post.coverImage && <img src={post.coverImage} alt="" className="article-cover" />}
+          {post.coverImage && <img src={post.coverImage} alt={post.title} className="article-cover" />}
 
           <div className="prose" style={{ marginTop: 40 }} dangerouslySetInnerHTML={{ __html: post.content }} />
 

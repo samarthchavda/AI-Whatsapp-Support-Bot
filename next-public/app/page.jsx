@@ -400,16 +400,18 @@ export default function LandingPage() {
           <div className="container hero-grid">
             <div className="hero-copy">
               <span className="pill hero-fade" style={{ alignSelf: 'flex-start', '--d': '0s' }}>
-                <span className="dot" /> Built for WhatsApp commerce operations
+                <span className="dot" /> For Shopify &amp; WooCommerce stores
               </span>
-              <h1 className="rise" aria-label="Support that knows your store.">
-                <span style={{ '--w': 0 }}>Support</span>{' '}
-                <span style={{ '--w': 1 }}>that</span>{' '}
-                <span style={{ '--w': 2 }}>knows</span>{' '}
-                <span style={{ '--w': 3 }} className="highlight swipe">your store.</span>
+              <h1 className="rise" aria-label="WhatsApp AI support that knows your store.">
+                <span style={{ '--w': 0 }}>WhatsApp</span>{' '}
+                <span style={{ '--w': 1 }}>AI</span>{' '}
+                <span style={{ '--w': 2 }}>support</span>{' '}
+                <span style={{ '--w': 3 }}>that</span>{' '}
+                <span style={{ '--w': 4 }}>knows</span>{' '}
+                <span style={{ '--w': 5 }} className="highlight swipe">your store.</span>
               </h1>
               <p className="hero-lead hero-fade" style={{ '--d': '.45s' }}>
-                Kwickbot connects WhatsApp, Gemini AI and your commerce data, so customers get useful answers while your team keeps control of every escalation.
+                Kwickbot answers your customers on WhatsApp with AI, sends order confirmations and shipping updates automatically, and hands the chat to your team when a person is needed.
               </p>
               <div className="hero-actions hero-fade" style={{ '--d': '.6s' }}>
                 <Link href="/demo" className="btn btn-primary">Book a demo <FaArrowRight /></Link>

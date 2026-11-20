@@ -34,8 +34,8 @@
   --ok-ink: #3D5A22;
 
   /* Type */
-  --font-sans: "Plus Jakarta Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
-  --font-brand: "Space Grotesk", "Plus Jakarta Sans", system-ui, sans-serif;
+  --font-sans: var(--font-jakarta), "Plus Jakarta Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-brand: var(--font-space), "Space Grotesk", var(--font-jakarta), system-ui, sans-serif;
 
   /* Shape */
   --r-sm: 12px;
@@ -235,7 +235,7 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0
 .hero { padding: 72px 0 0; }
 .hero-grid { display: flex; flex-wrap: wrap; gap: 56px; align-items: center; }
 .hero-copy { flex: 1 1 480px; display: flex; flex-direction: column; gap: 24px; min-width: 0; }
-.hero h1 { font-size: clamp(42px, 6.4vw, 70px); font-weight: 800; line-height: 1.03; letter-spacing: -0.045em; }
+.hero h1 { font-size: clamp(40px, 5.4vw, 62px); font-weight: 800; line-height: 1.03; letter-spacing: -0.045em; }
 .highlight { background: var(--pista); border-radius: 16px; padding: 0 12px; -webkit-box-decoration-break: clone; box-decoration-break: clone; }
 .hero-lead { font-size: 18.5px; line-height: 1.6; color: var(--muted); max-width: 540px; }
 .hero-actions { display: flex; flex-wrap: wrap; gap: 12px; }

@@ -1,14 +1,12 @@
 import React from 'react';
 import Link from 'next/link';
+import { pageMetadata } from '../seo';
 
-export const metadata = {
-  title: 'WhatsApp AI & E-Commerce Support Blog | Kwickbot',
-  description: 'Explore Kwickbot\'s latest guides, tutorials, and insights on WhatsApp AI customer support, e-commerce automation, abandoned cart recovery, and slashing CAC.',
-  openGraph: {
-    title: 'WhatsApp AI & E-Commerce Support Blog | Kwickbot',
-    description: 'Latest guides on WhatsApp AI automation, Shopify sync, and D2C support.',
-  }
-};
+export const metadata = pageMetadata({
+  path: '/blog',
+  title: 'WhatsApp Commerce Blog: Guides for Shopify & D2C Brands',
+  description: 'Guides on WhatsApp AI customer support, the WhatsApp Cloud API, Meta templates and pricing, broadcasts and Shopify or WooCommerce automation.'
+});
 
 const FALLBACK_POSTS = [
   {

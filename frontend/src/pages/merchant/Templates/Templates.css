@@ -242,13 +242,14 @@
   justify-content: space-between;
   align-items: center;
   font-size: 12px;
-  color: #71717a;
-  border-top: 1px solid #f4f4f5;
+  color: var(--text-muted);
+  border-top: 1px solid var(--border);
   padding-top: 12px;
 }
 
 .template-lang-badge code {
-  background-color: #f4f4f5;
+  background-color: var(--bg-hover);
+  color: var(--text-primary);
   padding: 2px 4px;
   border-radius: 4px;
   font-family: monospace;
@@ -266,12 +267,12 @@
   display: flex;
   align-items: start;
   gap: 12px;
-  background-color: #eff6ff;
-  border: 1px solid #bfdbfe;
+  background-color: rgba(59, 130, 246, 0.12);
+  border: 1px solid rgba(59, 130, 246, 0.3);
   border-radius: 12px;
   padding: 16px;
   font-size: 14px;
-  color: #1e3a8a;
+  color: #93c5fd;
   line-height: 1.5;
 }
 
@@ -285,16 +286,16 @@
 .empty-state {
   text-align: center;
   padding: 60px 20px;
-  background-color: white;
+  background-color: var(--bg-card);
   border-radius: 16px;
-  border: 1px dashed #e4e4e7;
-  color: #71717a;
+  border: 1px dashed var(--border);
+  color: var(--text-secondary);
 }
 
 .empty-state h3 {
   font-size: 18px;
   font-weight: 700;
-  color: #18181b;
+  color: var(--text-primary);
   margin: 12px 0 6px;
 }
 

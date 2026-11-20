@@ -711,30 +711,31 @@ function Integrations({ admin, onUpdateAdmin }) {
           padding: '20px'
         }}>
           <div style={{
-            backgroundColor: '#ffffff',
+            backgroundColor: 'var(--bg-card)',
+            border: '1px solid var(--border)',
             borderRadius: '20px',
             width: '100%',
             maxWidth: '1100px',
             height: '85vh',
             display: 'flex',
             flexDirection: 'column',
-            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+            boxShadow: 'var(--shadow-lg, 0 25px 50px -12px rgba(0, 0, 0, 0.5))',
             overflow: 'hidden'
           }}>
             {/* Header */}
             <div style={{
               padding: '20px 24px',
-              borderBottom: '1px solid #e4e4e7',
+              borderBottom: '1px solid var(--border)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between',
-              backgroundColor: '#f8fafc'
+              backgroundColor: 'var(--bg-input)'
             }}>
               <div>
-                <h2 style={{ fontSize: '18px', fontWeight: '800', color: '#0f172a', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <h2 style={{ fontSize: '18px', fontWeight: '800', color: 'var(--text-primary)', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <FaShopify style={{ color: '#96bf48' }} /> Shopify App Integration Guide
                 </h2>
-                <p style={{ fontSize: '13px', color: '#64748b', margin: '4px 0 0 0' }}>
+                <p style={{ fontSize: '13px', color: 'var(--text-secondary)', margin: '4px 0 0 0' }}>
                   Step {currentGuideStep + 1} of {SHOPIFY_GUIDE_STEPS.length}: {SHOPIFY_GUIDE_STEPS[currentGuideStep].title}
                 </p>
               </div>
@@ -744,7 +745,7 @@ function Integrations({ admin, onUpdateAdmin }) {
                   background: 'none',
                   border: 'none',
                   fontSize: '24px',
-                  color: '#94a3b8',
+                  color: 'var(--text-muted)',
                   cursor: 'pointer',
                   padding: '4px',
                   display: 'flex',
@@ -756,12 +757,12 @@ function Integrations({ admin, onUpdateAdmin }) {
                   transition: 'background-color 0.2s'
                 }}
                 onMouseOver={(e) => {
-                  e.currentTarget.style.backgroundColor = '#f1f5f9';
-                  e.currentTarget.style.color = '#334155';
+                  e.currentTarget.style.backgroundColor = 'var(--bg-hover)';
+                  e.currentTarget.style.color = 'var(--text-primary)';
                 }}
                 onMouseOut={(e) => {
                   e.currentTarget.style.backgroundColor = 'transparent';
-                  e.currentTarget.style.color = '#94a3b8';
+                  e.currentTarget.style.color = 'var(--text-muted)';
                 }}
               >
                 &times;
@@ -772,7 +773,7 @@ function Integrations({ admin, onUpdateAdmin }) {
             <div style={{
               width: '100%',
               height: '4px',
-              backgroundColor: '#e2e8f0'
+              backgroundColor: 'var(--border)'
             }}>
               <div style={{
                 height: '100%',
@@ -791,13 +792,13 @@ function Integrations({ admin, onUpdateAdmin }) {
             }}>
               {/* Left Pane: Screenshot */}
               <div style={{
-                backgroundColor: '#f1f5f9',
+                backgroundColor: 'var(--bg-input)',
                 padding: '24px',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 overflow: 'auto',
-                borderRight: '1px solid #e2e8f0',
+                borderRight: '1px solid var(--border)',
                 position: 'relative'
               }}>
                 <img
@@ -808,8 +809,8 @@ function Integrations({ admin, onUpdateAdmin }) {
                     maxHeight: '100%',
                     objectFit: 'contain',
                     borderRadius: '8px',
-                    boxShadow: '0 10px 25px -5px rgba(0,0,0,0.1), 0 8px 10px -6px rgba(0,0,0,0.1)',
-                    backgroundColor: '#ffffff'
+                    boxShadow: 'var(--shadow-md)',
+                    backgroundColor: 'var(--bg-card)'
                   }}
                 />
               </div>
@@ -821,15 +822,15 @@ function Integrations({ admin, onUpdateAdmin }) {
                 flexDirection: 'column',
                 justifyContent: 'space-between',
                 overflowY: 'auto',
-                backgroundColor: '#ffffff'
+                backgroundColor: 'var(--bg-card)'
               }}>
                 <div>
                   <div style={{
                     display: 'inline-flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    backgroundColor: '#ecfdf5',
-                    color: '#059669',
+                    backgroundColor: 'rgba(16, 185, 129, 0.12)',
+                    color: '#10b981',
                     padding: '6px 12px',
                     borderRadius: '20px',
                     fontSize: '12px',
@@ -839,13 +840,13 @@ function Integrations({ admin, onUpdateAdmin }) {
                     STEP {currentGuideStep + 1}
                   </div>
 
-                  <h3 style={{ fontSize: '20px', fontWeight: '700', color: '#0f172a', marginBottom: '16px', lineHeight: '1.3' }}>
+                  <h3 style={{ fontSize: '20px', fontWeight: '700', color: 'var(--text-primary)', marginBottom: '16px', lineHeight: '1.3' }}>
                     {SHOPIFY_GUIDE_STEPS[currentGuideStep].title}
                   </h3>
 
                   <div style={{
                     fontSize: '14px',
-                    color: '#334155',
+                    color: 'var(--text-secondary)',
                     lineHeight: '1.6',
                     whiteSpace: 'pre-line'
                   }}>
@@ -857,11 +858,11 @@ function Integrations({ admin, onUpdateAdmin }) {
                 <div style={{
                   marginTop: '24px',
                   padding: '12px 16px',
-                  backgroundColor: '#f8fafc',
+                  backgroundColor: 'var(--bg-input)',
                   borderRadius: '8px',
                   borderLeft: '4px solid #96bf48',
                   fontSize: '13px',
-                  color: '#475569'
+                  color: 'var(--text-secondary)'
                 }}>
                   <strong>💡 Pro-Tip:</strong> Use Left & Right Arrow keys on your keyboard to navigate between steps.
                 </div>
@@ -871,11 +872,11 @@ function Integrations({ admin, onUpdateAdmin }) {
             {/* Footer */}
             <div style={{
               padding: '16px 24px',
-              borderTop: '1px solid #e4e4e7',
+              borderTop: '1px solid var(--border)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between',
-              backgroundColor: '#f8fafc'
+              backgroundColor: 'var(--bg-input)'
             }}>
               <button
                 type="button"
@@ -883,9 +884,9 @@ function Integrations({ admin, onUpdateAdmin }) {
                 disabled={currentGuideStep === 0}
                 style={{
                   padding: '10px 16px',
-                  backgroundColor: '#ffffff',
-                  color: currentGuideStep === 0 ? '#cbd5e1' : '#334155',
-                  border: '1px solid #e2e8f0',
+                  backgroundColor: 'var(--bg-hover)',
+                  color: currentGuideStep === 0 ? 'var(--text-muted)' : 'var(--text-primary)',
+                  border: '1px solid var(--border)',
                   borderRadius: '8px',
                   fontWeight: '600',
                   fontSize: '14px',
@@ -913,7 +914,7 @@ function Integrations({ admin, onUpdateAdmin }) {
                       width: '10px',
                       height: '10px',
                       borderRadius: '50%',
-                      backgroundColor: currentGuideStep === idx ? '#96bf48' : '#cbd5e1',
+                      backgroundColor: currentGuideStep === idx ? '#96bf48' : 'var(--border)',
                       border: 'none',
                       padding: 0,
                       cursor: 'pointer',

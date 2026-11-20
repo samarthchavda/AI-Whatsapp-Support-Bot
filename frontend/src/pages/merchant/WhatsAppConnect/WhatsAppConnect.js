@@ -1177,7 +1177,7 @@ function WhatsAppConnect() {
 
               {/* Style type */}
               <div style={{ display: 'grid', gap: '6px' }}>
-                <label style={{ fontSize: '14px', fontWeight: '600', color: '#374151' }}>
+                <label style={{ fontSize: '14px', fontWeight: '600', color: 'var(--text-primary)' }}>
                   Widget Style
                 </label>
                 <select
@@ -1187,21 +1187,22 @@ function WhatsAppConnect() {
                     width: '100%',
                     padding: '10px 12px',
                     borderRadius: '8px',
-                    border: '1px solid #d1d5db',
+                    border: '1px solid var(--border)',
                     fontSize: '14px',
-                    backgroundColor: '#ffffff',
+                    backgroundColor: 'var(--bg-input)',
+                    color: 'var(--text-primary)',
                     outline: 'none'
                   }}
                 >
-                  <option value="pill">Pill Shape (Icon + Text)</option>
-                  <option value="bubble">Bubble Shape (Icon Only)</option>
+                  <option value="pill" style={{ backgroundColor: 'var(--bg-card)', color: 'var(--text-primary)' }}>Pill Shape (Icon + Text)</option>
+                  <option value="bubble" style={{ backgroundColor: 'var(--bg-card)', color: 'var(--text-primary)' }}>Bubble Shape (Icon Only)</option>
                 </select>
               </div>
 
               {/* Button Text */}
               {widgetStyle === 'pill' && (
                 <div style={{ display: 'grid', gap: '6px' }}>
-                  <label style={{ fontSize: '14px', fontWeight: '600', color: '#374151' }}>
+                  <label style={{ fontSize: '14px', fontWeight: '600', color: 'var(--text-primary)' }}>
                     Button Text
                   </label>
                   <input
@@ -1214,8 +1215,10 @@ function WhatsAppConnect() {
                       width: '100%',
                       padding: '10px 12px',
                       borderRadius: '8px',
-                      border: '1px solid #d1d5db',
+                      border: '1px solid var(--border)',
                       fontSize: '14px',
+                      backgroundColor: 'var(--bg-input)',
+                      color: 'var(--text-primary)',
                       outline: 'none',
                       boxSizing: 'border-box'
                     }}
@@ -1225,7 +1228,7 @@ function WhatsAppConnect() {
 
               {/* Pre-filled Message */}
               <div style={{ display: 'grid', gap: '6px' }}>
-                <label style={{ fontSize: '14px', fontWeight: '600', color: '#374151' }}>
+                <label style={{ fontSize: '14px', fontWeight: '600', color: 'var(--text-primary)' }}>
                   Welcome Pre-filled Message
                 </label>
                 <textarea
@@ -1237,22 +1240,24 @@ function WhatsAppConnect() {
                     width: '100%',
                     padding: '10px 12px',
                     borderRadius: '8px',
-                    border: '1px solid #d1d5db',
+                    border: '1px solid var(--border)',
                     fontSize: '14px',
+                    backgroundColor: 'var(--bg-input)',
+                    color: 'var(--text-primary)',
                     outline: 'none',
                     fontFamily: 'inherit',
                     boxSizing: 'border-box',
                     resize: 'none'
                   }}
                 />
-                <span style={{ fontSize: '11px', color: '#6b7280' }}>
+                <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
                   This text automatically fills in the customer's chat screen when they click the widget.
                 </span>
               </div>
 
               {/* Theme Color Picker */}
               <div style={{ display: 'grid', gap: '6px' }}>
-                <label style={{ fontSize: '14px', fontWeight: '600', color: '#374151' }}>
+                <label style={{ fontSize: '14px', fontWeight: '600', color: 'var(--text-primary)' }}>
                   Theme Color
                 </label>
                 <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
@@ -1293,11 +1298,11 @@ function WhatsAppConnect() {
 
               {/* Position selector */}
               <div style={{ display: 'grid', gap: '6px' }}>
-                <label style={{ fontSize: '14px', fontWeight: '600', color: '#374151' }}>
+                <label style={{ fontSize: '14px', fontWeight: '600', color: 'var(--text-primary)' }}>
                   Widget Position
                 </label>
                 <div style={{ display: 'flex', gap: '16px' }}>
-                  <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontSize: '14px' }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontSize: '14px', color: 'var(--text-primary)' }}>
                     <input
                       type="radio"
                       name="position"
@@ -1307,7 +1312,7 @@ function WhatsAppConnect() {
                     />
                     Bottom-Right
                   </label>
-                  <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontSize: '14px' }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontSize: '14px', color: 'var(--text-primary)' }}>
                     <input
                       type="radio"
                       name="position"
@@ -1329,7 +1334,7 @@ function WhatsAppConnect() {
                   onChange={(e) => setWidgetPulse(e.target.checked)}
                   style={{ width: '16px', height: '16px', cursor: 'pointer' }}
                 />
-                <label htmlFor="pulse-toggle" style={{ fontSize: '14px', fontWeight: '600', color: '#374151', cursor: 'pointer' }}>
+                <label htmlFor="pulse-toggle" style={{ fontSize: '14px', fontWeight: '600', color: 'var(--text-primary)', cursor: 'pointer' }}>
                   Enable Pulse Attention Animation
                 </label>
               </div>
@@ -1583,20 +1588,20 @@ function WhatsAppConnect() {
               <div style={{ display: 'grid', gap: '8px' }}>
 
                 {/* Shopify Accordion */}
-                <div style={{ border: '1px solid #e4e4e7', borderRadius: '10px', overflow: 'hidden' }}>
+                <div style={{ border: '1px solid var(--border)', borderRadius: '10px', overflow: 'hidden' }}>
                   <button
                     onClick={() => setActiveGuideCollapse(activeGuideCollapse === 'shopify' ? '' : 'shopify')}
                     style={{
                       width: '100%',
                       padding: '12px 16px',
-                      backgroundColor: '#f8fafc',
+                      backgroundColor: 'var(--bg-input)',
                       border: 'none',
                       display: 'flex',
                       justifyContent: 'space-between',
                       alignItems: 'center',
                       fontWeight: '700',
                       fontSize: '13px',
-                      color: '#1f2937',
+                      color: 'var(--text-primary)',
                       cursor: 'pointer'
                     }}
                   >
@@ -1604,7 +1609,7 @@ function WhatsAppConnect() {
                     {activeGuideCollapse === 'shopify' ? <FaChevronUp /> : <FaChevronDown />}
                   </button>
                   {activeGuideCollapse === 'shopify' && (
-                    <div style={{ padding: '16px', fontSize: '13px', color: '#4b5563', borderTop: '1px solid #e4e4e7', textAlign: 'left', lineHeight: '1.6' }}>
+                    <div style={{ padding: '16px', fontSize: '13px', color: 'var(--text-secondary)', borderTop: '1px solid var(--border)', textAlign: 'left', lineHeight: '1.6', backgroundColor: 'var(--bg-card)' }}>
                       <ol style={{ margin: 0, paddingLeft: '20px' }}>
                         <li>Log in to your <strong>Shopify Admin Panel</strong>.</li>
                         <li>Go to <strong>Online Store</strong> &rarr; <strong>Themes</strong>.</li>
@@ -1619,20 +1624,20 @@ function WhatsAppConnect() {
                 </div>
 
                 {/* WooCommerce Accordion */}
-                <div style={{ border: '1px solid #e4e4e7', borderRadius: '10px', overflow: 'hidden' }}>
+                <div style={{ border: '1px solid var(--border)', borderRadius: '10px', overflow: 'hidden' }}>
                   <button
                     onClick={() => setActiveGuideCollapse(activeGuideCollapse === 'woocommerce' ? '' : 'woocommerce')}
                     style={{
                       width: '100%',
                       padding: '12px 16px',
-                      backgroundColor: '#f8fafc',
+                      backgroundColor: 'var(--bg-input)',
                       border: 'none',
                       display: 'flex',
                       justifyContent: 'space-between',
                       alignItems: 'center',
                       fontWeight: '700',
                       fontSize: '13px',
-                      color: '#1f2937',
+                      color: 'var(--text-primary)',
                       cursor: 'pointer'
                     }}
                   >
@@ -1640,7 +1645,7 @@ function WhatsAppConnect() {
                     {activeGuideCollapse === 'woocommerce' ? <FaChevronUp /> : <FaChevronDown />}
                   </button>
                   {activeGuideCollapse === 'woocommerce' && (
-                    <div style={{ padding: '16px', fontSize: '13px', color: '#4b5563', borderTop: '1px solid #e4e4e7', textAlign: 'left', lineHeight: '1.6' }}>
+                    <div style={{ padding: '16px', fontSize: '13px', color: 'var(--text-secondary)', borderTop: '1px solid var(--border)', textAlign: 'left', lineHeight: '1.6', backgroundColor: 'var(--bg-card)' }}>
                       <ol style={{ margin: 0, paddingLeft: '20px' }}>
                         <li>Log in to your <strong>WordPress Dashboard</strong>.</li>
                         <li>Go to <strong>Plugins</strong> &rarr; <strong>Add New</strong>.</li>
@@ -1654,20 +1659,20 @@ function WhatsAppConnect() {
                 </div>
 
                 {/* Custom HTML Accordion */}
-                <div style={{ border: '1px solid #e4e4e7', borderRadius: '10px', overflow: 'hidden' }}>
+                <div style={{ border: '1px solid var(--border)', borderRadius: '10px', overflow: 'hidden' }}>
                   <button
                     onClick={() => setActiveGuideCollapse(activeGuideCollapse === 'custom' ? '' : 'custom')}
                     style={{
                       width: '100%',
                       padding: '12px 16px',
-                      backgroundColor: '#f8fafc',
+                      backgroundColor: 'var(--bg-input)',
                       border: 'none',
                       display: 'flex',
                       justifyContent: 'space-between',
                       alignItems: 'center',
                       fontWeight: '700',
                       fontSize: '13px',
-                      color: '#1f2937',
+                      color: 'var(--text-primary)',
                       cursor: 'pointer'
                     }}
                   >
@@ -1675,7 +1680,7 @@ function WhatsAppConnect() {
                     {activeGuideCollapse === 'custom' ? <FaChevronUp /> : <FaChevronDown />}
                   </button>
                   {activeGuideCollapse === 'custom' && (
-                    <div style={{ padding: '16px', fontSize: '13px', color: '#4b5563', borderTop: '1px solid #e4e4e7', textAlign: 'left', lineHeight: '1.6' }}>
+                    <div style={{ padding: '16px', fontSize: '13px', color: 'var(--text-secondary)', borderTop: '1px solid var(--border)', textAlign: 'left', lineHeight: '1.6', backgroundColor: 'var(--bg-card)' }}>
                       <ol style={{ margin: 0, paddingLeft: '20px' }}>
                         <li>Open your project's main HTML files (e.g., <code>index.html</code>, <code>footer.html</code>).</li>
                         <li>Scroll down to the bottom of the file to find the closing <code>&lt;/body&gt;</code> tag.</li>

@@ -1093,7 +1093,11 @@ tbody td, .table-row-premium td {
 .filter-group input[type="text"],
 .filter-group input[type="email"],
 .filter-group input[type="tel"],
-.filter-group input[type="number"] {
+.filter-group input[type="number"],
+.filter-group input[type="datetime-local"],
+.filter-group input[type="password"],
+.filter-group input[type="url"],
+.filter-group input[type="search"] {
   padding: 9px 13px;
   border: 1.5px solid var(--border);
   border-radius: var(--radius-sm);

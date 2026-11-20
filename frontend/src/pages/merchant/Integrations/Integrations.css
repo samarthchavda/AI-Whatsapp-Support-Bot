@@ -141,10 +141,10 @@
 .webhook-url-input {
   flex: 1;
   padding: 10px 14px;
-  background: #F8FAFC;
-  border: 1px solid var(--border-subtle, #DCE6F2);
+  background: var(--bg-input, #1A1D24);
+  border: 1px solid var(--border-subtle, #292C33);
   border-radius: 8px;
-  color: var(--text-secondary, #667085);
+  color: var(--text-primary, #F8FAFC);
   font-size: 12px;
   font-family: monospace;
 }
@@ -225,14 +225,15 @@
 }
 
 .modal-content {
-  background: #FFFFFF;
-  border: 1px solid var(--border-subtle, #DCE6F2);
+  background: var(--bg-card, #15171C);
+  border: 1px solid var(--border-subtle, #292C33);
   border-radius: 16px;
   width: 100%;
   max-width: 600px;
   max-height: 90vh;
   overflow-y: auto;
-  box-shadow: 0 20px 50px rgba(16, 24, 40, 0.15);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+  color: var(--text-primary, #F8FAFC);
 }
 
 .modal-header {
@@ -240,11 +241,11 @@
   justify-content: space-between;
   align-items: center;
   padding: 24px 28px;
-  border-bottom: 1px solid var(--border-subtle, #DCE6F2);
+  border-bottom: 1px solid var(--border-subtle, #292C33);
 }
 
 .modal-header h2 {
-  color: var(--text-primary, #101828);
+  color: var(--text-primary, #F8FAFC);
   font-size: 20px;
   font-weight: 700;
   margin: 0;
@@ -253,7 +254,7 @@
 .modal-close {
   background: none;
   border: none;
-  color: var(--text-secondary, #667085);
+  color: var(--text-secondary, #A1A1AA);
   font-size: 20px;
   cursor: pointer;
   padding: 8px;
@@ -261,7 +262,7 @@
 }
 
 .modal-close:hover {
-  color: var(--text-primary, #101828);
+  color: var(--text-primary, #F8FAFC);
 }
 
 .modal-form {
@@ -274,7 +275,7 @@
 
 .form-group label {
   display: block;
-  color: var(--text-primary, #101828);
+  color: var(--text-primary, #F8FAFC);
   font-size: 14px;
   font-weight: 600;
   margin-bottom: 8px;
@@ -283,44 +284,44 @@
 .form-group input {
   width: 100%;
   padding: 12px 14px;
-  background: #F8FAFC;
-  border: 1px solid var(--border-subtle, #DCE6F2);
+  background: var(--bg-input, #1A1D24);
+  border: 1px solid var(--border-subtle, #292C33);
   border-radius: 10px;
-  color: var(--text-primary, #101828);
+  color: var(--text-primary, #F8FAFC);
   font-size: 14px;
   transition: border-color 0.2s ease;
 }
 
 .form-group input:focus {
   outline: none;
-  border-color: var(--brand, #1677FF);
+  border-color: var(--brand, #28B8F2);
 }
 
 .form-group small {
   display: block;
-  color: var(--text-secondary, #667085);
+  color: var(--text-secondary, #A1A1AA);
   font-size: 12px;
   margin-top: 6px;
   line-height: 1.4;
 }
 
 .info-box {
-  background: var(--brand-light, #EEF6FF);
-  border: 1px solid rgba(22, 119, 255, 0.25);
+  background: var(--brand-light, rgba(40, 184, 242, 0.12));
+  border: 1px solid var(--border-subtle, #292C33);
   border-radius: 10px;
   padding: 16px;
   margin-bottom: 20px;
 }
 
 .info-box strong {
-  color: var(--brand, #1677FF);
+  color: var(--brand, #28B8F2);
   font-size: 14px;
   display: block;
   margin-bottom: 12px;
 }
 
 .info-box ol {
-  color: var(--text-primary, #101828);
+  color: var(--text-secondary, #A1A1AA);
   font-size: 13px;
   line-height: 1.8;
   margin: 0;
@@ -354,7 +355,7 @@
 /* Locked/Disabled State styling */
 .integration-card.locked {
   border: 1px dashed rgba(239, 68, 68, 0.4) !important;
-  background: #F8FAFC !important;
+  background: var(--bg-card, #15171C) !important;
   opacity: 0.8;
   position: relative;
 }

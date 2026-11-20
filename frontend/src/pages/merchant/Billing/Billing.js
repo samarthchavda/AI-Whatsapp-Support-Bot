@@ -121,7 +121,7 @@ function Billing() {
         currency: currency,
         name: 'Kwickbot AI',
         description: `Subscribe to ${planName.toUpperCase()} Plan (${selectedCycle.toUpperCase()})`,
-        image: '/logo.png',
+        image: '/app-icon.png',
         order_id: id,
         handler: async function (response) {
           try {

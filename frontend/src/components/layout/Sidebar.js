@@ -52,7 +52,7 @@ export default function Sidebar({ admin, onLogout, isOpen, onToggle, pendingDemo
               }
               return (
                 <img 
-                  src={isOpen ? "/logo.png" : "/app-icon.png"} 
+                  src={isOpen ? "/logo-reversed.png" : "/app-icon.png"} 
                   className={isOpen ? "sidebar-logo-img" : "logo-img"} 
                   alt="Kwickbot Logo"
                   onError={(e) => {

@@ -1384,19 +1384,19 @@ select:focus, textarea:focus {
   width: 28px;
   height: 28px;
   object-fit: contain;
-  filter: drop-shadow(0 2px 6px rgba(22, 119, 255, 0.2));
-  transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  border-radius: 8px;
+  transition: transform 0.2s ease;
 }
 
 .logo-img:hover {
-  transform: scale(1.1) rotate(3deg);
+  transform: scale(1.05);
 }
 
 .logo-img-large {
   width: 44px;
   height: 44px;
   object-fit: contain;
-  filter: drop-shadow(0 4px 10px rgba(22, 119, 255, 0.25));
+  border-radius: 10px;
 }
 
 /* Single Source of Truth Brand Logo */

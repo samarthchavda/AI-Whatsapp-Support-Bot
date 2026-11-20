@@ -63,3 +63,11 @@ video .zip
 # Local Python env / one-off scratch scripts
 .venv/
 backend/scratch/
+
+# Brand assets (logo files)
+!docs/brand/**/*.png
+!docs/brand/**/*.svg
+!docs/brand/*.ico
+!next-public/public/*.png
+!next-public/public/*.ico
+!next-public/public/*.jpg

@@ -398,3 +398,36 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* ---------- Billing details + real invoices ---------- */
+.billing-muted { color: var(--text-secondary); font-size: 13px; margin: 6px 0 0; }
+.billing-details-card { margin-bottom: 24px; }
+.billing-details-form {
+  display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px 16px; margin-top: 18px;
+}
+.bd-field { display: flex; flex-direction: column; gap: 6px; }
+.bd-field.bd-wide { grid-column: span 2; }
+.bd-field label { font-size: 12.5px; font-weight: 600; color: var(--text-secondary); }
+.bd-field input, .bd-field select {
+  background: var(--bg-input); border: 1px solid var(--border-default); border-radius: 10px;
+  padding: 10px 12px; color: var(--text-primary); font-size: 14px; outline: none; min-height: 42px;
+}
+.bd-field input:focus, .bd-field select:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--brand-light); }
+.bd-actions { grid-column: 1 / -1; display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+.bd-msg { font-size: 13px; font-weight: 600; }
+.bd-success { color: var(--success); }
+.bd-error { color: var(--danger); }
+.invoice-download-btn {
+  display: inline-flex; align-items: center; gap: 6px; padding: 7px 12px; border-radius: 8px;
+  background: transparent; border: 1px solid var(--border-default); color: var(--text-primary);
+  font-size: 12.5px; font-weight: 600; cursor: pointer;
+}
+.invoice-download-btn:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+.invoice-download-btn:disabled { opacity: .6; cursor: wait; }
+.invoice-empty { display: flex; align-items: center; gap: 14px; padding: 18px; border: 1px dashed var(--border-default); border-radius: 12px; }
+.invoice-empty svg { font-size: 24px; color: var(--text-muted); flex: none; }
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); border: 0; }
+@media (max-width: 760px) {
+  .billing-details-form { grid-template-columns: 1fr; }
+  .bd-field.bd-wide { grid-column: auto; }
+}

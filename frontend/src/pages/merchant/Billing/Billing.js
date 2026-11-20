@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { FaCrown, FaCheck, FaTimes, FaInfoCircle, FaRegCreditCard, FaHistory, FaCalendarAlt, FaTicketAlt, FaWhatsapp } from 'react-icons/fa';
+import { FaCrown, FaCheck, FaTimes, FaInfoCircle, FaRegCreditCard, FaHistory, FaCalendarAlt, FaTicketAlt, FaWhatsapp, FaDownload, FaFileInvoice, FaBuilding } from 'react-icons/fa';
 import api, { getAdminProfile, getPricingPlans, upgradePricingPlan, createRazorpayOrder, verifyRazorpayPayment } from '../../../services/api';
 import './Billing.css';
 
@@ -17,9 +17,87 @@ function Billing() {
   const [razorpayKeyId, setRazorpayKeyId] = useState('');
   const [selectedCycle, setSelectedCycle] = useState('monthly');
 
+  // Real invoice history + customer billing details printed on invoices
+  const [invoices, setInvoices] = useState([]);
+  const [invoicesLoading, setInvoicesLoading] = useState(true);
+  const [invoiceError, setInvoiceError] = useState('');
+  const [downloadingId, setDownloadingId] = useState(null);
+  const [billingDetails, setBillingDetails] = useState({ legalName: '', gstin: '', addressLine: '', city: '', state: '', pincode: '' });
+  const [indianStates, setIndianStates] = useState([]);
+  const [savingDetails, setSavingDetails] = useState(false);
+  const [detailsMessage, setDetailsMessage] = useState(null);
+
   useEffect(() => {
     fetchBillingData();
+    fetchInvoices();
+    fetchBillingDetails();
   }, []);
+
+  const fetchInvoices = async () => {
+    try {
+      setInvoicesLoading(true);
+      setInvoiceError('');
+      const res = await api.get('/invoices', { params: { limit: 50 } });
+      setInvoices(res.data?.invoices || []);
+    } catch (error) {
+      console.error('Error fetching invoices:', error);
+      setInvoiceError('Could not load your invoices. Please refresh the page.');
+    } finally {
+      setInvoicesLoading(false);
+    }
+  };
+
+  const fetchBillingDetails = async () => {
+    try {
+      const res = await api.get('/invoices/billing-details');
+      const data = res.data?.data || {};
+      setBillingDetails((prev) => ({ ...prev, ...data, legalName: data.legalName || res.data?.defaults?.legalName || '' }));
+      setIndianStates(res.data?.states || []);
+    } catch (error) {
+      console.error('Error fetching billing details:', error);
+    }
+  };
+
+  const handleDetailsChange = (e) => {
+    const { name, value } = e.target;
+    setBillingDetails((prev) => ({ ...prev, [name]: name === 'gstin' ? value.toUpperCase() : value }));
+    setDetailsMessage(null);
+  };
+
+  const saveBillingDetails = async (e) => {
+    e.preventDefault();
+    try {
+      setSavingDetails(true);
+      const res = await api.put('/invoices/billing-details', billingDetails);
+      setDetailsMessage({ type: 'success', text: res.data?.message || 'Billing details saved.' });
+    } catch (error) {
+      setDetailsMessage({ type: 'error', text: error.response?.data?.error || 'Could not save billing details.' });
+    } finally {
+      setSavingDetails(false);
+    }
+  };
+
+  const downloadInvoice = async (inv) => {
+    try {
+      setDownloadingId(inv._id);
+      const res = await api.get(`/invoices/${inv._id}/pdf`, { params: { download: 1 }, responseType: 'blob' });
+      const url = window.URL.createObjectURL(new Blob([res.data], { type: 'application/pdf' }));
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `Kwickbot-Invoice-${String(inv.invoiceNumber).replace(/[^A-Za-z0-9-]+/g, '-')}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      setTimeout(() => window.URL.revokeObjectURL(url), 2000);
+    } catch (error) {
+      console.error('Invoice download failed:', error);
+      setInvoiceError('Could not download that invoice. Please try again.');
+    } finally {
+      setDownloadingId(null);
+    }
+  };
+
+  const formatINR = (n) => `₹${Number(n || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
   const fetchBillingData = async () => {
     try {
@@ -136,6 +214,9 @@ function Billing() {
               razorpay_signature: response.razorpay_signature
             });
 
+            // Show the new invoice straight away
+            fetchInvoices();
+
             // Update local profile state
             const updatedProfile = verifyRes.data.data;
             setProfile(prev => ({
@@ -226,11 +307,6 @@ function Billing() {
     geminiTokensPerMonth: profile?.geminiTokensLimit || ((profile?.subscriptionPlan === 'growth' || profile?.subscriptionPlan === 'professional') ? 200000 : (profile?.subscriptionPlan === 'scale' || profile?.subscriptionPlan === 'enterprise') ? -1 : 50000),
     maxWhatsAppConnections: (profile?.subscriptionPlan === 'growth' || profile?.subscriptionPlan === 'professional') ? 2 : (profile?.subscriptionPlan === 'scale' || profile?.subscriptionPlan === 'enterprise') ? 5 : 1
   });
-
-  const mockInvoices = [
-    { id: 'INV-2026-001', date: '2026-05-15', amount: profile?.monthlyPrice || 29, status: 'Paid', method: 'Visa ending in 4242' },
-    { id: 'INV-2026-002', date: '2026-04-15', amount: profile?.monthlyPrice || 29, status: 'Paid', method: 'Visa ending in 4242' },
-  ];
 
   return (
     <div className="container billing-page">
@@ -673,36 +749,110 @@ function Billing() {
         </div>
       </div>
 
+      {/* Billing details printed on invoices */}
+      <div className="billing-card billing-details-card">
+        <h3 className="card-title-with-icon">
+          <FaBuilding /> Billing details for invoices
+        </h3>
+        <p className="billing-muted">These details appear in the “Billed to” section of your Kwickbot invoices. Add your GSTIN to claim input tax credit.</p>
+        <form className="billing-details-form" onSubmit={saveBillingDetails}>
+          <div className="bd-field bd-wide">
+            <label htmlFor="bd-legalName">Legal business name</label>
+            <input id="bd-legalName" name="legalName" value={billingDetails.legalName} onChange={handleDetailsChange} placeholder="As registered for GST" maxLength={200} />
+          </div>
+          <div className="bd-field">
+            <label htmlFor="bd-gstin">GSTIN <span className="billing-muted">(optional)</span></label>
+            <input id="bd-gstin" name="gstin" value={billingDetails.gstin} onChange={handleDetailsChange} placeholder="27ABCDE1234F1Z5" maxLength={15} autoComplete="off" />
+          </div>
+          <div className="bd-field bd-wide">
+            <label htmlFor="bd-address">Address</label>
+            <input id="bd-address" name="addressLine" value={billingDetails.addressLine} onChange={handleDetailsChange} placeholder="Building, street, area" maxLength={300} autoComplete="street-address" />
+          </div>
+          <div className="bd-field">
+            <label htmlFor="bd-city">City</label>
+            <input id="bd-city" name="city" value={billingDetails.city} onChange={handleDetailsChange} maxLength={120} autoComplete="address-level2" />
+          </div>
+          <div className="bd-field">
+            <label htmlFor="bd-state">State</label>
+            <select id="bd-state" name="state" value={billingDetails.state} onChange={handleDetailsChange}>
+              <option value="">Select state</option>
+              {indianStates.map((st) => <option key={st} value={st}>{st}</option>)}
+            </select>
+          </div>
+          <div className="bd-field">
+            <label htmlFor="bd-pincode">PIN code</label>
+            <input id="bd-pincode" name="pincode" value={billingDetails.pincode} onChange={handleDetailsChange} inputMode="numeric" maxLength={6} autoComplete="postal-code" />
+          </div>
+          <div className="bd-actions">
+            <button type="submit" className="btn-primary" disabled={savingDetails}>
+              {savingDetails ? 'Saving…' : 'Save billing details'}
+            </button>
+            {detailsMessage && (
+              <span role="status" className={detailsMessage.type === 'error' ? 'bd-msg bd-error' : 'bd-msg bd-success'}>
+                {detailsMessage.text}
+              </span>
+            )}
+          </div>
+        </form>
+      </div>
+
       {/* Invoice History */}
       <div className="billing-card invoice-history-card">
         <h3 className="card-title-with-icon">
-          <FaHistory /> Invoice Payment History
+          <FaHistory /> Invoices
         </h3>
+        {invoiceError && <div className="bd-msg bd-error" role="alert" style={{ marginTop: 12 }}>{invoiceError}</div>}
         <div className="table-wrapper" style={{ marginTop: '16px' }}>
-          <table className="premium-table">
-            <thead>
-              <tr>
-                <th>Invoice Number</th>
-                <th>Billed Date</th>
-                <th>Amount</th>
-                <th>Payment Method</th>
-                <th>Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {mockInvoices.map((inv) => (
-                <tr key={inv.id} className="table-row-premium">
-                  <td><strong>{inv.id}</strong></td>
-                  <td>{inv.date}</td>
-                  <td>₹{inv.amount.toFixed(2)}</td>
-                  <td>{inv.method}</td>
-                  <td>
-                    <span className="badge-premium badge-active">{inv.status}</span>
-                  </td>
+          {invoicesLoading ? (
+            <p className="billing-muted">Loading invoices…</p>
+          ) : invoices.length === 0 ? (
+            <div className="invoice-empty">
+              <FaFileInvoice aria-hidden="true" />
+              <div>
+                <strong>No invoices yet</strong>
+                <p className="billing-muted">Your invoice will appear here as soon as you upgrade or renew a plan.</p>
+              </div>
+            </div>
+          ) : (
+            <table className="premium-table">
+              <thead>
+                <tr>
+                  <th>Invoice</th>
+                  <th>Date</th>
+                  <th>Plan</th>
+                  <th>Amount</th>
+                  <th>Status</th>
+                  <th><span className="sr-only">Download</span></th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {invoices.map((inv) => (
+                  <tr key={inv._id} className="table-row-premium">
+                    <td><strong>{inv.invoiceNumber}</strong></td>
+                    <td>{new Date(inv.issuedDate || inv.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</td>
+                    <td>{inv.planName ? `${inv.planName}${inv.billingCycle ? ` · ${inv.billingCycle === 'yearly' ? 'Yearly' : 'Monthly'}` : ''}` : (inv.items?.[0]?.description || '—')}</td>
+                    <td>{formatINR(inv.totalAmount)}</td>
+                    <td>
+                      <span className={`badge-premium ${inv.status === 'paid' ? 'badge-active' : ''}`}>
+                        {inv.status === 'paid' ? 'Paid' : (inv.status || 'Issued')}
+                      </span>
+                    </td>
+                    <td style={{ textAlign: 'right' }}>
+                      <button
+                        type="button"
+                        className="invoice-download-btn"
+                        onClick={() => downloadInvoice(inv)}
+                        disabled={downloadingId === inv._id}
+                        aria-label={`Download invoice ${inv.invoiceNumber} as PDF`}
+                      >
+                        <FaDownload aria-hidden="true" /> {downloadingId === inv._id ? 'Preparing…' : 'PDF'}
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
         </div>
       </div>
     </div>

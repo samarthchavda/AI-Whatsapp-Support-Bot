@@ -93,7 +93,19 @@ const invoiceSchema = new mongoose.Schema({
   },
   razorpayOrderId: {
     type: String
-  }
+  },
+  paymentMethod: String,
+  currency: { type: String, default: 'INR' },
+  planName: String,
+  billingCycle: String,
+  periodStart: Date,
+  periodEnd: Date,
+  couponCode: String,
+  discountAmount: { type: Number, default: 0 },
+  // Frozen at creation so past invoices never change when settings change
+  tax: { type: mongoose.Schema.Types.Mixed },
+  seller: { type: mongoose.Schema.Types.Mixed },
+  buyer: { type: mongoose.Schema.Types.Mixed }
 }, { 
   timestamps: true 
 });

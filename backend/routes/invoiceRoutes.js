@@ -29,6 +29,10 @@ router.get('/signed/:id/pdf', invoiceController.downloadSignedInvoicePdf);
  *       201:
  *         description: Invoice created
  */
+router.get('/billing-details', verifyToken, invoiceController.getBillingDetails);
+router.put('/billing-details', verifyToken, invoiceController.updateBillingDetails);
+router.get('/sample/pdf', verifyToken, requireSuperAdmin, invoiceController.previewSampleInvoice);
+
 router.get('/', verifyToken, invoiceController.getAllInvoices);
 router.post('/', verifyToken, requireSuperAdmin, invoiceController.createInvoice);
 

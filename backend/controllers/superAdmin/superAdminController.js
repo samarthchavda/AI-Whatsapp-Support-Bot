@@ -1163,7 +1163,8 @@ exports.getGlobalSettings = async (req, res) => {
       'razorpay_key_id',
       'razorpay_key_secret',
       'geminiApiFundsAdded',
-      'webBotEnabled'
+      'webBotEnabled',
+      'invoice_business_profile'
     ];
 
     // Explicit security whitelist query: retrieve only whitelisted configuration keys
@@ -1185,6 +1186,11 @@ exports.getGlobalSettings = async (req, res) => {
         settingsMap[s.key] = s.value;
       }
     });
+
+    // Always return a complete invoice profile (defaults merged) and the state list
+    const billing = require('../../services/billingService');
+    settingsMap['invoice_business_profile'] = billing.sanitizeProfile(settingsMap['invoice_business_profile'] || {});
+    settingsMap['invoice_states'] = billing.INDIAN_STATES;
 
     const superAdmin = await Admin.findOne({ role: 'super_admin' });
     if (superAdmin) {
@@ -1228,10 +1234,22 @@ exports.updateGlobalSettings = async (req, res) => {
       'razorpay_key_id',
       'razorpay_key_secret',
       'geminiApiFundsAdded',
-      'webBotEnabled'
+      'webBotEnabled',
+      'invoice_business_profile'
     ];
 
     const whatsappWebBot = require('../../services/whatsappWebBot');
+
+    // Invoice business profile: sanitise and validate before anything is saved
+    if (settings.invoice_business_profile !== undefined) {
+      const billing = require('../../services/billingService');
+      const profile = billing.sanitizeProfile(settings.invoice_business_profile || {});
+      const errors = billing.validateProfile(profile);
+      if (errors.length) {
+        return res.status(400).json({ success: false, error: errors.join('. ') });
+      }
+      settings.invoice_business_profile = profile;
+    }
 
     for (const [key, value] of Object.entries(settings)) {
       // Security Whitelist restriction on input setting keys

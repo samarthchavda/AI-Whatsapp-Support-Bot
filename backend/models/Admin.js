@@ -265,6 +265,15 @@ const adminSchema = new mongoose.Schema({
     default: true
   },
   // Business / Store info
+  // Customer billing details printed on Kwickbot invoices (optional)
+  billingDetails: {
+    legalName: { type: String, trim: true, maxlength: 200 },
+    gstin: { type: String, trim: true, uppercase: true, maxlength: 15 },
+    addressLine: { type: String, trim: true, maxlength: 300 },
+    city: { type: String, trim: true, maxlength: 120 },
+    state: { type: String, trim: true, maxlength: 120 },
+    pincode: { type: String, trim: true, maxlength: 12 }
+  },
   businessName: {
     type: String
   },

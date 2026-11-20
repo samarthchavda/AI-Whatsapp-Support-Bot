@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FaPlug, FaSave, FaEye, FaEyeSlash, FaInfoCircle, FaTrash, FaCopy, FaWhatsapp, FaCheckCircle, FaExclamationTriangle, FaUserCheck, FaSyncAlt } from 'react-icons/fa';
+import { FaPlug, FaSave, FaEye, FaEyeSlash, FaInfoCircle, FaTrash, FaCopy, FaWhatsapp, FaCheckCircle, FaExclamationTriangle, FaUserCheck, FaSyncAlt, FaFileInvoice } from 'react-icons/fa';
 import api from '../../../services/api';
 import '../Dashboard/SuperAdmin.css';
 import './SuperAdminSettings.css';
@@ -28,6 +28,11 @@ function SuperAdminSettings() {
   const [embeddedLoading, setEmbeddedLoading] = useState(false);
   const [savingRazorpay, setSavingRazorpay] = useState(false);
   const [hasRazorpayKeys, setHasRazorpayKeys] = useState(false);
+  const [invoiceProfile, setInvoiceProfile] = useState(null);
+  const [invoiceStates, setInvoiceStates] = useState([]);
+  const [savingInvoiceProfile, setSavingInvoiceProfile] = useState(false);
+  const [invoiceProfileMsg, setInvoiceProfileMsg] = useState(null);
+  const [previewingInvoice, setPreviewingInvoice] = useState(false);
   const [successMsg, setSuccessMsg] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
 
@@ -110,6 +115,8 @@ function SuperAdminSettings() {
           razorpay_key_secret: settings.razorpay_key_secret || ''
         });
         setHasRazorpayKeys(!!(settings.razorpay_key_id && settings.razorpay_key_secret));
+        if (settings.invoice_business_profile) setInvoiceProfile(settings.invoice_business_profile);
+        if (Array.isArray(settings.invoice_states)) setInvoiceStates(settings.invoice_states);
         if (settings.superAdminWhatsApp) {
           setSuperAdminWhatsApp(settings.superAdminWhatsApp);
         }
@@ -284,6 +291,41 @@ function SuperAdminSettings() {
       ...formData,
       [e.target.name]: e.target.value
     });
+  };
+
+  const handleInvoiceProfileChange = (e) => {
+    const { name, value } = e.target;
+    setInvoiceProfile((prev) => ({ ...prev, [name]: name === 'gstin' || name === 'pan' ? value.toUpperCase() : value }));
+    setInvoiceProfileMsg(null);
+  };
+
+  const handleSaveInvoiceProfile = async (e) => {
+    e.preventDefault();
+    try {
+      setSavingInvoiceProfile(true);
+      setInvoiceProfileMsg(null);
+      await api.post('/super-admin/settings', { settings: { invoice_business_profile: invoiceProfile } });
+      setInvoiceProfileMsg({ type: 'success', text: 'Invoice business details saved. New invoices will use them.' });
+      await fetchSettings(true);
+    } catch (err) {
+      setInvoiceProfileMsg({ type: 'error', text: err.response?.data?.error || 'Failed to save invoice details.' });
+    } finally {
+      setSavingInvoiceProfile(false);
+    }
+  };
+
+  const handlePreviewInvoice = async () => {
+    try {
+      setPreviewingInvoice(true);
+      const res = await api.get('/invoices/sample/pdf', { responseType: 'blob' });
+      const url = window.URL.createObjectURL(new Blob([res.data], { type: 'application/pdf' }));
+      window.open(url, '_blank', 'noopener');
+      setTimeout(() => window.URL.revokeObjectURL(url), 60000);
+    } catch (err) {
+      setInvoiceProfileMsg({ type: 'error', text: 'Could not generate the sample invoice. Save your details and try again.' });
+    } finally {
+      setPreviewingInvoice(false);
+    }
   };
 
   const handleSaveRazorpay = async (e) => {
@@ -570,6 +612,65 @@ function SuperAdminSettings() {
             )}
           </div>
         </form>
+      </div>
+
+      {/* Invoice business details */}
+      <div className="glass-card">
+        <h3 className="section-title">
+          <FaFileInvoice style={{ marginRight: 10 }} /> Invoice business details
+        </h3>
+        <p className="field-desc" style={{ marginTop: -6, marginBottom: 18 }}>
+          Printed in the “Billed by” section of every Kwickbot invoice. Add your GSTIN to issue GST tax invoices: plan prices are treated as GST-inclusive and tax is split as CGST + SGST or IGST automatically. Existing invoices keep the details they were issued with.
+        </p>
+        {invoiceProfile ? (
+          <form onSubmit={handleSaveInvoiceProfile} className="settings-form invoice-profile-grid">
+            {[
+              ['legalName', 'Legal business name *', 'As registered (e.g. company or proprietor name)', 200],
+              ['tradeName', 'Trade name', 'Kwickbot', 120],
+              ['gstin', 'GSTIN', '24ABCDE1234F1Z5', 15],
+              ['pan', 'PAN (shown if no GSTIN)', 'ABCDE1234F', 10],
+              ['addressLine', 'Registered address', 'Building, street, area', 300],
+              ['city', 'City', '', 120],
+              ['pincode', 'PIN code', '', 6],
+              ['email', 'Billing email', 'hello@kwickbot.in', 120],
+              ['phone', 'Billing phone', '+91 …', 30],
+              ['website', 'Website', 'kwickbot.in', 120],
+              ['sacCode', 'SAC code', 'Service accounting code for your service', 10],
+              ['footerNote', 'Footer note', 'Thank you for choosing Kwickbot.', 300]
+            ].map(([name, label, placeholder, max]) => (
+              <div className={`settings-field ${name === 'addressLine' || name === 'footerNote' ? 'span-2' : ''}`} key={name}>
+                <label className="settings-label" htmlFor={`inv-${name}`}>{label}</label>
+                <input id={`inv-${name}`} className="premium-input" name={name} value={invoiceProfile[name] ?? ''} onChange={handleInvoiceProfileChange} placeholder={placeholder} maxLength={max} />
+              </div>
+            ))}
+            <div className="settings-field">
+              <label className="settings-label" htmlFor="inv-state">State (place of supply)</label>
+              <select id="inv-state" className="premium-input" name="state" value={invoiceProfile.state || ''} onChange={handleInvoiceProfileChange}>
+                <option value="">Select state</option>
+                {invoiceStates.map((st) => <option key={st} value={st}>{st}</option>)}
+              </select>
+            </div>
+            <div className="settings-field">
+              <label className="settings-label" htmlFor="inv-gstRate">GST rate (%)</label>
+              <input id="inv-gstRate" className="premium-input" type="number" min="0" max="28" step="0.5" name="gstRate" value={invoiceProfile.gstRate ?? 18} onChange={handleInvoiceProfileChange} />
+            </div>
+            <div className="btn-group span-2">
+              <button type="submit" className="btn-premium-primary" disabled={savingInvoiceProfile}>
+                <FaSave /> {savingInvoiceProfile ? 'Saving…' : 'Save invoice details'}
+              </button>
+              <button type="button" className="btn-premium-primary" style={{ background: 'transparent', border: '1px solid var(--border-default)', color: 'var(--text-primary)' }} onClick={handlePreviewInvoice} disabled={previewingInvoice}>
+                <FaEye /> {previewingInvoice ? 'Generating…' : 'Preview sample invoice'}
+              </button>
+            </div>
+            {invoiceProfileMsg && (
+              <div className="span-2" role="status" style={{ fontSize: 13, fontWeight: 600, color: invoiceProfileMsg.type === 'error' ? 'var(--danger)' : 'var(--success)' }}>
+                {invoiceProfileMsg.text}
+              </div>
+            )}
+          </form>
+        ) : (
+          <p className="field-desc">Loading…</p>
+        )}
       </div>
     </div>
   );

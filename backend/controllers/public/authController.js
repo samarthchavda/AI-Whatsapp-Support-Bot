@@ -1231,65 +1231,35 @@ exports.verifyRazorpayPayment = async (req, res) => {
     admin.limitNotificationSent = false;
     await admin.save();
 
-    // Create invoice history record
-    const lastInvoice = await Invoice.findOne().sort({ createdAt: -1 });
-    let nextNum = 1001;
-    if (lastInvoice && lastInvoice.invoiceNumber) {
-      const parsed = parseInt(lastInvoice.invoiceNumber.replace('INV-', ''));
-      if (!isNaN(parsed)) nextNum = parsed + 1;
-    }
-
-    const invoice = new Invoice({
-      invoiceNumber: `INV-${nextNum}`,
-      customerId: admin._id,
-      customerPhone: admin.phone || admin.businessPhone || '9999999999',
-      customerName: admin.name || admin.businessName || 'Merchant',
-      customerEmail: admin.email,
-      subtotal: originalPrice,
-      totalAmount: originalPrice,
-      status: 'paid',
-      paymentStatus: 'completed',
-      paymentTerms: 'Due on Receipt',
-      razorpayPaymentId: String(razorpay_payment_id),
-      razorpayOrderId: String(razorpay_order_id),
-      dueDate: new Date(Date.now() + durationDays * 24 * 60 * 60 * 1000),
-      items: [
-        {
-          description: `Kwickbot ${planDetails.displayName} Subscription (${cycle.toUpperCase()})`,
-          quantity: 1,
-          unitPrice: originalPrice,
-          amount: originalPrice
-        }
-      ]
+    // Create the branded invoice from what Razorpay actually charged (coupon-aware, GST split)
+    const { createInvoiceForPayment } = require('../../services/billingService');
+    const invoice = await createInvoiceForPayment({
+      admin,
+      plan: planDetails,
+      cycle,
+      listPrice: originalPrice,
+      order: rzpOrder,
+      payment: rzpPayment
     });
-    await invoice.save();
+    const amountPaid = invoice.totalAmount;
 
     // Notify super admins via WhatsApp of subscription upgrade
     try {
       const superAdminBotService = require('../../services/superAdminBotService');
-      await superAdminBotService.notifySubscriptionUpgrade(admin, planName, originalPrice);
+      await superAdminBotService.notifySubscriptionUpgrade(admin, planName, amountPaid);
     } catch (waErr) {
       console.error('Error notifying super admins of subscription upgrade:', waErr.message);
     }
 
-    // Generate Invoice PDF
+    // Short-lived signed link so Meta can fetch the PDF (rendered on demand) without exposing invoices publicly
     let pdfUrl = null;
     try {
-      const invoicePdfService = require('../../services/invoicePdfService');
-      await invoicePdfService.generateInvoicePDF(invoice, admin);
-      
-      const getBackendUrl = (req) => {
-        if (process.env.BACKEND_URL) return process.env.BACKEND_URL;
-        return `${req.protocol}://${req.get('host')}`;
-      };
-      
-      // Short-lived signed link so Meta can fetch the PDF without exposing all invoices publicly
+      const backendUrl = process.env.BACKEND_URL || `${req.protocol}://${req.get('host')}`;
       const { signResource } = require('../../utils/signedUrl');
-      const { exp, sig } = signResource(`invoice:${invoice.invoiceNumber}`, 24 * 60 * 60);
-      pdfUrl = `${getBackendUrl(req)}/api/invoices/signed/${encodeURIComponent(invoice.invoiceNumber)}/pdf?exp=${exp}&sig=${sig}`;
-      console.log(`✅ Invoice PDF generated successfully: ${invoice.invoiceNumber}`);
-    } catch (pdfError) {
-      console.error('❌ Error generating invoice PDF:', pdfError.message);
+      const { exp, sig } = signResource(`invoice:${invoice._id}`, 24 * 60 * 60);
+      pdfUrl = `${backendUrl}/api/invoices/signed/${invoice._id}/pdf?exp=${exp}&sig=${sig}`;
+    } catch (linkError) {
+      console.error('❌ Error creating invoice link:', linkError.message);
     }
 
     // Send WhatsApp Invoice notification
@@ -1317,7 +1287,7 @@ Thank you for upgrading! Your payment has been successfully processed and your s
 💳 *Invoice Details:*
 • *Invoice Number:* ${invoice.invoiceNumber}
 • *Plan Name:* ${planName.toUpperCase()} Plan
-• *Amount Paid:* ₹${originalPrice} (INR)
+• *Amount Paid:* ₹${amountPaid.toLocaleString('en-IN')} (INR)
 • *Payment Status:* Paid
 • *Billing Cycle:* ${formattedStartDate} to ${formattedEndDate}
 
@@ -1345,7 +1315,7 @@ Best regards,
           const docResult = await whatsappCloudAPI.sendDocument(
             targetPhone, 
             pdfUrl, 
-            `Invoice-${invoice.invoiceNumber}.pdf`
+            `Invoice-${invoice.invoiceNumber.replace(/\//g, '-')}.pdf`
           );
           if (docResult.success) {
             console.log(`✅ Invoice PDF document sent to WhatsApp: ${targetPhone}`);

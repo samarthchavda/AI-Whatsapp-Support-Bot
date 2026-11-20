@@ -64,7 +64,8 @@ describe('Super Admin Feature Flags Backend Enforcement', () => {
             'razorpay_key_id',
             'razorpay_key_secret',
             'geminiApiFundsAdded',
-            'webBotEnabled'
+            'webBotEnabled',
+            'invoice_business_profile'
           ]
         }
       });
@@ -82,6 +83,9 @@ describe('Super Admin Feature Flags Backend Enforcement', () => {
       
       const responseData = res.json.mock.calls[0][0].data;
       expect(responseData.database_secret_credential).toBeUndefined();
+      // Invoice business profile is always returned complete, with defaults
+      expect(responseData.invoice_business_profile).toEqual(expect.objectContaining({ legalName: 'Kwickbot', gstRate: 18 }));
+      expect(Array.isArray(responseData.invoice_states)).toBe(true);
     });
 
     test('updateGlobalSettings ignores masked values and only saves whitelisted settings keys', async () => {

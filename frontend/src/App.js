@@ -56,6 +56,7 @@ import ApiUsage from './pages/merchant/DeveloperPlatform/ApiUsage';
 import Sidebar from './components/layout/Sidebar';
 import TopBar from './components/layout/TopBar';
 import './App.css';
+import './MerchantTheme.css';
 
 function ExternalRedirect({ to }) {
   useEffect(() => {
@@ -95,12 +96,14 @@ const isJwtExpired = (token) => {
   }
 };
 
-function ThemeHandler() {
+function ThemeHandler({ admin }) {
   const location = useLocation();
 
   useEffect(() => {
     document.body.classList.add('dark-theme');
-  }, [location.pathname]);
+    document.body.classList.toggle('merchant-theme', Boolean(admin && admin.role !== 'super_admin'));
+    return () => document.body.classList.remove('merchant-theme');
+  }, [location.pathname, admin]);
 
   return null;
 }
@@ -139,17 +142,34 @@ function App() {
   const [sidebarOpen, setSidebarOpen] = useState(() => {
     return localStorage.getItem('sidebarOpen') === 'true';
   });
+  const [merchantSidebarOpen, setMerchantSidebarOpen] = useState(false);
   const [theme, setTheme] = useState(() => {
     return localStorage.getItem('dashboard-theme') || 'dark';
   });
 
   const handleToggleSidebar = () => {
+    if (admin?.role !== 'super_admin') {
+      setMerchantSidebarOpen(prev => !prev);
+      return;
+    }
     setSidebarOpen(prev => {
       const next = !prev;
       localStorage.setItem('sidebarOpen', String(next));
       return next;
     });
   };
+
+  const isMerchantPortal = Boolean(admin && admin.role !== 'super_admin');
+  const activeSidebarOpen = isMerchantPortal ? merchantSidebarOpen : sidebarOpen;
+
+  useEffect(() => {
+    if (!merchantSidebarOpen) return undefined;
+    const closeOnEscape = (event) => {
+      if (event.key === 'Escape') setMerchantSidebarOpen(false);
+    };
+    document.addEventListener('keydown', closeOnEscape);
+    return () => document.removeEventListener('keydown', closeOnEscape);
+  }, [merchantSidebarOpen]);
 
   const handleToggleTheme = () => {
     setTheme(prev => {
@@ -414,20 +434,22 @@ function App() {
           element={
             <ProtectedRoute isAuthenticated={isAuthenticated}>
               <EffectiveAccessProvider admin={admin}>
-                <div className="App">
+                <div className={`App${isMerchantPortal ? ' merchant-portal' : ''}`}>
                   <Sidebar 
                     admin={admin} 
                     onLogout={handleLogout} 
-                    isOpen={sidebarOpen} 
+                    isOpen={activeSidebarOpen}
                     onToggle={handleToggleSidebar} 
+                    onOpen={isMerchantPortal ? () => setMerchantSidebarOpen(true) : undefined}
+                    onClose={isMerchantPortal ? () => setMerchantSidebarOpen(false) : undefined}
                     pendingDemoRequestsCount={pendingDemoRequestsCount} 
                   />
 
-                  {sidebarOpen && (
+                  {activeSidebarOpen && !isMerchantPortal && (
                     <div className="sidebar-backdrop" onClick={handleToggleSidebar} />
                   )}
 
-                  <div className={`main-content${sidebarOpen ? ' main-content-expanded' : ''}`}>
+                  <div className={`main-content${sidebarOpen && !isMerchantPortal ? ' main-content-expanded' : ''}`}>
                   {isImpersonated && (
                     <div className="impersonation-banner">
                       <div className="impersonation-content">

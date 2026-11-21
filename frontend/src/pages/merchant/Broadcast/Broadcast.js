@@ -221,17 +221,17 @@ function Broadcast() {
 
   const getStatusBadge = (status) => {
     const statusConfig = {
-      draft: { color: '#71717a', label: 'Draft' },
-      scheduled: { color: '#f59e0b', label: 'Scheduled' },
-      sending: { color: '#3b82f6', label: 'Sending' },
-      completed: { color: '#10b981', label: 'Completed' },
-      failed: { color: '#ef4444', label: 'Failed' }
+      draft: { color: 'var(--text-muted)', background: 'var(--bg-hover)', label: 'Draft' },
+      scheduled: { color: 'var(--warning)', background: '#fcefd9', label: 'Scheduled' },
+      sending: { color: 'var(--brand)', background: 'var(--brand-light)', label: 'Sending' },
+      completed: { color: 'var(--success)', background: 'var(--brand-light)', label: 'Completed' },
+      failed: { color: 'var(--danger)', background: '#fbe4e1', label: 'Failed' }
     };
 
     const config = statusConfig[status] || statusConfig.draft;
     
     return (
-      <span className="badge" style={{ background: `${config.color}33`, color: config.color }}>
+      <span className="badge" style={{ background: config.background, color: config.color }}>
         {config.label}
       </span>
     );
@@ -273,14 +273,14 @@ function Broadcast() {
 
       {/* Create Broadcast Form */}
       {showCreateForm && (
-        <div className="table-container" style={{ marginBottom: '28px', background: 'rgba(99, 102, 241, 0.05)', overflowX: 'hidden' }}>
-          <div className="table-header" style={{ background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.2) 0%, rgba(139, 92, 246, 0.2) 100%)' }}>
+        <div className="table-container" style={{ marginBottom: '28px', background: 'var(--brand-light)', overflowX: 'hidden' }}>
+          <div className="table-header" style={{ background: 'linear-gradient(135deg, var(--brand-light), var(--bg-card))' }}>
             <h2>📤 Create New Broadcast</h2>
           </div>
           <form onSubmit={handleCreateBroadcast} style={{ padding: '28px' }} encType="multipart/form-data">
             {reusedBroadcast ? (
               <div style={{
-                background: 'rgba(16, 185, 129, 0.12)',
+                background: 'var(--brand-light)',
                 border: '1px solid rgba(16, 185, 129, 0.4)',
                 borderRadius: '12px',
                 padding: '16px 20px',
@@ -290,10 +290,10 @@ function Broadcast() {
                 alignItems: 'center'
               }}>
                 <div>
-                  <h4 style={{ margin: '0 0 4px', color: '#34d399', fontSize: '15px' }}>
+                  <h4 style={{ margin: '0 0 4px', color: 'var(--brand)', fontSize: '15px' }}>
                     ♻️ Reusing CSV Recipient List
                   </h4>
-                  <p style={{ margin: 0, color: '#a1a1aa', fontSize: '13px' }}>
+                  <p style={{ margin: 0, color: 'var(--text-secondary)', fontSize: '13px' }}>
                     Campaign: <strong>"{reusedBroadcast.title}"</strong> ({reusedBroadcast.totalRecipients} recipients loaded)
                   </p>
                 </div>
@@ -311,16 +311,16 @@ function Broadcast() {
               </div>
             ) : (
               <div style={{ 
-                background: 'rgba(99, 102, 241, 0.1)', 
-                border: '1px solid rgba(99, 102, 241, 0.3)',
+                background: 'var(--brand-light)',
+                border: '1px solid var(--border-default)',
                 borderRadius: '12px',
                 padding: '16px',
                 marginBottom: '24px'
               }}>
-                <h3 style={{ color: '#a5b4fc', fontSize: '14px', fontWeight: '600', marginBottom: '12px' }}>
+                <h3 style={{ color: 'var(--brand)', fontSize: '14px', fontWeight: '600', marginBottom: '12px' }}>
                   📋 CSV Format Requirements:
                 </h3>
-                <ul style={{ color: '#a1a1aa', fontSize: '13px', lineHeight: '1.8', paddingLeft: '20px', margin: 0 }}>
+                <ul style={{ color: 'var(--text-secondary)', fontSize: '13px', lineHeight: '1.8', paddingLeft: '20px', margin: 0 }}>
                   <li><strong>Required columns:</strong> phoneNumber (with country code, e.g., +1234567890)</li>
                   <li><strong>Optional columns:</strong> name (for personalization)</li>
                   <li><strong>Example:</strong> phoneNumber,name</li>
@@ -328,7 +328,7 @@ function Broadcast() {
                   {isCrmAutomationPlan ? (
                     <li><strong>CRM export:</strong> Export the recipients you want to message from your CRM/Odoo, then upload that CSV here.</li>
                   ) : (
-                    <li><strong>Shopify Basic Plan Guide:</strong> Learn how to export customers from Shopify and format the CSV by downloading the <a href="/docs/broadcast_guide.pdf" target="_blank" rel="noopener noreferrer" style={{ color: '#a5b4fc', textDecoration: 'underline', fontWeight: 'bold' }}>Shopify Basic Plan PDF Guide</a>.</li>
+                    <li><strong>Shopify Basic Plan Guide:</strong> Learn how to export customers from Shopify and format the CSV by downloading the <a href="/docs/broadcast_guide.pdf" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--brand)', textDecoration: 'underline', fontWeight: 'bold' }}>Shopify Basic Plan PDF Guide</a>.</li>
                   )}
                 </ul>
               </div>
@@ -354,9 +354,9 @@ function Broadcast() {
                     onClick={handleSyncTemplates}
                     disabled={syncingTemplates}
                     style={{
-                      background: 'rgba(99, 102, 241, 0.15)',
-                      border: '1px solid rgba(99, 102, 241, 0.4)',
-                      color: '#a5b4fc',
+                      background: 'var(--brand-light)',
+                      border: '1px solid var(--border-default)',
+                      color: 'var(--brand)',
                       borderRadius: '8px',
                       padding: '4px 12px',
                       fontSize: '12px',
@@ -398,11 +398,11 @@ function Broadcast() {
                   style={{
                     width: '100%',
                     padding: '12px 14px',
-                    border: '1px solid rgba(99, 102, 241, 0.4)',
+                    border: '1px solid var(--border-default)',
                     borderRadius: '12px',
                     fontSize: '14px',
-                    background: 'rgba(39, 39, 42, 0.6)',
-                    color: '#fafafa'
+                    background: 'var(--bg-input)',
+                    color: 'var(--text-primary)'
                   }}
                 >
                   <option value="">-- Choose Approved Meta Template --</option>
@@ -417,16 +417,16 @@ function Broadcast() {
                 </select>
 
                 {selectedTemplate ? (
-                  <div style={{ marginTop: '8px', padding: '8px 12px', background: 'rgba(16, 185, 129, 0.1)', border: '1px solid rgba(16, 185, 129, 0.25)', borderRadius: '8px', fontSize: '12px', color: '#34d399', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <div style={{ marginTop: '8px', padding: '8px 12px', background: 'var(--brand-light)', border: '1px solid rgba(16, 185, 129, 0.25)', borderRadius: '8px', fontSize: '12px', color: 'var(--brand)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                     <span>✅ Active Template: <strong>{selectedTemplate.name}</strong> ({selectedTemplate.language || 'en_US'})</span>
                     <span>Category: {selectedTemplate.category}</span>
                   </div>
                 ) : approvedTemplates.length === 0 ? (
-                  <small style={{ color: '#fbbf24', fontSize: '12px', marginTop: '6px', display: 'block' }}>
+                  <small style={{ color: 'var(--warning)', fontSize: '12px', marginTop: '6px', display: 'block' }}>
                     ⚠️ No local templates found. Click <strong>"Sync from Meta"</strong> above to pull your approved WhatsApp templates.
                   </small>
                 ) : (
-                  <small style={{ color: '#a1a1aa', fontSize: '12px', marginTop: '4px', display: 'block' }}>
+                  <small style={{ color: 'var(--text-secondary)', fontSize: '12px', marginTop: '4px', display: 'block' }}>
                     Selecting a template auto-populates the message box and guarantees 100% delivery outside the 24-hour service window.
                   </small>
                 )}
@@ -434,8 +434,8 @@ function Broadcast() {
 
               {/* Header Image (Dynamically shown ONLY when an Image Template is selected or media attached) */}
               {((selectedTemplate?.components?.some(c => c.type === 'HEADER' && (c.format === 'IMAGE' || c.format === 'VIDEO' || c.format === 'DOCUMENT' || c.text === '[IMAGE]'))) || headerImageUrl || previewImageFileUrl) && (
-                <div className="filter-group" style={{ gridColumn: 'span 2', background: 'rgba(99, 102, 241, 0.08)', padding: '18px', borderRadius: '14px', border: '1px solid rgba(99, 102, 241, 0.3)' }}>
-                  <label style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#a5b4fc', fontWeight: '700', fontSize: '14px', marginBottom: '8px' }}>
+                <div className="filter-group" style={{ gridColumn: 'span 2', background: 'var(--brand-light)', padding: '18px', borderRadius: '14px', border: '1px solid var(--border-default)' }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--brand)', fontWeight: '700', fontSize: '14px', marginBottom: '8px' }}>
                     📸 Media Header (Required for Selected Image Template)
                   </label>
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '16px', marginTop: '8px' }}>
@@ -447,7 +447,7 @@ function Broadcast() {
                         value={headerImageUrl}
                         onChange={(e) => setHeaderImageUrl(e.target.value)}
                         placeholder="e.g., https://kwickbot.in/assets/banner.jpg"
-                        style={{ width: '100%', padding: '11px', borderRadius: '10px', border: '1px solid rgba(63, 63, 70, 0.6)', background: 'rgba(39, 39, 42, 0.8)', color: '#fff', fontSize: '13px' }}
+                        style={{ width: '100%', padding: '11px', borderRadius: '10px', border: '1px solid var(--border)', background: 'var(--bg-input)', color: 'var(--text-primary)', fontSize: '13px' }}
                       />
                     </div>
                     <div>
@@ -461,18 +461,18 @@ function Broadcast() {
                             setPreviewImageFileUrl(URL.createObjectURL(e.target.files[0]));
                           }
                         }}
-                        style={{ width: '100%', padding: '9px', borderRadius: '10px', border: '1px dashed rgba(99, 102, 241, 0.6)', background: 'rgba(39, 39, 42, 0.8)', color: '#fff', fontSize: '13px', cursor: 'pointer' }}
+                        style={{ width: '100%', padding: '9px', borderRadius: '10px', border: '1px dashed var(--border-default)', background: 'var(--bg-input)', color: 'var(--text-primary)', fontSize: '13px', cursor: 'pointer' }}
                       />
                     </div>
                   </div>
 
                   {(headerImageUrl || previewImageFileUrl) && (
-                    <div style={{ marginTop: '14px', display: 'flex', alignItems: 'center', gap: '14px', background: 'rgba(0,0,0,0.3)', padding: '10px 14px', borderRadius: '10px' }}>
-                      <span style={{ fontSize: '12px', color: '#34d399', fontWeight: '700' }}>Live Image Header Preview:</span>
+                    <div style={{ marginTop: '14px', display: 'flex', alignItems: 'center', gap: '14px', background: 'var(--brand-light)', padding: '10px 14px', borderRadius: '10px' }}>
+                      <span style={{ fontSize: '12px', color: 'var(--brand)', fontWeight: '700' }}>Live Image Header Preview:</span>
                       <img 
                         src={previewImageFileUrl || headerImageUrl} 
                         alt="Header Preview" 
-                        style={{ maxHeight: '90px', maxWidth: '200px', borderRadius: '8px', border: '1px solid #3f3f46', objectFit: 'cover' }} 
+                        style={{ maxHeight: '90px', maxWidth: '200px', borderRadius: '8px', border: '1px solid var(--border)', objectFit: 'cover' }}
                         onError={(e) => { e.target.style.display = 'none'; }}
                       />
                     </div>
@@ -493,13 +493,13 @@ function Broadcast() {
                     border: '1px solid rgba(63, 63, 70, 0.5)',
                     borderRadius: '12px',
                     fontSize: '14px',
-                    background: 'rgba(39, 39, 42, 0.6)',
-                    color: '#fafafa',
+                    background: 'var(--bg-input)',
+                    color: 'var(--text-primary)',
                     fontFamily: 'Inter, sans-serif',
                     resize: 'vertical'
                   }}
                 />
-                <small style={{ color: '#71717a', fontSize: '12px', marginTop: '6px', display: 'block' }}>
+                <small style={{ color: 'var(--text-muted)', fontSize: '12px', marginTop: '6px', display: 'block' }}>
                   Tip: Use {'{'}{'{'} name {'}'}{'}'}  to personalize messages with recipient names
                 </small>
               </div>
@@ -511,7 +511,7 @@ function Broadcast() {
                     <input type="hidden" name="recipientSource" value="csv" />
                     <div style={{
                       width: '100%', padding: '14px', border: '1px solid black',
-                      borderRadius: '12px', fontSize: '14px', background: 'rgba(16, 185, 129, 0.08)', color: '#d1fae5'
+                      borderRadius: '12px', fontSize: '14px', background: 'var(--brand-light)', color: 'var(--text-primary)'
                     }}>
                       📁 Upload CSV File <span style={{ color: '#040404', fontSize: '12px' }}>— CRM Automation recipient source</span>
                     </div>
@@ -527,8 +527,8 @@ function Broadcast() {
                       border: '1px solid rgba(63, 63, 70, 0.5)',
                       borderRadius: '12px',
                       fontSize: '14px',
-                      background: 'rgba(39, 39, 42, 0.6)',
-                      color: '#fafafa'
+                      background: 'var(--bg-input)',
+                      color: 'var(--text-primary)'
                     }}
                   >
                     <option value="csv">📁 Upload CSV File</option>
@@ -556,11 +556,11 @@ function Broadcast() {
                     border: '1px solid rgba(63, 63, 70, 0.5)',
                     borderRadius: '12px',
                     fontSize: '14px',
-                    background: 'rgba(39, 39, 42, 0.6)',
-                    color: '#fafafa'
+                    background: 'var(--bg-input)',
+                    color: 'var(--text-primary)'
                   }}
                 />
-                <small style={{ color: '#71717a', fontSize: '12px', marginTop: '6px', display: 'block' }}>
+                <small style={{ color: 'var(--text-muted)', fontSize: '12px', marginTop: '6px', display: 'block' }}>
                   Leave empty to send immediately
                 </small>
               </div>
@@ -576,11 +576,11 @@ function Broadcast() {
                     style={{
                       width: '100%',
                       padding: '14px',
-                      border: '2px dashed rgba(99, 102, 241, 0.5)',
+                      border: '2px dashed var(--border-default)',
                       borderRadius: '12px',
                       fontSize: '14px',
-                      background: 'rgba(39, 39, 42, 0.6)',
-                      color: '#fafafa',
+                      background: 'var(--bg-input)',
+                      color: 'var(--text-primary)',
                       cursor: 'pointer'
                     }}
                   />
@@ -589,7 +589,7 @@ function Broadcast() {
                 <div className="filter-group" style={{ gridColumn: 'span 2' }}>
                   <label>Imported Recipient List</label>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', background: 'rgba(16,185,129,0.06)', border: '1px solid rgba(16,185,129,0.2)', borderRadius: '10px' }}>
-                    <span style={{ fontSize: '20px', fontWeight: '800', color: '#10b981' }}>{reusedBroadcast?.totalRecipients?.toLocaleString()}</span>
+                    <span style={{ fontSize: '20px', fontWeight: '800', color: 'var(--success)' }}>{reusedBroadcast?.totalRecipients?.toLocaleString()}</span>
                     <span style={{ fontSize: '14px', color: 'var(--text-secondary)' }}>recipients auto-populated from <strong style={{ color: 'var(--text-primary)' }}>{reusedBroadcast?.title}</strong> ✅</span>
                   </div>
                 </div>
@@ -606,7 +606,7 @@ function Broadcast() {
                     </div>
                   ) : importPreview ? (
                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', background: 'rgba(16,185,129,0.06)', border: '1px solid rgba(16,185,129,0.2)', borderRadius: '10px' }}>
-                      <span style={{ fontSize: '20px', fontWeight: '800', color: '#10b981' }}>{importPreview.count.toLocaleString()}</span>
+                      <span style={{ fontSize: '20px', fontWeight: '800', color: 'var(--success)' }}>{importPreview.count.toLocaleString()}</span>
                       <span style={{ fontSize: '14px', color: 'var(--text-secondary)' }}>unique contacts from <strong style={{ color: 'var(--text-primary)' }}>{importPreview.source}</strong> — duplicates removed ✅</span>
                     </div>
                   ) : null}
@@ -634,11 +634,11 @@ function Broadcast() {
 
             {uploadProgress && (
               <div style={{
-                background: 'rgba(99, 102, 241, 0.1)',
-                border: '1px solid rgba(99, 102, 241, 0.3)',
+                background: 'var(--brand-light)',
+                border: '1px solid var(--border-default)',
                 padding: '12px 16px',
                 borderRadius: '10px',
-                color: '#a5b4fc',
+                color: 'var(--brand)',
                 fontSize: '14px',
                 marginBottom: '16px',
                 textAlign: 'center'
@@ -743,7 +743,7 @@ function Broadcast() {
                           style={{
                             background: 'none',
                             border: 'none',
-                            color: broadcast.failedCount > 0 ? 'var(--danger)' : '#a1a1aa',
+                            color: broadcast.failedCount > 0 ? 'var(--danger)' : 'var(--text-secondary)',
                             cursor: 'pointer',
                             padding: 0,
                             textDecoration: 'underline',
@@ -816,8 +816,8 @@ function Broadcast() {
           left: 0,
           right: 0,
           bottom: 0,
-          backgroundColor: 'rgba(0, 0, 0, 0.82)',
-          backdropFilter: 'blur(4px)',
+          backgroundColor: 'rgba(245, 248, 239, 0.76)',
+          backdropFilter: 'blur(14px)',
           display: 'flex',
           justifyContent: 'center',
           alignItems: 'center',
@@ -825,33 +825,33 @@ function Broadcast() {
           padding: '20px'
         }}>
           <div style={{
-            background: '#18181b',
-            border: '1px solid #3f3f46',
+            background: 'var(--bg-card)',
+            border: '1px solid var(--border)',
             borderRadius: '16px',
             width: '100%',
             maxWidth: '750px',
             maxHeight: '85vh',
             display: 'flex',
             flexDirection: 'column',
-            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.7)',
+            boxShadow: '0 24px 56px rgba(42, 61, 24, 0.16)',
             position: 'relative',
             overflow: 'hidden'
           }}>
             {/* Modal Header */}
             <div style={{
               padding: '18px 24px',
-              borderBottom: '1px solid #27272a',
+              borderBottom: '1px solid var(--border)',
               display: 'flex',
               justifyContent: 'space-between',
               alignItems: 'center',
-              background: '#27272a',
+              background: 'var(--bg-input)',
               flexShrink: 0
             }}>
               <div>
-                <h3 style={{ margin: 0, color: '#f4f4f5', fontSize: '17px', fontWeight: '700' }}>
+                <h3 style={{ margin: 0, color: 'var(--text-primary)', fontSize: '17px', fontWeight: '700' }}>
                   📊 {detailModalBroadcast.title}
                 </h3>
-                <small style={{ color: '#a1a1aa' }}>
+                <small style={{ color: 'var(--text-secondary)' }}>
                   Created on {new Date(detailModalBroadcast.createdAt).toLocaleString()}
                 </small>
               </div>
@@ -860,7 +860,7 @@ function Broadcast() {
                 style={{
                   background: 'none',
                   border: 'none',
-                  color: '#a1a1aa',
+                  color: 'var(--text-secondary)',
                   fontSize: '20px',
                   cursor: 'pointer',
                   padding: '4px 8px'
@@ -879,65 +879,65 @@ function Broadcast() {
                 gap: '14px',
                 marginBottom: '20px'
               }}>
-                <div style={{ background: '#27272a', border: '1px solid #3f3f46', padding: '16px', borderRadius: '12px', textAlign: 'center' }}>
-                  <div style={{ fontSize: '12px', color: '#a1a1aa', fontWeight: '600', marginBottom: '6px' }}>TOTAL RECIPIENTS</div>
-                  <div style={{ fontSize: '24px', fontWeight: '800', color: '#f4f4f5' }}>{detailModalBroadcast.totalRecipients}</div>
+                <div style={{ background: 'var(--bg-input)', border: '1px solid var(--border)', padding: '16px', borderRadius: '12px', textAlign: 'center' }}>
+                  <div style={{ fontSize: '12px', color: 'var(--text-secondary)', fontWeight: '600', marginBottom: '6px' }}>TOTAL RECIPIENTS</div>
+                  <div style={{ fontSize: '24px', fontWeight: '800', color: 'var(--text-primary)' }}>{detailModalBroadcast.totalRecipients}</div>
                 </div>
-                <div style={{ background: 'rgba(16, 185, 129, 0.12)', border: '1px solid rgba(16, 185, 129, 0.3)', padding: '16px', borderRadius: '12px', textAlign: 'center' }}>
-                  <div style={{ fontSize: '12px', color: '#34d399', fontWeight: '600', marginBottom: '6px' }}>SUCCESSFUL / SENT</div>
-                  <div style={{ fontSize: '24px', fontWeight: '800', color: '#10b981' }}>{detailModalBroadcast.sentCount || 0}</div>
+                <div style={{ background: 'var(--brand-light)', border: '1px solid rgba(16, 185, 129, 0.3)', padding: '16px', borderRadius: '12px', textAlign: 'center' }}>
+                  <div style={{ fontSize: '12px', color: 'var(--brand)', fontWeight: '600', marginBottom: '6px' }}>SUCCESSFUL / SENT</div>
+                  <div style={{ fontSize: '24px', fontWeight: '800', color: 'var(--success)' }}>{detailModalBroadcast.sentCount || 0}</div>
                 </div>
                 <div style={{ background: 'rgba(239, 68, 68, 0.12)', border: '1px solid rgba(239, 68, 68, 0.3)', padding: '16px', borderRadius: '12px', textAlign: 'center' }}>
-                  <div style={{ fontSize: '12px', color: '#f87171', fontWeight: '600', marginBottom: '6px' }}>FAILED / REQUIRED TEMPLATE</div>
+                  <div style={{ fontSize: '12px', color: 'var(--danger)', fontWeight: '600', marginBottom: '6px' }}>FAILED / REQUIRED TEMPLATE</div>
                   <div style={{ fontSize: '24px', fontWeight: '800', color: '#ef4444' }}>{detailModalBroadcast.failedCount || 0}</div>
                 </div>
               </div>
 
               {/* Message Content */}
               <div style={{
-                background: '#27272a',
-                border: '1px solid #3f3f46',
+                background: 'var(--bg-input)',
+                border: '1px solid var(--border)',
                 padding: '16px',
                 borderRadius: '12px',
                 marginBottom: '20px',
                 fontSize: '13.5px',
-                color: '#e4e4e7',
-                borderLeft: '4px solid #6366f1'
+                color: 'var(--text-primary)',
+                borderLeft: '4px solid var(--brand)'
               }}>
                 {detailModalBroadcast.headerImageUrl && (
                   <div style={{ marginBottom: '12px' }}>
-                    <strong style={{ color: '#a5b4fc', display: 'block', marginBottom: '6px' }}>Header Image:</strong>
+                    <strong style={{ color: 'var(--brand)', display: 'block', marginBottom: '6px' }}>Header Image:</strong>
                     <img
                       src={detailModalBroadcast.headerImageUrl}
                       alt="Header"
-                      style={{ maxHeight: '160px', maxWidth: '100%', borderRadius: '10px', border: '1px solid #3f3f46', objectFit: 'cover' }}
+                      style={{ maxHeight: '160px', maxWidth: '100%', borderRadius: '10px', border: '1px solid var(--border)', objectFit: 'cover' }}
                       onError={(e) => { e.target.style.display = 'none'; }}
                     />
                   </div>
                 )}
-                <strong style={{ color: '#a5b4fc' }}>Message Text:</strong>
+                <strong style={{ color: 'var(--brand)' }}>Message Text:</strong>
                 <p style={{ margin: '8px 0 0', whiteSpace: 'pre-wrap', lineHeight: '1.5' }}>{detailModalBroadcast.message}</p>
               </div>
 
               {/* Recipient Breakdown Table */}
-              <h4 style={{ color: '#f4f4f5', margin: '0 0 12px 0', fontSize: '15px', fontWeight: '700' }}>
+              <h4 style={{ color: 'var(--text-primary)', margin: '0 0 12px 0', fontSize: '15px', fontWeight: '700' }}>
                 Recipient Delivery Status & Failure Log ({detailModalBroadcast.recipients?.length || 0})
               </h4>
-              <div style={{ border: '1px solid #3f3f46', borderRadius: '10px', overflow: 'hidden' }}>
+              <div style={{ border: '1px solid var(--border)', borderRadius: '10px', overflow: 'hidden' }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px', minWidth: 'auto' }}>
                   <thead>
-                    <tr style={{ background: '#27272a', color: '#a1a1aa', textAlign: 'left' }}>
-                      <th style={{ padding: '12px 14px', borderBottom: '1px solid #3f3f46' }}>Phone / Name</th>
-                      <th style={{ padding: '12px 14px', borderBottom: '1px solid #3f3f46' }}>Status</th>
-                      <th style={{ padding: '12px 14px', borderBottom: '1px solid #3f3f46' }}>Delivery Details / Reason</th>
+                    <tr style={{ background: 'var(--bg-input)', color: 'var(--text-secondary)', textAlign: 'left' }}>
+                      <th style={{ padding: '12px 14px', borderBottom: '1px solid var(--border)' }}>Phone / Name</th>
+                      <th style={{ padding: '12px 14px', borderBottom: '1px solid var(--border)' }}>Status</th>
+                      <th style={{ padding: '12px 14px', borderBottom: '1px solid var(--border)' }}>Delivery Details / Reason</th>
                     </tr>
                   </thead>
                   <tbody>
                     {(detailModalBroadcast.recipients || []).map((r, idx) => (
-                      <tr key={idx} style={{ borderBottom: idx === (detailModalBroadcast.recipients.length - 1) ? 'none' : '1px solid #27272a', background: '#18181b' }}>
-                        <td style={{ padding: '12px 14px', color: '#f4f4f5' }}>
+                      <tr key={idx} style={{ borderBottom: idx === (detailModalBroadcast.recipients.length - 1) ? 'none' : '1px solid var(--border)', background: 'var(--bg-card)' }}>
+                        <td style={{ padding: '12px 14px', color: 'var(--text-primary)' }}>
                           <div><strong>{r.phone}</strong></div>
-                          {r.name && <div style={{ fontSize: '11px', color: '#a1a1aa' }}>{r.name}</div>}
+                          {r.name && <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>{r.name}</div>}
                         </td>
                         <td style={{ padding: '12px 14px' }}>
                           <span style={{
@@ -946,19 +946,19 @@ function Broadcast() {
                             fontSize: '11px',
                             fontWeight: '700',
                             background: r.status === 'sent' ? 'rgba(16, 185, 129, 0.2)' : r.status === 'failed' ? 'rgba(239, 68, 68, 0.2)' : 'rgba(113, 113, 122, 0.2)',
-                            color: r.status === 'sent' ? '#10b981' : r.status === 'failed' ? '#ef4444' : '#71717a'
+                            color: r.status === 'sent' ? 'var(--success)' : r.status === 'failed' ? '#ef4444' : 'var(--text-muted)'
                           }}>
                             {r.status?.toUpperCase()}
                           </span>
                         </td>
-                        <td style={{ padding: '12px 14px', color: r.status === 'failed' ? '#f87171' : '#a1a1aa', fontSize: '12.5px' }}>
+                        <td style={{ padding: '12px 14px', color: r.status === 'failed' ? 'var(--danger)' : 'var(--text-secondary)', fontSize: '12.5px' }}>
                           {r.status === 'failed' ? (
                             <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                               <FaExclamationTriangle style={{ color: '#ef4444', flexShrink: 0 }} />
                               <span>{r.error || 'Outside 24-hour customer window. Approved Meta template required.'}</span>
                             </div>
                           ) : r.status === 'sent' ? (
-                            <span style={{ color: '#10b981' }}>Delivered / Sent to WhatsApp</span>
+                            <span style={{ color: 'var(--success)' }}>Delivered / Sent to WhatsApp</span>
                           ) : (
                             'Pending queue processing'
                           )}
@@ -973,11 +973,11 @@ function Broadcast() {
             {/* Modal Footer */}
             <div style={{
               padding: '16px 24px',
-              borderTop: '1px solid #27272a',
+              borderTop: '1px solid var(--border)',
               display: 'flex',
               justifyContent: 'space-between',
               alignItems: 'center',
-              background: '#27272a',
+              background: 'var(--bg-input)',
               flexShrink: 0
             }}>
               {!isCrmAutomationPlan && (

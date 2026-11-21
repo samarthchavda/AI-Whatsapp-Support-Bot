@@ -3,9 +3,10 @@ import { Link, useLocation } from 'react-router-dom';
 import { FaHome, FaComments, FaBox, FaExclamationTriangle, FaPlug, FaBell, FaSignOutAlt, FaUser, FaBrain, FaCommentDots, FaBroadcastTower, FaChartLine, FaCog, FaCrown, FaFileAlt, FaShoppingCart, FaCoins, FaUserSecret, FaHeartbeat, FaBullhorn, FaBlog, FaWhatsapp, FaShieldAlt, FaToggleOn, FaTimes, FaTags, FaUserTag, FaCode, FaBookOpen, FaKey, FaUserPlus } from 'react-icons/fa';
 import { useEffectiveAccess } from '../../context/EffectiveAccessContext';
 
-export default function Sidebar({ admin, onLogout, isOpen, onToggle, pendingDemoRequestsCount }) {
+export default function Sidebar({ admin, onLogout, isOpen, onToggle, onOpen, onClose, pendingDemoRequestsCount }) {
   const location = useLocation();
   const { canViewPage } = useEffectiveAccess();
+  const isMerchant = Boolean(admin && admin.role !== 'super_admin');
 
   const isActive = (path) => {
     return location.pathname === path ? 'active' : '';
@@ -18,13 +19,21 @@ export default function Sidebar({ admin, onLogout, isOpen, onToggle, pendingDemo
   const canUseTemplates = isPageAllowed('templates') || isPageAllowed('whatsapp-templates');
 
   return (
-    <div className={`sidebar${isOpen ? ' sidebar-expanded' : ''}`}>
+    <div
+      className={`sidebar${isOpen ? ' sidebar-expanded' : ''}`}
+      onMouseEnter={isMerchant ? () => { if (window.matchMedia?.('(hover: hover) and (pointer: fine)').matches !== false) onOpen?.(); } : undefined}
+      onMouseLeave={isMerchant ? () => onClose?.() : undefined}
+      onFocusCapture={isMerchant ? () => onOpen?.() : undefined}
+      onBlurCapture={isMerchant ? (event) => { if (!event.currentTarget.contains(event.relatedTarget)) onClose?.(); } : undefined}
+    >
       {/* Toggle Button — outside inner so it floats on the edge */}
       <button
         className="sidebar-toggle-btn"
         onClick={onToggle}
         title={isOpen ? 'Collapse sidebar' : 'Expand sidebar'}
         aria-label={isOpen ? 'Collapse sidebar' : 'Expand sidebar'}
+        aria-expanded={isOpen}
+        aria-controls="dashboard-sidebar-nav"
       >
         <span className={`toggle-arrow${isOpen ? ' open' : ''}`}>&#8250;</span>
       </button>
@@ -51,8 +60,9 @@ export default function Sidebar({ admin, onLogout, isOpen, onToggle, pendingDemo
                 );
               }
               return (
+                <>
                 <img 
-                  src={isOpen ? "/logo-reversed.png" : "/app-icon.png"} 
+                  src={isOpen && !isMerchant ? "/logo-reversed.png" : "/app-icon.png"}
                   className={isOpen ? "sidebar-logo-img" : "logo-img"} 
                   alt="Kwickbot Logo"
                   onError={(e) => {
@@ -63,12 +73,14 @@ export default function Sidebar({ admin, onLogout, isOpen, onToggle, pendingDemo
                     height: '34px',
                     width: 'auto', 
                     maxHeight: '34px',
-                    maxWidth: isOpen ? '140px' : '32px', 
+                    maxWidth: isOpen && !isMerchant ? '140px' : '32px',
                     flexShrink: 0, 
                     objectFit: 'contain',
                     display: 'block'
                   }} 
                 />
+                {isOpen && isMerchant && <span className="sidebar-brand-name">kwickbot</span>}
+                </>
               );
             })()}
           </div>
@@ -79,7 +91,7 @@ export default function Sidebar({ admin, onLogout, isOpen, onToggle, pendingDemo
           )}
         </div>
 
-        <nav className="sidebar-nav">
+        <nav id="dashboard-sidebar-nav" className="sidebar-nav" aria-label="Dashboard navigation" onClickCapture={isMerchant ? (event) => { if (event.target.closest('a')) onClose?.(); } : undefined}>
           {/* Super Admin Section */}
           {admin && admin.role === 'super_admin' && (
             <div className="nav-section">

@@ -58,6 +58,24 @@ test('merchant sidebar closes when the pointer leaves the glass drawer', () => {
   expect(sidebar).not.toHaveClass('sidebar-expanded');
 });
 
+test('merchant pages follow the support, commerce, automation, and setup workflow', () => {
+  const { container } = render(<MerchantSidebarHarness />);
+  fireEvent.mouseEnter(container.querySelector('.sidebar'));
+  const nav = container.querySelector('#dashboard-sidebar-nav');
+  const sections = [...nav.querySelectorAll('.nav-section-title')].map(title => title.textContent);
+  expect(sections).toEqual(['Overview', 'Inbox', 'Commerce', 'Automations', 'Insights', 'Connections & Integrations', 'Account']);
+
+  const destinations = [...nav.querySelectorAll('.nav-links a')].map(link => link.getAttribute('href'));
+  expect(destinations).toEqual([
+    '/dashboard', '/dashboard/live-chat', '/dashboard/escalations',
+    '/dashboard/orders', '/dashboard/abandoned-carts', '/dashboard/products', '/dashboard/leads',
+    '/dashboard/knowledge-base', '/dashboard/templates', '/dashboard/broadcast',
+    '/dashboard/analytics', '/dashboard/whatsapp-connect', '/dashboard/integrations#shopify',
+    '/dashboard/integrations#woocommerce', '/dashboard/developer',
+    '/dashboard/billing', '/dashboard/profile'
+  ]);
+});
+
 test('connection pages stay visible for merchants without other page entitlements', () => {
   mockCanViewPage.mockReturnValue(false);
   render(<MerchantSidebarHarness />);

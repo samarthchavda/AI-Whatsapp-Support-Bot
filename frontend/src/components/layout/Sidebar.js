@@ -305,36 +305,119 @@ export default function Sidebar({ admin, onLogout, isOpen, onToggle, onOpen, onC
                 </ul>
               </div>
 
-              {/* Customer Messaging */}
-              <div className="nav-section">
-                {isOpen && <div className="nav-section-title">Customer Messaging</div>}
-                <ul className="nav-links">
-                  {(isPageAllowed('live_chat') || isPageAllowed('conversations') || isPageAllowed('live-chat')) && (
+              {/* Daily support work */}
+              {(isPageAllowed('live_chat') || isPageAllowed('conversations') || isPageAllowed('live-chat') || isPageAllowed('escalations')) && (
+                <div className="nav-section">
+                  {isOpen && <div className="nav-section-title">Inbox</div>}
+                  <ul className="nav-links">
+                    {(isPageAllowed('live_chat') || isPageAllowed('conversations') || isPageAllowed('live-chat')) && (
+                      <li>
+                        <Link to="/dashboard/live-chat" className={isActive('/dashboard/live-chat')} title="Live Chat">
+                          <FaCommentDots />
+                          <span className="nav-label">Chat</span>
+                        </Link>
+                      </li>
+                    )}
+                    {isPageAllowed('escalations') && (
+                      <li>
+                        <Link to="/dashboard/escalations" className={isActive('/dashboard/escalations')} title="Escalations">
+                          <FaExclamationTriangle />
+                          <span className="nav-label">Escalations</span>
+                        </Link>
+                      </li>
+                    )}
+                  </ul>
+                </div>
+              )}
+
+              {/* Store operations */}
+              {(isPageAllowed('orders') || isPageAllowed('products') || isPageAllowed('leads') || isPageAllowed('abandoned_carts') || isPageAllowed('abandoned-carts')) && (
+                <div className="nav-section">
+                  {isOpen && <div className="nav-section-title">Commerce</div>}
+                  <ul className="nav-links">
+                    {isPageAllowed('orders') && (
+                      <li>
+                        <Link to="/dashboard/orders" className={isActive('/dashboard/orders')} title="Orders">
+                          <FaBox />
+                          <span className="nav-label">Orders</span>
+                        </Link>
+                      </li>
+                    )}
+                    {(isPageAllowed('abandoned_carts') || isPageAllowed('abandoned-carts')) && (
+                      <li>
+                        <Link to="/dashboard/abandoned-carts" className={isActive('/dashboard/abandoned-carts')} title="Abandoned Carts">
+                          <FaShoppingCart />
+                          <span className="nav-label">Abandoned Carts</span>
+                        </Link>
+                      </li>
+                    )}
+                    {isPageAllowed('products') && (
+                      <li>
+                        <Link to="/dashboard/products" className={isActive('/dashboard/products')} title="Products">
+                          <FaTags />
+                          <span className="nav-label">Products</span>
+                        </Link>
+                      </li>
+                    )}
+                    {isPageAllowed('leads') && (
+                      <li>
+                        <Link to="/dashboard/leads" className={isActive('/dashboard/leads')} title="WhatsApp Leads">
+                          <FaUserTag />
+                          <span className="nav-label">Leads</span>
+                        </Link>
+                      </li>
+                    )}
+                  </ul>
+                </div>
+              )}
+
+              {/* AI setup and outbound messaging */}
+              {(isPageAllowed('knowledge_base') || isPageAllowed('knowledge-base') || canUseTemplates || isPageAllowed('broadcast')) && (
+                <div className="nav-section">
+                  {isOpen && <div className="nav-section-title">Automations</div>}
+                  <ul className="nav-links">
+                    {(isPageAllowed('knowledge_base') || isPageAllowed('knowledge-base')) && (
+                      <li>
+                        <Link to="/dashboard/knowledge-base" className={isActive('/dashboard/knowledge-base')} title="Knowledge Base">
+                          <FaBrain />
+                          <span className="nav-label">Knowledge Base</span>
+                        </Link>
+                      </li>
+                    )}
+                    {canUseTemplates && (
+                      <li>
+                        <Link to="/dashboard/templates" className={isActive('/dashboard/templates')} title="Templates">
+                          <FaFileAlt />
+                          <span className="nav-label">Templates</span>
+                        </Link>
+                      </li>
+                    )}
+                    {isPageAllowed('broadcast') && (
+                      <li>
+                        <Link to="/dashboard/broadcast" className={isActive('/dashboard/broadcast')} title="Broadcasting">
+                          <FaBroadcastTower />
+                          <span className="nav-label">Broadcasting</span>
+                        </Link>
+                      </li>
+                    )}
+                  </ul>
+                </div>
+              )}
+
+              {/* Insights */}
+              {isPageAllowed('analytics') && (
+                <div className="nav-section">
+                  {isOpen && <div className="nav-section-title">Insights</div>}
+                  <ul className="nav-links">
                     <li>
-                      <Link to="/dashboard/live-chat" className={isActive('/dashboard/live-chat')} title="Live Chat">
-                        <FaCommentDots />
-                        <span className="nav-label">Chat</span>
+                      <Link to="/dashboard/analytics" className={isActive('/dashboard/analytics')} title="Analytics">
+                        <FaChartLine />
+                        <span className="nav-label">Analytics</span>
                       </Link>
                     </li>
-                  )}
-                  {canUseTemplates && (
-                    <li>
-                      <Link to="/dashboard/templates" className={isActive('/dashboard/templates')} title="Templates">
-                        <FaFileAlt />
-                        <span className="nav-label">Templates</span>
-                      </Link>
-                    </li>
-                  )}
-                  {isPageAllowed('broadcast') && (
-                    <li>
-                      <Link to="/dashboard/broadcast" className={isActive('/dashboard/broadcast')} title="Broadcasting">
-                        <FaBroadcastTower />
-                        <span className="nav-label">Broadcasting</span>
-                      </Link>
-                    </li>
-                  )}
-                </ul>
-              </div>
+                  </ul>
+                </div>
+              )}
 
               {/* Connection setup */}
               <div className="nav-section">
@@ -366,85 +449,6 @@ export default function Sidebar({ admin, onLogout, isOpen, onToggle, onOpen, onC
                   </li>
                 </ul>
               </div>
-
-              {/* Commerce & CRM */}
-              {(isPageAllowed('orders') || isPageAllowed('products') || isPageAllowed('leads') || isPageAllowed('abandoned_carts') || isPageAllowed('abandoned-carts') || isPageAllowed('escalations')) && (
-                <div className="nav-section">
-                  {isOpen && <div className="nav-section-title">Commerce & CRM</div>}
-                  <ul className="nav-links">
-                    {isPageAllowed('orders') && (
-                      <li>
-                        <Link to="/dashboard/orders" className={isActive('/dashboard/orders')} title="Orders">
-                          <FaBox />
-                          <span className="nav-label">Orders</span>
-                        </Link>
-                      </li>
-                    )}
-                    {isPageAllowed('products') && (
-                      <li>
-                        <Link to="/dashboard/products" className={isActive('/dashboard/products')} title="Products">
-                          <FaTags />
-                          <span className="nav-label">Products</span>
-                        </Link>
-                      </li>
-                    )}
-                    {isPageAllowed('leads') && (
-                      <li>
-                        <Link to="/dashboard/leads" className={isActive('/dashboard/leads')} title="WhatsApp Leads">
-                          <FaUserTag />
-                          <span className="nav-label">Leads</span>
-                        </Link>
-                      </li>
-                    )}
-                    {(isPageAllowed('abandoned_carts') || isPageAllowed('abandoned-carts')) && (
-                      <li>
-                        <Link to="/dashboard/abandoned-carts" className={isActive('/dashboard/abandoned-carts')} title="Abandoned Carts">
-                          <FaShoppingCart />
-                          <span className="nav-label">Abandoned Carts</span>
-                        </Link>
-                      </li>
-                    )}
-                    {isPageAllowed('escalations') && (
-                      <li>
-                        <Link to="/dashboard/escalations" className={isActive('/dashboard/escalations')} title="Escalations">
-                          <FaExclamationTriangle />
-                          <span className="nav-label">Escalations</span>
-                        </Link>
-                      </li>
-                    )}
-                  </ul>
-                </div>
-              )}
-
-              {/* AI Section */}
-              {(isPageAllowed('knowledge_base') || isPageAllowed('knowledge-base')) && (
-                <div className="nav-section">
-                  {isOpen && <div className="nav-section-title">AI Knowledge</div>}
-                  <ul className="nav-links">
-                    <li>
-                      <Link to="/dashboard/knowledge-base" className={isActive('/dashboard/knowledge-base')} title="Knowledge Base">
-                        <FaBrain />
-                        <span className="nav-label">Knowledge Base</span>
-                      </Link>
-                    </li>
-                  </ul>
-                </div>
-              )}
-
-              {/* Insights */}
-              {isPageAllowed('analytics') && (
-                <div className="nav-section">
-                  {isOpen && <div className="nav-section-title">Insights</div>}
-                  <ul className="nav-links">
-                    <li>
-                      <Link to="/dashboard/analytics" className={isActive('/dashboard/analytics')} title="Analytics">
-                        <FaChartLine />
-                        <span className="nav-label">Analytics</span>
-                      </Link>
-                    </li>
-                  </ul>
-                </div>
-              )}
 
               {/* Account */}
               <div className="nav-section">

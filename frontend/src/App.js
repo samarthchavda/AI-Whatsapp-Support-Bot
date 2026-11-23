@@ -120,6 +120,8 @@ const MERCHANT_VISIBLE_PATHS = new Set([
   '/dashboard/live-chat',
   '/dashboard/templates',
   '/dashboard/broadcast',
+  '/dashboard/knowledge-base',
+  '/dashboard/orders',
   '/dashboard/whatsapp-connect',
   '/dashboard/integrations',
   '/dashboard/developer',

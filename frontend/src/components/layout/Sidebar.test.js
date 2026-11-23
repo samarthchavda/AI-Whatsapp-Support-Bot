@@ -69,6 +69,16 @@ test('connection pages stay visible for merchants without other page entitlement
   expect(screen.queryByRole('link', { name: /API Keys/i })).not.toBeInTheDocument();
 });
 
+test('shared Knowledge Base and Orders pages appear without advanced plan modules', () => {
+  mockCanViewPage.mockImplementation((page) => ['knowledge-base', 'orders'].includes(page));
+  render(<MerchantSidebarHarness />);
+
+  expect(screen.getByRole('link', { name: /Knowledge Base/i })).toHaveAttribute('href', '/dashboard/knowledge-base');
+  expect(screen.getByRole('link', { name: /Orders/i })).toHaveAttribute('href', '/dashboard/orders');
+  expect(screen.queryByRole('link', { name: /Analytics/i })).not.toBeInTheDocument();
+  expect(screen.queryByRole('link', { name: /Abandoned Carts/i })).not.toBeInTheDocument();
+});
+
 test('developer tools stay inside the WhatsApp API Connection hub', () => {
   render(<MerchantSidebarHarness initialPath="/dashboard/developer/api-keys" />);
 

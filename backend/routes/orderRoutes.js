@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const orderController = require('../controllers/merchant/orderController');
 const { verifyToken } = require('../middleware/auth');
+const { requirePage } = require('../middleware/rbac');
 const multer = require('multer');
 const upload = multer({ dest: 'uploads/' });
 
@@ -72,8 +73,8 @@ const upload = multer({ dest: 'uploads/' });
  *       201:
  *         description: Order created successfully
  */
-router.get('/', verifyToken, orderController.getAllOrders);
-router.post('/', verifyToken, orderController.createOrder);
+router.get('/', verifyToken, requirePage('orders'), orderController.getAllOrders);
+router.post('/', verifyToken, requirePage('orders'), orderController.createOrder);
 
 /**
  * @openapi
@@ -97,7 +98,7 @@ router.post('/', verifyToken, orderController.createOrder);
  *       200:
  *         description: CSV orders imported
  */
-router.post('/bulk-upload', verifyToken, upload.single('file'), orderController.bulkUploadOrders);
+router.post('/bulk-upload', verifyToken, requirePage('orders'), upload.single('file'), orderController.bulkUploadOrders);
 
 /**
  * @openapi
@@ -118,7 +119,7 @@ router.post('/bulk-upload', verifyToken, upload.single('file'), orderController.
  *       200:
  *         description: Customer orders list
  */
-router.get('/phone/:phone', verifyToken, orderController.getOrdersByPhone);
+router.get('/phone/:phone', verifyToken, requirePage('orders'), orderController.getOrdersByPhone);
 
 /**
  * @openapi
@@ -180,8 +181,8 @@ router.get('/phone/:phone', verifyToken, orderController.getOrdersByPhone);
  *       200:
  *         description: Order deleted
  */
-router.get('/:id', verifyToken, orderController.getOrderById);
-router.patch('/:id', verifyToken, orderController.updateOrderStatus);
-router.delete('/:id', verifyToken, orderController.deleteOrder);
+router.get('/:id', verifyToken, requirePage('orders'), orderController.getOrderById);
+router.patch('/:id', verifyToken, requirePage('orders'), orderController.updateOrderStatus);
+router.delete('/:id', verifyToken, requirePage('orders'), orderController.deleteOrder);
 
 module.exports = router;

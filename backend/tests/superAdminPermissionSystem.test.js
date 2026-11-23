@@ -179,6 +179,24 @@ describe('Super Admin Permission System & 10 Standard Plans Verification', () =>
       expect(denied.permissions).not.toContain(CANONICAL_PERMISSIONS.API_KEYS_MANAGE);
     });
 
+    test('Knowledge Base and Orders are available to every merchant plan unless explicitly denied', async () => {
+      for (const subscriptionPlan of ['starter', 'growth', 'scale', 'crm_automation', 'api_starter']) {
+        const result = await resolveEffectivePermissions({ role: 'admin', subscriptionPlan });
+        expect(result.pages).toEqual(expect.arrayContaining([
+          CANONICAL_PAGES.KNOWLEDGE_BASE,
+          CANONICAL_PAGES.ORDERS
+        ]));
+      }
+
+      const denied = await resolveEffectivePermissions({
+        role: 'admin',
+        subscriptionPlan: 'starter',
+        deniedPages: [CANONICAL_PAGES.ORDERS]
+      });
+      expect(denied.pages).toContain(CANONICAL_PAGES.KNOWLEDGE_BASE);
+      expect(denied.pages).not.toContain(CANONICAL_PAGES.ORDERS);
+    });
+
     test('Customer Deny Overrides take absolute precedence over allow overrides and plan defaults', async () => {
       const merchant = {
         role: 'admin',

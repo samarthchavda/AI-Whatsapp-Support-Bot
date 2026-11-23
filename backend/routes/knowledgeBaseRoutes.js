@@ -113,6 +113,9 @@ router.post('/sync-shopify-products', verifyToken, requirePage('knowledge-base')
  */
 router.post('/url', verifyToken, requirePage('knowledge-base'), knowledgeBaseController.ingestURL);
 
+// Test a merchant's uploaded knowledge before exposing the AI to customers.
+router.post('/query', verifyToken, requirePage('knowledge-base'), knowledgeBaseController.queryKnowledgeBase);
+
 /**
  * @openapi
  * /api/knowledge-base/{id}:

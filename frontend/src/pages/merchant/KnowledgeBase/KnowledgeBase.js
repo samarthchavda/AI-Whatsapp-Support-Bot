@@ -159,9 +159,18 @@ function KnowledgeBase() {
       <div className="page-header">
         <div className="page-header-info">
           <h1 className="page-title">AI Knowledge Base</h1>
-          <p className="page-subtitle">Upload PDF documents and FAQs for AI-powered responses</p>
+          <p className="page-subtitle">Upload a PDF, then test how the WhatsApp AI answers from it.</p>
         </div>
         <div className="page-header-actions">
+          <button
+            type="button"
+            className="btn btn-secondary"
+            onClick={() => setShowTestQuery((open) => !open)}
+            aria-expanded={showTestQuery}
+            aria-controls="knowledge-base-test"
+          >
+            <FaRobot aria-hidden="true" /> {showTestQuery ? 'Hide AI Test' : 'Test AI Knowledge'}
+          </button>
           <button 
             className="btn btn-primary" 
             onClick={() => setShowUploadForm(!showUploadForm)}
@@ -294,7 +303,7 @@ function KnowledgeBase() {
             📝 Ready-Made Sample Store FAQ PDF Template
           </h3>
           <p style={{ fontSize: '13.5px', color: 'var(--text-secondary)', margin: 0, lineHeight: '1.5' }}>
-            We have pre-loaded a professional <strong>Sample Store FAQ Template</strong> PDF into your Knowledge Base. This shows the correct formatting of return windows, shipping rates, and support details to ensure high-accuracy responses from the AI. Download it below to use as a template.
+            Download this sample FAQ PDF to see how to structure return windows, shipping rates, and support details. Add your own store information, then upload the finished PDF above.
           </p>
         </div>
         <a 
@@ -317,9 +326,9 @@ function KnowledgeBase() {
 
       {/* Test Query Form */}
       {showTestQuery && (
-        <div className="table-container" style={{ marginBottom: '28px', background: 'rgba(16, 185, 129, 0.05)' }}>
-          <div className="table-header" style={{ background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.2) 0%, rgba(5, 150, 105, 0.2) 100%)' }}>
-            <h2>🤖 Test Knowledge Base Query</h2>
+        <div id="knowledge-base-test" className="table-container" style={{ marginBottom: '28px', background: 'var(--bg-card)' }}>
+          <div className="table-header">
+            <h2>Test AI Knowledge</h2>
           </div>
           <form onSubmit={handleTestQuery} style={{ padding: '28px' }}>
             <div className="filter-group" style={{ marginBottom: '20px' }}>
@@ -333,11 +342,11 @@ function KnowledgeBase() {
                 style={{
                   width: '100%',
                   padding: '14px',
-                  border: '1px solid rgba(63, 63, 70, 0.5)',
+                  border: '1px solid var(--border-default)',
                   borderRadius: '12px',
                   fontSize: '14px',
-                  background: 'rgba(39, 39, 42, 0.6)',
-                  color: '#fafafa',
+                  background: 'var(--bg-input)',
+                  color: 'var(--text-primary)',
                   fontFamily: 'Inter, sans-serif',
                   resize: 'vertical'
                 }}
@@ -362,14 +371,14 @@ function KnowledgeBase() {
               }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
                   <span style={{ fontSize: '20px' }}>{testResult.foundInKB ? '✅' : '❌'}</span>
-                  <strong style={{ color: '#fafafa' }}>
+                  <strong style={{ color: 'var(--text-primary)' }}>
                     {testResult.foundInKB ? 'Answer Found in Knowledge Base' : 'Not Found in Knowledge Base'}
                   </strong>
                 </div>
-                <p style={{ color: '#d4d4d8', lineHeight: '1.6', margin: 0 }}>
+                <p style={{ color: 'var(--text-secondary)', lineHeight: '1.6', margin: 0 }}>
                   {testResult.answer}
                 </p>
-                <div style={{ marginTop: '12px', fontSize: '12px', color: '#71717a' }}>
+                <div style={{ marginTop: '12px', fontSize: '12px', color: 'var(--text-muted)' }}>
                   Confidence: {(testResult.confidence * 100).toFixed(0)}%
                 </div>
               </div>
@@ -382,20 +391,20 @@ function KnowledgeBase() {
       {showUploadForm && (
         <div className="table-container" style={{ marginBottom: '28px' }}>
           <div className="table-header">
-            <h2>📤 Upload Knowledge Base PDF</h2>
+            <h2>Upload Knowledge Base PDF</h2>
           </div>
           <form onSubmit={handleUpload} style={{ padding: '28px' }} encType="multipart/form-data">
             <div style={{ 
-              background: 'rgba(99, 102, 241, 0.1)', 
-              border: '1px solid rgba(99, 102, 241, 0.3)',
+              background: 'var(--brand-light)',
+              border: '1px solid var(--border-default)',
               borderRadius: '12px',
               padding: '16px',
               marginBottom: '24px'
             }}>
-              <h3 style={{ color: '#a5b4fc', fontSize: '14px', fontWeight: '600', marginBottom: '12px' }}>
-                📋 Supported Format:
+              <h3 style={{ color: 'var(--text-primary)', fontSize: '14px', fontWeight: '600', marginBottom: '12px' }}>
+                Supported format
               </h3>
-              <ul style={{ color: '#a1a1aa', fontSize: '13px', lineHeight: '1.8', paddingLeft: '20px', margin: 0 }}>
+              <ul style={{ color: 'var(--text-secondary)', fontSize: '13px', lineHeight: '1.8', paddingLeft: '20px', margin: 0 }}>
                 <li><strong>PDF files only (.pdf):</strong> Business FAQs and store policies{planUsage?.rawPlanName !== 'starter' ? ', product catalogs' : ''}</li>
                 <li><strong>Maximum size:</strong> 10MB per PDF</li>
                 {planUsage?.maxKbPdfPages > 0 && <li><strong>Page limit:</strong> {planUsage.maxKbPdfPages} pages per PDF</li>}
@@ -422,11 +431,11 @@ function KnowledgeBase() {
                 style={{
                   width: '100%',
                   padding: '14px',
-                  border: '1px solid rgba(63, 63, 70, 0.5)',
+                  border: '1px solid var(--border-default)',
                   borderRadius: '12px',
                   fontSize: '14px',
-                  background: 'rgba(39, 39, 42, 0.6)',
-                  color: '#fafafa',
+                  background: 'var(--bg-input)',
+                  color: 'var(--text-primary)',
                   fontFamily: 'Inter, sans-serif',
                   resize: 'vertical'
                 }}
@@ -443,11 +452,11 @@ function KnowledgeBase() {
                 style={{
                   width: '100%',
                   padding: '14px',
-                  border: '2px dashed rgba(99, 102, 241, 0.5)',
+                  border: '2px dashed var(--border-default)',
                   borderRadius: '12px',
                   fontSize: '14px',
-                  background: 'rgba(39, 39, 42, 0.6)',
-                  color: '#fafafa',
+                  background: 'var(--bg-input)',
+                  color: 'var(--text-primary)',
                   cursor: 'pointer'
                 }}
               />
@@ -455,11 +464,11 @@ function KnowledgeBase() {
 
             {uploadProgress && (
               <div style={{
-                background: 'rgba(99, 102, 241, 0.1)',
-                border: '1px solid rgba(99, 102, 241, 0.3)',
+                background: 'var(--brand-light)',
+                border: '1px solid var(--border-default)',
                 padding: '12px 16px',
                 borderRadius: '10px',
-                color: '#a5b4fc',
+                color: 'var(--text-primary)',
                 fontSize: '14px',
                 marginBottom: '16px',
                 textAlign: 'center'

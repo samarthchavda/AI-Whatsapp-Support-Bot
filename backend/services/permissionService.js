@@ -18,6 +18,13 @@ const MERCHANT_CONNECTION_PAGES = [
   CANONICAL_PAGES.API_USAGE
 ];
 
+// Core merchant workspaces are available on every plan. Explicit account
+// denials below still take precedence over this shared access.
+const MERCHANT_CORE_PAGES = [
+  CANONICAL_PAGES.KNOWLEDGE_BASE,
+  CANONICAL_PAGES.ORDERS
+];
+
 const MERCHANT_API_PERMISSIONS = [
   CANONICAL_PERMISSIONS.API_DASHBOARD_VIEW,
   CANONICAL_PERMISSIONS.API_KEYS_VIEW,
@@ -173,6 +180,7 @@ async function resolveEffectivePermissions(adminDoc) {
   }
 
   MERCHANT_CONNECTION_PAGES.forEach(page => effectivePages.add(page));
+  MERCHANT_CORE_PAGES.forEach(page => effectivePages.add(page));
   MERCHANT_API_PERMISSIONS.forEach(permission => effectivePermissions.add(permission));
 
   // Step 1: Customer-specific DENY overrides (admin.deniedPages & admin.deniedPermissions)

@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { FaPlug, FaWhatsapp, FaServer, FaCheckCircle, FaExclamationTriangle, FaInfoCircle, FaArrowRight, FaKey, FaBuilding, FaUserCheck, FaCode, FaLaptop, FaCopy, FaChevronDown, FaChevronUp, FaExternalLinkAlt } from 'react-icons/fa';
+import { FaWhatsapp, FaInfoCircle, FaCode, FaLaptop, FaCopy, FaChevronDown, FaChevronUp, FaExternalLinkAlt } from 'react-icons/fa';
+import WhatsAppCloudPanel from './WhatsAppCloudPanel';
+import './WhatsAppConnect.css';
 
 const BASE_URL = process.env.REACT_APP_API_URL?.replace('/api', '') || (window.location.hostname === 'localhost' ? 'http://localhost:5001' : window.location.origin);
 
@@ -7,7 +9,7 @@ const GUIDE_STEPS = [
   {
     step: 1,
     title: 'Find Callback URL & Verification Token',
-    description: 'First, look at the "Webhook Configuration Details" card on the left side of this page.\n\nYou will need to copy these two values later in Meta Developer Console:\n1. Callback URL\n2. Verification Token\n\nLeave this tab open or click "Copy" to save them to your clipboard when requested.',
+    description: 'Expand "Webhook setup details" near the bottom of the WhatsApp numbers page. Copy the Callback URL and Verification Token if Meta asks you to verify a webhook manually.',
     image: '/guide/step-1.png'
   },
   {
@@ -79,7 +81,7 @@ const GUIDE_STEPS = [
   {
     step: 13,
     title: 'Generate and Copy Credentials',
-    description: 'Here you will get the credentials to link the bot:\n\n1. Access Token: Click the "Generate access token" button and copy the generated token.\n2. Phone Number ID: Copy the "Phone number ID" from Step 1.\n3. WhatsApp Business Account ID: Copy the "WhatsApp Business Account ID" from Step 1.\n\nReturn to our dashboard page and paste these three values in the connection form, then click "Save & Connect".',
+    description: 'This Meta screen shows your app credentials and WhatsApp Business account details. To connect a number to Kwickbot, return to the WhatsApp numbers page and choose "Connect Business App number" or "Connect Cloud API number". Complete the Meta sign-in window and select the number you want to connect.',
     image: '/guide/step-13.png'
   },
   {
@@ -170,7 +172,7 @@ function WhatsAppConnect() {
     }(document, 'script', 'facebook-jssdk'));
 
     const handleMetaMessage = (event) => {
-      if (event.origin.includes('facebook.com') || event.origin.includes('meta.com')) {
+      if (['facebook.com', 'meta.com'].some(domain => event.origin === `https://${domain}` || event.origin.endsWith(`.${domain}`))) {
         try {
           const data = typeof event.data === 'string' ? JSON.parse(event.data) : event.data;
           if (data && data.type === 'WA_EMBEDDED_SIGNUP') {
@@ -193,8 +195,11 @@ function WhatsAppConnect() {
     return () => window.removeEventListener('message', handleMetaMessage);
   }, []);
 
-  const handleLaunchEmbeddedSignup = () => {
+  const handleLaunchEmbeddedSignup = (mode = 'coexistence') => {
     setEmbeddedLoading(true);
+    window.__metaWabaId = null;
+    window.__metaPhoneNumberId = null;
+    window.__isCoexistence = false;
 
     const appId = process.env.REACT_APP_META_APP_ID || '2242808243238982';
     const configId = process.env.REACT_APP_META_CONFIG_ID || '1066111046278122';
@@ -203,11 +208,9 @@ function WhatsAppConnect() {
       config_id: configId,
       response_type: 'code',
       override_default_response_type: true,
-      extras: {
-        setup: {},
-        featureType: 'whatsapp_business_app_onboarding',
-        sessionInfoVersion: '3'
-      }
+      extras: mode === 'coexistence'
+        ? { setup: {}, featureType: 'whatsapp_business_app_onboarding', sessionInfoVersion: '3' }
+        : { setup: {} }
     };
 
     const rawUri = window.location.href.split('#')[0].split('?')[0];
@@ -308,7 +311,6 @@ function WhatsAppConnect() {
         } else {
           alert('🎉 WhatsApp Business connected successfully via Meta Embedded Signup!');
         }
-        setShowCredentialsForm(false);
         fetchCloudStatus();
       } else {
         alert(data.error || 'Failed to exchange credentials with backend.');
@@ -335,13 +337,7 @@ function WhatsAppConnect() {
   const [cloudLoading, setCloudLoading] = useState(false);
   const [cloudError, setCloudError] = useState(null);
   const [actionLoading, setActionLoading] = useState(false);
-
-  // Form Credentials States
-  const [showCredentialsForm, setShowCredentialsForm] = useState(false);
-  const [whatsappAccessToken, setWhatsappAccessToken] = useState('');
-  const [whatsappPhoneNumberId, setWhatsappPhoneNumberId] = useState('');
-  const [whatsappBusinessAccountId, setWhatsappBusinessAccountId] = useState('');
-  const [saveLoading, setSaveLoading] = useState(false);
+  const [disconnectingPhoneId, setDisconnectingPhoneId] = useState(null);
 
   // Widget Customizer States
   const [widgetPhone, setWidgetPhone] = useState('');
@@ -430,20 +426,6 @@ function WhatsAppConnect() {
       const data = await response.json();
       setCloudStatus(data);
 
-      // Auto show form if Meta API credentials are not configured
-      if (data && !data.isConfigured) {
-        setShowCredentialsForm(true);
-      }
-
-      // Populate states with current credentials if any
-      if (data && data.credentials) {
-        setWhatsappPhoneNumberId(data.credentials.whatsappPhoneNumberId || '');
-        setWhatsappBusinessAccountId(data.credentials.whatsappBusinessAccountId || '');
-        // Keep access token empty if it's masked, so they don't overwrite it unless they input a new one
-        if (!data.credentials.whatsappAccessToken) {
-          setWhatsappAccessToken('');
-        }
-      }
     } catch (err) {
       setCloudError(err.message);
     } finally {
@@ -451,22 +433,22 @@ function WhatsAppConnect() {
     }
   }, []);
 
-  const handleDisconnectCloud = async () => {
-    if (!window.confirm('Are you sure you want to disconnect this WhatsApp connection? The AI Bot will stop responding to incoming queries. (Note: This will not log you out of your Admin Dashboard)')) return;
+  const handleDisconnectCloud = async (phoneNumberId) => {
+    if (!window.confirm('Disconnect this WhatsApp number? Messages and automations for this number will stop. Other connected numbers will remain available.')) return;
     try {
       setActionLoading(true);
+      setDisconnectingPhoneId(phoneNumberId);
       const token = localStorage.getItem('token') || localStorage.getItem('accessToken');
       const response = await fetch(`${BASE_URL}/api/webhook/disconnect`, {
         method: 'POST',
         headers: {
+          'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
-        }
+        },
+        body: JSON.stringify({ phoneNumberId })
       });
       if (response.ok) {
         alert('WhatsApp connection disconnected successfully!');
-        setWhatsappAccessToken('');
-        setWhatsappPhoneNumberId('');
-        setWhatsappBusinessAccountId('');
         await fetchCloudStatus();
       } else {
         const result = await response.json().catch(() => ({}));
@@ -477,6 +459,7 @@ function WhatsAppConnect() {
       alert('Error disconnecting WhatsApp');
     } finally {
       setActionLoading(false);
+      setDisconnectingPhoneId(null);
     }
   };
 
@@ -501,44 +484,6 @@ function WhatsAppConnect() {
       alert('Error logging in / connecting WhatsApp');
     } finally {
       setActionLoading(false);
-    }
-  };
-
-  const handleSaveCredentials = async (e) => {
-    e.preventDefault();
-    if (!whatsappAccessToken || !whatsappPhoneNumberId || !whatsappBusinessAccountId) {
-      alert('Please fill out all credentials to connect.');
-      return;
-    }
-
-    try {
-      setSaveLoading(true);
-      const token = localStorage.getItem('token') || localStorage.getItem('accessToken');
-      const response = await fetch(`${BASE_URL}/api/webhook/settings`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          whatsappAccessToken,
-          whatsappPhoneNumberId,
-          whatsappBusinessAccountId
-        })
-      });
-      const data = await response.json();
-      if (response.ok && data.success) {
-        alert('WhatsApp Business credentials saved successfully! Your assistant is now active.');
-        setShowCredentialsForm(false);
-        fetchCloudStatus();
-      } else {
-        alert(data.error || 'Failed to save credentials');
-      }
-    } catch (err) {
-      console.error(err);
-      alert('Error saving WhatsApp credentials');
-    } finally {
-      setSaveLoading(false);
     }
   };
 
@@ -581,84 +526,51 @@ function WhatsAppConnect() {
   }, [fetchCloudStatus]);
 
   return (
-    <div className="container">
-      <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
+    <div className="container whatsapp-connect-page">
+      <div className="page-header wa-page-header">
         <div>
-          <h1 className="page-title" style={{ display: 'flex', alignItems: 'center', gap: '12px', margin: 0 }}>
-            <FaWhatsapp style={{ color: '#25d366' }} /> WhatsApp Connection
+          <h1 className="page-title">
+            <FaWhatsapp aria-hidden="true" /> WhatsApp Connection
           </h1>
-          <p className="page-subtitle" style={{ margin: '4px 0 0 0' }}>Choose your preferred WhatsApp integration service to automate client interactions.</p>
+          <p className="page-subtitle">Connect and manage the WhatsApp numbers your team uses for customer support.</p>
         </div>
-        <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-          <button
-            type="button"
-            onClick={() => {
-              if (activeTab === 'widget') {
-                setIsWidgetGuideOpen(true);
-                setCurrentWidgetGuideStep(0);
-              } else {
-                setIsGuideOpen(true);
-                setCurrentGuideStep(0);
-              }
-            }}
-            className="btn btn-primary"
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '8px',
-              padding: '10px 18px',
-              fontWeight: '600',
-              fontSize: '14px',
-              boxShadow: 'var(--shadow-sm)'
-            }}
-          >
-            📖 {activeTab === 'widget' ? 'View Widget Guide' : 'View Step-by-Step Guide'}
-          </button>
-        </div>
+        <button
+          type="button"
+          onClick={() => {
+            if (activeTab === 'widget') {
+              setIsWidgetGuideOpen(true);
+              setCurrentWidgetGuideStep(0);
+            } else {
+              setIsGuideOpen(true);
+              setCurrentGuideStep(0);
+            }
+          }}
+          className="wa-guide-button"
+        >
+          <FaInfoCircle aria-hidden="true" /> {activeTab === 'widget' ? 'Widget guide' : 'Setup guide'}
+        </button>
       </div>
 
       {/* Tabs */}
-      <div style={{
-        display: 'flex',
-        borderBottom: '1px solid var(--border)',
-        marginBottom: '24px',
-        gap: '16px'
-      }}>
-
+      <div className="wa-tabs" role="tablist" aria-label="WhatsApp connection tools">
         <button
+          type="button"
+          role="tab"
+          aria-selected={activeTab === 'cloudapi'}
           onClick={() => {
             setActiveTab('cloudapi');
             fetchCloudStatus();
           }}
-          style={{
-            padding: '12px 20px',
-            fontSize: '16px',
-            fontWeight: '600',
-            border: 'none',
-            background: 'none',
-            borderBottom: activeTab === 'cloudapi' ? '3px solid var(--brand)' : '3px solid transparent',
-            color: activeTab === 'cloudapi' ? 'var(--brand)' : 'var(--text-secondary)',
-            cursor: 'pointer',
-            transition: 'all 0.2s ease'
-          }}
         >
-          ⚙️ Official WhatsApp Cloud API (Production)
+          <FaWhatsapp aria-hidden="true" /> WhatsApp numbers
         </button>
         <button
+          type="button"
+          role="tab"
+          aria-selected={activeTab === 'widget'}
           onClick={() => setActiveTab('widget')}
-          style={{
-            padding: '12px 20px',
-            fontSize: '16px',
-            fontWeight: '600',
-            border: 'none',
-            background: 'none',
-            borderBottom: activeTab === 'widget' ? '3px solid var(--brand)' : '3px solid transparent',
-            color: activeTab === 'widget' ? 'var(--brand)' : 'var(--text-secondary)',
-            cursor: 'pointer',
-            transition: 'all 0.2s ease'
-          }}
         >
-          🌐 Website Chat Widget
+          <FaCode aria-hidden="true" /> Website chat widget
         </button>
       </div>
 
@@ -666,444 +578,34 @@ function WhatsAppConnect() {
 
 
       {activeTab === 'cloudapi' && (
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: '1fr 1fr',
-          gap: '24px',
-          alignItems: 'start'
-        }}>
-          {/* Configuration Status */}
-          <div style={{
-            backgroundColor: 'var(--bg-card)',
-            borderRadius: '16px',
-            padding: '32px',
-            boxShadow: 'var(--shadow-sm)',
-            border: '1px solid var(--border)'
-          }}>
-            <h3 style={{ fontSize: '18px', fontWeight: '700', marginBottom: '20px', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <FaServer style={{ color: '#6366f1' }} /> Cloud API Configuration State
-            </h3>
-
-            {cloudLoading ? (
-              <div style={{ textAlign: 'center', padding: '40px 0' }}>
-                <div className="spinner" style={{ width: '40px', height: '40px', margin: '0 auto 12px' }}></div>
-                <p style={{ fontSize: '14px', color: '#71717a', margin: 0 }}>Fetching Meta profile status...</p>
-              </div>
-            ) : cloudError ? (
-              <div style={{
-                padding: '16px',
-                backgroundColor: '#fee2e2',
-                color: '#991b1b',
-                borderRadius: '12px',
-                fontSize: '14px',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px'
-              }}>
-                <FaExclamationTriangle />
-                <span>{cloudError}</span>
-              </div>
-            ) : cloudStatus ? (
-              <div>
-                {showCredentialsForm ? (
-                  <div style={{ display: 'grid', gap: '16px' }}>
-                    <div style={{
-                      padding: '12px 16px',
-                      backgroundColor: 'var(--brand-light)',
-                      color: 'var(--brand)',
-                      border: '1px solid var(--border)',
-                      borderRadius: '8px',
-                      fontSize: '13px',
-                      fontWeight: '500',
-                      lineHeight: '1.4'
-                    }}>
-                      💡 <strong>WhatsApp Coexistence Supported:</strong> Connect using your existing WhatsApp Business app phone number! You can continue chatting 1:1 on your mobile phone while Kwickbot automates customer support, orders & broadcasts simultaneously.
-                    </div>
-
-                    <div style={{
-                      display: 'flex',
-                      flexDirection: 'column',
-                      gap: '12px',
-                      padding: '24px',
-                      backgroundColor: 'rgba(24, 119, 242, 0.05)',
-                      border: '1px dashed rgba(24, 119, 242, 0.3)',
-                      borderRadius: '12px',
-                      textAlign: 'center',
-                    }}>
-                      <button
-                        type="button"
-                        disabled={embeddedLoading}
-                        onClick={handleLaunchEmbeddedSignup}
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          gap: '10px',
-                          padding: '14px 28px',
-                          background: '#1877f2',
-                          color: 'white',
-                          border: 'none',
-                          borderRadius: '8px',
-                          fontSize: '16px',
-                          fontWeight: '700',
-                          cursor: 'pointer',
-                          boxShadow: '0 2px 8px rgba(24, 119, 242, 0.25)',
-                          transition: 'all 0.2s'
-                        }}
-                      >
-                        <FaWhatsapp style={{ fontSize: '20px' }} />
-                        {embeddedLoading ? 'Connecting via Meta...' : 'Connect via Meta WhatsApp Manager'}
-                      </button>
-
-                      <a
-                        href="https://business.facebook.com/wa/manage/phone-numbers"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        style={{
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          gap: '6px',
-                          fontSize: '13px',
-                          fontWeight: '600',
-                          color: '#1877f2',
-                          textDecoration: 'none',
-                          marginTop: '4px'
-                        }}
-                      >
-                        <FaExternalLinkAlt style={{ fontSize: '11px' }} /> Open Meta WhatsApp Business Manager (Direct)
-                      </a>
-                    </div>
-
-                    {cloudStatus.isConfigured && (
-                      <button
-                        type="button"
-                        onClick={() => setShowCredentialsForm(false)}
-                        className="btn btn-secondary"
-                        style={{ padding: '12px 20px', width: '100%' }}
-                      >
-                        Cancel
-                      </button>
-                    )}
-                  </div>
-                ) : (
-                  <div>
-                    <div style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '12px',
-                      padding: '16px',
-                      backgroundColor: (cloudStatus.isConfigured && cloudStatus.isConnected) ? 'rgba(22, 163, 74, 0.1)' : 'rgba(245, 158, 11, 0.1)',
-                      border: '1px solid ' + ((cloudStatus.isConfigured && cloudStatus.isConnected) ? 'rgba(22, 163, 74, 0.2)' : 'rgba(245, 158, 11, 0.2)'),
-                      color: (cloudStatus.isConfigured && cloudStatus.isConnected) ? 'var(--success)' : 'var(--warning)',
-                      borderRadius: '12px',
-                      marginBottom: '20px'
-                    }}>
-                      {(cloudStatus.isConfigured && cloudStatus.isConnected) ? (
-                        <FaCheckCircle style={{ color: 'var(--success)', fontSize: '24px' }} />
-                      ) : (
-                        <FaExclamationTriangle style={{ color: 'var(--warning)', fontSize: '24px' }} />
-                      )}
-                      <div>
-                        <h4 style={{ fontSize: '15px', fontWeight: '700', color: 'var(--text-primary)', margin: '0 0 2px 0', textAlign: 'left' }}>
-                          {(cloudStatus.isConfigured && cloudStatus.isConnected) ? 'WhatsApp Connected & Active' : 'WhatsApp Disconnected'}
-                        </h4>
-                        <p style={{ fontSize: '12.5px', color: 'var(--text-secondary)', margin: 0, textAlign: 'left' }}>
-                          {(cloudStatus.isConfigured && cloudStatus.isConnected)
-                            ? 'Your server is connected and responding to customer messages.'
-                            : cloudStatus.isConfigured
-                              ? 'Your integration is configured but currently disconnected. The AI agent will not respond to messages.'
-                              : 'Complete the step-by-step setup in .env.'}
-                        </p>
-                      </div>
-                    </div>
-
-                    <div style={{ display: 'grid', gap: '12px', marginBottom: '20px' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid var(--border)', paddingBottom: '8px' }}>
-                        <span style={{ fontSize: '14px', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '8px' }}><FaKey style={{ fontSize: '12px' }} /> API Configuration:</span>
-                        <span style={{ fontSize: '14px', fontWeight: '600', color: cloudStatus.isConfigured ? 'var(--success)' : 'var(--warning)' }}>
-                          {cloudStatus.isConfigured ? 'Configured' : 'Pending'}
-                        </span>
-                      </div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid var(--border)', paddingBottom: '8px' }}>
-                        <span style={{ fontSize: '14px', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '8px' }}><FaServer style={{ fontSize: '12px' }} /> Channel Status:</span>
-                        <span style={{ fontSize: '14px', fontWeight: '600', color: cloudStatus.isConnected ? 'var(--success)' : 'var(--danger)' }}>
-                          {cloudStatus.isConnected ? 'Connected' : 'Disconnected'}
-                        </span>
-                      </div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid var(--border)', paddingBottom: '8px' }}>
-                        <span style={{ fontSize: '14px', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '8px' }}><FaBuilding style={{ fontSize: '12px' }} /> Display Name:</span>
-                        <span style={{ fontSize: '14px', fontWeight: '600', color: 'var(--text-primary)' }}>{cloudStatus.displayName}</span>
-                      </div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid var(--border)', paddingBottom: '8px' }}>
-                        <span style={{ fontSize: '14px', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '8px' }}><FaWhatsapp style={{ fontSize: '12px' }} /> Phone Details:</span>
-                        <span style={{ fontSize: '14px', fontWeight: '600', color: 'var(--text-primary)' }}>{cloudStatus.phoneNumber}</span>
-                      </div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', paddingBottom: '8px' }}>
-                        <span style={{ fontSize: '14px', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '8px' }}><FaUserCheck style={{ fontSize: '12px' }} /> Verified Name:</span>
-                        <span style={{ fontSize: '14px', fontWeight: '600', color: 'var(--text-primary)' }}>{cloudStatus.verified}</span>
-                      </div>
-                    </div>
-
-                    <div style={{ display: 'flex', gap: '12px' }}>
-                      <button
-                        onClick={() => setShowCredentialsForm(true)}
-                        className="btn btn-secondary"
-                        style={{ flex: 1, padding: '12px 16px' }}
-                      >
-                        ⚙️ Update Meta Credentials
-                      </button>
-
-                      {cloudStatus.isConfigured && (
-                        cloudStatus.isConnected ? (
-                          <button
-                            onClick={handleDisconnectCloud}
-                            disabled={actionLoading}
-                            className="btn btn-danger"
-                            style={{ flex: 1, padding: '12px 16px' }}
-                          >
-                            {actionLoading ? 'Disconnecting...' : 'Disconnect WhatsApp'}
-                          </button>
-                        ) : (
-                          <button
-                            onClick={handleConnectCloud}
-                            disabled={actionLoading}
-                            className="btn btn-primary"
-                            style={{ flex: 1, padding: '12px 16px' }}
-                          >
-                            {actionLoading ? 'Connecting...' : 'Connect / Login WhatsApp'}
-                          </button>
-                        )
-                      )}
-                    </div>
-                  </div>
-                )}
-              </div>
-            ) : null}
-
-            <div style={{
-              marginTop: '24px',
-              padding: '20px',
-              backgroundColor: 'var(--bg-input)',
-              borderRadius: '12px',
-              border: '1px solid var(--border)'
-            }}>
-              <h4 style={{ fontSize: '15px', fontWeight: '700', color: 'var(--text-primary)', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px', textAlign: 'left' }}>
-                <FaInfoCircle style={{ color: '#6366f1' }} /> Webhook Configuration Details
-              </h4>
-
-              <div style={{ display: 'grid', gap: '12px', textAlign: 'left' }}>
-                <div>
-                  <span style={{ fontSize: '12px', fontWeight: '600', color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>Callback URL</span>
-                  <div style={{ display: 'flex', gap: '8px' }}>
-                    <input
-                      type="text"
-                      readOnly
-                      value={cloudStatus?.webhookUrl || `${BASE_URL}/api/webhook/whatsapp`}
-                      style={{
-                        flex: 1,
-                        padding: '8px 12px',
-                        backgroundColor: 'var(--bg-input)',
-                        border: '1px solid var(--border)',
-                        borderRadius: '6px',
-                        fontSize: '12px',
-                        fontFamily: 'monospace',
-                        color: 'var(--text-primary)'
-                      }}
-                    />
-                    <button
-                      onClick={() => {
-                        const url = cloudStatus?.webhookUrl || `${BASE_URL}/api/webhook/whatsapp`;
-                        navigator.clipboard.writeText(url);
-                        setCopiedWebhookUrl(true);
-                        setTimeout(() => setCopiedWebhookUrl(false), 2000);
-                      }}
-                      style={{
-                        padding: '8px 12px',
-                        backgroundColor: copiedWebhookUrl ? '#0958D9' : '#1677FF',
-                        color: '#ffffff',
-                        border: 'none',
-                        borderRadius: '6px',
-                        fontSize: '12px',
-                        fontWeight: '600',
-                        cursor: 'pointer',
-                        transition: 'background-color 0.2s'
-                      }}
-                    >
-                      {copiedWebhookUrl ? '✓ Copied!' : 'Copy'}
-                    </button>
-                  </div>
-                </div>
-
-                <div>
-                  <span style={{ fontSize: '12px', fontWeight: '600', color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>Verification Token</span>
-                  <div style={{ display: 'flex', gap: '8px' }}>
-                    <input
-                      type="text"
-                      readOnly
-                      value={cloudStatus?.verifyToken || 'secure_webhook_token_123'}
-                      style={{
-                        flex: 1,
-                        padding: '8px 12px',
-                        backgroundColor: 'var(--bg-input)',
-                        border: '1px solid var(--border)',
-                        borderRadius: '6px',
-                        fontSize: '12px',
-                        fontFamily: 'monospace',
-                        color: 'var(--text-primary)'
-                      }}
-                    />
-                    <button
-                      onClick={() => {
-                        const token = cloudStatus?.verifyToken || 'secure_webhook_token_123';
-                        navigator.clipboard.writeText(token);
-                        setCopiedVerifyToken(true);
-                        setTimeout(() => setCopiedVerifyToken(false), 2000);
-                      }}
-                      style={{
-                        padding: '8px 12px',
-                        backgroundColor: copiedVerifyToken ? '#0958D9' : '#1677FF',
-                        color: '#ffffff',
-                        border: 'none',
-                        borderRadius: '6px',
-                        fontSize: '12px',
-                        fontWeight: '600',
-                        cursor: 'pointer',
-                        transition: 'background-color 0.2s'
-                      }}
-                    >
-                      {copiedVerifyToken ? '✓ Copied!' : 'Copy'}
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Setup Onboarding instructions */}
-          <div style={{
-            backgroundColor: 'var(--bg-card)',
-            borderRadius: '16px',
-            padding: '32px',
-            boxShadow: 'var(--shadow-sm)',
-            border: '1px solid var(--border)'
-          }}>
-            <h3 style={{ fontSize: '18px', fontWeight: '700', marginBottom: '16px', color: 'var(--text-primary)' }}>Meta Developer Portal Setup</h3>
-
-            <button
-              onClick={() => {
-                setIsGuideOpen(true);
-                setCurrentGuideStep(0);
-              }}
-              className="btn btn-primary"
-              style={{
-                width: '100%',
-                padding: '12px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '8px',
-                marginBottom: '20px'
-              }}
-            >
-              📖 View Step-by-Step Screenshot Guide
-            </button>
-
-            <p style={{ fontSize: '14.5px', color: 'var(--text-secondary)', marginBottom: '20px', lineHeight: '1.5' }}>
-              Follow these simple instructions to link your official WhatsApp Business number to the AI agent:
-            </p>
-
-            <div style={{ display: 'grid', gap: '16px' }}>
-              <div style={{ display: 'flex', gap: '12px', alignItems: 'start' }}>
-                <div style={{
-                  backgroundColor: 'var(--brand-light)',
-                  color: 'var(--brand)',
-                  width: '24px',
-                  height: '24px',
-                  borderRadius: '50%',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontSize: '12px',
-                  fontWeight: '700',
-                  flexShrink: 0
-                }}>1</div>
-                <div>
-                  <h4 style={{ fontSize: '14px', fontWeight: '700', color: 'var(--text-primary)', margin: '0 0 4px 0' }}>Create Meta Developer Account</h4>
-                  <p style={{ fontSize: '13px', color: 'var(--text-secondary)', margin: 0, lineHeight: '1.4' }}>
-                    Go to <a href="https://developers.facebook.com" target="_blank" rel="noreferrer" style={{ color: 'var(--brand)', textDecoration: 'underline' }}>developers.facebook.com</a> and sign up for a developer account.
-                  </p>
-                </div>
-              </div>
-
-              <div style={{ display: 'flex', gap: '12px', alignItems: 'start' }}>
-                <div style={{
-                  backgroundColor: 'var(--brand-light)',
-                  color: 'var(--brand)',
-                  width: '24px',
-                  height: '24px',
-                  borderRadius: '50%',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontSize: '12px',
-                  fontWeight: '700',
-                  flexShrink: 0
-                }}>2</div>
-                <div>
-                  <h4 style={{ fontSize: '14px', fontWeight: '700', color: 'var(--text-primary)', margin: '0 0 4px 0' }}>Create a WhatsApp App</h4>
-                  <p style={{ fontSize: '13px', color: 'var(--text-secondary)', margin: 0, lineHeight: '1.4' }}>
-                    Click <strong>Create App</strong>, choose <strong>Other</strong>, and select the <strong>Business</strong> type. Add the <strong>WhatsApp</strong> product to your app.
-                  </p>
-                </div>
-              </div>
-
-              <div style={{ display: 'flex', gap: '12px', alignItems: 'start' }}>
-                <div style={{
-                  backgroundColor: 'var(--brand-light)',
-                  color: 'var(--brand)',
-                  width: '24px',
-                  height: '24px',
-                  borderRadius: '50%',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontSize: '12px',
-                  fontWeight: '700',
-                  flexShrink: 0
-                }}>3</div>
-                <div>
-                  <h4 style={{ fontSize: '14px', fontWeight: '700', color: 'var(--text-primary)', margin: '0 0 4px 0' }}>Enter Meta Credentials</h4>
-                  <p style={{ fontSize: '13px', color: 'var(--text-secondary)', margin: 0, lineHeight: '1.4' }}>
-                    Copy the <strong>Access Token</strong>, <strong>Phone Number ID</strong>, and <strong>Business Account ID</strong> from the WhatsApp Getting Started page and paste them into the credentials form on this page.
-                  </p>
-                </div>
-              </div>
-
-              <div style={{ display: 'flex', gap: '12px', alignItems: 'start' }}>
-                <div style={{
-                  backgroundColor: 'var(--brand-light)',
-                  color: 'var(--brand)',
-                  width: '24px',
-                  height: '24px',
-                  borderRadius: '50%',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontSize: '12px',
-                  fontWeight: '700',
-                  flexShrink: 0
-                }}>4</div>
-                <div>
-                  <h4 style={{ fontSize: '14px', fontWeight: '700', color: 'var(--text-primary)', margin: '0 0 4px 0' }}>Configure Webhook</h4>
-                  <p style={{ fontSize: '13px', color: 'var(--text-secondary)', margin: 0, lineHeight: '1.4' }}>
-                    Set up the Webhook configuration under WhatsApp setup in Meta. Paste the **Callback URL** and **Verification Token** shown on the left, then subscribe to the <code>messages</code> webhook topic.
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
+        <WhatsAppCloudPanel
+          status={cloudStatus}
+          loading={cloudLoading}
+          error={cloudError}
+          embeddedLoading={embeddedLoading}
+          disconnectingPhoneId={disconnectingPhoneId}
+          reconnecting={actionLoading}
+          onConnectBusinessApp={() => handleLaunchEmbeddedSignup('coexistence')}
+          onConnectCloudApi={() => handleLaunchEmbeddedSignup('cloudapi')}
+          onDisconnect={handleDisconnectCloud}
+          onReconnect={handleConnectCloud}
+          onRetry={fetchCloudStatus}
+          onOpenGuide={() => { setIsGuideOpen(true); setCurrentGuideStep(0); }}
+          onCopyWebhookUrl={() => {
+            navigator.clipboard.writeText(cloudStatus?.webhookUrl || `${BASE_URL}/api/webhook/whatsapp`);
+            setCopiedWebhookUrl(true);
+            setTimeout(() => setCopiedWebhookUrl(false), 2000);
+          }}
+          onCopyVerifyToken={() => {
+            if (!cloudStatus?.verifyToken) return;
+            navigator.clipboard.writeText(cloudStatus.verifyToken);
+            setCopiedVerifyToken(true);
+            setTimeout(() => setCopiedVerifyToken(false), 2000);
+          }}
+          copiedWebhookUrl={copiedWebhookUrl}
+          copiedVerifyToken={copiedVerifyToken}
+          fallbackWebhookUrl={`${BASE_URL}/api/webhook/whatsapp`}
+        />
       )}
 
       {activeTab === 'widget' && (

@@ -60,7 +60,7 @@ const defaultPlans = [
       monthlyApiRequests: 10000,
       monthlyWebhookDeliveries: 5000,
       monthlyAutomationExecutions: 1000,
-      maxWhatsAppConnections: 1,
+      maxWhatsAppConnections: 2,
       maxActiveAutomations: 0,
       maxApiKeys: 0,
       maxTeamMembers: 1,
@@ -200,7 +200,7 @@ const defaultPlans = [
     name: 'crm_connect',
     slug: 'crm-connect',
     displayName: 'CRM Connect',
-    shortDescription: 'WhatsApp support with one connected business number.',
+    shortDescription: 'WhatsApp support with two connected business numbers.',
     detailedDescription: 'WhatsApp messaging and Live Chat handoff. External CRM setup is not available.',
     category: 'crm_integration',
     currency: 'INR',
@@ -256,7 +256,7 @@ const defaultPlans = [
       monthlyApiRequests: 0,
       monthlyWebhookDeliveries: 0,
       monthlyAutomationExecutions: 0,
-      maxWhatsAppConnections: 1,
+      maxWhatsAppConnections: 2,
       maxActiveAutomations: 0,
       maxApiKeys: 0,
       maxTeamMembers: 1,
@@ -414,7 +414,7 @@ const defaultPlans = [
       monthlyApiRequests: 50000,
       monthlyWebhookDeliveries: 25000,
       maxApiKeys: 2,
-      maxWhatsAppConnections: 1
+      maxWhatsAppConnections: 2
     },
     supportLevel: 'Developer Forum & Email',
     sla: 'Best Effort'

@@ -270,7 +270,19 @@ exports.handleEmbeddedSignup = async (req, res) => {
       });
     }
 
-    const phoneInfo = phoneList.find(p => p.id === targetPhoneNumberId) || phoneList[0];
+    const admin = await Admin.findById(req.admin._id);
+    if (!admin) {
+      return res.status(404).json({ success: false, error: 'Merchant admin user not found' });
+    }
+
+    const { getWhatsappConnectionLimit, getActiveWhatsappPhoneIds, selectWhatsappPhone } = require('../../services/whatsappConnectionLimit');
+    const phoneInfo = selectWhatsappPhone(phoneList, targetPhoneNumberId, admin);
+    if (!phoneInfo) {
+      return res.status(400).json({
+        success: false,
+        error: 'The selected WhatsApp phone number was not found in the Meta Business account. Please choose that number again.'
+      });
+    }
     const phoneNumberId = phoneInfo.id;
     const displayPhoneNumber = phoneInfo.display_phone_number || '';
     const verifiedName = phoneInfo.verified_name || '';
@@ -278,19 +290,11 @@ exports.handleEmbeddedSignup = async (req, res) => {
     console.log(`✅ Found Phone Number: ${displayPhoneNumber} (ID: ${phoneNumberId})`);
 
     // 4. Save credentials securely to the Admin profile with plan connection limit check
-    const admin = await Admin.findById(req.admin._id);
-    if (!admin) {
-      return res.status(404).json({
-        success: false,
-        error: 'Merchant admin user not found'
-      });
-    }
-
-    const subscriptionService = require('../../services/subscriptionService');
     const isSuperAdmin = admin.role === 'super_admin';
-    const maxConnections = isSuperAdmin ? 1 : subscriptionService.getPlanLimit(admin.subscriptionPlan, 'maxWhatsAppConnections');
+    const maxConnections = getWhatsappConnectionLimit(admin);
     const activeConns = (admin.whatsappConnections || []).filter(c => c.isActive !== false);
-    const existingConn = activeConns.find(c => c.phoneNumberId === phoneNumberId);
+    const activePhoneIds = getActiveWhatsappPhoneIds(admin);
+    const existingConn = activePhoneIds.has(String(phoneNumberId));
 
     if (isSuperAdmin && !existingConn && (admin.whatsappConnected || activeConns.length >= 1)) {
       return res.status(400).json({
@@ -299,12 +303,28 @@ exports.handleEmbeddedSignup = async (req, res) => {
       });
     }
 
-    if (!isSuperAdmin && !existingConn && maxConnections !== -1 && activeConns.length >= maxConnections) {
-      const planName = subscriptionService.normalizePlanName(admin.subscriptionPlan);
+    if (!isSuperAdmin && !existingConn && maxConnections !== -1 && activePhoneIds.size >= maxConnections) {
+      const planName = require('../../services/subscriptionService').normalizePlanName(admin.subscriptionPlan);
       const displayPlan = planName.charAt(0).toUpperCase() + planName.slice(1);
       return res.status(403).json({
         success: false,
         error: `Your ${displayPlan} plan allows a maximum of ${maxConnections} active WhatsApp connection(s). Please upgrade your subscription to connect additional numbers.`
+      });
+    }
+
+    // Preserve accounts created before the multi-number list was introduced.
+    // The root fields are overwritten below with the newly selected primary number.
+    admin.whatsappConnections = admin.whatsappConnections || [];
+    const legacyPhoneId = admin.whatsappPhoneNumberId;
+    if (admin.whatsappConnected && legacyPhoneId && !admin.whatsappConnections.some(c => String(c.phoneNumberId) === String(legacyPhoneId))) {
+      admin.whatsappConnections.push({
+        phoneNumberId: legacyPhoneId,
+        accessToken: admin.whatsappAccessToken,
+        businessAccountId: admin.whatsappBusinessAccountId,
+        displayPhoneNumber: admin.whatsappDisplayPhoneNumber,
+        businessName: admin.whatsappBusinessName,
+        isActive: true,
+        connectedAt: admin.whatsappConnectedAt || new Date()
       });
     }
 
@@ -319,7 +339,6 @@ exports.handleEmbeddedSignup = async (req, res) => {
     admin.whatsappConnected = true;
     admin.whatsappConnectedAt = new Date();
 
-    admin.whatsappConnections = admin.whatsappConnections || [];
     const existingIdx = admin.whatsappConnections.findIndex(c => c.phoneNumberId === phoneNumberId);
     if (existingIdx >= 0) {
       admin.whatsappConnections[existingIdx] = {

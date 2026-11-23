@@ -165,7 +165,7 @@ const plans = [
     included: [
       'Up to 500 WhatsApp conversations / month',
       'Up to 2,000 messages / month',
-      '1 active WhatsApp connection',
+      '2 active WhatsApp connections',
       '1 knowledge base PDF',
       '1 store integration (Shopify or WooCommerce)',
       'Knowledge base retrieval & live chat CRM'

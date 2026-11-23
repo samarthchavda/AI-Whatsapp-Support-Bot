@@ -75,17 +75,48 @@ exports.handleWebhook = async (req, res) => {
         });
 
         if (adminDoc) {
+          const connections = adminDoc.whatsappConnections || [];
+          const affectedConnections = connections.filter(connection => String(connection.businessAccountId) === String(wabaId));
+          const primaryAffected = String(adminDoc.whatsappBusinessAccountId || '') === String(wabaId);
           if (eventType === 'PARTNER_REMOVED' || eventType === 'ACCOUNT_OFFBOARDED') {
-            adminDoc.whatsappConnected = false;
-            adminDoc.whatsappStatus = 'disconnected';
+            affectedConnections.forEach(connection => { connection.isActive = false; });
+            if (primaryAffected || (!adminDoc.whatsappPhoneNumberId && affectedConnections.length)) {
+              const nextConnection = connections.find(connection => connection.isActive !== false);
+              if (nextConnection) {
+                adminDoc.whatsappAccessToken = nextConnection.accessToken || null;
+                adminDoc.whatsappPhoneNumberId = nextConnection.phoneNumberId;
+                adminDoc.whatsappBusinessAccountId = nextConnection.businessAccountId;
+                adminDoc.whatsappDisplayPhoneNumber = nextConnection.displayPhoneNumber || null;
+                adminDoc.whatsappBusinessName = nextConnection.businessName || null;
+                adminDoc.whatsappConnected = true;
+                adminDoc.whatsappConnectedAt = nextConnection.connectedAt || new Date();
+              } else {
+                adminDoc.whatsappConnected = false;
+              }
+            } else if (!affectedConnections.length && !primaryAffected) {
+              adminDoc.whatsappConnected = false;
+            }
+            adminDoc.whatsappStatus = adminDoc.whatsappConnected ? 'connected' : 'disconnected';
             await adminDoc.save();
-            console.log(`🔌 [Coexistence] WhatsApp marked disconnected for admin ${adminDoc._id} due to ${eventType}`);
+            console.log(`🔌 [Coexistence] Updated WhatsApp connection status for admin ${adminDoc._id} due to ${eventType}`);
             if (global.io) {
-              global.io.emit('whatsapp_status_updated', { adminId: adminDoc._id, connected: false });
+              global.io.emit('whatsapp_status_updated', { adminId: adminDoc._id, connected: adminDoc.whatsappConnected });
             }
           } else if (eventType === 'ACCOUNT_RECONNECTED') {
-            adminDoc.whatsappConnected = true;
-            adminDoc.whatsappStatus = 'connected';
+            affectedConnections.forEach(connection => { connection.isActive = true; });
+            if (primaryAffected || !adminDoc.whatsappConnected) {
+              const restored = affectedConnections[0];
+              if (restored) {
+                adminDoc.whatsappAccessToken = restored.accessToken || null;
+                adminDoc.whatsappPhoneNumberId = restored.phoneNumberId;
+                adminDoc.whatsappBusinessAccountId = restored.businessAccountId;
+                adminDoc.whatsappDisplayPhoneNumber = restored.displayPhoneNumber || null;
+                adminDoc.whatsappBusinessName = restored.businessName || null;
+                adminDoc.whatsappConnectedAt = restored.connectedAt || new Date();
+              }
+              adminDoc.whatsappConnected = true;
+            }
+            adminDoc.whatsappStatus = adminDoc.whatsappConnected ? 'connected' : 'disconnected';
             await adminDoc.save();
             console.log(`🔌 [Coexistence] WhatsApp marked reconnected for admin ${adminDoc._id}`);
             if (global.io) {
@@ -233,23 +264,23 @@ exports.handleWebhook = async (req, res) => {
         return;
       }
 
-      // Build explicit, immutable request context for this incoming message
-      const isSuperAdminConnection = matchedAdmin.role === 'super_admin';
-      const requestContext = {
-        contextType: isSuperAdminConnection ? 'super_admin' : 'merchant',
-        receivingPhoneNumberId: incomingPhoneNumberId,
-        adminId: matchedAdmin._id,
-        role: matchedAdmin.role,
-        credentials: {
-          accessToken: matchedAdmin.whatsappAccessToken,
-          phoneNumberId: matchedAdmin.whatsappPhoneNumberId || incomingPhoneNumberId,
-          businessAccountId: matchedAdmin.whatsappBusinessAccountId
-        }
-      };
-
       // Handle messages
       if (webhookValue.messages) {
+        // Replies must use the credentials of the number that received this message.
+        const { getReceivingWhatsappCredentials } = require('../../services/whatsappConnectionLimit');
+        const receivingCredentials = getReceivingWhatsappCredentials(matchedAdmin, incomingPhoneNumberId);
+        if (!receivingCredentials?.accessToken) {
+          console.warn(`🔒 [SECURITY] No active credentials for recipient ${incomingPhoneNumberId}. Skipping AI replies.`);
+        }
+        const requestContext = {
+          contextType: matchedAdmin.role === 'super_admin' ? 'super_admin' : 'merchant',
+          receivingPhoneNumberId: incomingPhoneNumberId,
+          adminId: matchedAdmin._id,
+          role: matchedAdmin.role,
+          credentials: receivingCredentials
+        };
         for (const message of webhookValue.messages) {
+          if (!receivingCredentials?.accessToken && !['edit', 'revoke'].includes(message.type)) continue;
           handleIncomingMessage(message, contactName, matchedAdmin, requestContext).catch(err => {
             console.error('Error handling incoming message:', err);
           });
@@ -675,6 +706,29 @@ exports.getStatus = async (req, res) => {
     } catch (err) {
       console.log('Error detecting ngrok URL:', err.message);
     }
+
+    const { getWhatsappConnectionLimit } = require('../../services/whatsappConnectionLimit');
+    const primaryPhoneId = String(adminDoc?.whatsappPhoneNumberId || '');
+    const connections = (adminDoc?.whatsappConnections || []).map(connection => ({
+      phoneNumberId: connection.phoneNumberId,
+      displayPhoneNumber: connection.displayPhoneNumber || '',
+      businessName: connection.businessName || '',
+      businessAccountId: connection.businessAccountId || '',
+      isActive: connection.isActive !== false,
+      isPrimary: String(connection.phoneNumberId) === primaryPhoneId,
+      connectedAt: connection.connectedAt || null
+    }));
+    if (primaryPhoneId && !connections.some(connection => String(connection.phoneNumberId) === primaryPhoneId)) {
+      connections.unshift({
+        phoneNumberId: primaryPhoneId,
+        displayPhoneNumber: adminDoc.whatsappDisplayPhoneNumber || phoneDetails?.display_phone_number || '',
+        businessName: adminDoc.whatsappBusinessName || phoneDetails?.verified_name || '',
+        businessAccountId: adminDoc.whatsappBusinessAccountId || '',
+        isActive: isConnected,
+        isPrimary: true,
+        connectedAt: adminDoc.whatsappConnectedAt || null
+      });
+    }
  
     res.json({
       service: 'WhatsApp Cloud API',
@@ -685,6 +739,8 @@ exports.getStatus = async (req, res) => {
       displayName: phoneDetails?.display_phone_number || 'N/A',
       webBotEnabled,
       isConnected,
+      connections,
+      connectionLimit: getWhatsappConnectionLimit(adminDoc),
       webhookUrl: `${process.env.BACKEND_URL || (req.protocol + '://' + req.get('host'))}/api/webhook/whatsapp`,
       verifyToken: adminDoc?.whatsappVerifyToken || process.env.WEBHOOK_VERIFY_TOKEN || 'secure_webhook_token_123',
       credentials: {

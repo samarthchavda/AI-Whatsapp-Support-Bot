@@ -20,7 +20,7 @@ const KWICKBOT_CRM_COMPARISON = {
   starter: {
     conversations: '500',
     messages: '2,000',
-    connections: '1',
+    connections: '2',
     knowledgeBasePdfs: '1 PDF document',
     storeIntegrations: '1 store integration (Shopify or WooCommerce)',
     advancedAnalytics: false,
@@ -79,7 +79,7 @@ const KWICKBOT_CRM_COMPARISON = {
 const CRM_INTEGRATION_COMPARISON = {
   crm_connect: {
     included: [
-      '1 WhatsApp connection and 1 CRM connection',
+      '2 WhatsApp connections and 1 CRM connection',
       'Up to 2,000 WhatsApp conversations/month',
       'Up to 10,000 WhatsApp messages/month',
       'AI WhatsApp support with 1 knowledge base upload',
@@ -383,7 +383,7 @@ export default function PricingPage() {
                               <>
                                 <FeatureItem>{formatLimit(plan.usageLimits.monthlyConversations)} WhatsApp conversations / month</FeatureItem>
                                 <FeatureItem>{formatLimit(plan.usageLimits.monthlyMessages)} messages / month</FeatureItem>
-                                <FeatureItem>{formatLimit(plan.usageLimits.maxWhatsAppConnections)} active WhatsApp connection(s)</FeatureItem>
+                                <FeatureItem>{formatLimit(plan.usageLimits.maxWhatsAppConnections === -1 ? -1 : Math.max(2, Number(plan.usageLimits.maxWhatsAppConnections) || 0))} active WhatsApp connection(s)</FeatureItem>
                               </>
                             )}
                             {plan.features?.aiAutomation && <FeatureItem>AI knowledge base &amp; automated support</FeatureItem>}

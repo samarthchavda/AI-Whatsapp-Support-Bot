@@ -3,10 +3,11 @@ jest.mock('../services/whatsappCloudAPI', () => ({}));
 jest.mock('../services/aiService', () => ({}));
 jest.mock('../models/Conversation', () => ({}));
 jest.mock('../services/webhookRelayService', () => ({}));
+jest.mock('../services/ngrokService', () => ({ getNgrokUrl: jest.fn().mockResolvedValue(null) }));
 jest.mock('../models/Admin', () => ({ findById: jest.fn() }));
 
 const Admin = require('../models/Admin');
-const { disconnectWhatsApp } = require('../controllers/public/webhookController');
+const { disconnectWhatsApp, getStatus } = require('../controllers/public/webhookController');
 
 const makeResponse = () => ({ status: jest.fn().mockReturnThis(), json: jest.fn() });
 
@@ -68,5 +69,27 @@ describe('WhatsApp disconnect', () => {
 
     expect(res.status).toHaveBeenCalledWith(400);
     expect(admin.save).not.toHaveBeenCalled();
+  });
+
+  test('status lists every number without exposing access tokens', async () => {
+    Admin.findById.mockResolvedValue({
+      role: 'admin',
+      subscriptionPlan: 'starter',
+      whatsappVerifyToken: 'verification-token',
+      whatsappConnected: false,
+      whatsappPhoneNumberId: null,
+      whatsappConnections: [
+        { phoneNumberId: 'phone-a', displayPhoneNumber: '+91 111', businessAccountId: 'waba-a', accessToken: 'secret-a', isActive: true },
+        { phoneNumberId: 'phone-b', displayPhoneNumber: '+91 222', businessAccountId: 'waba-b', accessToken: 'secret-b', isActive: true }
+      ]
+    });
+    const res = makeResponse();
+    await getStatus({ admin: { _id: 'merchant-a' }, protocol: 'https', get: () => 'kwickbot.in' }, res);
+
+    const payload = res.json.mock.calls[0][0];
+    expect(payload.connectionLimit).toBe(2);
+    expect(payload.connections.map(connection => connection.phoneNumberId)).toEqual(['phone-a', 'phone-b']);
+    expect(JSON.stringify(payload.connections)).not.toContain('secret-a');
+    expect(JSON.stringify(payload.connections)).not.toContain('secret-b');
   });
 });

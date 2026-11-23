@@ -1,7 +1,7 @@
 /**
  * Official Centralized Subscription Plan Definitions & Features
  * Kwickbot Public Pricing Source of Truth:
- * - STARTER  (starter): ₹1,499/mo | 500 Conversations | 2,000 Messages | 1 WA Connection | 1 PDF KB | 1 Store Integration | NO Broadcasting
+ * - STARTER  (starter): ₹1,499/mo | 500 Conversations | 2,000 Messages | 2 WA Connections | 1 PDF KB | 1 Store Integration | NO Broadcasting
  * - GROWTH   (growth):  ₹2,999/mo | 3,000 Conversations | 15,000 Messages | 2 WA Connections | 3 PDF KBs | 1 Store Integration | 5,000 Broadcast Msgs | 10 Campaigns
  * - SCALE    (scale):   ₹9,999/mo | Unlimited Conversations | Unlimited Messages | 5 WA Connections | Unlimited PDF KBs | Multiple Store Integrations | 25,000 Broadcast Msgs | Unlimited Campaigns
  */
@@ -16,7 +16,7 @@ const PLAN_DEFINITIONS = {
       maxConversations: 500,
       maxMessages: 2000,
       geminiTokensPerMonth: 50000,
-      maxWhatsAppConnections: 1,
+      maxWhatsAppConnections: 2,
       maxKbUploads: 1,
       maxIntegrations: 1,
       maxBroadcastMessages: 5000,
@@ -127,12 +127,12 @@ const PLAN_DEFINITIONS = {
     name: 'crm_connect',
     displayName: 'CRM Connect Plan',
     monthlyPrice: 2499,
-    description: 'WhatsApp support with one connected business number.',
+    description: 'WhatsApp support with two connected business numbers.',
     features: {
       maxConversations: 2000,
       maxMessages: 10000,
       geminiTokensPerMonth: 50000,
-      maxWhatsAppConnections: 1,
+      maxWhatsAppConnections: 2,
       maxActiveAutomations: 0,
       maxApiKeys: 0,
       maxKbUploads: 1,

@@ -96,6 +96,56 @@ describe('WhatsApp Coexistence Integration Tests', () => {
     expect(mockAdmin.save).toHaveBeenCalled();
   });
 
+  test('offboarding a secondary WABA keeps the primary number connected', async () => {
+    const mockAdmin = {
+      _id: 'admin_123',
+      whatsappBusinessAccountId: 'waba-primary',
+      whatsappPhoneNumberId: 'phone-primary',
+      whatsappConnected: true,
+      whatsappConnections: [
+        { phoneNumberId: 'phone-primary', businessAccountId: 'waba-primary', isActive: true },
+        { phoneNumberId: 'phone-secondary', businessAccountId: 'waba-secondary', isActive: true }
+      ],
+      save: jest.fn().mockResolvedValue(true)
+    };
+    mockAdminFindOne.mockResolvedValue(mockAdmin);
+    const res = makeResponse();
+
+    await handleWebhook({ method: 'POST', body: { object: 'whatsapp_business_account', entry: [{
+      id: 'waba-secondary', changes: [{ field: 'account_update', value: { event: 'PARTNER_REMOVED', waba_info: { waba_id: 'waba-secondary' } } }]
+    }] } }, res);
+
+    expect(mockAdmin.whatsappConnected).toBe(true);
+    expect(mockAdmin.whatsappPhoneNumberId).toBe('phone-primary');
+    expect(mockAdmin.whatsappConnections[1].isActive).toBe(false);
+    expect(global.io.emit).toHaveBeenCalledWith('whatsapp_status_updated', { adminId: 'admin_123', connected: true });
+  });
+
+  test('offboarding the primary WABA promotes another active number', async () => {
+    const mockAdmin = {
+      _id: 'admin_123',
+      whatsappBusinessAccountId: 'waba-primary',
+      whatsappPhoneNumberId: 'phone-primary',
+      whatsappConnected: true,
+      whatsappConnections: [
+        { phoneNumberId: 'phone-primary', businessAccountId: 'waba-primary', isActive: true },
+        { phoneNumberId: 'phone-secondary', businessAccountId: 'waba-secondary', accessToken: 'second-token', isActive: true }
+      ],
+      save: jest.fn().mockResolvedValue(true)
+    };
+    mockAdminFindOne.mockResolvedValue(mockAdmin);
+    const res = makeResponse();
+
+    await handleWebhook({ method: 'POST', body: { object: 'whatsapp_business_account', entry: [{
+      id: 'waba-primary', changes: [{ field: 'account_update', value: { event: 'PARTNER_REMOVED', waba_info: { waba_id: 'waba-primary' } } }]
+    }] } }, res);
+
+    expect(mockAdmin.whatsappConnected).toBe(true);
+    expect(mockAdmin.whatsappPhoneNumberId).toBe('phone-secondary');
+    expect(mockAdmin.whatsappAccessToken).toBe('second-token');
+    expect(mockAdmin.whatsappConnections[0].isActive).toBe(false);
+  });
+
   test('2. Handles smb_message_echoes webhook from mobile WhatsApp Business app and pauses bot', async () => {
     const mockAdmin = {
       _id: 'admin_123',

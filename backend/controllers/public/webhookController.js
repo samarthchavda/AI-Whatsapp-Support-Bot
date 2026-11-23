@@ -386,6 +386,9 @@ async function handleIncomingMessage(message, contactName, matchedAdmin, request
       } else {
         messageContent = '[INTERACTIVE] Choice selected';
       }
+    } else if (['image', 'video', 'audio', 'document', 'sticker'].includes(message.type)) {
+      const media = message[message.type] || {};
+      messageContent = `[${message.type}] ${media.caption || media.filename || 'Attachment received'}`;
     } else {
       messageContent = `[${message.type.toUpperCase()}] Message received`;
     }
@@ -444,6 +447,17 @@ async function handleIncomingMessage(message, contactName, matchedAdmin, request
       isSystemNumber,
       requestContext
     });
+
+    const savedConversation = await Conversation.findOne({ admin: matchedAdmin._id, customerPhone, channelPhoneNumberId: requestContext.receivingPhoneNumberId }).sort({ updatedAt: -1 });
+    if (savedConversation) {
+      savedConversation.channelPhoneNumberId = requestContext.receivingPhoneNumberId;
+      const savedMessage = savedConversation.messages.find(item => item.messageId === messageId);
+      const incomingMedia = message[message.type];
+      if (savedMessage && ['image', 'video', 'audio', 'document', 'sticker'].includes(message.type) && incomingMedia?.id) {
+        savedMessage.media = { id: incomingMedia.id, type: message.type, mimeType: incomingMedia.mime_type, filename: incomingMedia.filename, caption: incomingMedia.caption };
+      }
+      await savedConversation.save();
+    }
 
     if (aiResponse.botPaused) {
       if (aiResponse.message) {

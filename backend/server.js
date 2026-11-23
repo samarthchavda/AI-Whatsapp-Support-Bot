@@ -180,6 +180,8 @@ mongoose.connect(mongoUri, {
 })
   .then(() => {
     console.log('✅ Connected to MongoDB');
+    require('./database/migrations/ensureTemplateScopeIndex').ensureTemplateScopeIndex()
+      .catch(error => console.error('Template index migration warning:', error.message));
 
     // Seed/update default blog posts on startup
     try {

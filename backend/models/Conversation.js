@@ -16,6 +16,7 @@ const conversationSchema = new mongoose.Schema({
     type: String,
     required: true
   },
+  channelPhoneNumberId: { type: String, default: null },
   messages: [{
     role: {
       type: String,
@@ -26,6 +27,13 @@ const conversationSchema = new mongoose.Schema({
       type: String,
       required: false,
       default: ''
+    },
+    media: {
+      id: String,
+      type: String,
+      mimeType: String,
+      filename: String,
+      caption: String
     },
     translation: {
       type: String,

@@ -707,6 +707,29 @@ class WhatsAppCloudAPI {
     }
   }
 
+  async sendMedia(phoneNumber, file, mediaType, customCredentials, caption = '') {
+    const { accessToken, phoneNumberId } = customCredentials || {};
+    if (!accessToken || !phoneNumberId) return { success: false, error: 'WhatsApp number is not connected.' };
+    try {
+      const form = new FormData();
+      form.append('messaging_product', 'whatsapp');
+      form.append('file', new Blob([file.buffer], { type: file.mimetype }), file.originalname);
+      const uploaded = await axios.post(`${this.baseUrl}/${phoneNumberId}/media`, form, {
+        headers: { Authorization: `Bearer ${accessToken}` }, timeout: 30000
+      });
+      const attachment = { id: uploaded.data.id };
+      if (caption && ['image', 'video', 'document'].includes(mediaType)) attachment.caption = caption;
+      if (mediaType === 'document') attachment.filename = file.originalname;
+      const response = await axios.post(`${this.baseUrl}/${phoneNumberId}/messages`, {
+        messaging_product: 'whatsapp', recipient_type: 'individual', to: String(phoneNumber).replace(/\D/g, ''),
+        type: mediaType, [mediaType]: attachment
+      }, { headers: { Authorization: `Bearer ${accessToken}` }, timeout: 30000 });
+      return { success: true, messageId: response.data?.messages?.[0]?.id, mediaId: uploaded.data.id };
+    } catch (error) {
+      return { success: false, error: error.response?.data?.error?.message || error.message };
+    }
+  }
+
   // Upload media for sending
   async uploadMedia(phoneNumberId, mediaFile, mediaType = 'image', customCredentials = null) {
     const accessToken = customCredentials?.accessToken || this.accessToken;
@@ -779,12 +802,20 @@ class WhatsAppCloudAPI {
         }
       };
 
-      const response = await axios.get(url, config);
-      console.log('✅ Templates fetched from Meta:', response.data.data?.length || 0);
-      return response.data.data || [];
+      const templates = [];
+      let next = url;
+      for (let page = 0; next && page < 20; page += 1) {
+        const response = await axios.get(next, config);
+        templates.push(...(response.data.data || []));
+        next = response.data.paging?.next || null;
+        if (next && new URL(next).hostname !== 'graph.facebook.com') throw new Error('Invalid Meta pagination URL.');
+      }
+      if (next) throw new Error('Meta template listing exceeded the page limit.');
+      console.log('✅ Templates fetched from Meta:', templates.length);
+      return templates;
     } catch (error) {
       console.error('❌ Error fetching templates from Meta:', error.response?.data || error.message);
-      return [];
+      throw error;
     }
   }
 

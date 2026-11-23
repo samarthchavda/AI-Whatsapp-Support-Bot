@@ -1115,3 +1115,43 @@ body.dark-theme .template-lang-badge code {
   text-overflow: ellipsis;
   line-height: 1.4;
 }
+
+/* Merchant portal palette for the template workspace. */
+.merchant-portal .tmpl-number-bar { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; padding: 14px 18px; margin: 0 0 18px; background: var(--bg-card); border: 1px solid var(--border); border-radius: 14px; color: var(--text-secondary); }
+.merchant-portal .tmpl-number-bar label { font-weight: 700; color: var(--text-primary); }
+.merchant-portal .tmpl-number-bar select { min-width: 190px; padding: 10px 12px; border: 1px solid var(--border-default); border-radius: 9px; background: var(--bg-input); color: var(--text-primary); }
+.merchant-portal .tmpl-number-bar span { font-size: 13px; }
+.merchant-portal .meta-connection-banner,.merchant-portal .tmpl-filter-bar,.merchant-portal .tmpl-table-card,.merchant-portal .template-card { background: var(--bg-card); border-color: var(--border); box-shadow: var(--shadow-sm); }
+.merchant-portal .meta-conn-icon { background: var(--brand-light); color: var(--brand); }
+.merchant-portal .meta-conn-header h4,.merchant-portal .template-name,.merchant-portal .tmpl-name-text { color: var(--text-primary); }
+.merchant-portal .meta-conn-header p,.merchant-portal .tmpl-table tbody td,.merchant-portal .tmpl-message-snippet,.merchant-portal .tmpl-date-cell,.merchant-portal .tmpl-lang-code,.merchant-portal .template-card-snippet p { color: var(--text-secondary); }
+.merchant-portal .tmpl-search-input,.merchant-portal .tmpl-filter-select,.merchant-portal .tmpl-inline-trigger-select,.merchant-portal .mapping-select { background: var(--bg-input); border-color: var(--border-default); color: var(--text-primary); }
+.merchant-portal .tmpl-search-input::placeholder { color: var(--text-muted); opacity: 1; }
+.merchant-portal .tmpl-search-input:focus,.merchant-portal .tmpl-filter-select:focus,.merchant-portal .tmpl-inline-trigger-select:focus,.merchant-portal .tmpl-number-bar select:focus { outline: 2px solid var(--border-focus); outline-offset: 2px; box-shadow: none; }
+.merchant-portal .tmpl-view-toggle { background: var(--bg-input); border-color: var(--border-default); }
+.merchant-portal .tmpl-view-btn { color: var(--text-secondary); min-width: 40px; min-height: 40px; }
+.merchant-portal .tmpl-view-btn.active { background: var(--brand-light); color: var(--brand-dark); }
+.merchant-portal .tmpl-table thead th { background: var(--brand-light); color: var(--brand-dark); border-color: var(--border-default); }
+.merchant-portal .tmpl-table tbody td { border-color: var(--border); }
+.merchant-portal .tmpl-table tr:hover td { background: var(--bg-hover); }
+.merchant-portal .tmpl-icon-action-btn { color: var(--text-secondary); min-width: 40px; min-height: 40px; }
+.merchant-portal .tmpl-category-badge,.merchant-portal .template-category-tag { background: var(--brand-light); color: var(--brand-dark); border-color: var(--border-default); }
+.merchant-portal .tmpl-status-badge.approved { color: #256b47; background: #e7f5eb; border-color: #b5ddc3; }
+.merchant-portal .tmpl-status-badge.pending { color: #78500b; background: #fff3d7; border-color: #eed79d; }
+.merchant-portal .tmpl-status-badge.rejected { color: #a33b33; background: #fff0ec; border-color: #efc2b9; }
+.merchant-portal .tmpl-status-badge.paused { color: var(--text-secondary); background: var(--bg-input); border-color: var(--border); }
+.merchant-portal .tmpl-mapped-inline-tag { color: #256b47; background: #e7f5eb; border-color: #b5ddc3; }
+.merchant-portal .template-card-snippet,.merchant-portal .template-mapping-section { background: var(--bg-input); border-color: var(--border); }
+.merchant-portal .template-action-button,.merchant-portal .sync-meta-btn { background: var(--bg-input); border-color: var(--border-default); color: var(--brand-dark); }
+.merchant-portal .template-action-button:hover,.merchant-portal .sync-meta-btn:hover { background: var(--brand-light); color: var(--brand-dark); }
+.merchant-portal .info-notice-box { background: var(--brand-light); border-color: var(--border-default); color: var(--text-primary); }
+.merchant-portal .info-notice-box svg { color: var(--brand); }
+.merchant-portal .template-preview-modal,.merchant-portal .template-preview-details { background: var(--bg-card); border-color: var(--border); }
+.merchant-portal .template-preview-details > div { color: var(--text-secondary); border-color: var(--border); }
+.merchant-portal .template-preview-details > div strong { color: var(--text-primary); }
+.merchant-portal .template-preview-details code { background: var(--bg-input); color: var(--brand-dark); border-color: var(--border); }
+.merchant-portal .template-phone-preview,.merchant-portal .template-preview-modal .template-phone-preview { background: var(--bg-input); border-color: var(--border-default); }
+.merchant-portal .template-preview-title,.merchant-portal .template-preview-buttons span,.merchant-portal .template-label-with-action button,.merchant-portal .template-add-button { color: var(--brand-dark); }
+.merchant-portal .template-variable-samples,.merchant-portal .template-buttons-builder { background: var(--bg-input); border-color: var(--border-default); }
+.merchant-portal .template-label-with-action button,.merchant-portal .template-add-button { background: var(--brand-light); }
+@media (max-width: 900px) { .merchant-portal .tmpl-filters-container { flex-wrap: wrap; } .merchant-portal .tmpl-search-wrapper { max-width: none; } }

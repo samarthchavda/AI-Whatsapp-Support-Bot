@@ -1,5 +1,73 @@
 const Conversation = require('../../models/Conversation');
 const Escalation = require('../../models/Escalation');
+const axios = require('axios');
+const { getReceivingWhatsappCredentials } = require('../../services/whatsappConnectionLimit');
+const whatsappCloudAPI = require('../../services/whatsappCloudAPI');
+
+const mediaKind = (mime = '') => {
+  if (/^image\/(jpeg|png|webp)$/.test(mime)) return 'image';
+  if (/^video\/mp4$/.test(mime)) return 'video';
+  if (/^audio\/(ogg|mpeg|mp4|amr|aac)(;|$)/.test(mime)) return 'audio';
+  if (['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'application/vnd.ms-excel', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'].includes(mime)) return 'document';
+  return null;
+};
+
+exports.sendAdminMedia = async (req, res) => {
+  try {
+    const conversation = await Conversation.findOne({ _id: req.params.id, admin: req.admin._id });
+    if (!conversation) return res.status(404).json({ success: false, error: 'Conversation not found.' });
+    if (!req.file) return res.status(400).json({ success: false, error: 'Choose a media file.' });
+    const type = mediaKind(req.file.mimetype);
+    if (!type) return res.status(400).json({ success: false, error: 'Use a JPG, PNG, WebP, MP4, supported audio, PDF, Word, or Excel file.' });
+    const credentials = getReceivingWhatsappCredentials(req.admin, conversation.channelPhoneNumberId || req.admin.whatsappPhoneNumberId);
+    if (!credentials?.accessToken) return res.status(400).json({ success: false, error: 'The WhatsApp number for this chat is disconnected.' });
+    const caption = String(req.body.caption || '').trim().slice(0, 1024);
+    const sent = await whatsappCloudAPI.sendMedia(conversation.customerPhone, req.file, type, credentials, caption);
+    if (!sent.success) return res.status(502).json({ success: false, error: sent.error || 'WhatsApp could not send the attachment.' });
+    conversation.botPaused = true;
+    conversation.suggestedReply = null;
+    conversation.messages.push({ role: 'system', content: caption || req.file.originalname, messageId: sent.messageId,
+      media: { id: sent.mediaId, type, mimeType: req.file.mimetype, filename: req.file.originalname, caption }, timestamp: new Date() });
+    conversation.lastMessageAt = new Date();
+    await conversation.save();
+    const io = req.app.get('io') || global.io;
+    if (io) io.to(`merchant:${req.admin._id}`).emit('conversation_updated', conversation);
+    res.json({ success: true, data: conversation });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message || 'Failed to send media.' });
+  }
+};
+
+exports.getMessageMedia = async (req, res) => {
+  try {
+    const conversation = await Conversation.findOne({ _id: req.params.id, admin: req.admin._id });
+    const message = conversation?.messages.find(item => String(item._id) === req.params.messageId);
+    if (!message?.media?.id) return res.status(404).json({ success: false, error: 'Attachment not found.' });
+    const credentials = getReceivingWhatsappCredentials(req.admin, conversation.channelPhoneNumberId || req.admin.whatsappPhoneNumberId);
+    if (!credentials?.accessToken) return res.status(403).json({ success: false, error: 'WhatsApp number disconnected.' });
+    const info = await whatsappCloudAPI.getMedia(message.media.id, credentials);
+    if (!info?.url) return res.status(404).json({ success: false, error: 'Media expired or unavailable.' });
+    let source = new URL(info.url);
+    const allowedSource = (url) => url.protocol === 'https:' && /(^|\.)(facebook\.com|fbcdn\.net|fbsbx\.com)$/.test(url.hostname);
+    if (!allowedSource(source)) return res.status(502).json({ success: false, error: 'Invalid media source.' });
+    let download;
+    for (let redirect = 0; redirect < 3; redirect += 1) {
+      download = await axios.get(source.toString(), { headers: { Authorization: `Bearer ${credentials.accessToken}` }, responseType: 'stream', timeout: 15000, maxRedirects: 0, validateStatus: status => status >= 200 && status < 400 });
+      if (download.status < 300) break;
+      download.data.destroy();
+      if (!download.headers.location) return res.status(502).json({ success: false, error: 'Media redirect failed.' });
+      source = new URL(download.headers.location, source);
+      if (!allowedSource(source)) return res.status(502).json({ success: false, error: 'Invalid media redirect.' });
+    }
+    if (download.status >= 300) return res.status(502).json({ success: false, error: 'Too many media redirects.' });
+    res.set('Content-Type', info.mime_type || message.media.mimeType || 'application/octet-stream');
+    res.set('Cache-Control', 'private, no-store');
+    res.set('Content-Disposition', `${message.media.type === 'document' ? 'attachment' : 'inline'}; filename="attachment"`);
+    download.data.pipe(res);
+  } catch (error) {
+    if (!res.headersSent) res.status(502).json({ success: false, error: 'Unable to load attachment.' });
+  }
+};
 
 // Get all conversations
 exports.getAllConversations = async (req, res) => {
@@ -40,7 +108,7 @@ exports.getAllConversations = async (req, res) => {
 // Get conversation by ID
 exports.getConversationById = async (req, res) => {
   try {
-    const conversation = await Conversation.findById(req.params.id);
+    const conversation = await Conversation.findOne({ _id: req.params.id, admin: req.admin._id });
     
     if (!conversation) {
       return res.status(404).json({ error: 'Conversation not found' });
@@ -92,7 +160,7 @@ exports.updateConversationStatus = async (req, res) => {
   try {
     const { status, satisfaction, botPaused, suggestedReply } = req.body;
 
-    const conversation = await Conversation.findById(req.params.id);
+    const conversation = await Conversation.findOne({ _id: req.params.id, admin: req.admin._id });
     
     if (!conversation) {
       return res.status(404).json({ error: 'Conversation not found' });
@@ -190,7 +258,7 @@ exports.getConversationStats = async (req, res) => {
 // Send admin message to customer
 exports.sendAdminMessage = async (req, res) => {
   try {
-    const { customerPhone, message } = req.body;
+    const { customerPhone, message, conversationId } = req.body;
 
     if (!customerPhone || !message) {
       return res.status(400).json({
@@ -200,7 +268,8 @@ exports.sendAdminMessage = async (req, res) => {
     }
 
     // Find conversation for this admin
-    let conversation = await Conversation.findOne({ 
+    let conversation = await Conversation.findOne({
+      ...(conversationId ? { _id: conversationId } : {}),
       admin: req.admin._id,
       customerPhone 
     });
@@ -212,12 +281,6 @@ exports.sendAdminMessage = async (req, res) => {
       });
     }
 
-    // Automatically pause the bot as the admin has taken over
-    conversation.botPaused = true;
-    
-    // Clear suggested draft message
-    conversation.suggestedReply = null;
-    
     // Retrieve customer's language preference
     let targetLanguage = 'English';
     if (conversation.messages && conversation.messages.length > 0) {
@@ -236,7 +299,7 @@ exports.sendAdminMessage = async (req, res) => {
                               targetLanguage.toLowerCase() !== 'english' && 
                               targetLanguage.toLowerCase() !== 'gujarati';
 
-    if (isForeignLanguage) {
+    if (isForeignLanguage && !/^[\p{Extended_Pictographic}\p{Emoji_Component}\s]+$/u.test(message)) {
       try {
         const translationService = require('../../services/translationService');
         translation = await translationService.translateText(message, targetLanguage);
@@ -247,67 +310,20 @@ exports.sendAdminMessage = async (req, res) => {
       }
     }
 
-    // Add admin message to conversation
-    conversation.messages.push({
-      role: 'system', // Admin messages are 'system' role
-      content: message,
-      translation: isForeignLanguage ? translation : null,
-      detectedLanguage: targetLanguage,
-      timestamp: new Date()
-    });
+    const { getReceivingWhatsappCredentials } = require('../../services/whatsappConnectionLimit');
+    const whatsappCloudAPI = require('../../services/whatsappCloudAPI');
+    const phoneNumberId = conversation.channelPhoneNumberId || req.admin.whatsappPhoneNumberId;
+    const credentials = getReceivingWhatsappCredentials(req.admin, phoneNumberId);
+    if (!credentials?.accessToken) return res.status(400).json({ success: false, error: 'The WhatsApp number for this chat is disconnected.' });
+    const sent = await whatsappCloudAPI.sendMessage(customerPhone, messageToSend, credentials);
+    if (!sent.success) return res.status(502).json({ success: false, error: sent.error || 'WhatsApp could not send the reply.' });
 
+    conversation.botPaused = true;
+    conversation.suggestedReply = null;
+    conversation.messages.push({ role: 'system', content: message, translation: translation || null,
+      detectedLanguage: targetLanguage, messageId: sent.messageId, timestamp: new Date() });
     conversation.lastMessageAt = new Date();
     await conversation.save();
-
-    // Send message via WhatsApp Web Bot or WhatsApp Cloud API
-    let sentSuccess = false;
-    let errorMsg = null;
-
-    try {
-      const whatsappWebBot = require('../../services/whatsappWebBot');
-      if (whatsappWebBot && whatsappWebBot.isReady) {
-        console.log(`Sending manual message via WhatsApp Web Bot to ${customerPhone}`);
-        const webResult = await whatsappWebBot.sendMessage(customerPhone, messageToSend);
-        if (webResult.success) {
-          sentSuccess = true;
-        } else {
-          errorMsg = webResult.error;
-        }
-      }
-    } catch (e) {
-      console.log('WhatsApp Web Bot not available for sending admin message:', e.message);
-    }
-
-    if (!sentSuccess) {
-      try {
-        const whatsappCloudAPI = require('../../services/whatsappCloudAPI');
-        const Admin = require('../../models/Admin');
-        const adminDoc = await Admin.findById(req.admin._id);
-        
-        let customCredentials = null;
-        if (adminDoc && adminDoc.whatsappAccessToken && adminDoc.whatsappPhoneNumberId) {
-          customCredentials = {
-            accessToken: adminDoc.whatsappAccessToken,
-            phoneNumberId: adminDoc.whatsappPhoneNumberId,
-            businessAccountId: adminDoc.whatsappBusinessAccountId
-          };
-        }
-
-        console.log(`Sending manual message via WhatsApp Cloud API to ${customerPhone}`);
-        const cloudResult = await whatsappCloudAPI.sendMessage(customerPhone, messageToSend, customCredentials);
-        if (cloudResult.success) {
-          sentSuccess = true;
-        } else {
-          errorMsg = typeof cloudResult.error === 'object' ? JSON.stringify(cloudResult.error) : (cloudResult.error || 'Failed to send via Cloud API');
-        }
-      } catch (e) {
-        console.log('WhatsApp Cloud API not available for sending admin message:', e.message);
-      }
-    }
-
-    if (!sentSuccess) {
-      console.log(`⚠️ Manual message simulated (not sent to actual WhatsApp): "${messageToSend}". Reason: ${errorMsg || 'No active clients'}`);
-    }
     
     // Emit socket event for real-time update
     const io = req.app.get('io') || global.io;
@@ -316,6 +332,7 @@ exports.sendAdminMessage = async (req, res) => {
       const target = adminId ? io.to(`merchant:${adminId}`).to('super_admin_room') : io.to('super_admin_room');
       target.emit('new_message', {
         customerPhone,
+        conversationId: conversation._id,
         role: 'system',
         content: message,
         translation: isForeignLanguage ? translation : null,

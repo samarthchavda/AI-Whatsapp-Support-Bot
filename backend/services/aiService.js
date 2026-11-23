@@ -377,6 +377,9 @@ STRICT KNOWLEDGE BASE GROUNDING RULES:
       if (adminId) {
         conversationQuery.admin = adminId;
       }
+      if (requestContext?.receivingPhoneNumberId) {
+        conversationQuery.channelPhoneNumberId = requestContext.receivingPhoneNumberId;
+      }
 
       conversation = await Conversation.findOne(conversationQuery);
 
@@ -400,6 +403,7 @@ STRICT KNOWLEDGE BASE GROUNDING RULES:
           admin: finalAdminId,
           customerPhone,
           customerName,
+          channelPhoneNumberId: requestContext?.receivingPhoneNumberId || null,
           messages: [],
           status: 'active'
         });

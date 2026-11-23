@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { FaPaperPlane, FaRobot, FaUser, FaCircle, FaSearch, FaPhone, FaCommentDots } from 'react-icons/fa';
+import { FaPaperPlane, FaRobot, FaUser, FaCircle, FaSearch, FaPhone, FaCommentDots, FaPaperclip, FaSmile, FaDownload, FaFileAlt, FaTimes } from 'react-icons/fa';
 import io from 'socket.io-client';
+import api from '../../../services/api';
 import { getConversations, getConversationById, getConversationsByPhone, sendConversationMessage, updateConversation } from '../../../services/api';
 import './LiveChat.css';
 
@@ -14,6 +15,28 @@ const AVATAR_COLORS = [
   'linear-gradient(135deg, #3b82f6, #1d4ed8)'
 ];
 
+const QUICK_EMOJIS = ['😊', '👍', '🙏', '❤️', '🎉', '✅', '👋', '🙂'];
+
+function MessageMedia({ conversationId, message }) {
+  const [url, setUrl] = useState('');
+  const [error, setError] = useState(false);
+  useEffect(() => {
+    let active = true;
+    let objectUrl = '';
+    api.get(`/conversations/${conversationId}/messages/${message._id}/media`, { responseType: 'blob' })
+      .then((response) => { objectUrl = URL.createObjectURL(response.data); if (active) setUrl(objectUrl); else URL.revokeObjectURL(objectUrl); })
+      .catch(() => { if (active) setError(true); });
+    return () => { active = false; if (objectUrl) URL.revokeObjectURL(objectUrl); };
+  }, [conversationId, message._id]);
+  if (error) return <span className="chat-media-error">Attachment unavailable</span>;
+  if (!url) return <span className="chat-media-loading">Loading attachment…</span>;
+  const { type, filename } = message.media;
+  if (type === 'image' || type === 'sticker') return <img className="chat-media-image" src={url} alt={filename || 'WhatsApp image'} />;
+  if (type === 'video') return <video className="chat-media-video" src={url} controls preload="metadata" />;
+  if (type === 'audio') return <audio className="chat-media-audio" src={url} controls preload="metadata" />;
+  return <a className="chat-media-document" href={url} download={filename || 'attachment'}><FaFileAlt /> {filename || 'Document'} <FaDownload /></a>;
+}
+
 function LiveChat() {
   const [conversations, setConversations] = useState([]);
   const [selectedConversation, setSelectedConversation] = useState(null);
@@ -24,7 +47,11 @@ function LiveChat() {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [togglingBot, setTogglingBot] = useState(false);
+  const [attachment, setAttachment] = useState(null);
+  const [showEmojis, setShowEmojis] = useState(false);
+  const [sendError, setSendError] = useState('');
   const messagesEndRef = useRef(null);
+  const fileInputRef = useRef(null);
 
   const getInitials = (name) =>
     (name || '?').split(' ').map((n) => n[0]).join('').toUpperCase().slice(0, 2);
@@ -99,6 +126,9 @@ function LiveChat() {
   const handleSelectConversation = (conv) => {
     if (!conv) return;
     setSelectedConversation(conv);
+    setMessageInput('');
+    setAttachment(null);
+    setSendError('');
     if (Array.isArray(conv.messages)) {
       setMessages(conv.messages);
     }
@@ -152,21 +182,27 @@ function LiveChat() {
 
   const sendMessage = async (e) => {
     e.preventDefault();
-    if (!messageInput.trim() || !selectedConversation) return;
+    if ((!messageInput.trim() && !attachment) || !selectedConversation) return;
 
     try {
       setSending(true);
-      await sendConversationMessage({
-        customerPhone: selectedConversation.customerPhone,
-        message: messageInput,
-        sender: 'admin'
-      });
+      setSendError('');
+      if (attachment) {
+        const data = new FormData();
+        data.append('file', attachment);
+        data.append('caption', messageInput.trim());
+        await api.post(`/conversations/${selectedConversation._id}/send-media`, data);
+        setAttachment(null);
+        if (fileInputRef.current) fileInputRef.current.value = '';
+      } else {
+        await sendConversationMessage({ conversationId: selectedConversation._id, customerPhone: selectedConversation.customerPhone, message: messageInput.trim(), sender: 'admin' });
+      }
       setMessageInput('');
       await fetchMessages(selectedConversation);
       await fetchConversations();
     } catch (error) {
       console.error('Error sending message:', error);
-      alert('Failed to send message');
+      setSendError(error.response?.data?.error || 'Message could not be sent. Please try again.');
     } finally {
       setSending(false);
     }
@@ -187,7 +223,7 @@ function LiveChat() {
   const lastMessagePreview = (conv) => {
     if (!conv.messages?.length) return 'No messages yet';
     const last = conv.messages[conv.messages.length - 1];
-    const text = last.content || '';
+    const text = last.content || (last.media ? 'Attachment' : '');
     return text.length > 48 ? `${text.substring(0, 48)}…` : text;
   };
 
@@ -369,7 +405,8 @@ function LiveChat() {
                         </span>
                         <span className="message-time">{formatMessageTime(msg.timestamp)}</span>
                       </div>
-                      <div className="message-content">{msg.content}</div>
+                      {msg.media?.id && <MessageMedia conversationId={selectedConversation._id} message={msg} />}
+                      {msg.content && <div className="message-content">{msg.content}</div>}
                       {msg.translation && (
                         <div className="message-translation">
                           <span className="translation-badge">
@@ -440,7 +477,13 @@ function LiveChat() {
                     <FaRobot /> AI Bot is active. Replying here will automatically pause the AI Bot.
                   </div>
                 )}
+                {attachment && <div className="chat-attachment-preview"><FaPaperclip /> {attachment.name}<button type="button" onClick={() => setAttachment(null)} aria-label="Remove attachment"><FaTimes /></button></div>}
+                {sendError && <p className="chat-send-error" role="alert">{sendError}</p>}
+                {showEmojis && <div className="chat-emoji-picker" aria-label="Choose an emoji">{QUICK_EMOJIS.map((emoji) => <button key={emoji} type="button" onClick={() => { setMessageInput((text) => text + emoji); setShowEmojis(false); }}>{emoji}</button>)}</div>}
                 <form onSubmit={sendMessage} className="message-input-form">
+                  <input ref={fileInputRef} type="file" accept="image/jpeg,image/png,image/webp,video/mp4,audio/ogg,audio/mpeg,audio/mp4,audio/amr,audio/aac,application/pdf,.doc,.docx,.xls,.xlsx" hidden onChange={(event) => { const file = event.target.files?.[0]; if (file?.size > 10 * 1024 * 1024) { setSendError('Attachment must be 10 MB or smaller.'); event.target.value = ''; return; } setSendError(''); setAttachment(file || null); }} />
+                  <button type="button" className="chat-tool-button" onClick={() => fileInputRef.current?.click()} disabled={sending} aria-label="Attach media"><FaPaperclip /></button>
+                  <button type="button" className="chat-tool-button" onClick={() => setShowEmojis((open) => !open)} disabled={sending} aria-label="Choose emoji"><FaSmile /></button>
                   <input
                     type="text"
                     placeholder="Type your message..."
@@ -448,7 +491,7 @@ function LiveChat() {
                     onChange={(e) => setMessageInput(e.target.value)}
                     disabled={sending}
                   />
-                  <button type="submit" disabled={sending || !messageInput.trim()}>
+                  <button type="submit" disabled={sending || (!messageInput.trim() && !attachment)} aria-label="Send reply">
                     {sending ? <div className="spinner-small"></div> : <FaPaperPlane />}
                   </button>
                 </form>

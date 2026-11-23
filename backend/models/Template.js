@@ -11,6 +11,7 @@ const templateSchema = new mongoose.Schema({
     type: String,
     required: true
   },
+  businessAccountId: { type: String, default: null, index: true },
   name: {
     type: String,
     required: true
@@ -56,7 +57,7 @@ const templateSchema = new mongoose.Schema({
   timestamps: true
 });
 
-// Ensure uniqueness per admin per template name
-templateSchema.index({ adminId: 1, name: 1 }, { unique: true });
+// Meta template names are unique within a WABA and language, not across a merchant's numbers.
+templateSchema.index({ adminId: 1, businessAccountId: 1, name: 1, language: 1 }, { unique: true, name: 'template_waba_name_language_unique' });
 
 module.exports = mongoose.model('Template', templateSchema);

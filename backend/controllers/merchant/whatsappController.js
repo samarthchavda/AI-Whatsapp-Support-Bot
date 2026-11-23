@@ -1,9 +1,35 @@
 const Template = require('../../models/Template');
 const whatsappCloudAPI = require('../../services/whatsappCloudAPI');
 const GlobalSettings = require('../../models/GlobalSettings');
+const { getReceivingWhatsappCredentials } = require('../../services/whatsappConnectionLimit');
 
 const TEMPLATE_NAME_PATTERN = /^[a-z0-9_]+$/;
 const ALLOWED_CATEGORIES = new Set(['MARKETING', 'UTILITY', 'AUTHENTICATION']);
+
+const templateConnection = (admin, phoneNumberId) => {
+  const id = phoneNumberId || admin.whatsappPhoneNumberId || (admin.whatsappConnections || []).find(connection => connection.isActive !== false)?.phoneNumberId;
+  const credentials = getReceivingWhatsappCredentials(admin, id);
+  if (!credentials?.accessToken || !credentials?.businessAccountId) return null;
+  return credentials;
+};
+
+const templateScope = (admin, credentials) => ({
+  adminId: admin._id,
+  ...(String(admin.whatsappBusinessAccountId || '') === String(credentials.businessAccountId)
+    ? { $or: [{ businessAccountId: credentials.businessAccountId }, { businessAccountId: null }, { businessAccountId: { $exists: false } }] }
+    : { businessAccountId: credentials.businessAccountId })
+});
+
+exports.getTemplateConnections = async (req, res) => {
+  const admin = req.admin;
+  const connections = (admin.whatsappConnections || [])
+    .filter(connection => connection.isActive !== false && connection.phoneNumberId && connection.businessAccountId && connection.accessToken)
+    .map(connection => ({ phoneNumberId: connection.phoneNumberId, businessAccountId: connection.businessAccountId, displayPhoneNumber: connection.displayPhoneNumber || connection.phoneNumberId }));
+  if (admin.whatsappConnected && admin.whatsappPhoneNumberId && admin.whatsappAccessToken && admin.whatsappBusinessAccountId && !connections.some(connection => String(connection.phoneNumberId) === String(admin.whatsappPhoneNumberId))) {
+    connections.unshift({ phoneNumberId: admin.whatsappPhoneNumberId, businessAccountId: admin.whatsappBusinessAccountId, displayPhoneNumber: admin.whatsappDisplayPhoneNumber || admin.whatsappPhoneNumberId });
+  }
+  res.json({ success: true, data: connections });
+};
 
 exports.getCostAnalytics = async (req, res) => {
   const period = req.query.period || 'this_month';
@@ -88,7 +114,9 @@ const buildTemplateComponents = ({ header, body, footer, buttons, variableSample
 // Get all templates for the current admin
 exports.getTemplates = async (req, res) => {
   try {
-    const templates = await Template.find({ adminId: req.admin._id }).sort({ name: 1 });
+    const credentials = templateConnection(req.admin, req.query.phoneNumberId);
+    if (!credentials) return res.status(400).json({ success: false, error: 'Select a connected WhatsApp number.' });
+    const templates = await Template.find(templateScope(req.admin, credentials)).sort({ name: 1 });
     res.json({
       success: true,
       data: templates
@@ -113,7 +141,9 @@ exports.createTemplate = async (req, res) => {
       });
     }
 
-    const { name, category, language = 'en_US', header, body, footer, buttons, variableSamples } = req.body || {};
+    const { name, category, language = 'en_US', header, body, footer, buttons, variableSamples, phoneNumberId } = req.body || {};
+    const credentials = templateConnection(req.admin, phoneNumberId);
+    if (!credentials) return res.status(400).json({ success: false, error: 'Select a connected WhatsApp number.' });
     const normalizedName = String(name || '').trim().toLowerCase();
     const normalizedCategory = String(category || '').toUpperCase();
 
@@ -123,18 +153,14 @@ exports.createTemplate = async (req, res) => {
     if (!ALLOWED_CATEGORIES.has(normalizedCategory)) {
       return res.status(400).json({ success: false, error: 'Choose MARKETING, UTILITY, or AUTHENTICATION as the category.' });
     }
-    if (await Template.exists({ adminId: req.admin._id, name: normalizedName })) {
+    if (await Template.exists({ ...templateScope(req.admin, credentials), name: normalizedName, language: String(language || 'en_US') })) {
       return res.status(409).json({ success: false, error: 'A template with this name already exists in your Kwickbot account.' });
     }
-    if (!req.admin.whatsappAccessToken || !req.admin.whatsappBusinessAccountId) {
-      return res.status(400).json({ success: false, error: 'Connect your WhatsApp Business account before creating a template.' });
-    }
-
     const components = buildTemplateComponents({ header, body, footer, buttons, variableSamples });
     const metaPayload = { name: normalizedName, category: normalizedCategory, language: String(language || 'en_US'), components };
     const metaTemplate = await whatsappCloudAPI.createTemplate(metaPayload, {
-      accessToken: req.admin.whatsappAccessToken,
-      businessAccountId: req.admin.whatsappBusinessAccountId
+      accessToken: credentials.accessToken,
+      businessAccountId: credentials.businessAccountId
     });
     const returnedStatus = String(metaTemplate.status || '').toUpperCase();
     const status = ['APPROVED', 'PENDING', 'REJECTED', 'PAUSED'].includes(returnedStatus)
@@ -142,6 +168,7 @@ exports.createTemplate = async (req, res) => {
       : 'PENDING';
     const template = await Template.create({
       adminId: req.admin._id,
+      businessAccountId: credentials.businessAccountId,
       metaTemplateId: metaTemplate.id,
       name: normalizedName,
       category: normalizedCategory,
@@ -171,39 +198,26 @@ exports.syncTemplates = async (req, res) => {
     const admin = req.admin;
     const adminId = admin._id;
 
-    let customCredentials = null;
-    if (admin && admin.whatsappAccessToken && admin.whatsappBusinessAccountId) {
-      customCredentials = {
-        accessToken: admin.whatsappAccessToken,
-        businessAccountId: admin.whatsappBusinessAccountId
-      };
-    }
+    const customCredentials = templateConnection(admin, req.body?.phoneNumberId);
+    if (!customCredentials) return res.status(400).json({ success: false, error: 'Select a connected WhatsApp number.' });
 
     const metaTemplates = await whatsappCloudAPI.fetchTemplates(customCredentials);
 
-    // Extract valid template names returned from Meta Graph API
-    const metaNames = metaTemplates.map(t => t.name);
-
-    // Remove legacy mock templates AND any deleted templates no longer present on Meta Graph API
-    await Template.deleteMany({
-      adminId,
-      $or: [
-        { metaTemplateId: /^mock_/ },
-        { name: { $nin: metaNames } }
-      ]
-    });
+    // A partial or failed Meta listing must never erase a merchant's cached templates.
+    await Template.deleteMany({ ...templateScope(admin, customCredentials), metaTemplateId: /^mock_/ });
 
     const syncedTemplates = [];
 
     for (const tpl of metaTemplates) {
       // Find template by name and adminId
-      let localTemplate = await Template.findOne({ adminId, name: tpl.name });
+      let localTemplate = await Template.findOne({ ...templateScope(admin, customCredentials), name: tpl.name, language: tpl.language || 'en_US' });
 
       const components = tpl.components || [];
 
       if (localTemplate) {
         // Update components, status, category, language
         localTemplate.metaTemplateId = tpl.id || localTemplate.metaTemplateId;
+        localTemplate.businessAccountId = customCredentials.businessAccountId;
         localTemplate.category = tpl.category || localTemplate.category;
         localTemplate.language = tpl.language || localTemplate.language;
         localTemplate.status = tpl.status || localTemplate.status;
@@ -214,6 +228,7 @@ exports.syncTemplates = async (req, res) => {
         // Create new template
         const newTemplate = new Template({
           adminId,
+          businessAccountId: customCredentials.businessAccountId,
           metaTemplateId: tpl.id,
           name: tpl.name,
           category: tpl.category || 'UTILITY',

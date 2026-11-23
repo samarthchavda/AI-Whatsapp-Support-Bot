@@ -7,6 +7,7 @@ const whatsappController = require('../controllers/merchant/whatsappController')
 router.use(verifyToken);
 
 router.get('/analytics/costs', whatsappController.getCostAnalytics);
+router.get('/connections', whatsappController.getTemplateConnections);
 
 // List all templates cached locally
 router.get('/templates', whatsappController.getTemplates);

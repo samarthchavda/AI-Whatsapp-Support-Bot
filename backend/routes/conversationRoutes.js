@@ -2,6 +2,12 @@ const express = require('express');
 const router = express.Router();
 const conversationController = require('../controllers/merchant/conversationController');
 const { verifyToken } = require('../middleware/auth');
+const multer = require('multer');
+const mediaUpload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
+const acceptMedia = (req, res, next) => mediaUpload.single('file')(req, res, error => {
+  if (!error) return next();
+  return res.status(error.code === 'LIMIT_FILE_SIZE' ? 413 : 400).json({ success: false, error: error.code === 'LIMIT_FILE_SIZE' ? 'Attachment must be 10 MB or smaller.' : error.message });
+});
 
 /**
  * @openapi
@@ -61,6 +67,8 @@ router.get('/stats', verifyToken, conversationController.getConversationStats);
  *         description: Message sent to customer
  */
 router.post('/send-message', verifyToken, conversationController.sendAdminMessage);
+router.post('/:id/send-media', verifyToken, acceptMedia, conversationController.sendAdminMedia);
+router.get('/:id/messages/:messageId/media', verifyToken, conversationController.getMessageMedia);
 
 /**
  * @openapi

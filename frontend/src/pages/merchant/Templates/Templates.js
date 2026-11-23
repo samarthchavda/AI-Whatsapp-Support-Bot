@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import api from '../../../services/api';
 import { FaSync, FaSearch, FaFilter, FaCheckCircle, FaExclamationCircle, FaProjectDiagram, FaInfoCircle, FaFileAlt, FaPlus, FaTimes, FaSpinner, FaWhatsapp, FaImage, FaLink, FaPhoneAlt, FaEye, FaTrash, FaThList, FaThLarge } from 'react-icons/fa';
 import './Templates.css';
@@ -27,6 +27,9 @@ const sanitizeTemplateName = (value) => value
 
 function Templates({ admin }) {
   const [templates, setTemplates] = useState([]);
+  const [connections, setConnections] = useState([]);
+  const [selectedPhoneNumberId, setSelectedPhoneNumberId] = useState('');
+  const selectedPhoneRef = useRef('');
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -43,9 +46,19 @@ function Templates({ admin }) {
   const [viewMode, setViewMode] = useState('table'); // 'table' (Image 2 style) or 'grid'
 
   useEffect(() => {
-    fetchTemplates();
+    api.get('/whatsapp/connections').then((response) => {
+      const list = response.data?.data || [];
+      setConnections(list);
+      selectedPhoneRef.current = list[0]?.phoneNumberId || '';
+      setSelectedPhoneNumberId(selectedPhoneRef.current);
+      if (!list.length) setLoading(false);
+    }).catch(() => setLoading(false));
     fetchIntegrations();
   }, []);
+
+  useEffect(() => {
+    if (selectedPhoneNumberId) fetchTemplates(selectedPhoneNumberId);
+  }, [selectedPhoneNumberId]);
 
   const fetchIntegrations = async () => {
     try {
@@ -61,25 +74,27 @@ function Templates({ admin }) {
     }
   };
 
-  const fetchTemplates = async () => {
+  const fetchTemplates = async (phoneNumberId = selectedPhoneNumberId) => {
     try {
       setLoading(true);
-      const response = await api.get('/whatsapp/templates');
-      setTemplates(response.data.data || []);
+      const response = await api.get('/whatsapp/templates', { params: { phoneNumberId } });
+      if (selectedPhoneRef.current === phoneNumberId) setTemplates(response.data.data || []);
     } catch (error) {
-      console.error('Error fetching templates:', error);
-      alert('Failed to retrieve templates');
+      if (selectedPhoneRef.current === phoneNumberId) {
+        console.error('Error fetching templates:', error);
+        alert('Failed to retrieve templates');
+      }
     } finally {
-      setLoading(false);
+      if (selectedPhoneRef.current === phoneNumberId) setLoading(false);
     }
   };
 
   const handleSync = async () => {
     try {
       setSyncing(true);
-      const response = await api.post('/whatsapp/templates/sync');
+      const response = await api.post('/whatsapp/templates/sync', { phoneNumberId: selectedPhoneNumberId });
       alert(response.data.message || 'Real Meta templates synced successfully!');
-      fetchTemplates();
+      fetchTemplates(selectedPhoneNumberId);
     } catch (error) {
       console.error('Error syncing templates:', error);
       alert('Failed to sync templates with Meta API');
@@ -188,7 +203,8 @@ function Templates({ admin }) {
         body: draft.body,
         footer: draft.footer,
         buttons: draft.buttons,
-        variableSamples: draft.variableSamples
+        variableSamples: draft.variableSamples,
+        phoneNumberId: selectedPhoneNumberId
       });
       setShowCreateModal(false);
       setToast(response.data.message || 'Template submitted to Meta for review.');
@@ -247,7 +263,7 @@ function Templates({ admin }) {
   };
 
   const formatTemplateDate = (dateStr) => {
-    if (!dateStr) return '20 Nov 2026';
+    if (!dateStr) return '—';
     try {
       const d = new Date(dateStr);
       if (isNaN(d.getTime())) return '—';
@@ -259,7 +275,7 @@ function Templates({ admin }) {
 
   const filteredTemplates = templates.filter(tpl => {
     const matchesSearch = tpl.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-      tpl.components.some(c => c.text && c.text.toLowerCase().includes(searchQuery.toLowerCase()));
+      (tpl.components || []).some(c => c.text && c.text.toLowerCase().includes(searchQuery.toLowerCase()));
     
     const matchesCategory = categoryFilter === 'ALL' || tpl.category === categoryFilter;
     const matchesStatus = statusFilter === 'ALL' || tpl.status === statusFilter;
@@ -302,10 +318,19 @@ function Templates({ admin }) {
           <p className="page-subtitle">Create templates, submit them to Meta, and track approval status.</p>
         </div>
         <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-          <button onClick={openCreateModal} className="btn btn-primary" style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', fontWeight: '600' }}>
+          <button onClick={openCreateModal} disabled={!selectedPhoneNumberId} className="btn btn-primary" style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', fontWeight: '600' }}>
             <FaPlus /> Create Template
           </button>
         </div>
+      </div>
+
+      <div className="tmpl-number-bar">
+        <label htmlFor="template-phone-number">WhatsApp number</label>
+        <select id="template-phone-number" value={selectedPhoneNumberId} onChange={(event) => { selectedPhoneRef.current = event.target.value; setTemplates([]); setSelectedPhoneNumberId(event.target.value); }} disabled={!connections.length}>
+          {!connections.length && <option value="">No connected numbers</option>}
+          {connections.map((connection) => <option key={connection.phoneNumberId} value={connection.phoneNumberId}>{connection.displayPhoneNumber}</option>)}
+        </select>
+        <span>Templates belong to the Meta Business account. Numbers in the same account share templates.</span>
       </div>
 
       {/* Meta Template Connection Card (Matching Image 2) */}
@@ -324,7 +349,7 @@ function Templates({ admin }) {
             <button
               onClick={handleSync}
               className="btn btn-secondary sync-meta-btn"
-              disabled={syncing}
+              disabled={syncing || !selectedPhoneNumberId}
             >
               <FaSync className={syncing ? 'spinning' : ''} /> {syncing ? 'Syncing...' : 'Sync from Meta'}
             </button>
@@ -407,12 +432,12 @@ function Templates({ admin }) {
         <div className="empty-state">
           <FaFileAlt style={{ fontSize: '48px', color: '#a1a1aa', marginBottom: '16px' }} />
           <h3>No Real Templates Found</h3>
-          <p>Create your first template here, then Meta will review it before it can be sent to customers.</p>
+          <p>{selectedPhoneNumberId ? 'Create your first template here, then Meta will review it before it can be sent to customers.' : 'Connect a WhatsApp number to manage its templates.'}</p>
           <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', marginTop: '16px' }}>
-            <button onClick={openCreateModal} className="btn btn-primary">
+            <button onClick={openCreateModal} disabled={!selectedPhoneNumberId} className="btn btn-primary">
               <FaPlus /> Create Template
             </button>
-            <button onClick={handleSync} className="btn btn-secondary">
+            <button onClick={handleSync} disabled={!selectedPhoneNumberId} className="btn btn-secondary">
               <FaSync /> Sync Real Templates
             </button>
           </div>

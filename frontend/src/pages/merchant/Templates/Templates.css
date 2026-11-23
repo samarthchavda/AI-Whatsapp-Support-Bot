@@ -1155,3 +1155,10 @@ body.dark-theme .template-lang-badge code {
 .merchant-portal .template-variable-samples,.merchant-portal .template-buttons-builder { background: var(--bg-input); border-color: var(--border-default); }
 .merchant-portal .template-label-with-action button,.merchant-portal .template-add-button { background: var(--brand-light); }
 @media (max-width: 900px) { .merchant-portal .tmpl-filters-container { flex-wrap: wrap; } .merchant-portal .tmpl-search-wrapper { max-width: none; } }
+
+/* Keep headings distinct from template content in the light merchant theme. */
+.merchant-portal .meta-conn-header h4 { font-size: 14px; font-weight: 700; }
+.merchant-portal .tmpl-table thead th { font-weight: 700; }
+.merchant-portal .tmpl-name-text { font-weight: 700; }
+.merchant-portal .template-name { font-weight: 700; }
+.merchant-portal .tmpl-number-bar label { font-weight: 700; }

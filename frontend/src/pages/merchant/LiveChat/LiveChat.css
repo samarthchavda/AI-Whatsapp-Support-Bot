@@ -91,3 +91,8 @@
 .chat-emoji-picker { display: flex; flex-wrap: wrap; gap: 6px; padding: 8px; margin-bottom: 8px; border: 1px solid var(--border-default); border-radius: 10px; background: var(--bg-card); }
 .chat-emoji-picker button { min-width: 40px; min-height: 40px; border: 0; border-radius: 8px; background: var(--bg-input); cursor: pointer; font-size: 20px; }
 @media (max-width: 768px) { .merchant-portal .message-input-form { gap: 6px; }.merchant-portal .message-input-form .chat-tool-button { width: 42px; height: 42px; }.merchant-portal .live-chat-container { min-height: 70vh; } }
+
+/* Give the inbox and conversation titles more weight than message text. */
+.merchant-portal .live-chat-page .sidebar-header h2 { font-weight: 750; }
+.merchant-portal .customer-name,.merchant-portal .customer-details h3 { font-weight: 700; }
+.merchant-portal .empty-state-large h3 { font-weight: 700; }

@@ -45,3 +45,12 @@ test('merchant sidebar can be opened and closed by keyboard accessible controls'
   fireEvent.click(screen.getByRole('button', { name: 'Close sidebar' }));
   expect(sidebar).not.toHaveClass('sidebar-expanded');
 });
+
+test('merchant sidebar closes when the pointer leaves the glass drawer', () => {
+  const { container } = render(<MerchantSidebarHarness />);
+  const sidebar = container.querySelector('.sidebar');
+  fireEvent.mouseEnter(sidebar);
+  expect(sidebar).toHaveClass('sidebar-expanded');
+  fireEvent.mouseLeave(container.querySelector('.sidebar-inner'));
+  expect(sidebar).not.toHaveClass('sidebar-expanded');
+});

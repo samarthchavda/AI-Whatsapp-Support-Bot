@@ -23,6 +23,7 @@ export default function Sidebar({ admin, onLogout, isOpen, onToggle, onOpen, onC
       className={`sidebar${isOpen ? ' sidebar-expanded' : ''}`}
       onMouseEnter={isMerchant ? () => { if (window.matchMedia?.('(hover: hover) and (pointer: fine)').matches !== false) onOpen?.(); } : undefined}
       onMouseLeave={isMerchant ? () => onClose?.() : undefined}
+      onClick={isMerchant && isOpen ? (event) => { if (event.target === event.currentTarget) onClose?.(); } : undefined}
       onFocusCapture={isMerchant ? () => onOpen?.() : undefined}
       onBlurCapture={isMerchant ? (event) => { if (!event.currentTarget.contains(event.relatedTarget)) onClose?.(); } : undefined}
     >
@@ -39,7 +40,7 @@ export default function Sidebar({ admin, onLogout, isOpen, onToggle, onOpen, onC
       </button>
 
       {/* Inner container clips content overflow during animation */}
-      <div className="sidebar-inner">
+      <div className="sidebar-inner" onMouseLeave={isMerchant ? () => onClose?.() : undefined}>
         <div className="sidebar-header">
           <div className="sidebar-logo">
             {(() => {

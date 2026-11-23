@@ -60,14 +60,14 @@ body.merchant-theme {
   padding: 8px clamp(16px, 2.6vw, 40px) 48px;
 }
 
-/* The rail becomes a frosted, viewport-wide navigation surface on hover. */
+/* The rail opens a glass drawer over a translucent, blurred viewport scrim. */
 .App.merchant-portal > .sidebar {
-  background: rgba(255, 255, 255, .91);
+  background: rgba(255, 255, 255, .78);
   border-right: 1px solid var(--border);
   box-shadow: 8px 0 28px rgba(42, 61, 24, .055);
-  backdrop-filter: blur(18px);
-  -webkit-backdrop-filter: blur(18px);
-  transition: width .24s ease, background-color .24s ease, box-shadow .24s ease;
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  transition: background-color .22s ease, box-shadow .22s ease;
 }
 
 .App.merchant-portal > .sidebar::before {
@@ -76,14 +76,24 @@ body.merchant-theme {
 
 .App.merchant-portal > .sidebar.sidebar-expanded {
   width: 100vw;
-  background: rgba(255, 255, 255, .88);
-  box-shadow: 0 22px 60px rgba(42, 61, 24, .13);
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
+  border-right: 0;
+  background: rgba(245, 248, 239, .18);
+  box-shadow: none;
+  backdrop-filter: blur(7px);
+  -webkit-backdrop-filter: blur(7px);
 }
 
 .merchant-portal > .sidebar .sidebar-inner {
-  align-items: center;
+  align-items: stretch;
+}
+
+.merchant-portal > .sidebar.sidebar-expanded .sidebar-inner {
+  width: min(390px, calc(100vw - 32px));
+  background: rgba(255, 255, 255, .88);
+  border-right: 1px solid rgba(212, 225, 193, .8);
+  box-shadow: 18px 0 48px rgba(42, 61, 24, .13);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
 }
 
 .merchant-portal > .sidebar .sidebar-header,
@@ -92,19 +102,13 @@ body.merchant-theme {
   width: 100%;
 }
 
-.merchant-portal > .sidebar.sidebar-expanded .sidebar-header,
-.merchant-portal > .sidebar.sidebar-expanded .sidebar-nav,
-.merchant-portal > .sidebar.sidebar-expanded .sidebar-footer {
-  width: min(100%, 1280px);
-}
-
 .merchant-portal > .sidebar .sidebar-header {
   border-color: var(--border);
 }
 
 .merchant-portal > .sidebar.sidebar-expanded .sidebar-header {
-  min-height: 96px;
-  padding: 20px 36px;
+  min-height: 84px;
+  padding: 16px 22px;
 }
 
 .merchant-portal > .sidebar .sidebar-brand-name {
@@ -119,19 +123,21 @@ body.merchant-theme {
 }
 
 .merchant-portal > .sidebar.sidebar-expanded .sidebar-nav {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(225px, 1fr));
-  align-content: start;
-  gap: 20px;
-  padding: 28px 36px 36px;
+  display: block;
+  padding: 14px 16px 24px;
 }
 
 .merchant-portal > .sidebar.sidebar-expanded .nav-section {
-  margin: 0;
-  padding: 12px;
-  border: 1px solid var(--border);
-  border-radius: 20px;
-  background: rgba(245, 248, 239, .74);
+  margin: 0 0 8px;
+  padding: 0 0 8px;
+  border: 0;
+  border-bottom: 1px solid var(--border);
+  border-radius: 0;
+  background: transparent;
+}
+
+.merchant-portal > .sidebar.sidebar-expanded .nav-section:last-child {
+  border-bottom: 0;
 }
 
 .merchant-portal > .sidebar .nav-section-title {
@@ -182,7 +188,7 @@ body.dark-theme .App.merchant-portal > .sidebar .nav-links li a.active::before {
 }
 
 .merchant-portal > .sidebar.sidebar-expanded .sidebar-footer {
-  padding: 16px 36px;
+  padding: 14px 20px;
 }
 
 .merchant-portal > .sidebar .sidebar-user-avatar {
@@ -506,8 +512,7 @@ body.dark-theme .App.merchant-portal > .sidebar .nav-links li a.active::before {
   }
 
   .merchant-portal > .sidebar.sidebar-expanded .sidebar-nav {
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    padding: 16px 20px 24px;
+    padding: 12px 16px 24px;
   }
 
   .merchant-portal > .sidebar.sidebar-expanded .sidebar-footer {

@@ -11,10 +11,10 @@ jest.mock('../../context/EffectiveAccessContext', () => ({
 
 beforeEach(() => mockCanViewPage.mockReturnValue(true));
 
-function MerchantSidebarHarness() {
+function MerchantSidebarHarness({ initialPath = '/dashboard' }) {
   const [open, setOpen] = useState(false);
   return (
-    <MemoryRouter initialEntries={['/dashboard']} future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+    <MemoryRouter initialEntries={[initialPath]} future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
       <Sidebar
         admin={{ role: 'merchant', name: 'Test Merchant', email: 'merchant@example.test' }}
         isOpen={open}
@@ -66,5 +66,14 @@ test('connection pages stay visible for merchants without other page entitlement
   expect(screen.getByRole('link', { name: /Shopify Integration/i })).toHaveAttribute('href', '/dashboard/integrations#shopify');
   expect(screen.getByRole('link', { name: /WooCommerce Integration/i })).toHaveAttribute('href', '/dashboard/integrations#woocommerce');
   expect(screen.getByRole('link', { name: /WhatsApp API Connection/i })).toHaveAttribute('href', '/dashboard/developer');
-  expect(screen.getByRole('link', { name: /API Keys/i })).toHaveAttribute('href', '/dashboard/developer/api-keys');
+  expect(screen.queryByRole('link', { name: /API Keys/i })).not.toBeInTheDocument();
+});
+
+test('developer tools stay inside the WhatsApp API Connection hub', () => {
+  render(<MerchantSidebarHarness initialPath="/dashboard/developer/api-keys" />);
+
+  expect(screen.getByRole('link', { name: /WhatsApp API Connection/i })).toHaveClass('active');
+  expect(screen.queryByRole('link', { name: /API Keys/i })).not.toBeInTheDocument();
+  expect(screen.queryByRole('link', { name: /API Documentation/i })).not.toBeInTheDocument();
+  expect(screen.queryByRole('link', { name: /Failed Webhooks/i })).not.toBeInTheDocument();
 });

@@ -16,6 +16,7 @@ import { getDeveloperUsage, getDeveloperWebhooks } from '../../../services/api';
 import { useEffectiveAccess } from '../../../context/EffectiveAccessContext';
 import './DeveloperPlatform.css';
 import './PlatformDashboard.css';
+import './DeveloperTheme.css';
 
 function ApiDashboard() {
   const { usageLimits, getUsageLimit } = useEffectiveAccess();
@@ -64,12 +65,12 @@ function ApiDashboard() {
       <div className="dev-header">
         <div className="dev-header-content">
           <div className="dev-badge">
-            <FaCode /> Developer & API Hub
+            <FaCode /> WhatsApp API workspace
           </div>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
             <div>
-              <h1>WhatsApp Business API Developer Platform</h1>
-              <p>Trigger approved WhatsApp templates, consume outbound webhooks, manage API keys, and monitor usage.</p>
+              <h1>WhatsApp API Connection</h1>
+              <p>Manage API keys, webhooks, documentation, request logs, and usage from one place.</p>
             </div>
             <button className="quick-action-btn" onClick={fetchSummary} disabled={loading}>
               <FaSync className={loading ? 'spin' : ''} /> Refresh

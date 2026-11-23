@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { FaHome, FaComments, FaBox, FaExclamationTriangle, FaPlug, FaBell, FaSignOutAlt, FaUser, FaBrain, FaCommentDots, FaBroadcastTower, FaChartLine, FaCog, FaCrown, FaFileAlt, FaShoppingCart, FaCoins, FaUserSecret, FaHeartbeat, FaBullhorn, FaBlog, FaWhatsapp, FaShieldAlt, FaToggleOn, FaTimes, FaTags, FaUserTag, FaCode, FaBookOpen, FaKey, FaUserPlus, FaShopify, FaWordpress } from 'react-icons/fa';
+import { FaHome, FaComments, FaBox, FaExclamationTriangle, FaPlug, FaBell, FaSignOutAlt, FaUser, FaBrain, FaCommentDots, FaBroadcastTower, FaChartLine, FaCog, FaCrown, FaFileAlt, FaShoppingCart, FaCoins, FaUserSecret, FaHeartbeat, FaBullhorn, FaBlog, FaWhatsapp, FaShieldAlt, FaToggleOn, FaTimes, FaTags, FaUserTag, FaCode, FaUserPlus, FaShopify, FaWordpress } from 'react-icons/fa';
 import { useEffectiveAccess } from '../../context/EffectiveAccessContext';
 
 export default function Sidebar({ admin, onLogout, isOpen, onToggle, onOpen, onClose, pendingDemoRequestsCount }) {
@@ -9,6 +9,7 @@ export default function Sidebar({ admin, onLogout, isOpen, onToggle, onOpen, onC
   const isMerchant = Boolean(admin && admin.role !== 'super_admin');
 
   const isActive = (path) => {
+    if (path === '/dashboard/developer' && location.pathname.startsWith('/dashboard/developer/')) return 'active';
     return location.pathname === path ? 'active' : '';
   };
   const isIntegrationActive = (platform) =>
@@ -429,49 +430,6 @@ export default function Sidebar({ admin, onLogout, isOpen, onToggle, onOpen, onC
                   </ul>
                 </div>
               )}
-
-              {/* WhatsApp API tools */}
-                <div className="nav-section">
-                  {isOpen && <div className="nav-section-title">WhatsApp API</div>}
-                  <ul className="nav-links">
-                      <li>
-                        <Link to="/dashboard/developer/api-keys" className={isActive('/dashboard/developer/api-keys')} title="API Keys">
-                          <FaKey />
-                          <span className="nav-label">API Keys</span>
-                        </Link>
-                      </li>
-                      <li>
-                        <Link to="/dashboard/developer/docs" className={isActive('/dashboard/developer/docs')} title="Interactive API Docs">
-                          <FaBookOpen />
-                          <span className="nav-label">API Documentation</span>
-                        </Link>
-                      </li>
-                      <li>
-                        <Link to="/dashboard/developer/webhooks" className={isActive('/dashboard/developer/webhooks')} title="Webhooks">
-                          <FaPlug />
-                          <span className="nav-label">Webhooks</span>
-                        </Link>
-                      </li>
-                      <li>
-                        <Link to="/dashboard/developer/logs" className={isActive('/dashboard/developer/logs')} title="API Logs">
-                          <FaFileAlt />
-                          <span className="nav-label">API Logs</span>
-                        </Link>
-                      </li>
-                      <li>
-                        <Link to="/dashboard/developer/failed-webhooks" className={isActive('/dashboard/developer/failed-webhooks')} title="Failed Webhooks">
-                          <FaExclamationTriangle />
-                          <span className="nav-label">Failed Webhooks</span>
-                        </Link>
-                      </li>
-                      <li>
-                        <Link to="/dashboard/developer/usage" className={isActive('/dashboard/developer/usage')} title="Usage & Limits">
-                          <FaChartLine />
-                          <span className="nav-label">API Usage</span>
-                        </Link>
-                      </li>
-                  </ul>
-                </div>
 
               {/* Insights */}
               {isPageAllowed('analytics') && (

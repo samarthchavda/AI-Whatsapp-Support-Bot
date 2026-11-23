@@ -14,6 +14,8 @@ import {
 import { getApiKey, regenerateApiKey } from '../../../services/api';
 import './DeveloperPlatform.css';
 import './PlatformDashboard.css';
+import './DeveloperTheme.css';
+import DeveloperBackLink from './DeveloperBackLink';
 
 function ApiKeyManager() {
   const [apiKey, setApiKey] = useState('Loading...');
@@ -74,6 +76,7 @@ function ApiKeyManager() {
 
   return (
     <div className="dev-container">
+      <DeveloperBackLink />
       {/* Header */}
       <div className="dev-header">
         <div className="dev-header-content">

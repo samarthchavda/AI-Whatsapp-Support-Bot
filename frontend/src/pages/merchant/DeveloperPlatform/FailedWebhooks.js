@@ -9,6 +9,8 @@ import {
 import { getFailedWebhooks, retryFailedWebhook } from '../../../services/api';
 import './DeveloperPlatform.css';
 import './PlatformDashboard.css';
+import './DeveloperTheme.css';
+import DeveloperBackLink from './DeveloperBackLink';
 
 function FailedWebhooks() {
   const [failedList, setFailedList] = useState([]);
@@ -57,6 +59,7 @@ function FailedWebhooks() {
 
   return (
     <div className="dev-container">
+      <DeveloperBackLink />
       {/* Header */}
       <div className="dev-header">
         <div className="dev-header-content">

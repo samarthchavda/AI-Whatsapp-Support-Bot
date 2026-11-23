@@ -11,6 +11,8 @@ import {
 import { getDeveloperLogs } from '../../../services/api';
 import './DeveloperPlatform.css';
 import './PlatformDashboard.css';
+import './DeveloperTheme.css';
+import DeveloperBackLink from './DeveloperBackLink';
 
 function ApiLogs() {
   const [logs, setLogs] = useState([]);
@@ -56,6 +58,7 @@ function ApiLogs() {
 
   return (
     <div className="dev-container">
+      <DeveloperBackLink />
       {/* Header */}
       <div className="dev-header">
         <div className="dev-header-content">
@@ -236,7 +239,7 @@ function ApiLogs() {
             </div>
 
             <div className="modal-body-saas">
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', fontSize: '13px' }}>
+              <div className="dev-log-details-grid">
                 <div>
                   <span style={{ color: 'var(--text-muted, #98a2b3)' }}>Status Code:</span>
                   <div style={{ fontWeight: '700', marginTop: '2px' }}>{selectedLog.statusCode}</div>

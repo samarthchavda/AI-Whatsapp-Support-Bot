@@ -10,6 +10,8 @@ import { getDeveloperUsage } from '../../../services/api';
 import { useEffectiveAccess } from '../../../context/EffectiveAccessContext';
 import './DeveloperPlatform.css';
 import './PlatformDashboard.css';
+import './DeveloperTheme.css';
+import DeveloperBackLink from './DeveloperBackLink';
 
 function ApiUsage() {
   const { usageLimits, getUsageLimit } = useEffectiveAccess();
@@ -55,6 +57,7 @@ function ApiUsage() {
 
   return (
     <div className="dev-container">
+      <DeveloperBackLink />
       {/* Header */}
       <div className="dev-header">
         <div className="dev-header-content">
@@ -95,7 +98,7 @@ function ApiUsage() {
       )}
 
       {/* Quota Progress Cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '20px', marginBottom: '28px' }}>
+      <div className="dev-quota-grid">
         <div className="integration-section-card">
           <div className="section-header-row" style={{ marginBottom: '14px' }}>
             <div className="section-title-group">

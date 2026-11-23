@@ -9,6 +9,8 @@ import {
 } from 'react-icons/fa';
 import './DeveloperPlatform.css';
 import './PlatformDashboard.css';
+import './DeveloperTheme.css';
+import DeveloperBackLink from './DeveloperBackLink';
 
 const API_ENDPOINTS = [
   {
@@ -274,6 +276,7 @@ function ApiDocs() {
 
   return (
     <div className="dev-container">
+      <DeveloperBackLink />
       {/* Header */}
       <div className="dev-header">
         <div className="dev-header-content">
@@ -370,7 +373,7 @@ function ApiDocs() {
               </div>
 
               {/* Request & Response Side by Side */}
-              <div style={{ display: 'grid', gridTemplateColumns: item.requestBody ? '1fr 1fr' : '1fr', gap: '16px', marginBottom: '16px' }}>
+              <div className={`dev-example-grid${item.requestBody ? ' has-request' : ''}`}>
                 {item.requestBody && (
                   <div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>

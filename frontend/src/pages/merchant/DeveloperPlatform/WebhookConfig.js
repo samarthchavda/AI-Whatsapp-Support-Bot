@@ -21,6 +21,8 @@ import {
 } from '../../../services/api';
 import './DeveloperPlatform.css';
 import './PlatformDashboard.css';
+import './DeveloperTheme.css';
+import DeveloperBackLink from './DeveloperBackLink';
 
 const AVAILABLE_EVENTS = [
   { id: 'message.received', name: 'Message Received', desc: 'Inbound message sent by customer on WhatsApp' },
@@ -179,6 +181,7 @@ function WebhookConfig() {
 
   return (
     <div className="dev-container">
+      <DeveloperBackLink />
       {/* Header */}
       <div className="dev-header">
         <div className="dev-header-content">
@@ -472,7 +475,7 @@ function verifyKwickbotWebhook(req, res, next) {
               </p>
 
               <div className="api-key-display-row" style={{ marginTop: '8px' }}>
-                <code className="api-key-value-box" style={{ color: '#1677ff' }}>
+                <code className="api-key-value-box" style={{ color: 'var(--accent)' }}>
                   {createdSecretData.secret}
                 </code>
                 <button 

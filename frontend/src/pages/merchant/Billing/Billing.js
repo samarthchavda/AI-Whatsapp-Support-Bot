@@ -296,17 +296,27 @@ function Billing() {
   else if (isUsageWarning) progressColor = '#f59e0b'; // Amber
 
   const currentPlanDetails = plans.find(p => p.name === (profile?.subscriptionPlan === 'professional' ? 'growth' : profile?.subscriptionPlan === 'enterprise' ? 'scale' : profile?.subscriptionPlan));
-  const currentFeatures = currentPlanDetails?.features || (profile?.subscriptionPlan === 'custom' ? {
+  const fallbackFeatures = profile?.subscriptionPlan === 'custom' ? {
     maxConversations: -1,
     maxMessages: -1,
-    geminiTokensPerMonth: profile?.geminiTokensLimit || -1,
+    geminiTokensPerMonth: profile?.geminiTokensLimit ?? -1,
     maxWhatsAppConnections: 5
   } : {
-    maxConversations: (profile?.subscriptionPlan === 'growth' || profile?.subscriptionPlan === 'professional') ? 3000 : (profile?.subscriptionPlan === 'scale' || profile?.subscriptionPlan === 'enterprise') ? -1 : 500,
-    maxMessages: (profile?.subscriptionPlan === 'growth' || profile?.subscriptionPlan === 'professional') ? 15000 : (profile?.subscriptionPlan === 'scale' || profile?.subscriptionPlan === 'enterprise') ? -1 : 2000,
-    geminiTokensPerMonth: profile?.geminiTokensLimit || ((profile?.subscriptionPlan === 'growth' || profile?.subscriptionPlan === 'professional') ? 200000 : (profile?.subscriptionPlan === 'scale' || profile?.subscriptionPlan === 'enterprise') ? -1 : 50000),
-    maxWhatsAppConnections: (profile?.subscriptionPlan === 'growth' || profile?.subscriptionPlan === 'professional') ? 2 : (profile?.subscriptionPlan === 'scale' || profile?.subscriptionPlan === 'enterprise') ? 5 : 1
-  });
+    maxConversations: (profile?.subscriptionPlan === 'growth' || profile?.subscriptionPlan === 'professional' || profile?.subscriptionPlan === 'scale' || profile?.subscriptionPlan === 'enterprise') ? -1 : 500,
+    maxMessages: (profile?.subscriptionPlan === 'growth' || profile?.subscriptionPlan === 'professional' || profile?.subscriptionPlan === 'scale' || profile?.subscriptionPlan === 'enterprise') ? -1 : 2000,
+    geminiTokensPerMonth: profile?.geminiTokensLimit ?? ((profile?.subscriptionPlan === 'growth' || profile?.subscriptionPlan === 'professional' || profile?.subscriptionPlan === 'scale' || profile?.subscriptionPlan === 'enterprise') ? -1 : 50000),
+    maxWhatsAppConnections: (profile?.subscriptionPlan === 'growth' || profile?.subscriptionPlan === 'professional') ? 3 : (profile?.subscriptionPlan === 'scale' || profile?.subscriptionPlan === 'enterprise') ? 5 : 1
+  };
+  const currentLimits = currentPlanDetails?.usageLimits || {};
+  const currentFeatures = {
+    ...fallbackFeatures,
+    maxConversations: currentLimits.monthlyConversations ?? fallbackFeatures.maxConversations,
+    maxMessages: currentLimits.monthlyMessages ?? fallbackFeatures.maxMessages,
+    geminiTokensPerMonth: currentLimits.geminiTokensPerMonth ?? fallbackFeatures.geminiTokensPerMonth,
+    maxWhatsAppConnections: currentLimits.maxWhatsAppConnections ?? fallbackFeatures.maxWhatsAppConnections,
+    maxBroadcastMessages: currentLimits.maxBroadcastMessages ?? 0,
+    maxBroadcastCampaigns: currentLimits.maxBroadcastCampaigns ?? 0
+  };
 
   return (
     <div className="container billing-page">
@@ -365,7 +375,7 @@ function Billing() {
                 Support Messages: <strong style={{ color: 'var(--text-primary)' }}>{(profile?.totalMessagesProcessed || 0).toLocaleString()} / {currentFeatures.maxMessages === -1 ? 'Unlimited' : (currentFeatures.maxMessages || 2000).toLocaleString()}</strong>
               </div>
               <div style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>
-                Broadcast Messages: <strong style={{ color: 'var(--text-primary)' }}>{(profile?.broadcastMessagesUsed || 0).toLocaleString()} / {currentFeatures.maxBroadcastMessages === -1 ? '25,000' : (currentFeatures.maxBroadcastMessages || 0).toLocaleString()}</strong>
+                Broadcast Messages: <strong style={{ color: 'var(--text-primary)' }}>{(profile?.broadcastMessagesUsed || 0).toLocaleString()} / {currentFeatures.maxBroadcastMessages === -1 ? 'Unlimited' : currentFeatures.maxBroadcastMessages.toLocaleString()}</strong>
               </div>
               <div style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>
                 Broadcast Campaigns: <strong style={{ color: 'var(--text-primary)' }}>{(profile?.broadcastCampaignsUsed || 0).toLocaleString()} / {currentFeatures.maxBroadcastCampaigns === -1 ? 'Unlimited' : (currentFeatures.maxBroadcastCampaigns || 0).toLocaleString()}</strong>
@@ -514,7 +524,7 @@ function Billing() {
                 {plan.badge && <span className="upgrade-badge">{plan.badge}</span>}
                 
                 <h3 className="upgrade-plan-name">{plan.displayName}</h3>
-                <p className="upgrade-plan-desc">{plan.description}</p>
+                <p className="upgrade-plan-desc">{plan.shortDescription || plan.description}</p>
 
                 <div className="upgrade-price-row">
                   {activeCoupon ? (
@@ -539,7 +549,7 @@ function Billing() {
                     <li><FaCheck style={{ color: '#1677FF' }} /> Up to 500 WhatsApp Conversations/mo (new customer chat sessions)</li>
                   )}
                   {(plan.name === 'growth' || plan.name === 'professional') && (
-                    <li><FaCheck style={{ color: '#1677FF' }} /> Up to 3,000 WhatsApp Conversations/mo (ideal for active marketing & sales)</li>
+                    <li><FaCheck style={{ color: '#1677FF' }} /> Unlimited AI WhatsApp conversations/mo</li>
                   )}
                   {(plan.name === 'scale' || plan.name === 'enterprise') && (
                     <li><FaCheck style={{ color: '#1677FF' }} /> Unlimited WhatsApp Conversations/mo (no support volume restrictions)</li>
@@ -550,7 +560,7 @@ function Billing() {
                     <li><FaCheck style={{ color: '#1677FF' }} /> Up to 2,000 incoming & outgoing messages/mo (individual text bubbles)</li>
                   )}
                   {(plan.name === 'growth' || plan.name === 'professional') && (
-                    <li><FaCheck style={{ color: '#1677FF' }} /> Up to 15,000 incoming & outgoing messages/mo (individual text bubbles)</li>
+                    <li><FaCheck style={{ color: '#1677FF' }} /> Unlimited incoming & outgoing WhatsApp messages/mo</li>
                   )}
                   {(plan.name === 'scale' || plan.name === 'enterprise') && (
                     <li><FaCheck style={{ color: '#1677FF' }} /> Unlimited incoming & outgoing messages/mo (individual text bubbles)</li>
@@ -561,7 +571,7 @@ function Billing() {
                     <li><FaCheck style={{ color: '#1677FF' }} /> 1 Active WhatsApp Phone Number connection</li>
                   )}
                   {(plan.name === 'growth' || plan.name === 'professional') && (
-                    <li><FaCheck style={{ color: '#1677FF' }} /> Up to 2 Active WhatsApp Phone Number connections</li>
+                    <li><FaCheck style={{ color: '#1677FF' }} /> Up to 3 Active WhatsApp Phone Number connections</li>
                   )}
                   {(plan.name === 'scale' || plan.name === 'enterprise') && (
                     <li><FaCheck style={{ color: '#1677FF' }} /> Up to 5 Active WhatsApp Connections simultaneously</li>
@@ -580,10 +590,10 @@ function Billing() {
 
                   {/* E-commerce Integrations */}
                   {plan.name === 'starter' && (
-                    <li><FaCheck style={{ color: '#1677FF' }} /> 1 Active Integration (connect either your Shopify OR WooCommerce store)</li>
+                    <li><FaCheck style={{ color: '#1677FF' }} /> 1 Active Integration (Shopify or WooCommerce)</li>
                   )}
                   {(plan.name === 'growth' || plan.name === 'professional') && (
-                    <li><FaCheck style={{ color: '#1677FF' }} /> 1 Active Integration (connect either your Shopify OR WooCommerce store)</li>
+                    <li><FaCheck style={{ color: '#1677FF' }} /> 2 Active E-commerce Integrations (Shopify or WooCommerce)</li>
                   )}
                   {(plan.name === 'scale' || plan.name === 'enterprise') && (
                     <li><FaCheck style={{ color: '#1677FF' }} /> Multiple Integrations (connect both Shopify & WooCommerce simultaneously)</li>
@@ -592,6 +602,8 @@ function Billing() {
                   {/* Knowledge Base & Live Chat */}
                   <li><FaCheck style={{ color: '#1677FF' }} /> Instant AI Answers (reads your store FAQ & policy PDFs)</li>
                   <li><FaCheck style={{ color: '#1677FF' }} /> Live Chat Console for manual customer reply</li>
+                  {(plan.name === 'growth' || plan.name === 'professional') && <li><FaCheck style={{ color: '#1677FF' }} /> Abandoned cart recovery and order confirmation templates</li>}
+                  {(plan.name === 'growth' || plan.name === 'professional') && <li><FaCheck style={{ color: '#1677FF' }} /> Connect your CRM through WhatsApp API and webhooks</li>}
 
                   {/* Advanced Analytics */}
                   <li style={{ opacity: features.advancedAnalytics ? 1 : 0.5 }}>
@@ -639,12 +651,12 @@ function Billing() {
                   </li>
 
                   {/* WhatsApp Broadcasting */}
-                  <li style={{ opacity: (plan.name !== 'starter') ? 1 : 0.5 }}>
+                  <li>
                     {plan.name === 'starter' && (
-                      <><FaTimes style={{ color: '#ef4444', marginRight: '8px' }} /> <span style={{ textDecoration: 'line-through' }}>WhatsApp Broadcasting (0 Messages, 0 Campaigns)</span></>
+                      <><FaCheck style={{ color: '#1677FF' }} /> WhatsApp Broadcasting (5 campaigns/mo)</>
                     )}
                     {(plan.name === 'growth' || plan.name === 'professional') && (
-                      <><FaCheck style={{ color: '#1677FF' }} /> WhatsApp Broadcasting (5,000 Messages & 10 Campaigns/mo)</>
+                      <><FaCheck style={{ color: '#1677FF' }} /> Unlimited WhatsApp broadcast messages and campaigns</>
                     )}
                     {(plan.name === 'scale' || plan.name === 'enterprise') && (
                       <><FaCheck style={{ color: '#1677FF' }} /> WhatsApp Broadcasting (25,000 Messages & Unlimited Campaigns/mo)</>

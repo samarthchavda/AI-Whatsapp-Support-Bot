@@ -17,12 +17,12 @@ const DEFAULT_PROFILES_META = [
   {
     key: 'growth',
     name: 'Growth CRM Profile',
-    description: 'Mid-tier access: Analytics, Broadcasts, Escalations, and WhatsApp Templates.',
+    description: 'E-commerce Growth access: recovery, analytics, templates, broadcasts, and developer API.',
     category: 'kwickbot_crm',
     isSystemDefault: true,
     pages: PERMISSION_PROFILES.growth.pages,
     permissions: PERMISSION_PROFILES.growth.permissions,
-    features: { dashboardAccess: true, conversations: true, knowledgeBase: true, whatsappConnection: true, broadcasts: true, advancedAnalytics: true, humanHandoff: true }
+    features: { dashboardAccess: true, conversations: true, knowledgeBase: true, whatsappConnection: true, broadcasts: true, advancedAnalytics: true, humanHandoff: true, developerApi: true, apiKeys: true, customWebhooks: true }
   },
   {
     key: 'scale',
@@ -137,12 +137,17 @@ async function seedProfiles(dryRun = false) {
       results.created++;
     } else {
       if (!dryRun) {
+        const wasSystemDefault = existing.isSystemDefault;
         existing.name = p.name;
         existing.description = p.description;
         existing.category = p.category;
         existing.isSystemDefault = true;
         // If it was system default, sync default pages/permissions if empty
-        if (existing.pages.length === 0 && p.pages.length > 0) {
+        if (p.key === 'growth' && wasSystemDefault) {
+          existing.pages = p.pages;
+          existing.permissions = p.permissions;
+          existing.features = p.features;
+        } else if (existing.pages.length === 0 && p.pages.length > 0) {
           existing.pages = p.pages;
           existing.permissions = p.permissions;
         }

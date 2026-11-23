@@ -2,7 +2,7 @@
  * Official Centralized Subscription Plan Definitions & Features
  * Kwickbot Public Pricing Source of Truth:
  * - STARTER  (starter): ₹1,499/mo | 500 Conversations | 2,000 Messages | 1 WA Connection | 1 PDF (4 pages) | 1 Store Integration | 5 Broadcast Campaigns
- * - GROWTH   (growth):  ₹2,999/mo | 3,000 Conversations | 15,000 Messages | 2 WA Connections | 3 PDF KBs | 1 Store Integration | 5,000 Broadcast Msgs | 10 Campaigns
+ * - GROWTH   (growth):  ₹2,499/mo | Unlimited AI conversations and broadcasts | 3 WA Connections | 2 Store Integrations | Developer API
  * - SCALE    (scale):   ₹9,999/mo | Unlimited Conversations | Unlimited Messages | 5 WA Connections | Unlimited PDF KBs | Multiple Store Integrations | 25,000 Broadcast Msgs | Unlimited Campaigns
  */
 
@@ -43,17 +43,17 @@ const PLAN_DEFINITIONS = {
   growth: {
     name: 'growth',
     displayName: 'Growth Plan',
-    monthlyPrice: 2999,
-    description: 'Great for growing businesses looking for premium AI support and WhatsApp broadcasting.',
+    monthlyPrice: 2499,
+    description: 'For growing e-commerce stores with AI support, recovery automations, and CRM-ready APIs.',
     features: {
-      maxConversations: 3000,
-      maxMessages: 15000,
-      geminiTokensPerMonth: 200000,
-      maxWhatsAppConnections: 2,
+      maxConversations: -1,
+      maxMessages: -1,
+      geminiTokensPerMonth: -1,
+      maxWhatsAppConnections: 3,
       maxKbUploads: 3,
-      maxIntegrations: 1,
-      maxBroadcastMessages: 5000,
-      maxBroadcastCampaigns: 10,
+      maxIntegrations: 2,
+      maxBroadcastMessages: -1,
+      maxBroadcastCampaigns: -1,
       broadcastingAccess: true,
       scheduledBroadcasts: true,
       audienceSegmentation: true,
@@ -65,7 +65,7 @@ const PLAN_DEFINITIONS = {
       productCatalogSync: true,
       productCatalogAi: true,
       customBranding: false,
-      developerApi: false,
+      developerApi: true,
       liveChat: true,
       knowledgeBase: true,
       integrations: true,

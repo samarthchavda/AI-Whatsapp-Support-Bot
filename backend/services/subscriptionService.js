@@ -6,7 +6,7 @@ const { PLAN_DEFINITIONS, normalizePlanName, getPlanLimit, isFeatureAllowed } = 
 // Export legacy PLAN_LIMITS for backward compatibility if imported elsewhere
 const PLAN_LIMITS = {
   starter: { tokens: 50000, messages: 2000, conversations: 500 },
-  growth: { tokens: 200000, messages: 15000, conversations: 3000 },
+  growth: { tokens: -1, messages: -1, conversations: -1 },
   scale: { tokens: -1, messages: -1, conversations: -1 },
   custom: { tokens: -1, messages: -1, conversations: -1 }
 };

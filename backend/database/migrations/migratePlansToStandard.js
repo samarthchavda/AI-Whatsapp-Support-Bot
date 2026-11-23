@@ -84,14 +84,15 @@ const defaultPlans = [
   },
   {
     name: 'growth',
+    configurationVersion: 1,
     slug: 'growth',
     displayName: 'Growth',
-    shortDescription: 'For stores managing regular order and support volume.',
-    detailedDescription: 'Full-featured AI WhatsApp automation, broadcasts, live chat handoff, and analytics.',
+    shortDescription: 'Unlimited AI support and broadcasts for growing e-commerce stores.',
+    detailedDescription: 'Three WhatsApp numbers, two Shopify or WooCommerce stores, abandoned cart recovery, order confirmation templates, analytics and CRM-ready APIs.',
     category: 'kwickbot_crm',
     currency: 'INR',
-    monthlyPrice: 2999,
-    yearlyPrice: 29990,
+    monthlyPrice: 2499,
+    yearlyPrice: 24990,
     setupFee: 0,
     connectorMaintenanceFee: 0,
     customPricing: false,
@@ -105,7 +106,7 @@ const defaultPlans = [
     isPublished: true,
     allowedBillingCycles: ['monthly', 'yearly'],
     permissionProfile: 'growth',
-    allowedPages: ['dashboard', 'conversations', 'knowledge-base', 'broadcast', 'analytics', 'escalations', 'integrations', 'profile', 'billing'],
+    allowedPages: ['dashboard', 'conversations', 'knowledge-base', 'broadcast', 'analytics', 'abandoned_carts', 'abandoned-carts', 'escalations', 'templates', 'integrations', 'orders', 'api-dashboard', 'api-keys', 'api-documentation', 'webhook-configuration', 'api-logs', 'api-usage', 'profile', 'billing'],
     features: {
       dashboardAccess: true,
       conversations: true,
@@ -113,14 +114,17 @@ const defaultPlans = [
       internalInvoices: false,
       internalLeads: true,
       whatsappConnection: true,
-      customWebhooks: false,
-      developerApi: false,
-      apiKeys: false,
+      customWebhooks: true,
+      developerApi: true,
+      apiKeys: true,
       integrationLogs: true,
       failedEventReplay: false,
       aiAutomation: true,
       knowledgeBase: true,
       broadcasts: true,
+      broadcastingAccess: true,
+      scheduledBroadcasts: true,
+      audienceSegmentation: true,
       advancedAnalytics: true,
       abandonedCartRecovery: true,
       productCatalogSync: true,
@@ -132,17 +136,21 @@ const defaultPlans = [
       customSla: false
     },
     usageLimits: {
-      monthlyConversations: 3000,
-      monthlyMessages: 15000,
+      monthlyConversations: -1,
+      monthlyMessages: -1,
       monthlyApiRequests: 50000,
       monthlyWebhookDeliveries: 25000,
       monthlyAutomationExecutions: 10000,
-      maxWhatsAppConnections: 2,
+      maxWhatsAppConnections: 3,
+      maxKbUploads: 3,
+      maxIntegrations: 2,
+      maxBroadcastCampaigns: -1,
+      maxBroadcastMessages: -1,
       maxActiveAutomations: 5,
-      maxApiKeys: 1,
+      maxApiKeys: 3,
       maxTeamMembers: 3,
       logRetentionDays: 60,
-      geminiTokensPerMonth: 200000
+      geminiTokensPerMonth: -1
     },
     supportLevel: 'Priority Email & Chat Support (under 4h)',
     sla: '4-hour Response SLA'
@@ -693,6 +701,27 @@ async function runMigration(options = {}) {
           needsSave = true;
         }
 
+        if (planData.name === 'growth' && (existing.configurationVersion || 0) < 1) {
+          existing.monthlyPrice = planData.monthlyPrice;
+          existing.yearlyPrice = planData.yearlyPrice;
+          existing.shortDescription = planData.shortDescription;
+          existing.detailedDescription = planData.detailedDescription;
+          existing.allowedPages = [...planData.allowedPages];
+          existing.permissionProfile = planData.permissionProfile;
+          for (const key of [
+            'customWebhooks', 'developerApi', 'apiKeys', 'broadcastingAccess',
+            'scheduledBroadcasts', 'audienceSegmentation', 'advancedAnalytics',
+            'abandonedCartRecovery', 'productCatalogSync', 'productCatalogAi'
+          ]) existing.features[key] = planData.features[key];
+          for (const key of [
+            'monthlyConversations', 'monthlyMessages', 'maxWhatsAppConnections',
+            'maxKbUploads', 'maxIntegrations', 'maxBroadcastCampaigns',
+            'maxBroadcastMessages', 'maxApiKeys', 'geminiTokensPerMonth'
+          ]) existing.usageLimits[key] = planData.usageLimits[key];
+          existing.configurationVersion = 1;
+          needsSave = true;
+        }
+
         if (!existing.slug) {
           existing.slug = planData.slug;
           needsSave = true;
@@ -730,9 +759,16 @@ async function runMigration(options = {}) {
       }
     }
 
+    // Bring existing Growth subscribers onto the new defaults while retaining
+    // individually negotiated prices and token limits.
+    const Admin = require('../../models/Admin');
+    if (!isDryRun) {
+      await Admin.updateMany({ subscriptionPlan: { $in: ['growth', 'professional'] }, monthlyPrice: 2999 }, { $set: { monthlyPrice: 2499 } });
+      await Admin.updateMany({ subscriptionPlan: { $in: ['growth', 'professional'] }, geminiTokensLimit: 200000 }, { $set: { geminiTokensLimit: -1 } });
+    }
+
     // Post-migration stats verification & audit reporting
     const allPlans = await PricingPlan.find({});
-    const Admin = require('../../models/Admin');
     
     const categoryCounts = {
       kwickbot_crm: 0,

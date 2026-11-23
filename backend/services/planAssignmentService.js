@@ -6,7 +6,7 @@ const ALLOWED_SUBSCRIPTION_STATUSES = ['active', 'inactive', 'trial', 'cancelled
 
 const legacyDefaults = {
   starter: { monthlyPrice: 1499, geminiTokensLimit: 50000 },
-  growth: { monthlyPrice: 2999, geminiTokensLimit: 200000 },
+  growth: { monthlyPrice: 2499, geminiTokensLimit: -1 },
   scale: { monthlyPrice: 9999, geminiTokensLimit: -1 },
   custom: { monthlyPrice: 0, geminiTokensLimit: -1 }
 };

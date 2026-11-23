@@ -621,12 +621,12 @@ exports.getPlans = async (req, res) => {
 exports.getPublicPlans = async (req, res) => {
   try {
     const PricingPlan = require('../../models/PricingPlan');
-    // Legacy Shopify/WooCommerce tiers are retained for existing subscribers but
-    // are temporarily not offered on the public pricing page.
+    // Publish Starter and Growth for e-commerce; keep Scale off the public offer
+    // until its pricing is finalized.
     const plans = await PricingPlan.find({
       isActive: true,
       isPublished: true,
-      name: { $nin: ['starter', 'growth', 'scale'] }
+      name: { $ne: 'scale' }
     })
       .select('-__v -createdAt -updatedAt')
       .sort({ category: 1, displayOrder: 1 });
@@ -684,7 +684,7 @@ exports.upgradePlan = async (req, res) => {
     if (!planDetails) {
       const fallbacks = {
         starter: { price: 1499, limit: 50000 },
-        growth: { price: 2999, limit: 200000 },
+        growth: { price: 2499, limit: -1 },
         scale: { price: 9999, limit: -1 }
       };
       
@@ -695,7 +695,7 @@ exports.upgradePlan = async (req, res) => {
     } else {
       admin.subscriptionPlan = planName;
       originalPrice = planDetails.monthlyPrice;
-      admin.geminiTokensLimit = planDetails.features.geminiTokensPerMonth;
+      admin.geminiTokensLimit = planDetails.usageLimits?.geminiTokensPerMonth ?? 50000;
     }
 
     admin.monthlyPrice = originalPrice - (originalPrice * discountPercent / 100);

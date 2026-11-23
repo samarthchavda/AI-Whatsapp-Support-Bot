@@ -38,22 +38,27 @@ const KWICKBOT_CRM_COMPARISON = {
     developerApi: false
   },
   growth: {
-    conversations: '3,000',
-    messages: '15,000',
-    connections: '2',
+    conversations: 'Unlimited',
+    messages: 'Unlimited',
+    connections: '3',
     knowledgeBasePdfs: '3 PDF documents',
-    storeIntegrations: '1 store integration (Shopify or WooCommerce)',
+    storeIntegrations: '2 store integrations (Shopify or WooCommerce)',
     advancedAnalytics: true,
     liveChatEscalation: true,
     orderCancellation: true,
     broadcasting: true,
-    broadcastCampaigns: '10/month',
-    broadcastMessages: '5,000/month',
+    broadcastCampaigns: 'Unlimited',
+    broadcastMessages: 'Unlimited',
     scheduledBroadcasts: true,
     audienceSegmentation: true,
     broadcastAnalytics: 'Basic',
+    abandonedCartRecovery: true,
+    productCatalogSync: true,
+    productCatalogAi: true,
+    orderConfirmationTemplates: true,
+    crmApiWebhooks: true,
     customBranding: false,
-    developerApi: false
+    developerApi: true
   },
   scale: {
     conversations: 'Unlimited',
@@ -199,9 +204,9 @@ export default function PricingPage() {
     </li>
   );
 
-  // Publish the configured Starter offer while the other e-commerce tiers are being finalized.
+  // Show only the configured e-commerce offers; Scale remains in preparation.
   const filteredPlans = plans.filter((p) => p.category === activeCategory &&
-    (activeCategory !== 'kwickbot_crm' || String(p.name).toLowerCase() === 'starter'));
+    (activeCategory !== 'kwickbot_crm' || ['starter', 'growth'].includes(String(p.name).toLowerCase())));
 
   const breadcrumbSchema = {
     '@context': 'https://schema.org',
@@ -350,6 +355,8 @@ export default function PricingPage() {
                             <FeatureItem>{crmComparison.storeIntegrations}</FeatureItem>
                             <FeatureItem>AI WhatsApp support</FeatureItem>
                             <FeatureItem>Live chat CRM</FeatureItem>
+                            {crmComparison.orderConfirmationTemplates && <FeatureItem>Order confirmation WhatsApp templates</FeatureItem>}
+                            {crmComparison.crmApiWebhooks && <FeatureItem>Connect your CRM through API and webhooks</FeatureItem>}
                             {showFullComparison && (
                               <>
                                 <FeatureItem enabled={crmComparison.advancedAnalytics}>Advanced analytics</FeatureItem>

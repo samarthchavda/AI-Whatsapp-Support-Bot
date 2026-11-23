@@ -55,7 +55,7 @@ describe('Dynamic Pricing Plan System & Security Tests', () => {
 
       expect(growth).toBeDefined();
       expect(growth.category).toBe('kwickbot_crm');
-      expect(growth.monthlyPrice).toBe(2999);
+      expect(growth.monthlyPrice).toBe(2499);
       expect(growth.isPublished).toBe(true);
 
       expect(scale).toBeDefined();
@@ -125,8 +125,8 @@ describe('Dynamic Pricing Plan System & Security Tests', () => {
 
   describe('3. Pricing Math & Savings Calculation Logic', () => {
     test('Calculates yearly savings correctly when yearlyPrice is lower than monthlyPrice * 12', () => {
-      const monthlyPrice = 2999;
-      const yearlyPrice = 29990; // 2 months free -> ~17% off
+      const monthlyPrice = 2499;
+      const yearlyPrice = 24990; // 2 months free -> ~17% off
       const totalMonthlyYear = monthlyPrice * 12; // 35988
 
       expect(yearlyPrice).toBeLessThan(totalMonthlyYear);

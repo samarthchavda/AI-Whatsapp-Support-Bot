@@ -17,13 +17,18 @@ const PERMISSION_PROFILES = {
     ]
   },
   growth: {
-    pages: ['dashboard', 'conversations', 'knowledge-base', 'broadcast', 'analytics', 'escalations', 'integrations', 'profile', 'billing'],
+    pages: ['dashboard', 'conversations', 'knowledge-base', 'broadcast', 'analytics', 'abandoned_carts', 'abandoned-carts', 'escalations', 'templates', 'integrations', 'orders', 'api-dashboard', 'api-keys', 'api-documentation', 'webhook-configuration', 'api-logs', 'api-usage', 'profile', 'billing'],
     permissions: [
       CANONICAL_PERMISSIONS.USAGE_VIEW,
       CANONICAL_PERMISSIONS.BILLING_VIEW,
       CANONICAL_PERMISSIONS.WHATSAPP_CONNECTION_VIEW,
       CANONICAL_PERMISSIONS.WHATSAPP_CONNECTION_MANAGE,
       CANONICAL_PERMISSIONS.WHATSAPP_TEMPLATES_VIEW,
+      CANONICAL_PERMISSIONS.WHATSAPP_TEMPLATES_MANAGE,
+      CANONICAL_PERMISSIONS.API_KEYS_VIEW,
+      CANONICAL_PERMISSIONS.API_KEYS_MANAGE,
+      CANONICAL_PERMISSIONS.WEBHOOK_CONFIGURATION_VIEW,
+      CANONICAL_PERMISSIONS.WEBHOOK_CONFIGURATION_MANAGE,
       CANONICAL_PERMISSIONS.SETTINGS_VIEW,
       CANONICAL_PERMISSIONS.SETTINGS_MANAGE
     ]

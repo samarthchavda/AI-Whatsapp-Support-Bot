@@ -407,15 +407,10 @@ STRICT KNOWLEDGE BASE GROUNDING RULES:
         console.log(`🆕 New conversation created for ${customerPhone} under admin: ${finalAdminId}`);
       }
 
-      // Check if message is a product inquiry
+      // Classify product questions so Starter can avoid catalog-based answers.
+      let currentProductInquiry = null;
       try {
-        const productName = await this.detectProductInquiry(message, conversation.admin);
-        if (productName) {
-          conversation.hasProductInquiry = true;
-          conversation.inquiredProductName = productName;
-          conversation.productInquiryAt = new Date();
-          conversation.followUpSent = false;
-        }
+        currentProductInquiry = await this.detectProductInquiry(message, conversation.admin);
       } catch (inquiryErr) {
         console.error('Error running product inquiry detection:', inquiryErr);
       }
@@ -435,6 +430,13 @@ STRICT KNOWLEDGE BASE GROUNDING RULES:
           || await Admin.findOne({ whatsappConnected: true, role: { $ne: 'super_admin' } })
           || await Admin.findOne({ role: { $ne: 'super_admin' }, email: { $ne: 'demo@store.com' } })
           || await Admin.findOne({ role: { $ne: 'super_admin' } });
+      }
+
+      if (currentProductInquiry && adminDoc?.subscriptionPlan !== 'starter') {
+        conversation.hasProductInquiry = true;
+        conversation.inquiredProductName = currentProductInquiry;
+        conversation.productInquiryAt = new Date();
+        conversation.followUpSent = false;
       }
 
       // Detect language and translate if foreign
@@ -944,9 +946,12 @@ STRICT KNOWLEDGE BASE GROUNDING RULES:
       }
 
       // Process based on intent
-      switch (intent) {
+      if (merchantPlan === 'starter' &&
+          (currentProductInquiry || intent === 'faq_products' || intent === 'faq_products_all')) {
+        response = 'For product details and availability, please contact our store team directly. I can still help with store policies and order status.';
+      } else switch (intent) {
         case 'store_faqs':
-          const storeFaqResult = this.handleStoreFaqsMenu();
+          const storeFaqResult = this.handleStoreFaqsMenu(merchantPlan === 'starter');
           response = storeFaqResult.message;
           listMessage = storeFaqResult.listMessage;
           buttons = storeFaqResult.buttons;
@@ -984,8 +989,10 @@ STRICT KNOWLEDGE BASE GROUNDING RULES:
           break;
 
         case 'agent_handoff':
-          response = "I am your automated AI assistant and I am here 24/7 to help you with product information, specifications, order tracking, and store policies. Please let me know how I can help you today!";
-          buttons = ['🛍️ View Products', '📋 More FAQs'];
+          response = merchantPlan === 'starter'
+            ? 'I can help with order tracking and store policies. Please let me know what you need.'
+            : 'I can help with product information, specifications, order tracking, and store policies. Please let me know what you need.';
+          buttons = merchantPlan === 'starter' ? ['📋 More FAQs'] : ['🛍️ View Products', '📋 More FAQs'];
           break;
 
         case 'new_order_inquiry':
@@ -1101,6 +1108,10 @@ STRICT KNOWLEDGE BASE GROUNDING RULES:
           reason: escalationReason,
           relatedOrderIds
         });
+      }
+
+      if (merchantPlan === 'starter') {
+        buttons = buttons.filter(button => !/products?/i.test(button));
       }
 
       // Simulate streaming-like UX for WhatsApp by adding a short typing delay.
@@ -2544,7 +2555,7 @@ Response format must be ONLY the product name or "NONE". Do not write any other 
     return `I cannot place new orders directly here on WhatsApp.\n\nPlease place your order directly on our website here:${storeLinkText || ' our online store.'}\n\nIf you have any queries, feel free to send them here, and I will be happy to assist you!`;
   }
 
-  handleStoreFaqsMenu() {
+  handleStoreFaqsMenu(isStarter = false) {
     const listMessage = {
       header: "Store FAQs",
       body: "Sure! What would you like to know about?",
@@ -2557,7 +2568,7 @@ Response format must be ONLY the product name or "NONE". Do not write any other 
             { id: "row_shipping", title: "🚚 Shipping & Delivery", description: "Delivery times, rates & cutoff times" },
             { id: "row_returns", title: "↩️ Returns & Refunds", description: "Return window & refund policy" },
             { id: "row_payments", title: "💳 Payments", description: "Accepted payment options & COD" },
-            { id: "row_products", title: "🛍️ Products", description: "Product overview & catalog search" },
+            ...(!isStarter ? [{ id: "row_products", title: "🛍️ Products", description: "Product overview & catalog search" }] : []),
             { id: "row_offers", title: "🏷️ Offers & Discounts", description: "Promotions, deals & coupons" }
           ]
         }

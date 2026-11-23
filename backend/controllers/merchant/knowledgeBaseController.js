@@ -102,6 +102,31 @@ exports.uploadKnowledgeBase = async (req, res) => {
     const adminDoc = await Admin.findById(req.admin._id);
     const limitVal = subscriptionService.getPlanLimit(adminDoc?.subscriptionPlan, 'maxKbUploads');
 
+    const pageLimit = subscriptionService.getPlanLimit(adminDoc?.subscriptionPlan, 'maxKbPdfPages');
+    if (pageLimit > 0) {
+      let parser;
+      try {
+        const { PDFParse } = require('pdf-parse');
+        parser = new PDFParse({ data: fileBuffer });
+        const info = await parser.getInfo();
+        if (!Number.isInteger(info.total) || info.total < 1) {
+          throw new Error('Invalid PDF page count');
+        }
+        if (info.total > pageLimit) {
+          await fs.unlink(req.file.path).catch(() => {});
+          return res.status(403).json({
+            success: false,
+            error: `Your plan allows a maximum of ${pageLimit} pages per PDF.`
+          });
+        }
+      } catch (pdfError) {
+        await fs.unlink(req.file.path).catch(() => {});
+        return res.status(400).json({ success: false, error: 'Unable to read PDF page count.' });
+      } finally {
+        if (parser) await parser.destroy().catch(() => {});
+      }
+    }
+
     // Count ONLY active & ready documents towards the limit
     if (limitVal !== -1 && limitVal !== Infinity) {
       const activeCount = await KnowledgeBase.countDocuments({
@@ -218,6 +243,7 @@ exports.getAllKnowledgeBases = async (req, res) => {
       rawPlanName: 'starter',
       activePdfCount: 0,
       maxKbUploads: 1,
+      maxKbPdfPages: 4,
       isLimitReached: false
     };
 
@@ -241,6 +267,7 @@ exports.getAllKnowledgeBases = async (req, res) => {
         rawPlanName: normPlan,
         activePdfCount: activePdfCount,
         maxKbUploads: limitVal,
+        maxKbPdfPages: subscriptionService.getPlanLimit(normPlan, 'maxKbPdfPages'),
         isLimitReached: limitVal !== -1 && limitVal !== Infinity && activePdfCount >= limitVal
       };
     }
@@ -431,6 +458,13 @@ exports.queryKnowledgeBase = async (req, res) => {
  */
 exports.ingestURL = async (req, res) => {
   try {
+    const { normalizePlanName } = require('../../config/planConstants');
+    if (normalizePlanName(req.admin.subscriptionPlan) === 'starter') {
+      return res.status(403).json({
+        success: false,
+        error: 'The Starter plan supports one PDF knowledge base document only.'
+      });
+    }
     const { title, url, description } = req.body;
 
     if (!title || !url) {

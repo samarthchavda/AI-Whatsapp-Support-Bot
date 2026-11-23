@@ -53,6 +53,14 @@ exports.createBroadcast = async (req, res) => {
       });
     }
 
+    if (subscriptionService.normalizePlanName(req.admin.subscriptionPlan) === 'starter' && recipientSource === 'abandoned_carts') {
+      await removeUploadedFiles(req);
+      return res.status(403).json({
+        success: false,
+        error: 'Abandoned-cart audiences are not included in the Starter plan.'
+      });
+    }
+
     // The CRM Automation offering currently accepts an intentional, explicit
     // CSV audience only. Do not let API callers bypass the UI and pull store
     // orders, abandoned carts, or a previous campaign's recipient list.

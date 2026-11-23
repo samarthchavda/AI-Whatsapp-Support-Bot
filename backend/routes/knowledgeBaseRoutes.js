@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const knowledgeBaseController = require('../controllers/merchant/knowledgeBaseController');
-const { verifyToken } = require('../middleware/auth');
+const { verifyToken, requireFeature } = require('../middleware/auth');
 const { requirePage } = require('../middleware/rbac');
 const { MAX_KB_FILE_SIZE } = require('../config/kbConstants');
 const multer = require('multer');
@@ -85,7 +85,7 @@ router.post('/', verifyToken, requirePage('knowledge-base'), handleUploadMiddlew
  *       200:
  *         description: Shopify products synced
  */
-router.post('/sync-shopify-products', verifyToken, requirePage('knowledge-base'), knowledgeBaseController.syncShopifyProducts);
+router.post('/sync-shopify-products', verifyToken, requirePage('knowledge-base'), requireFeature('productCatalogSync'), knowledgeBaseController.syncShopifyProducts);
 
 /**
  * @openapi

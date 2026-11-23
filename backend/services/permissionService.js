@@ -205,7 +205,7 @@ async function getEffectiveAccessPayload(adminDoc) {
     monthlyApiRequests: 10000,
     monthlyWebhookDeliveries: 5000,
     monthlyAutomationExecutions: 1000,
-    maxWhatsAppConnections: 2,
+    maxWhatsAppConnections: 1,
     maxActiveAutomations: 0,
     maxApiKeys: 0,
     maxTeamMembers: 1,
@@ -214,7 +214,7 @@ async function getEffectiveAccessPayload(adminDoc) {
   };
   delete usageLimits.maxCrmConnections;
   if (adminDoc.role !== 'super_admin' && usageLimits.maxWhatsAppConnections !== -1) {
-    usageLimits.maxWhatsAppConnections = Math.max(2, Number(usageLimits.maxWhatsAppConnections) || 0);
+    usageLimits.maxWhatsAppConnections = Math.max(1, Number(usageLimits.maxWhatsAppConnections) || 1);
   }
 
   // Compute current usage snapshot

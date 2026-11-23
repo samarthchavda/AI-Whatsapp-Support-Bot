@@ -6,8 +6,7 @@ import { safeJsonStringify } from '../../utils/jsonSanitizer';
 import { FaCheck, FaTimes, FaChevronDown, FaChevronUp, FaInfoCircle } from 'react-icons/fa';
 
 const CATEGORIES = [
-  // Legacy Shopify/WooCommerce tiers are intentionally hidden for now.
-  // { id: 'kwickbot_crm', label: 'Kwickbot CRM' },
+  { id: 'kwickbot_crm', label: 'E-commerce' },
   { id: 'crm_integration', label: 'Connect Your CRM' },
   { id: 'whatsapp_api', label: 'WhatsApp API' },
   { id: 'enterprise_custom', label: 'Enterprise' }
@@ -20,18 +19,21 @@ const KWICKBOT_CRM_COMPARISON = {
   starter: {
     conversations: '500',
     messages: '2,000',
-    connections: '2',
-    knowledgeBasePdfs: '1 PDF document',
+    connections: '1',
+    knowledgeBasePdfs: '1 PDF document (up to 4 pages)',
     storeIntegrations: '1 store integration (Shopify or WooCommerce)',
     advancedAnalytics: false,
     liveChatEscalation: false,
     orderCancellation: false,
-    broadcasting: false,
-    broadcastCampaigns: null,
-    broadcastMessages: null,
+    broadcasting: true,
+    broadcastCampaigns: '5/month',
+    broadcastMessages: '5,000/month',
     scheduledBroadcasts: false,
     audienceSegmentation: false,
     broadcastAnalytics: null,
+    abandonedCartRecovery: false,
+    productCatalogSync: false,
+    productCatalogAi: false,
     customBranding: false,
     developerApi: false
   },
@@ -137,7 +139,7 @@ export default function PricingPage() {
   const [openFaqIndex, setOpenFaqIndex] = useState(0);
   const [showFullComparison, setShowFullComparison] = useState(true);
   const [billingCycle, setBillingCycle] = useState('monthly'); // 'monthly' | 'yearly'
-  const [activeCategory, setActiveCategory] = useState('crm_integration');
+  const [activeCategory, setActiveCategory] = useState('kwickbot_crm');
   const [plans, setPlans] = useState([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
@@ -197,7 +199,9 @@ export default function PricingPage() {
     </li>
   );
 
-  const filteredPlans = plans.filter((p) => p.category === activeCategory);
+  // Publish the configured Starter offer while the other e-commerce tiers are being finalized.
+  const filteredPlans = plans.filter((p) => p.category === activeCategory &&
+    (activeCategory !== 'kwickbot_crm' || String(p.name).toLowerCase() === 'starter'));
 
   const breadcrumbSchema = {
     '@context': 'https://schema.org',
@@ -349,6 +353,9 @@ export default function PricingPage() {
                             {showFullComparison && (
                               <>
                                 <FeatureItem enabled={crmComparison.advancedAnalytics}>Advanced analytics</FeatureItem>
+                                <FeatureItem enabled={crmComparison.abandonedCartRecovery ?? true}>Abandoned-cart recovery</FeatureItem>
+                                <FeatureItem enabled={crmComparison.productCatalogSync ?? true}>Product catalog sync</FeatureItem>
+                                <FeatureItem enabled={crmComparison.productCatalogAi ?? true}>Product-based AI replies on WhatsApp</FeatureItem>
                                 <FeatureItem enabled={crmComparison.liveChatEscalation}>Live chat escalation</FeatureItem>
                                 <FeatureItem enabled={crmComparison.orderCancellation}>Order cancellation</FeatureItem>
                                 <FeatureItem enabled={crmComparison.broadcasting}>WhatsApp broadcasting</FeatureItem>

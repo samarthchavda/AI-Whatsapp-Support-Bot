@@ -545,7 +545,7 @@ function Broadcast() {
                 )}
               </div>
 
-              <div className="filter-group">
+              {plan !== 'starter' && <div className="filter-group">
                 <label>Schedule For (Optional)</label>
                 <input
                   type="datetime-local"
@@ -563,7 +563,7 @@ function Broadcast() {
                 <small style={{ color: 'var(--text-muted)', fontSize: '12px', marginTop: '6px', display: 'block' }}>
                   Leave empty to send immediately
                 </small>
-              </div>
+              </div>}
 
               {recipientSource === 'csv' ? (
                 <div className="filter-group" style={{ gridColumn: 'span 2' }}>

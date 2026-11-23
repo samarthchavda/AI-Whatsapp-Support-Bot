@@ -8,6 +8,7 @@ const pricingPlanSchema = new mongoose.Schema({
     lowercase: true,
     trim: true
   },
+  configurationVersion: { type: Number, default: 0 },
   slug: {
     type: String,
     required: true,
@@ -118,6 +119,9 @@ const pricingPlanSchema = new mongoose.Schema({
     failedEventReplay: { type: Boolean, default: false },
     aiAutomation: { type: Boolean, default: true },
     knowledgeBase: { type: Boolean, default: true },
+    abandonedCartRecovery: { type: Boolean, default: false },
+    productCatalogSync: { type: Boolean, default: false },
+    productCatalogAi: { type: Boolean, default: false },
     broadcasts: { type: Boolean, default: false },
     broadcastingAccess: { type: Boolean, default: false },
     scheduledBroadcasts: { type: Boolean, default: false },
@@ -136,6 +140,9 @@ const pricingPlanSchema = new mongoose.Schema({
     monthlyWebhookDeliveries: { type: Number, default: 5000 },
     monthlyAutomationExecutions: { type: Number, default: 1000 },
     maxWhatsAppConnections: { type: Number, default: 1 },
+    maxKbUploads: { type: Number, default: 1 },
+    maxKbPdfPages: { type: Number, default: 0 },
+    maxIntegrations: { type: Number, default: 1 },
     maxActiveAutomations: { type: Number, default: 0 },
     maxApiKeys: { type: Number, default: 0 },
     maxTeamMembers: { type: Number, default: 1 },

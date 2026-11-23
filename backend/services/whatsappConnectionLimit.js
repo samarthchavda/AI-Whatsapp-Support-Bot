@@ -3,7 +3,7 @@ const subscriptionService = require('./subscriptionService');
 function getWhatsappConnectionLimit(admin) {
   if (admin?.role === 'super_admin') return 1;
   const planLimit = subscriptionService.getPlanLimit(admin?.subscriptionPlan, 'maxWhatsAppConnections');
-  return planLimit === -1 ? -1 : Math.max(2, Number(planLimit) || 0);
+  return planLimit === -1 ? -1 : Math.max(1, Number(planLimit) || 1);
 }
 
 function getActiveWhatsappPhoneIds(admin) {

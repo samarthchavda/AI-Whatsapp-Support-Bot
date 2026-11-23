@@ -263,6 +263,7 @@ function KnowledgeBase() {
               color: planUsage.isLimitReached ? '#ef4444' : 'var(--text-primary)'
             }}>
               {planUsage.maxKbUploads === -1 ? 'Unlimited PDFs' : `${planUsage.activePdfCount} / ${planUsage.maxKbUploads} PDFs used`}
+              {planUsage.maxKbPdfPages > 0 && ` · Up to ${planUsage.maxKbPdfPages} pages per PDF`}
             </span>
           </div>
 
@@ -395,8 +396,9 @@ function KnowledgeBase() {
                 📋 Supported Format:
               </h3>
               <ul style={{ color: '#a1a1aa', fontSize: '13px', lineHeight: '1.8', paddingLeft: '20px', margin: 0 }}>
-                <li><strong>PDF files only (.pdf):</strong> Business FAQs, policies, product catalogs</li>
+                <li><strong>PDF files only (.pdf):</strong> Business FAQs and store policies{planUsage?.rawPlanName !== 'starter' ? ', product catalogs' : ''}</li>
                 <li><strong>Maximum size:</strong> 10MB per PDF</li>
+                {planUsage?.maxKbPdfPages > 0 && <li><strong>Page limit:</strong> {planUsage.maxKbPdfPages} pages per PDF</li>}
                 <li><strong>Best practice:</strong> Use clear, structured PDF text with questions and answers</li>
               </ul>
             </div>

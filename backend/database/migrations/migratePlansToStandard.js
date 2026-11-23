@@ -10,10 +10,11 @@ const defaultPlans = [
   // 1. Kwickbot CRM (Active & Published)
   {
     name: 'starter',
+    configurationVersion: 2,
     slug: 'starter',
     displayName: 'Starter',
-    shortDescription: 'For small stores validating AI support.',
-    detailedDescription: 'Essential AI WhatsApp automation and support desk features for small merchants.',
+    shortDescription: 'AI WhatsApp support for one e-commerce store.',
+    detailedDescription: 'One WhatsApp number, one Shopify or WooCommerce store, one four-page PDF, and five broadcast campaigns per month.',
     category: 'kwickbot_crm',
     currency: 'INR',
     monthlyPrice: 1499,
@@ -31,7 +32,7 @@ const defaultPlans = [
     isPublished: true,
     allowedBillingCycles: ['monthly', 'yearly'],
     permissionProfile: 'starter',
-    allowedPages: ['dashboard', 'conversations', 'knowledge-base', 'integrations', 'profile', 'billing'],
+    allowedPages: ['dashboard', 'conversations', 'knowledge-base', 'broadcast', 'integrations', 'profile', 'billing'],
     features: {
       dashboardAccess: true,
       conversations: true,
@@ -46,7 +47,13 @@ const defaultPlans = [
       failedEventReplay: false,
       aiAutomation: true,
       knowledgeBase: true,
-      broadcasts: false,
+      broadcasts: true,
+      broadcastingAccess: true,
+      scheduledBroadcasts: false,
+      audienceSegmentation: false,
+      abandonedCartRecovery: false,
+      productCatalogSync: false,
+      productCatalogAi: false,
       advancedAnalytics: false,
       humanHandoff: false,
       customBranding: false,
@@ -60,7 +67,12 @@ const defaultPlans = [
       monthlyApiRequests: 10000,
       monthlyWebhookDeliveries: 5000,
       monthlyAutomationExecutions: 1000,
-      maxWhatsAppConnections: 2,
+      maxWhatsAppConnections: 1,
+      maxKbUploads: 1,
+      maxKbPdfPages: 4,
+      maxIntegrations: 1,
+      maxBroadcastCampaigns: 5,
+      maxBroadcastMessages: 5000,
       maxActiveAutomations: 0,
       maxApiKeys: 0,
       maxTeamMembers: 1,
@@ -110,6 +122,9 @@ const defaultPlans = [
       knowledgeBase: true,
       broadcasts: true,
       advancedAnalytics: true,
+      abandonedCartRecovery: true,
+      productCatalogSync: true,
+      productCatalogAi: true,
       humanHandoff: true,
       customBranding: false,
       prioritySupport: true,
@@ -172,6 +187,9 @@ const defaultPlans = [
       knowledgeBase: true,
       broadcasts: true,
       advancedAnalytics: true,
+      abandonedCartRecovery: true,
+      productCatalogSync: true,
+      productCatalogAi: true,
       humanHandoff: true,
       customBranding: true,
       prioritySupport: true,
@@ -652,6 +670,28 @@ async function runMigration(options = {}) {
       } else {
         // Record exists: preserve existing prices, features, limits, permissions, and publication status untouched
         let needsSave = false;
+
+        // Apply the requested Starter entitlement change once, without touching
+        // merchant-specific overrides or the Super Admin's other plan settings.
+        if (planData.name === 'starter' && (existing.configurationVersion || 0) < 2) {
+          const starterFeatureKeys = [
+            'broadcasts', 'broadcastingAccess', 'scheduledBroadcasts',
+            'audienceSegmentation', 'advancedAnalytics', 'abandonedCartRecovery',
+            'productCatalogSync', 'productCatalogAi'
+          ];
+          starterFeatureKeys.forEach(key => { existing.features[key] = planData.features[key]; });
+          const starterLimitKeys = [
+            'maxWhatsAppConnections', 'maxKbUploads', 'maxKbPdfPages',
+            'maxIntegrations', 'maxBroadcastCampaigns', 'maxBroadcastMessages'
+          ];
+          starterLimitKeys.forEach(key => { existing.usageLimits[key] = planData.usageLimits[key]; });
+          existing.allowedPages = [...new Set([...(existing.allowedPages || []), 'broadcast'])]
+            .filter(page => page !== 'analytics');
+          existing.shortDescription = planData.shortDescription;
+          existing.detailedDescription = planData.detailedDescription;
+          existing.configurationVersion = 2;
+          needsSave = true;
+        }
 
         if (!existing.slug) {
           existing.slug = planData.slug;

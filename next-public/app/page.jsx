@@ -160,19 +160,22 @@ const plans = [
   {
     name: 'Starter',
     price: '₹1,499',
-    desc: 'For small stores validating AI support.',
+    desc: 'AI WhatsApp support for one e-commerce store.',
     cta: 'Start with a demo',
     included: [
       'Up to 500 WhatsApp conversations / month',
       'Up to 2,000 messages / month',
-      '2 active WhatsApp connections',
-      '1 knowledge base PDF',
+      '1 active WhatsApp connection',
+      '1 knowledge base PDF, up to 4 pages',
       '1 store integration (Shopify or WooCommerce)',
-      'Knowledge base retrieval & live chat CRM'
+      'AI support from your PDF and live chat CRM',
+      'Broadcasting: 5 campaigns and up to 5,000 messages / month'
     ],
     excluded: [
-      'WhatsApp broadcasting',
+      'Abandoned-cart recovery',
       'Advanced analytics dashboard',
+      'Product catalog sync and product-based AI replies',
+      'Scheduled broadcasts and audience segmentation',
       'Live chat handoff escalations',
       'Automated order cancellations',
       'Custom branding',
@@ -638,7 +641,7 @@ export default function LandingPage() {
               </button>
             </div>
             <div className="plan-grid" data-stagger>
-              {plans.map((plan) => (
+              {plans.filter((plan) => plan.name === 'Starter').map((plan) => (
                 <article key={plan.name} className={`plan-card ${plan.featured ? 'featured' : ''}`}>
                   {plan.featured && <span className="plan-badge">Most popular</span>}
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>

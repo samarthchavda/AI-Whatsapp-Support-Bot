@@ -121,6 +121,14 @@ const MERCHANT_VISIBLE_PATHS = new Set([
   '/dashboard/templates',
   '/dashboard/broadcast',
   '/dashboard/whatsapp-connect',
+  '/dashboard/integrations',
+  '/dashboard/developer',
+  '/dashboard/developer/api-keys',
+  '/dashboard/developer/docs',
+  '/dashboard/developer/webhooks',
+  '/dashboard/developer/logs',
+  '/dashboard/developer/failed-webhooks',
+  '/dashboard/developer/usage',
   '/dashboard/billing',
   '/dashboard/profile'
 ]);

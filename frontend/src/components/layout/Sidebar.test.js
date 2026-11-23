@@ -4,9 +4,12 @@ import { fireEvent, render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import Sidebar from './Sidebar';
 
+const mockCanViewPage = jest.fn(() => true);
 jest.mock('../../context/EffectiveAccessContext', () => ({
-  useEffectiveAccess: () => ({ canViewPage: () => true })
+  useEffectiveAccess: () => ({ canViewPage: mockCanViewPage })
 }));
+
+beforeEach(() => mockCanViewPage.mockReturnValue(true));
 
 function MerchantSidebarHarness() {
   const [open, setOpen] = useState(false);
@@ -53,4 +56,15 @@ test('merchant sidebar closes when the pointer leaves the glass drawer', () => {
   expect(sidebar).toHaveClass('sidebar-expanded');
   fireEvent.mouseLeave(container.querySelector('.sidebar-inner'));
   expect(sidebar).not.toHaveClass('sidebar-expanded');
+});
+
+test('connection pages stay visible for merchants without other page entitlements', () => {
+  mockCanViewPage.mockReturnValue(false);
+  render(<MerchantSidebarHarness />);
+
+  expect(screen.getByRole('link', { name: /WhatsApp Connection/i })).toHaveAttribute('href', '/dashboard/whatsapp-connect');
+  expect(screen.getByRole('link', { name: /Shopify Integration/i })).toHaveAttribute('href', '/dashboard/integrations#shopify');
+  expect(screen.getByRole('link', { name: /WooCommerce Integration/i })).toHaveAttribute('href', '/dashboard/integrations#woocommerce');
+  expect(screen.getByRole('link', { name: /WhatsApp API Connection/i })).toHaveAttribute('href', '/dashboard/developer');
+  expect(screen.getByRole('link', { name: /API Keys/i })).toHaveAttribute('href', '/dashboard/developer/api-keys');
 });

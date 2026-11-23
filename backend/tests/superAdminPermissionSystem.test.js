@@ -149,6 +149,36 @@ describe('Super Admin Permission System & 10 Standard Plans Verification', () =>
       expect(result.pages).toContain('conversations');
     });
 
+    test('Every merchant receives store and WhatsApp API connection access unless explicitly denied', async () => {
+      const merchant = { role: 'admin', subscriptionPlan: 'starter' };
+      const result = await resolveEffectivePermissions(merchant);
+
+      expect(result.pages).toEqual(expect.arrayContaining([
+        CANONICAL_PAGES.INTEGRATIONS,
+        CANONICAL_PAGES.API_DASHBOARD,
+        CANONICAL_PAGES.API_KEYS,
+        CANONICAL_PAGES.API_DOCUMENTATION,
+        CANONICAL_PAGES.WEBHOOK_CONFIGURATION,
+        CANONICAL_PAGES.API_LOGS,
+        CANONICAL_PAGES.FAILED_WEBHOOKS,
+        CANONICAL_PAGES.API_USAGE
+      ]));
+      expect(result.permissions).toEqual(expect.arrayContaining([
+        CANONICAL_PERMISSIONS.API_KEYS_MANAGE,
+        CANONICAL_PERMISSIONS.WEBHOOK_CONFIGURATION_MANAGE,
+        CANONICAL_PERMISSIONS.API_USAGE_VIEW,
+        CANONICAL_PERMISSIONS.FAILED_WEBHOOKS_RETRY
+      ]));
+
+      const denied = await resolveEffectivePermissions({
+        ...merchant,
+        deniedPages: [CANONICAL_PAGES.INTEGRATIONS],
+        deniedPermissions: [CANONICAL_PERMISSIONS.API_KEYS_MANAGE]
+      });
+      expect(denied.pages).not.toContain(CANONICAL_PAGES.INTEGRATIONS);
+      expect(denied.permissions).not.toContain(CANONICAL_PERMISSIONS.API_KEYS_MANAGE);
+    });
+
     test('Customer Deny Overrides take absolute precedence over allow overrides and plan defaults', async () => {
       const merchant = {
         role: 'admin',

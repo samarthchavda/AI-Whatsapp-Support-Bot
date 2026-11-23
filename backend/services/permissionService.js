@@ -5,6 +5,32 @@ const { PERMISSION_PROFILES } = require('../constants/permissionProfiles');
 const { withoutRetiredPages, withoutRetiredPermissions } = require('../constants/retiredCrmConfig');
 const { normalizePlanName } = require('../config/planConstants');
 
+// Connection setup and the WhatsApp API workspace are available to every merchant.
+// Account-level denials and store enable/disable switches still take precedence.
+const MERCHANT_CONNECTION_PAGES = [
+  CANONICAL_PAGES.INTEGRATIONS,
+  CANONICAL_PAGES.API_DASHBOARD,
+  CANONICAL_PAGES.API_KEYS,
+  CANONICAL_PAGES.API_DOCUMENTATION,
+  CANONICAL_PAGES.WEBHOOK_CONFIGURATION,
+  CANONICAL_PAGES.API_LOGS,
+  CANONICAL_PAGES.FAILED_WEBHOOKS,
+  CANONICAL_PAGES.API_USAGE
+];
+
+const MERCHANT_API_PERMISSIONS = [
+  CANONICAL_PERMISSIONS.API_DASHBOARD_VIEW,
+  CANONICAL_PERMISSIONS.API_KEYS_VIEW,
+  CANONICAL_PERMISSIONS.API_KEYS_MANAGE,
+  CANONICAL_PERMISSIONS.API_DOCUMENTATION_VIEW,
+  CANONICAL_PERMISSIONS.WEBHOOK_CONFIGURATION_VIEW,
+  CANONICAL_PERMISSIONS.WEBHOOK_CONFIGURATION_MANAGE,
+  CANONICAL_PERMISSIONS.API_LOGS_VIEW,
+  CANONICAL_PERMISSIONS.FAILED_WEBHOOKS_VIEW,
+  CANONICAL_PERMISSIONS.FAILED_WEBHOOKS_RETRY,
+  CANONICAL_PERMISSIONS.API_USAGE_VIEW
+];
+
 /**
  * Validates account status and subscription active/trial state.
  */
@@ -145,6 +171,9 @@ async function resolveEffectivePermissions(adminDoc) {
   if (Array.isArray(adminDoc.allowedPermissions) && adminDoc.allowedPermissions.length > 0) {
     adminDoc.allowedPermissions.forEach(p => effectivePermissions.add(p));
   }
+
+  MERCHANT_CONNECTION_PAGES.forEach(page => effectivePages.add(page));
+  MERCHANT_API_PERMISSIONS.forEach(permission => effectivePermissions.add(permission));
 
   // Step 1: Customer-specific DENY overrides (admin.deniedPages & admin.deniedPermissions)
   if (Array.isArray(adminDoc.deniedPages) && adminDoc.deniedPages.length > 0) {

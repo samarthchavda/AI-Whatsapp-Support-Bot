@@ -88,7 +88,7 @@ body.merchant-theme {
 }
 
 .merchant-portal > .sidebar.sidebar-expanded .sidebar-inner {
-  width: min(390px, calc(100vw - 32px));
+  width: min(288px, calc(100vw - 20px));
   background: rgba(255, 255, 255, .88);
   border-right: 1px solid rgba(212, 225, 193, .8);
   box-shadow: 18px 0 48px rgba(42, 61, 24, .13);

@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { FaHome, FaComments, FaBox, FaExclamationTriangle, FaPlug, FaBell, FaSignOutAlt, FaUser, FaBrain, FaCommentDots, FaBroadcastTower, FaChartLine, FaCog, FaCrown, FaFileAlt, FaShoppingCart, FaCoins, FaUserSecret, FaHeartbeat, FaBullhorn, FaBlog, FaWhatsapp, FaShieldAlt, FaToggleOn, FaTimes, FaTags, FaUserTag, FaCode, FaBookOpen, FaKey, FaUserPlus } from 'react-icons/fa';
+import { FaHome, FaComments, FaBox, FaExclamationTriangle, FaPlug, FaBell, FaSignOutAlt, FaUser, FaBrain, FaCommentDots, FaBroadcastTower, FaChartLine, FaCog, FaCrown, FaFileAlt, FaShoppingCart, FaCoins, FaUserSecret, FaHeartbeat, FaBullhorn, FaBlog, FaWhatsapp, FaShieldAlt, FaToggleOn, FaTimes, FaTags, FaUserTag, FaCode, FaBookOpen, FaKey, FaUserPlus, FaShopify, FaWordpress } from 'react-icons/fa';
 import { useEffectiveAccess } from '../../context/EffectiveAccessContext';
 
 export default function Sidebar({ admin, onLogout, isOpen, onToggle, onOpen, onClose, pendingDemoRequestsCount }) {
@@ -11,6 +11,8 @@ export default function Sidebar({ admin, onLogout, isOpen, onToggle, onOpen, onC
   const isActive = (path) => {
     return location.pathname === path ? 'active' : '';
   };
+  const isIntegrationActive = (platform) =>
+    location.pathname === '/dashboard/integrations' && location.hash === `#${platform}` ? 'active' : '';
 
   const isPageAllowed = (key) => {
     if (!admin || admin.role === 'super_admin') return true;
@@ -333,9 +335,9 @@ export default function Sidebar({ admin, onLogout, isOpen, onToggle, onOpen, onC
                 </ul>
               </div>
 
-              {/* WhatsApp Setup */}
+              {/* Connection setup */}
               <div className="nav-section">
-                {isOpen && <div className="nav-section-title">WhatsApp Setup</div>}
+                {isOpen && <div className="nav-section-title">Connections & Integrations</div>}
                 <ul className="nav-links">
                   <li>
                     <Link to="/dashboard/whatsapp-connect" className={isActive('/dashboard/whatsapp-connect')} title="WhatsApp Connection">
@@ -343,14 +345,24 @@ export default function Sidebar({ admin, onLogout, isOpen, onToggle, onOpen, onC
                       <span className="nav-label">WhatsApp Connection</span>
                     </Link>
                   </li>
-                  {isPageAllowed('integrations') && (
-                    <li>
-                      <Link to="/dashboard/integrations" className={isActive('/dashboard/integrations')} title="Store Integrations">
-                        <FaCog />
-                        <span className="nav-label">Integrations</span>
-                      </Link>
-                    </li>
-                  )}
+                  <li>
+                    <Link to="/dashboard/integrations#shopify" className={isIntegrationActive('shopify')} title="Shopify Integration">
+                      <FaShopify />
+                      <span className="nav-label">Shopify Integration</span>
+                    </Link>
+                  </li>
+                  <li>
+                    <Link to="/dashboard/integrations#woocommerce" className={isIntegrationActive('woocommerce')} title="WooCommerce Integration">
+                      <FaWordpress />
+                      <span className="nav-label">WooCommerce Integration</span>
+                    </Link>
+                  </li>
+                  <li>
+                    <Link to="/dashboard/developer" className={isActive('/dashboard/developer')} title="WhatsApp API Connection">
+                      <FaCode />
+                      <span className="nav-label">WhatsApp API Connection</span>
+                    </Link>
+                  </li>
                 </ul>
               </div>
 
@@ -418,70 +430,48 @@ export default function Sidebar({ admin, onLogout, isOpen, onToggle, onOpen, onC
                 </div>
               )}
 
-              {/* WhatsApp API / Developer Section */}
-              {(isPageAllowed('api-dashboard') || isPageAllowed('api-keys') || isPageAllowed('api-documentation') || isPageAllowed('webhook-configuration') || isPageAllowed('api-logs') || isPageAllowed('failed-webhooks') || isPageAllowed('api-usage') || isPageAllowed('developer-api')) && (
+              {/* WhatsApp API tools */}
                 <div className="nav-section">
                   {isOpen && <div className="nav-section-title">WhatsApp API</div>}
                   <ul className="nav-links">
-                    {(isPageAllowed('api-dashboard') || isPageAllowed('developer-api')) && (
-                      <li>
-                        <Link to="/dashboard/developer" className={isActive('/dashboard/developer')} title="API Dashboard">
-                          <FaCode />
-                          <span className="nav-label">API Dashboard</span>
-                        </Link>
-                      </li>
-                    )}
-                    {isPageAllowed('api-keys') && (
                       <li>
                         <Link to="/dashboard/developer/api-keys" className={isActive('/dashboard/developer/api-keys')} title="API Keys">
                           <FaKey />
                           <span className="nav-label">API Keys</span>
                         </Link>
                       </li>
-                    )}
-                    {isPageAllowed('api-documentation') && (
                       <li>
                         <Link to="/dashboard/developer/docs" className={isActive('/dashboard/developer/docs')} title="Interactive API Docs">
                           <FaBookOpen />
                           <span className="nav-label">API Documentation</span>
                         </Link>
                       </li>
-                    )}
-                    {isPageAllowed('webhook-configuration') && (
                       <li>
                         <Link to="/dashboard/developer/webhooks" className={isActive('/dashboard/developer/webhooks')} title="Webhooks">
                           <FaPlug />
                           <span className="nav-label">Webhooks</span>
                         </Link>
                       </li>
-                    )}
-                    {isPageAllowed('api-logs') && (
                       <li>
                         <Link to="/dashboard/developer/logs" className={isActive('/dashboard/developer/logs')} title="API Logs">
                           <FaFileAlt />
                           <span className="nav-label">API Logs</span>
                         </Link>
                       </li>
-                    )}
-                    {isPageAllowed('failed-webhooks') && (
                       <li>
                         <Link to="/dashboard/developer/failed-webhooks" className={isActive('/dashboard/developer/failed-webhooks')} title="Failed Webhooks">
                           <FaExclamationTriangle />
                           <span className="nav-label">Failed Webhooks</span>
                         </Link>
                       </li>
-                    )}
-                    {isPageAllowed('api-usage') && (
                       <li>
                         <Link to="/dashboard/developer/usage" className={isActive('/dashboard/developer/usage')} title="Usage & Limits">
                           <FaChartLine />
                           <span className="nav-label">API Usage</span>
                         </Link>
                       </li>
-                    )}
                   </ul>
                 </div>
-              )}
 
               {/* Insights */}
               {isPageAllowed('analytics') && (

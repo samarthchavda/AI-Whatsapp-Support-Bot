@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { FaShopify, FaWordpress, FaPlug, FaCheck, FaTimes, FaCopy, FaSync, FaExternalLinkAlt, FaLock } from 'react-icons/fa';
 import api from '../../../services/api';
 import './Integrations.css';
@@ -9,6 +9,7 @@ import { getSyncFeedback, isMountedCommerceWebhookUrl, validateShopifyStoreUrl }
 
 function Integrations({ admin, onUpdateAdmin }) {
   const navigate = useNavigate();
+  const location = useLocation();
   const [integrations, setIntegrations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
@@ -250,6 +251,15 @@ function Integrations({ admin, onUpdateAdmin }) {
     }
     return true;
   });
+  const requestedPlatform = location.hash.slice(1);
+  const requestedPlatformUnavailable = platforms.some(platform => platform.id === requestedPlatform) &&
+    !visiblePlatforms.some(platform => platform.id === requestedPlatform);
+
+  useEffect(() => {
+    if (!loading && (requestedPlatform === 'shopify' || requestedPlatform === 'woocommerce')) {
+      document.getElementById(`integration-${requestedPlatform}`)?.scrollIntoView({ block: 'start' });
+    }
+  }, [loading, requestedPlatform]);
 
   const isProfileComplete = !!(admin?.businessName?.trim() && admin?.businessPhone?.trim() && admin?.supportEmail?.trim());
 
@@ -270,6 +280,11 @@ function Integrations({ admin, onUpdateAdmin }) {
         </div>
       )}
       {listError && <div className="integration-notice integration-notice-error" role="alert">{listError} <button type="button" onClick={fetchIntegrations}>Retry</button></div>}
+      {!loading && requestedPlatformUnavailable && (
+        <div className="integration-notice integration-notice-warning" role="status">
+          {requestedPlatform === 'shopify' ? 'Shopify' : 'WooCommerce'} is disabled for this account. Contact support to enable this connection.
+        </div>
+      )}
 
       {!isProfileComplete && !loading && (
         <div style={{
@@ -338,7 +353,7 @@ function Integrations({ admin, onUpdateAdmin }) {
               (platform.id === 'woocommerce' && admin?.woocommerceEnabled === false);
 
             return (
-              <div key={platform.id} className="integration-card">
+              <div key={platform.id} id={`integration-${platform.id}`} className="integration-card">
                 <div className="integration-header">
                   <div 
                     className="integration-icon"

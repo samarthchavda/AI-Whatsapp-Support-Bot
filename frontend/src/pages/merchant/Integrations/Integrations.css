@@ -36,6 +36,7 @@
 }
 
 .integration-card {
+  scroll-margin-top: 110px;
   background: var(--bg-card, #FFFFFF);
   border: 1px solid var(--border-subtle, #DCE6F2);
   border-radius: 16px;

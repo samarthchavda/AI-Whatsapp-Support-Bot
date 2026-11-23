@@ -277,7 +277,7 @@ export default function PricingPage() {
           <div className="container">
             <div className="alert" style={{ background: 'var(--warn-bg)', color: 'var(--warn-ink)', maxWidth: 860, margin: '0 auto 28px' }}>
               <FaInfoCircle aria-hidden="true" style={{ flex: 'none', marginTop: 3 }} />
-              <span>Meta WhatsApp conversation charges and third-party CRM/Odoo subscription fees are charged separately by those providers. Connector maintenance fees apply where specified.</span>
+              <span>Kwickbot AI support is included within each plan's stated limits. Meta bills WhatsApp message delivery separately at its current category and destination rates. Third-party CRM/Odoo fees and any listed connector maintenance fees are separate.</span>
             </div>
 
             <div className="plan-grid" data-stagger key={`${activeCategory}-${loading}`} aria-busy={loading}>
@@ -343,6 +343,7 @@ export default function PricingPage() {
                         {savingsText && <span className="plan-note" style={{ fontWeight: 700, color: isPopularCard ? 'var(--pista)' : 'var(--leaf-strong)' }}>{savingsText}</span>}
                         {plan.setupFee > 0 && <span className="plan-note">+ {currSymbol}{formatMoney(plan.setupFee)} one-time setup fee</span>}
                         {plan.connectorMaintenanceFee > 0 && <span className="plan-note">+ {currSymbol}{formatMoney(plan.connectorMaintenanceFee)}/mo connector maintenance fee</span>}
+                        {crmComparison && <span className="plan-note">AI support included in this plan. Meta WhatsApp message charges are separate.</span>}
                       </div>
 
                       <ul className="checklist">

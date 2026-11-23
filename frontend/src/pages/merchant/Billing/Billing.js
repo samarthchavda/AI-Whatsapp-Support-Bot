@@ -351,6 +351,9 @@ function Billing() {
             </span>
             <span className="monthly-price-display">₹{profile?.monthlyPrice || 1499}/mo</span>
           </div>
+          {['starter', 'growth', 'professional'].includes(profile?.subscriptionPlan) && (
+            <p className="billing-meta-plan-note">AI support is included within your plan's usage limits. Meta bills WhatsApp message delivery separately.</p>
+          )}
 
           <div className="plan-meta-list">
             <div className="plan-meta-item">
@@ -541,6 +544,9 @@ function Billing() {
                   )}
                   <span className="period">/month</span>
                 </div>
+                {['starter', 'growth', 'professional'].includes(plan.name) && (
+                  <p className="billing-meta-plan-note">AI support is included within this plan's usage limits. Meta charges separately for WhatsApp message delivery.</p>
+                )}
 
                 <ul className="upgrade-features-list">
                   {/* Conversations */}
@@ -697,11 +703,11 @@ function Billing() {
 
       {/* Official Meta WhatsApp API Charges Info Card */}
       <div className="billing-card meta-charges-card" style={{ marginBottom: '40px' }}>
-        <h3 className="card-title-with-icon" style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '18px', fontWeight: '700', color: '#fafafa', margin: '0 0 8px 0' }}>
+        <h3 className="card-title-with-icon" style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '18px', fontWeight: '700', color: 'var(--text-primary)', margin: '0 0 8px 0' }}>
           <FaWhatsapp style={{ color: '#25D366' }} /> Official Meta WhatsApp API Charges
         </h3>
         <p className="usage-subtitle" style={{ margin: '0 0 20px 0', color: 'var(--text-muted)', fontSize: '13px' }}>
-          Direct pricing charged directly by Meta. There are no platform markups or hidden fees on message templates.
+          Your Kwickbot plan includes its AI support features. Meta's delivery charges are separate and depend on the message category and recipient market.
         </p>
 
         <div className="table-wrapper">
@@ -709,7 +715,7 @@ function Billing() {
             <thead>
               <tr>
                 <th>Category</th>
-                <th>Rate (India / +91 numbers)</th>
+                <th>Meta rate</th>
                 <th>Common Examples</th>
                 <th>Billing Method</th>
               </tr>
@@ -717,27 +723,27 @@ function Billing() {
             <tbody>
               <tr className="table-row-premium">
                 <td><strong>Utility</strong></td>
-                <td><span style={{ color: 'var(--success)', fontWeight: '700' }}>₹0.145</span> <small style={{ color: 'var(--text-muted)' }}>/ 24-hr session</small></td>
+                <td><a href="https://whatsappbusiness.com/products/platform-pricing/" target="_blank" rel="noopener noreferrer">View current rate</a></td>
                 <td>Order Confirmed, Shipping Updates, Order Cancelled notifications</td>
-                <td>Billed directly to your connected Meta card</td>
+                <td>Charged per delivered message by Meta</td>
               </tr>
               <tr className="table-row-premium">
                 <td><strong>Marketing</strong></td>
-                <td><span style={{ color: 'var(--success)', fontWeight: '700' }}>₹1.09</span> <small style={{ color: 'var(--text-muted)' }}>/ 24-hr session</small></td>
+                <td><a href="https://whatsappbusiness.com/products/platform-pricing/" target="_blank" rel="noopener noreferrer">View current rate</a></td>
                 <td>Abandoned Cart Recovery, Promo Offers, Coupon Codes</td>
-                <td>Billed directly to your connected Meta card</td>
+                <td>Charged per delivered message by Meta</td>
               </tr>
               <tr className="table-row-premium">
                 <td><strong>Authentication</strong></td>
-                <td><span style={{ color: 'var(--success)', fontWeight: '700' }}>₹0.145</span> <small style={{ color: 'var(--text-muted)' }}>/ 24-hr session</small></td>
+                <td><a href="https://whatsappbusiness.com/products/platform-pricing/" target="_blank" rel="noopener noreferrer">View current rate</a></td>
                 <td>One-Time Passcodes (OTP), login verification checks</td>
-                <td>Billed directly to your connected Meta card</td>
+                <td>Charged per delivered message by Meta</td>
               </tr>
               <tr className="table-row-premium">
                 <td><strong>Service</strong></td>
-                <td><span style={{ color: '#60a5fa', fontWeight: '700' }}>Free Tier</span> <small style={{ color: 'var(--text-muted)' }}>(1,000/month)</small></td>
+                <td>First 1,000 per business number each month are free; then <a href="https://whatsappbusiness.com/products/platform-pricing/" target="_blank" rel="noopener noreferrer">Meta's current rate</a></td>
                 <td>Customer support chats started by the customer messaging first</td>
-                <td>Free for first 1,000 monthly service sessions</td>
+                <td>Charged per delivered message after the free allowance</td>
               </tr>
             </tbody>
           </table>
@@ -756,7 +762,7 @@ function Billing() {
         }}>
           <FaInfoCircle style={{ fontSize: '18px', flexShrink: 0, color: '#f59e0b' }} />
           <div style={{ fontSize: '13px', color: 'var(--text-secondary)', textAlign: 'left' }}>
-            <strong>Important Billing Note:</strong> The rates listed above are standard base rates for sending templates to destination phone numbers in India (+91). For sending templates to customers in other countries, Meta's regional conversation rates apply. You must connect your credit card directly inside the Meta Business Manager Billing panel to fund template deliveries.
+            <strong>Important Billing Note:</strong> Meta sets and bills WhatsApp message rates separately from your Kwickbot subscription. Rates can vary by message category and recipient market. Check Meta's current pricing and payment options in your WhatsApp Business account.
           </div>
         </div>
       </div>

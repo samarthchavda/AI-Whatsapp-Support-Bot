@@ -314,6 +314,17 @@
   font-weight: 500;
 }
 
+.billing-meta-plan-note {
+  margin: -10px 0 18px;
+  color: var(--text-secondary, #667085);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.active-plan-card .billing-meta-plan-note {
+  margin: 8px 0 16px;
+}
+
 .upgrade-features-list {
   list-style: none;
   padding: 0;

@@ -1403,7 +1403,9 @@ exports.exportDatabase = async (req, res) => {
       exportedAt: new Date(),
       actorEmail: actor.email,
       collections: {
-        admins,
+        // toObject keeps every field (passwords and encrypted secrets included)
+        // so a restore brings accounts back exactly; toJSON would strip them.
+        admins: admins.map((admin) => admin.toObject()),
         conversations,
         orders,
         broadcasts,

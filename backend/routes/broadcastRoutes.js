@@ -51,15 +51,29 @@ router.use(requireFeature('broadcastingAccess'));
  *         multipart/form-data:
  *           schema:
  *             type: object
- *             required: [name, message]
+ *             required: [title, message]
  *             properties:
- *               name:
+ *               title:
  *                 type: string
  *                 example: "Festival Discount Campaign"
  *               message:
  *                 type: string
  *                 example: "Enjoy 20% off today on all items! Use code FESTIVAL20."
+ *               recipientSource:
+ *                 type: string
+ *                 enum: [csv, crm, abandoned_carts, reuse]
+ *                 default: csv
+ *               templateName:
+ *                 type: string
+ *                 description: Meta-approved template name; required for free test broadcasts
+ *               templateLanguage:
+ *                 type: string
+ *                 example: en_US
  *               csvFile:
+ *                 type: string
+ *                 format: binary
+ *                 description: Recipient CSV; required when recipientSource is csv
+ *               headerImage:
  *                 type: string
  *                 format: binary
  *     responses:

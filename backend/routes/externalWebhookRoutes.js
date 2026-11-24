@@ -13,15 +13,19 @@ const webhookRateLimiter = WebhookAuth.createRateLimiter(100, 60000);
  *       - E-Commerce Webhooks
  *     summary: Shopify Order Created / Updated Webhook
  *     description: Receives order payload from Shopify Admin when a customer purchases a product.
- *     headers:
- *       X-Shopify-Topic:
+ *     parameters:
+ *       - in: header
+ *         name: X-Shopify-Topic
  *         schema:
  *           type: string
  *           example: orders/create
- *       X-Shopify-Hmac-Sha256:
+ *       - in: header
+ *         name: X-Shopify-Hmac-Sha256
+ *         required: true
  *         schema:
  *           type: string
- *       X-Shopify-Shop-Domain:
+ *       - in: header
+ *         name: X-Shopify-Shop-Domain
  *         schema:
  *           type: string
  *           example: ai-whatsapp-demo-store.myshopify.com
@@ -134,13 +138,19 @@ router.post(
 
 /**
  * @openapi
- * /api/webhooks/external-orders/custom:
+ * /api/webhooks/external-orders/{source}:
  *   post:
  *     tags:
  *       - E-Commerce Webhooks
  *     summary: Custom Website / ERP Order Webhook
  *     description: Push orders from any custom site directly into Kwickbot.
  *     parameters:
+ *       - in: path
+ *         name: source
+ *         required: true
+ *         schema:
+ *           type: string
+ *         example: custom
  *       - in: header
  *         name: x-webhook-token
  *         required: true

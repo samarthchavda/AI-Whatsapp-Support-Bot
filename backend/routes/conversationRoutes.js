@@ -79,6 +79,15 @@ router.get('/:id/messages/:messageId/media', verifyToken, conversationController
  *     summary: Get Conversation By Phone Number
  *     security:
  *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: phone
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Customer conversations
  */
 router.get('/phone/:phone', verifyToken, conversationController.getConversationsByPhone);
 
@@ -91,6 +100,15 @@ router.get('/phone/:phone', verifyToken, conversationController.getConversations
  *     summary: Get Conversation By ID
  *     security:
  *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Conversation details
  */
 router.get('/:id', verifyToken, conversationController.getConversationById);
 
@@ -103,6 +121,23 @@ router.get('/:id', verifyToken, conversationController.getConversationById);
  *     summary: Update Conversation Status or Bot Pause State
  *     security:
  *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               status: { type: string }
+ *               botPaused: { type: boolean }
+ *     responses:
+ *       200:
+ *         description: Conversation updated
  */
 router.put('/:id', verifyToken, conversationController.updateConversationStatus);
 router.patch('/:id', verifyToken, conversationController.updateConversationStatus);

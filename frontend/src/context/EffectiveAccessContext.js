@@ -72,13 +72,14 @@ export function EffectiveAccessProvider({ children, admin }) {
     const hyphenKey = normalizedKey.replace(/_/g, '-');
 
     const pages = accessData.effectivePages || [];
-    if (pages.includes(normalizedKey) || pages.includes(underscoreKey) || pages.includes(hyphenKey)) {
+    if (pages.includes('all') || pages.includes(normalizedKey) || pages.includes(underscoreKey) || pages.includes(hyphenKey)) {
       return true;
     }
 
     // Fallback check on admin.allowedPages if effectivePages is still empty
     if (pages.length === 0 && admin && Array.isArray(admin.allowedPages) && admin.allowedPages.length > 0) {
-      return admin.allowedPages.includes(normalizedKey) || 
+      return admin.allowedPages.includes('all') ||
+             admin.allowedPages.includes(normalizedKey) || 
              admin.allowedPages.includes(underscoreKey) || 
              admin.allowedPages.includes(hyphenKey);
     }

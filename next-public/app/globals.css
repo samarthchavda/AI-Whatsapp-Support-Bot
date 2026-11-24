@@ -679,7 +679,7 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0
 .motion-ready [data-reveal="left"] { transform: translateX(-36px); }
 .motion-ready [data-reveal="right"] { transform: translateX(36px); }
 .motion-ready [data-reveal].is-visible, .motion-ready .reveal-on-scroll.is-visible { opacity: 1; transform: none; }
-@media (max-width: 640px) {
+@media (max-width: 960px) {
   .motion-ready [data-reveal="left"]:not(.is-visible),
   .motion-ready [data-reveal="right"]:not(.is-visible) { transform: translateY(20px); }
 }

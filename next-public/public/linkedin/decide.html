@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>Kwickbot · LinkedIn post</title>
+<style>
+  *{box-sizing:border-box}
+  body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;background:#EDF2E5;font-family:'Plus Jakarta Sans',system-ui,-apple-system,Segoe UI,Roboto,sans-serif;color:#1F2E12;padding:24px}
+  .card{background:#fff;border-radius:20px;box-shadow:0 20px 50px rgba(31,46,18,.12);padding:36px;max-width:440px;width:100%;text-align:center}
+  img{height:34px;margin-bottom:24px}
+  h1{font-size:24px;margin:0 0 10px}
+  p{color:#4A5A3C;line-height:1.5;margin:0 0 26px}
+  button{border:0;border-radius:12px;padding:15px 28px;font-size:16px;font-weight:700;cursor:pointer;width:100%}
+  .approve{background:#4F8A2B;color:#fff}
+  .skip{background:#2B3D1A;color:#fff}
+  button:disabled{opacity:.6;cursor:default}
+  .msg{margin-top:20px;font-weight:600}
+  .ok{color:#4F8A2B}.err{color:#B3261E}
+</style>
+</head>
+<body>
+<div class="card">
+  <img src="/kwickbot-logo.png" alt="Kwickbot">
+  <h1 id="title">Today's LinkedIn post</h1>
+  <p id="desc"></p>
+  <button id="go" type="button"></button>
+  <div id="msg" class="msg"></div>
+</div>
+<script>
+(function () {
+  var q = new URLSearchParams(location.search);
+  var cb = q.get('cb') || '';
+  var action = q.get('a') === 'approve' ? 'approve' : 'skip';
+  var title = document.getElementById('title');
+  var desc = document.getElementById('desc');
+  var btn = document.getElementById('go');
+  var msg = document.getElementById('msg');
+
+  // Only ever POST to Zapier workflow callback URLs.
+  var valid = /^https:\/\/code-substrate-runner\.zapier\.com\/api\/v0\/callbacks\/[A-Za-z0-9_-]+$/.test(cb);
+
+  if (action === 'approve') {
+    title.textContent = 'Approve today’s post?';
+    desc.textContent = 'It will be published on LinkedIn at 6:00 PM IST, or right away if it’s already past 6.';
+    btn.textContent = '✅ Yes, approve & post';
+    btn.className = 'approve';
+  } else {
+    title.textContent = 'Skip today’s post?';
+    desc.textContent = 'Nothing will be posted on LinkedIn today.';
+    btn.textContent = 'Yes, skip today';
+    btn.className = 'skip';
+  }
+
+  if (!valid) {
+    btn.disabled = true;
+    msg.className = 'msg err';
+    msg.textContent = 'This link is invalid. Open it from the approval email.';
+    return;
+  }
+
+  function done(ok, text) {
+    msg.className = 'msg ' + (ok ? 'ok' : 'err');
+    msg.textContent = text;
+  }
+
+  btn.addEventListener('click', function () {
+    btn.disabled = true;
+    msg.className = 'msg';
+    msg.textContent = 'Sending…';
+    var body = JSON.stringify({ decision: action, at: new Date().toISOString() });
+    fetch(cb, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: body })
+      .then(function (r) {
+        if (r.ok) return done(true, action === 'approve' ? 'Approved. The post is scheduled for 6:00 PM IST.' : 'Skipped. Nothing will be posted today.');
+        if (r.status === 404 || r.status === 409 || r.status === 410) return done(false, 'This decision was already made, or the approval window has closed.');
+        btn.disabled = false;
+        done(false, 'Something went wrong (' + r.status + '). Please try again.');
+      })
+      .catch(function () {
+        // CORS-blocked: send as a simple request the browser will deliver without a preflight.
+        fetch(cb, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain' }, body: body })
+          .then(function () { done(true, action === 'approve' ? 'Sent. The post is scheduled for 6:00 PM IST.' : 'Sent. Nothing will be posted today.'); })
+          .catch(function () { btn.disabled = false; done(false, 'Network error. Please try again.'); });
+      });
+  });
+})();
+</script>
+</body>
+</html>

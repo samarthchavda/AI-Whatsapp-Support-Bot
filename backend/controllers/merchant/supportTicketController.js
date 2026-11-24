@@ -79,7 +79,12 @@ exports.getMyTickets = async (req, res) => {
   try {
     const { status, category, priority, search, page = 1, limit = 15 } = req.query;
 
-    const query = { admin: req.admin._id };
+    const query = {};
+    if (req.admin.role !== 'super_admin') {
+      query.admin = req.admin._id;
+    } else if (req.query.adminId) {
+      query.admin = req.query.adminId;
+    }
 
     if (status && status !== 'all') {
       query.status = status;
@@ -103,6 +108,8 @@ exports.getMyTickets = async (req, res) => {
     const skip = (parseInt(page, 10) - 1) * parseInt(limit, 10);
     const parsedLimit = parseInt(limit, 10);
 
+    const matchStage = req.admin.role === 'super_admin' && !req.query.adminId ? {} : { admin: req.admin._id };
+
     const [tickets, totalCount, statsAgg] = await Promise.all([
       SupportTicket.find(query)
         .sort({ createdAt: -1 })
@@ -111,7 +118,7 @@ exports.getMyTickets = async (req, res) => {
         .lean(),
       SupportTicket.countDocuments(query),
       SupportTicket.aggregate([
-        { $match: { admin: req.admin._id } },
+        { $match: matchStage },
         {
           $group: {
             _id: '$status',

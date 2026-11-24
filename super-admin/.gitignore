@@ -1,0 +1,5 @@
+# Generated local settings and secrets for the local backend
+local-backend/.env
+local-backend/.local-secrets
+local-backend/uploads/
+local-backend/.wwebjs_auth/

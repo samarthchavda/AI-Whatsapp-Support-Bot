@@ -1,0 +1,26 @@
+{
+  "name": "kwickbot-super-admin-api",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Backend for the new Kwickbot super admin: plans, coupons, offers, pricing and website promotions. Separate from ../../backend, which it never changes.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "test": "jest"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "express": "4.21.2",
+    "jsonwebtoken": "9.0.2",
+    "mongoose": "7.8.3"
+  },
+  "devDependencies": {
+    "jest": "29.7.0",
+    "supertest": "7.0.0"
+  },
+  "jest": {
+    "testEnvironment": "node"
+  }
+}

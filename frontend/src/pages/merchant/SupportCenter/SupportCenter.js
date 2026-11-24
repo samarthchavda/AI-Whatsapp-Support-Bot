@@ -3,24 +3,21 @@ import {
   FaHeadset, 
   FaPlus, 
   FaSearch, 
-  FaFilter, 
   FaComments, 
   FaCheckCircle, 
   FaClock, 
   FaExclamationCircle, 
   FaWhatsapp, 
-  FaEnvelope, 
-  FaBook, 
   FaPaperPlane, 
   FaTimes, 
-  FaTag, 
   FaCheck, 
   FaExternalLinkAlt, 
   FaSyncAlt,
-  FaShieldAlt,
   FaShopify,
   FaCode,
-  FaCoins
+  FaCoins,
+  FaBook,
+  FaTag
 } from 'react-icons/fa';
 import { 
   getSupportTickets, 
@@ -222,13 +219,23 @@ export default function SupportCenter({ admin }) {
             <div>
               <h1 className="support-title">Customer Support & Helpdesk</h1>
               <p className="support-subtitle">
-                Submit assistance requests, track ticket status in real-time, or connect directly with our engineering team.
+                Submit technical requests, track ticket status in real-time, or connect directly with our engineering team.
               </p>
             </div>
           </div>
         </div>
 
         <div className="header-actions">
+          <a 
+            href="https://wa.me/919876543210?text=Hello%20Kwickbot%20Support,%20I%20need%20assistance%20with%20my%20account" 
+            target="_blank" 
+            rel="noreferrer" 
+            className="btn-whatsapp-direct"
+            title="Chat directly on WhatsApp"
+          >
+            <FaWhatsapp /> Chat on WhatsApp
+          </a>
+
           <button 
             className="btn-create-ticket"
             onClick={() => setIsCreateModalOpen(true)}
@@ -244,114 +251,58 @@ export default function SupportCenter({ admin }) {
         </div>
       )}
 
-      {/* KPI Stats Overview */}
-      <div className="support-stats-grid">
-        <div className="stat-card">
-          <div className="stat-icon-wrapper total">
-            <FaHeadset />
-          </div>
-          <div className="stat-content">
-            <div className="stat-label">Total Tickets</div>
-            <div className="stat-value">{stats.total || 0}</div>
-          </div>
-        </div>
-
-        <div className="stat-card">
-          <div className="stat-icon-wrapper open">
-            <FaExclamationCircle />
-          </div>
-          <div className="stat-content">
-            <div className="stat-label">Open / Awaiting Action</div>
-            <div className="stat-value">{stats.open || 0}</div>
-          </div>
-        </div>
-
-        <div className="stat-card">
-          <div className="stat-icon-wrapper progress">
-            <FaClock />
-          </div>
-          <div className="stat-content">
-            <div className="stat-label">In Progress</div>
-            <div className="stat-value">{stats.in_progress || 0}</div>
-          </div>
-        </div>
-
-        <div className="stat-card">
-          <div className="stat-icon-wrapper resolved">
-            <FaCheckCircle />
-          </div>
-          <div className="stat-content">
-            <div className="stat-label">Resolved Tickets</div>
-            <div className="stat-value">{stats.resolved || 0}</div>
-          </div>
-        </div>
-      </div>
-
-      {/* Quick Direct Help & Knowledge Base Cards */}
-      <div className="quick-help-banner">
-        <div className="quick-help-card whatsapp-channel">
-          <div className="channel-icon">
-            <FaWhatsapp />
-          </div>
-          <div className="channel-info">
-            <h3>Urgent WhatsApp Helpdesk</h3>
-            <p>Connect with a dedicated integration specialist right away on WhatsApp for live support.</p>
-            <a 
-              href="https://wa.me/919876543210?text=Hello%20Kwickbot%20Support,%20I%20need%20assistance%20with%20my%20account" 
-              target="_blank" 
-              rel="noreferrer" 
-              className="channel-action-link"
-            >
-              Chat on WhatsApp <FaExternalLinkAlt />
-            </a>
-          </div>
-        </div>
-
-        <div className="quick-help-card docs-channel">
-          <div className="channel-icon">
-            <FaBook />
-          </div>
-          <div className="channel-info">
-            <h3>Shopify & Bot Documentation</h3>
-            <p>Step-by-step connection guides with screenshots for Shopify custom apps, webhooks & AI training.</p>
-            <div className="doc-links-row">
-              <a 
-                href="/guide/Shopify_Kwickbot_Integration_Guide.pdf" 
-                target="_blank" 
-                rel="noreferrer" 
-                className="doc-pill-btn"
-              >
-                Shopify Connection Guide (PDF)
-              </a>
-              <a 
-                href="/guide/Kwickbot_AI_Agent_KnowledgeBase_Catalog.pdf" 
-                target="_blank" 
-                rel="noreferrer" 
-                className="doc-pill-btn"
-              >
-                AI Agent Handbook (PDF)
-              </a>
-            </div>
-          </div>
-        </div>
-
-        <div className="quick-help-card sla-channel">
-          <div className="channel-icon">
-            <FaShieldAlt />
-          </div>
-          <div className="channel-info">
-            <h3>Dedicated Enterprise SLA</h3>
-            <p>Your tickets receive priority triage by our core engineering team within <strong>&lt; 2 hours</strong>.</p>
-            <span className="email-hint">
-              <FaEnvelope /> Direct Email: <strong>support@kwickbot.in</strong>
-            </span>
-          </div>
-        </div>
-      </div>
-
-      {/* Tickets Management Panel */}
+      {/* Main Support Tickets Panel */}
       <div className="support-tickets-panel">
-        <div className="panel-toolbar">
+        
+        {/* Status Filter Tabs (Segmented Control) */}
+        <div className="status-segmented-bar">
+          <div className="status-tabs-list">
+            <button 
+              type="button"
+              className={`status-tab-btn ${statusFilter === 'all' ? 'active' : ''}`}
+              onClick={() => setStatusFilter('all')}
+            >
+              All Statuses
+              {stats.total > 0 && <span className="tab-badge">{stats.total}</span>}
+            </button>
+            <button 
+              type="button"
+              className={`status-tab-btn ${statusFilter === 'open' ? 'active' : ''}`}
+              onClick={() => setStatusFilter('open')}
+            >
+              <span className="status-dot dot-open"></span>
+              Open
+              {stats.open > 0 && <span className="tab-badge badge-open">{stats.open}</span>}
+            </button>
+            <button 
+              type="button"
+              className={`status-tab-btn ${statusFilter === 'in_progress' ? 'active' : ''}`}
+              onClick={() => setStatusFilter('in_progress')}
+            >
+              <span className="status-dot dot-progress"></span>
+              In Progress
+              {stats.in_progress > 0 && <span className="tab-badge badge-progress">{stats.in_progress}</span>}
+            </button>
+            <button 
+              type="button"
+              className={`status-tab-btn ${statusFilter === 'resolved' ? 'active' : ''}`}
+              onClick={() => setStatusFilter('resolved')}
+            >
+              <span className="status-dot dot-resolved"></span>
+              Resolved
+              {stats.resolved > 0 && <span className="tab-badge badge-resolved">{stats.resolved}</span>}
+            </button>
+          </div>
+
+          <div className="status-bar-right">
+            <button className="btn-refresh-simple" onClick={fetchTickets} title="Refresh Tickets">
+              <FaSyncAlt className={loading ? 'spin' : ''} />
+            </button>
+          </div>
+        </div>
+
+        {/* Toolbar: Search & Category Dropdown */}
+        <div className="panel-sub-toolbar">
           <div className="search-box">
             <FaSearch className="search-icon" />
             <input 
@@ -360,37 +311,29 @@ export default function SupportCenter({ admin }) {
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
+            {searchTerm && (
+              <button 
+                type="button" 
+                className="clear-search-btn" 
+                onClick={() => setSearchTerm('')}
+                title="Clear search"
+              >
+                <FaTimes />
+              </button>
+            )}
           </div>
 
-          <div className="filters-row">
-            <div className="filter-group">
-              <FaFilter className="filter-icon" />
-              <select 
-                value={statusFilter} 
-                onChange={(e) => setStatusFilter(e.target.value)}
-              >
-                <option value="all">All Statuses</option>
-                <option value="open">Open</option>
-                <option value="in_progress">In Progress</option>
-                <option value="resolved">Resolved</option>
-              </select>
-            </div>
-
-            <div className="filter-group">
-              <select 
-                value={categoryFilter} 
-                onChange={(e) => setCategoryFilter(e.target.value)}
-              >
-                <option value="all">All Categories</option>
-                {CATEGORIES.map(cat => (
-                  <option key={cat.id} value={cat.id}>{cat.label}</option>
-                ))}
-              </select>
-            </div>
-
-            <button className="btn-refresh" onClick={fetchTickets} title="Refresh Tickets">
-              <FaSyncAlt className={loading ? 'spin' : ''} />
-            </button>
+          <div className="category-filter-wrapper">
+            <select 
+              className="category-dropdown-select"
+              value={categoryFilter} 
+              onChange={(e) => setCategoryFilter(e.target.value)}
+            >
+              <option value="all">All Categories</option>
+              {CATEGORIES.map(cat => (
+                <option key={cat.id} value={cat.id}>{cat.label}</option>
+              ))}
+            </select>
           </div>
         </div>
 
@@ -398,7 +341,7 @@ export default function SupportCenter({ admin }) {
         {loading ? (
           <div className="support-loading-state">
             <div className="spinner"></div>
-            <span>Fetching support tickets...</span>
+            <span>Loading support tickets...</span>
           </div>
         ) : error ? (
           <div className="support-error-state">

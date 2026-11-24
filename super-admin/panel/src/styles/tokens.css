@@ -1,0 +1,121 @@
+/*
+ * Kwickbot dashboard tokens.
+ * Built with the unslop method by Damir Sokolovsky (@heydamir), CC BY 4.0.
+ *
+ * Graphite neutrals for every surface, one chat-green accent used rarely.
+ * Light is the default; dark follows the system or data-theme="dark".
+ */
+:root {
+  /* Neutral ramp: graphite, light */
+  --bg: #fafafa;
+  --surface: #ffffff;
+  --raised: #f4f4f5;
+  --sidebar: #f4f4f5;
+  --hairline: rgba(23, 23, 23, 0.08);
+  --hairline-strong: rgba(23, 23, 23, 0.14);
+  --text: #171717;
+  --text-2: #525252;
+  --text-3: #737373;
+
+  /* Accent: chat green. White text on it is 5:1 */
+  --accent: #15803d;
+  --accent-hover: #166534;
+  --accent-ink: #15803d;
+  --accent-soft: rgba(21, 128, 61, 0.08);
+  --on-accent: #ffffff;
+
+  /* Primary button on light: the text colour as a fill */
+  --primary: #171717;
+  --primary-hover: #262626;
+  --on-primary: #ffffff;
+
+  --positive: #16a34a;
+  --negative: #dc2626;
+  --negative-soft: rgba(220, 38, 38, 0.08);
+  --warning: #b45309;
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+  --shadow-float: 0 8px 24px rgba(0, 0, 0, 0.06);
+  --button-highlight: none;
+
+  /* Type */
+  --font: 'Geist', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-mono: 'Geist Mono', ui-monospace, 'SFMono-Regular', Menlo, monospace;
+
+  /* Radius */
+  --r-tag: 6px;
+  --r-control: 8px;
+  --r-card: 14px;
+  --r-panel: 16px;
+
+  /* Layout */
+  --sidebar-w: 256px;
+  --topbar-h: 56px;
+  --content-max: 1440px;
+
+  /* Motion */
+  --ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --t-fast: 140ms;
+  --t-menu: 180ms;
+  --t-enter: 360ms;
+
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --bg: #141415;
+    --surface: #19191b;
+    --raised: #232325;
+    --sidebar: #0f0f10;
+    --hairline: rgba(237, 237, 237, 0.08);
+    --hairline-strong: rgba(237, 237, 237, 0.14);
+    --text: #ededed;
+    --text-2: #a1a1a6;
+    --text-3: #85858b;
+    --accent: #3fb27f;
+    --accent-hover: #4cc38a;
+    --accent-ink: #4cc38a;
+    --accent-soft: rgba(76, 195, 138, 0.1);
+    --on-accent: #0f0f10;
+    --primary: #ededed;
+    --primary-hover: #ffffff;
+    --on-primary: #141415;
+    --positive: #4cc38a;
+    --negative: #e5484d;
+    --negative-soft: rgba(229, 72, 77, 0.12);
+    --warning: #e0a24a;
+    --shadow-sm: none;
+    --shadow-float: 0 8px 24px rgba(0, 0, 0, 0.4);
+    --button-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.12);
+    color-scheme: dark;
+  }
+}
+
+:root[data-theme='dark'] {
+  --bg: #141415;
+  --surface: #19191b;
+  --raised: #232325;
+  --sidebar: #0f0f10;
+  --hairline: rgba(237, 237, 237, 0.08);
+  --hairline-strong: rgba(237, 237, 237, 0.14);
+  --text: #ededed;
+  --text-2: #a1a1a6;
+  --text-3: #85858b;
+  --accent: #3fb27f;
+  --accent-hover: #4cc38a;
+  --accent-ink: #4cc38a;
+  --accent-soft: rgba(76, 195, 138, 0.1);
+  --on-accent: #0f0f10;
+  --primary: #ededed;
+  --primary-hover: #ffffff;
+  --on-primary: #141415;
+  --positive: #4cc38a;
+  --negative: #e5484d;
+  --negative-soft: rgba(229, 72, 77, 0.12);
+  --warning: #e0a24a;
+  --shadow-sm: none;
+  --shadow-float: 0 8px 24px rgba(0, 0, 0, 0.4);
+  --button-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.12);
+  color-scheme: dark;
+}

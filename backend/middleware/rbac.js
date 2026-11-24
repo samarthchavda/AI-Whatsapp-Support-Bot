@@ -10,6 +10,7 @@ function requirePage(pageKey) {
       if (!req.admin) {
         return res.status(401).json({ success: false, error: 'Authentication required' });
       }
+      if (req.method === 'GET' && require('../services/selfServePreview').isSelfServePreview(req.admin)) return next();
 
       // Check subscription validity
       const statusCheck = permissionService.validateAccountSubscription(req.admin);
@@ -48,6 +49,7 @@ function requirePermission(permissionKey) {
       if (!req.admin) {
         return res.status(401).json({ success: false, error: 'Authentication required' });
       }
+      if (req.method === 'GET' && require('../services/selfServePreview').isSelfServePreview(req.admin)) return next();
 
       const statusCheck = permissionService.validateAccountSubscription(req.admin);
       if (!statusCheck.valid) {
@@ -85,6 +87,7 @@ function requirePlanFeature(featureKey) {
       if (!req.admin) {
         return res.status(401).json({ success: false, error: 'Authentication required' });
       }
+      if (req.method === 'GET' && require('../services/selfServePreview').isSelfServePreview(req.admin)) return next();
 
       const isAllowed = await permissionService.hasPlanFeature(req.admin, featureKey);
       if (!isAllowed) {

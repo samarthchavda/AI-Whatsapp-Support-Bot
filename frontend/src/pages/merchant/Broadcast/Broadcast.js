@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import api from '../../../services/api';
+import { Link } from 'react-router-dom';
 import { getAbandonedCarts, getOrders } from '../../../services/api';
 import { FaBroadcastTower, FaPaperPlane, FaTrash, FaClock, FaRedo, FaEye, FaExclamationTriangle } from 'react-icons/fa';
 
@@ -17,6 +18,21 @@ function Broadcast() {
   const [previewImageFileUrl, setPreviewImageFileUrl] = useState('');
   const [selectedTemplate, setSelectedTemplate] = useState(null);
   const [syncingTemplates, setSyncingTemplates] = useState(false);
+  const [previewAccess, setPreviewAccess] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('admin') || '{}'); } catch { return {}; }
+  });
+  const isPreview = previewAccess?.selfSignupTrial === true &&
+    (previewAccess.subscriptionStatus !== 'active' || (previewAccess.subscriptionEndDate && new Date(previewAccess.subscriptionEndDate) <= new Date()));
+  const testsLeft = Math.max(0, 2 - (previewAccess?.trialBroadcastsUsed || 0));
+
+  const refreshPreviewAccess = async () => {
+    try {
+      const response = await api.get('/auth/profile');
+      setPreviewAccess(response.data?.data?.admin || {});
+    } catch (error) {
+      console.error('Could not refresh preview usage:', error);
+    }
+  };
 
   const plan = (JSON.parse(localStorage.getItem('admin') || '{}')?.subscriptionPlan || 'starter').toLowerCase();
   // CRM Automation is intentionally CSV-only for now. CRM data imports and
@@ -60,6 +76,7 @@ function Broadcast() {
   useEffect(() => {
     fetchBroadcasts();
     fetchApprovedTemplates();
+    refreshPreviewAccess();
   }, []);
 
   const fetchApprovedTemplates = async () => {
@@ -112,6 +129,7 @@ function Broadcast() {
   };
 
   const handleReuseBroadcast = (broadcast) => {
+    if (isPreview) return;
     if (isCrmAutomationPlan) {
       alert('CRM Automation broadcasts currently accept recipients through a CSV upload only.');
       return;
@@ -142,6 +160,10 @@ function Broadcast() {
 
   const handleCreateBroadcast = async (e) => {
     e.preventDefault();
+    if (isPreview && !selectedTemplate) {
+      alert('Select a Meta-approved template before sending a test broadcast.');
+      return;
+    }
     const formData = new FormData(e.target);
 
     if (reusedBroadcast) {
@@ -169,11 +191,13 @@ function Broadcast() {
         setRecipientSource('csv');
         setReusedBroadcast(null);
         fetchBroadcasts();
+        refreshPreviewAccess();
         alert('Broadcast created successfully!');
         e.target.reset();
       }
     } catch (error) {
       setUploadProgress(null);
+      refreshPreviewAccess();
       alert(error.response?.data?.error || 'Failed to create broadcast');
     }
   };
@@ -185,6 +209,7 @@ function Broadcast() {
       await api.post(`/broadcasts/${id}/send`, {});
       alert('Broadcast queued for sending!');
       fetchBroadcasts();
+      refreshPreviewAccess();
     } catch (error) {
       alert(error.response?.data?.error || 'Failed to send broadcast');
     }
@@ -256,6 +281,7 @@ function Broadcast() {
           </a>
           <button 
             className="btn btn-primary" 
+            disabled={isPreview && (testsLeft === 0 || !previewAccess.whatsappConnected)}
             onClick={() => {
               if (showCreateForm) {
                 setShowCreateForm(false);
@@ -270,6 +296,13 @@ function Broadcast() {
           </button>
         </div>
       </div>
+
+      {isPreview && <div className="broadcast-preview-note" role="status">
+        <strong>{testsLeft} of 2 test broadcasts left</strong>
+        <span>Connect WhatsApp, select a Meta-approved template and upload a CSV with up to 5 contacts. Test sends count toward this one-time allowance. Meta message charges are separate.</span>
+        {!previewAccess.whatsappConnected && <Link to="/dashboard/whatsapp-connect">Connect WhatsApp</Link>}
+        {testsLeft === 0 && <Link to="/dashboard/billing">Choose a plan to send more</Link>}
+      </div>}
 
       {/* Create Broadcast Form */}
       {showCreateForm && (
@@ -427,7 +460,7 @@ function Broadcast() {
                   </small>
                 ) : (
                   <small style={{ color: 'var(--text-secondary)', fontSize: '12px', marginTop: '4px', display: 'block' }}>
-                    Selecting a template auto-populates the message box and guarantees 100% delivery outside the 24-hour service window.
+                    Selecting an approved template lets Meta deliver messages outside the 24-hour service window. Delivery still depends on Meta and the recipient number.
                   </small>
                 )}
               </div>
@@ -506,14 +539,14 @@ function Broadcast() {
 
               <div className="filter-group">
                 <label>Recipient Source *</label>
-                {isCrmAutomationPlan ? (
+                {isCrmAutomationPlan || isPreview ? (
                   <>
                     <input type="hidden" name="recipientSource" value="csv" />
                     <div style={{
                       width: '100%', padding: '14px', border: '1px solid black',
                       borderRadius: '12px', fontSize: '14px', background: 'var(--brand-light)', color: 'var(--text-primary)'
                     }}>
-                      📁 Upload CSV File <span style={{ color: '#040404', fontSize: '12px' }}>— CRM Automation recipient source</span>
+                      📁 Upload CSV File <span style={{ color: '#040404', fontSize: '12px' }}>— {isPreview ? 'up to 5 contacts for each test' : 'CRM Automation recipient source'}</span>
                     </div>
                   </>
                 ) : (
@@ -545,7 +578,7 @@ function Broadcast() {
                 )}
               </div>
 
-              {plan !== 'starter' && <div className="filter-group">
+              {plan !== 'starter' && !isPreview && <div className="filter-group">
                 <label>Schedule For (Optional)</label>
                 <input
                   type="datetime-local"
@@ -651,10 +684,10 @@ function Broadcast() {
               <button 
                 type="submit" 
                 className="btn-primary"
-                disabled={uploadProgress !== null}
+                disabled={uploadProgress !== null || (isPreview && !selectedTemplate)}
                 style={{ flex: 1 }}
               >
-                {uploadProgress ? 'Creating...' : 'Create Broadcast'}
+                {uploadProgress ? 'Sending...' : isPreview ? 'Send test broadcast' : 'Create Broadcast'}
               </button>
               <button 
                 type="button" 
@@ -769,7 +802,7 @@ function Broadcast() {
                         <FaEye /> Log
                       </button>
 
-                      {!isCrmAutomationPlan && (
+                      {!isCrmAutomationPlan && !isPreview && (
                         <button
                           onClick={() => handleReuseBroadcast(broadcast)}
                           className="btn btn-secondary"
@@ -782,6 +815,7 @@ function Broadcast() {
 
                       {(broadcast.status === 'draft' || broadcast.status === 'scheduled') && (
                         <button
+                          disabled={isPreview && (testsLeft === 0 || !previewAccess.whatsappConnected)}
                           onClick={() => handleSendNow(broadcast._id)}
                           className="btn btn-primary"
                           style={{ fontSize: '11px', padding: '5px 8px' }}
@@ -790,7 +824,7 @@ function Broadcast() {
                           <FaPaperPlane />
                         </button>
                       )}
-                      {(broadcast.status === 'draft' || broadcast.status === 'failed') && (
+                      {!isPreview && (broadcast.status === 'draft' || broadcast.status === 'failed') && (
                         <button
                           onClick={() => handleDelete(broadcast._id)}
                           className="btn btn-danger"

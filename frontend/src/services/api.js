@@ -95,6 +95,12 @@ api.interceptors.response.use(
     const isUnauthorized = error.response?.status === 401;
     const isAuthEndpoint = originalRequest?.url?.includes('/auth/login') || originalRequest?.url?.includes('/auth/refresh');
 
+    if (error.response?.data?.code === 'PREVIEW_READ_ONLY') {
+      window.dispatchEvent(new CustomEvent('kwickbot:preview-gate', {
+        detail: { message: error.response.data.error }
+      }));
+    }
+
     if (isUnauthorized && originalRequest && !originalRequest._retry && !isAuthEndpoint) {
       originalRequest._retry = true;
 

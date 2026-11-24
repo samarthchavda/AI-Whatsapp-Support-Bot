@@ -63,6 +63,7 @@ export function EffectiveAccessProvider({ children, admin }) {
 
   const canViewPage = useCallback((pageKey) => {
     if (!pageKey) return true;
+    if (admin?.selfSignupTrial === true && (admin.subscriptionStatus !== 'active' || (admin.subscriptionEndDate && new Date(admin.subscriptionEndDate) <= new Date()))) return true;
     if (admin && admin.role === 'super_admin') return true;
     if (accessData.user && accessData.user.role === 'super_admin') return true;
 
@@ -89,6 +90,7 @@ export function EffectiveAccessProvider({ children, admin }) {
 
   const hasPermission = useCallback((permKey) => {
     if (!permKey) return true;
+    if (admin?.selfSignupTrial === true && (admin.subscriptionStatus !== 'active' || (admin.subscriptionEndDate && new Date(admin.subscriptionEndDate) <= new Date()))) return true;
     if (admin && admin.role === 'super_admin') return true;
     if (accessData.user && accessData.user.role === 'super_admin') return true;
 
@@ -98,6 +100,7 @@ export function EffectiveAccessProvider({ children, admin }) {
 
   const hasFeature = useCallback((featureKey) => {
     if (!featureKey) return true;
+    if (admin?.selfSignupTrial === true && (admin.subscriptionStatus !== 'active' || (admin.subscriptionEndDate && new Date(admin.subscriptionEndDate) <= new Date()))) return true;
     if (admin && admin.role === 'super_admin') return true;
     if (accessData.user && accessData.user.role === 'super_admin') return true;
 

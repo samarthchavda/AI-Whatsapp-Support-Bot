@@ -142,6 +142,14 @@ const verifyToken = async (req, res, next) => {
 
     // Attach admin to request
     req.admin = admin;
+    const { isSelfServePreview, previewWriteAllowed } = require('../services/selfServePreview');
+    if (isSelfServePreview(admin) && !previewWriteAllowed(req.method, (req.originalUrl || req.path || '').split('?')[0])) {
+      return res.status(403).json({
+        success: false,
+        code: 'PREVIEW_READ_ONLY',
+        error: 'This page is view-only during your free preview. Activate a plan in Billing to use this feature.'
+      });
+    }
     next();
   } catch (error) {
     if (error.name === 'JsonWebTokenError') {
@@ -181,6 +189,7 @@ const requireFeature = (featureName) => {
     if (req.admin.role === 'super_admin') {
       return next();
     }
+    if (req.method === 'GET' && require('../services/selfServePreview').isSelfServePreview(req.admin)) return next();
 
     // Broadcasting is unlocked platform-wide for all admin accounts
     if (featureName === 'broadcastingAccess') {

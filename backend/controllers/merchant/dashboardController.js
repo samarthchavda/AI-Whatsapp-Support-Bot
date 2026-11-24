@@ -4,6 +4,7 @@ const Order = require('../../models/Order');
 const Announcement = require('../../models/Announcement');
 const Broadcast = require('../../models/Broadcast');
 const { getAdminPricingPlan } = require('../../services/permissionService');
+const { isSelfServePreview, TEST_BROADCAST_LIMIT, TEST_RECIPIENT_LIMIT } = require('../../services/selfServePreview');
 
 // Get dashboard statistics
 exports.getDashboardStats = async (req, res) => {
@@ -107,6 +108,13 @@ exports.getDashboardStats = async (req, res) => {
         planCategory: pricingPlan?.category || null,
         billingCycle: req.admin.billingCycle || 'monthly',
         subscriptionStatus: req.admin.subscriptionStatus || 'trial',
+        preview: {
+          active: isSelfServePreview(req.admin),
+          whatsappConnected: Boolean(req.admin.whatsappConnected && req.admin.whatsappAccessToken && req.admin.whatsappPhoneNumberId),
+          testBroadcastsUsed: req.admin.trialBroadcastsUsed || 0,
+          testBroadcastsLimit: TEST_BROADCAST_LIMIT,
+          testRecipientsLimit: TEST_RECIPIENT_LIMIT
+        },
         periodStartedAt: req.admin.lastTokenReset || null,
         // These counters are reset together every 30 days by subscriptionService.
         conversations: req.admin.monthlyConversationsCount || 0,

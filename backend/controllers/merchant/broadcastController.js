@@ -4,6 +4,8 @@ const { scheduleBroadcast, cancelScheduledBroadcast } = require('../../services/
 const fs = require('fs').promises;
 const csv = require('csv-parser');
 const { createReadStream } = require('fs');
+const Admin = require('../../models/Admin');
+const { isSelfServePreview, TEST_BROADCAST_LIMIT, TEST_RECIPIENT_LIMIT } = require('../../services/selfServePreview');
 
 const isCrmAutomationPlan = (plan) => ['crm_automation', 'crm-automation'].includes(
   String(plan || '').trim().toLowerCase()
@@ -19,9 +21,11 @@ const removeUploadedFiles = async (req) => {
 
 // Create new broadcast
 exports.createBroadcast = async (req, res) => {
+  let previewReserved = false;
   try {
     const { title, message, scheduledFor } = req.body;
     const recipientSource = req.body.recipientSource || 'csv';
+    const preview = isSelfServePreview(req.admin);
     let recipients = [];
     let csvFileName = 'Imported from CRM/Orders';
 
@@ -59,6 +63,10 @@ exports.createBroadcast = async (req, res) => {
         success: false,
         error: 'Abandoned-cart audiences are not included in the Starter plan.'
       });
+    }
+    if (preview && (recipientSource !== 'csv' || req.body.reuseFromId || scheduledFor)) {
+      await removeUploadedFiles(req);
+      return res.status(403).json({ success: false, error: 'Test broadcasts use a CSV audience and send immediately. Activate a plan for imports, reuse and scheduling.' });
     }
 
     // The CRM Automation offering currently accepts an intentional, explicit
@@ -194,6 +202,10 @@ exports.createBroadcast = async (req, res) => {
     }
 
     // Check broadcast message quota
+    if (preview && recipients.length > TEST_RECIPIENT_LIMIT) {
+      await removeUploadedFiles(req);
+      return res.status(403).json({ success: false, error: `Test broadcasts can have at most ${TEST_RECIPIENT_LIMIT} recipients. Activate a plan for larger audiences.` });
+    }
     const maxMessages = subscriptionService.getPlanLimit(req.admin.subscriptionPlan, 'maxBroadcastMessages');
     const messagesUsed = req.admin.broadcastMessagesUsed || 0;
     if (maxMessages !== -1 && maxMessages !== Infinity && (messagesUsed + recipients.length) > maxMessages) {
@@ -210,7 +222,7 @@ exports.createBroadcast = async (req, res) => {
 
     const Template = require('../../models/Template');
     if (req.body.templateId) {
-      const foundTpl = await Template.findById(req.body.templateId).catch(() => null);
+      const foundTpl = await Template.findOne({ _id: req.body.templateId, adminId: req.admin._id, status: 'APPROVED' }).catch(() => null);
       if (foundTpl) {
         finalTemplateName = foundTpl.name;
         finalTemplateLanguage = foundTpl.language || finalTemplateLanguage || 'en_US';
@@ -260,6 +272,14 @@ exports.createBroadcast = async (req, res) => {
     if (!finalTemplateLanguage) {
       finalTemplateLanguage = 'en_US';
     }
+    if (preview) {
+      const approvedTemplate = finalTemplateName && await Template.findOne({ adminId: req.admin._id, name: finalTemplateName, status: 'APPROVED' });
+      if (!approvedTemplate) {
+        await removeUploadedFiles(req);
+        return res.status(400).json({ success: false, error: 'Choose a Meta-approved template before sending a test broadcast.' });
+      }
+      finalTemplateLanguage = approvedTemplate.language || finalTemplateLanguage;
+    }
 
     let headerImageUrl = req.body.headerImageUrl || null;
     const uploadedHeaderImg = req.files && req.files.headerImage ? req.files.headerImage[0] : null;
@@ -290,9 +310,18 @@ exports.createBroadcast = async (req, res) => {
       templateParams: finalTemplateParams
     });
 
-    // Increment merchant broadcastCampaignsUsed
-    const Admin = require('../../models/Admin');
-    await Admin.findByIdAndUpdate(req.admin._id, { $inc: { broadcastCampaignsUsed: 1 } }).catch(() => {});
+    if (preview) {
+      const reserved = await Admin.findOneAndUpdate(
+        { _id: req.admin._id, selfSignupTrial: true, trialBroadcastsUsed: { $lt: TEST_BROADCAST_LIMIT } },
+        { $inc: { trialBroadcastsUsed: 1 } },
+        { new: true }
+      );
+      if (!reserved) {
+        await removeUploadedFiles(req);
+        return res.status(403).json({ success: false, error: 'Your two test broadcasts are used. Activate a plan in Billing to send more.' });
+      }
+      previewReserved = true;
+    }
 
     // Handle scheduling
     if (scheduledFor) {
@@ -319,6 +348,7 @@ exports.createBroadcast = async (req, res) => {
       broadcast.status = 'scheduled';
       broadcast.scheduledFor = scheduledDate;
       await broadcast.save();
+      await Admin.findByIdAndUpdate(req.admin._id, { $inc: { broadcastCampaignsUsed: 1 } }).catch(() => {});
 
       // Schedule the broadcast
       scheduleBroadcast(broadcast._id, scheduledDate);
@@ -343,6 +373,10 @@ exports.createBroadcast = async (req, res) => {
 
     // Send immediately
     await broadcast.save();
+    // Once a test campaign is persisted, this attempt is consumed even if the
+    // queue later reports a delivery error. It must not be refundable and sent again.
+    previewReserved = false;
+    await Admin.findByIdAndUpdate(req.admin._id, { $inc: { broadcastCampaignsUsed: 1 } }).catch(() => {});
 
     // Delete CSV file after processing
     if (req.file) {
@@ -363,6 +397,9 @@ exports.createBroadcast = async (req, res) => {
       }
     });
   } catch (error) {
+    if (previewReserved) {
+      await Admin.findByIdAndUpdate(req.admin._id, { $inc: { trialBroadcastsUsed: -1 } }).catch(() => {});
+    }
     // Delete uploaded file if error occurs
     if (req.file) {
       try {
@@ -557,6 +594,7 @@ exports.cancelBroadcast = async (req, res) => {
 
 // Send broadcast now (immediate dispatch)
 exports.sendBroadcastNow = async (req, res) => {
+  let previewReserved = false;
   try {
     const broadcast = await Broadcast.findOne({
       _id: req.params.id,
@@ -576,6 +614,28 @@ exports.sendBroadcastNow = async (req, res) => {
         error: `Broadcast is already ${broadcast.status}`
       });
     }
+    if (isSelfServePreview(req.admin)) {
+      if (!req.admin.whatsappConnected || !req.admin.whatsappAccessToken || !req.admin.whatsappPhoneNumberId) {
+        return res.status(400).json({ success: false, error: 'Connect WhatsApp before sending a test broadcast.' });
+      }
+      if (Math.max(broadcast.totalRecipients || 0, broadcast.recipients?.length || 0) > TEST_RECIPIENT_LIMIT) {
+        return res.status(403).json({ success: false, error: `Test broadcasts can have at most ${TEST_RECIPIENT_LIMIT} recipients.` });
+      }
+      const Template = require('../../models/Template');
+      const approved = broadcast.templateName && await Template.findOne({ adminId: req.admin._id, name: broadcast.templateName, status: 'APPROVED' });
+      if (!approved) {
+        return res.status(400).json({ success: false, error: 'Choose a Meta-approved template before sending a test broadcast.' });
+      }
+      const reserved = await Admin.findOneAndUpdate(
+        { _id: req.admin._id, selfSignupTrial: true, trialBroadcastsUsed: { $lt: TEST_BROADCAST_LIMIT } },
+        { $inc: { trialBroadcastsUsed: 1 } },
+        { new: true }
+      );
+      if (!reserved) {
+        return res.status(403).json({ success: false, error: 'Your two test broadcasts are used. Activate a plan in Billing to send more.' });
+      }
+      previewReserved = true;
+    }
 
     // Cancel scheduled task if it was scheduled
     if (broadcast.status === 'scheduled') {
@@ -589,8 +649,10 @@ exports.sendBroadcastNow = async (req, res) => {
       { new: true }
     );
     if (!claimed) {
+      if (previewReserved) await Admin.findByIdAndUpdate(req.admin._id, { $inc: { trialBroadcastsUsed: -1 } }).catch(() => {});
       return res.status(409).json({ success: false, error: 'Broadcast is already being sent' });
     }
+    previewReserved = false;
     broadcast.status = claimed.status;
 
     // Trigger queue sending in background without blocking HTTP response
@@ -604,6 +666,7 @@ exports.sendBroadcastNow = async (req, res) => {
       data: broadcast
     });
   } catch (error) {
+    if (previewReserved) await Admin.findByIdAndUpdate(req.admin._id, { $inc: { trialBroadcastsUsed: -1 } }).catch(() => {});
     console.error('Error triggering broadcast:', error);
     res.status(500).json({
       success: false,

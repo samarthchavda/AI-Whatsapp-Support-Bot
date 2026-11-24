@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route, useLocation, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, useLocation, Navigate, Link } from 'react-router-dom';
 import { FaSignOutAlt } from 'react-icons/fa';
 import api, { clearAuthState, refreshAuth } from './services/api';
 import io from 'socket.io-client';
@@ -158,6 +158,7 @@ function App() {
     return localStorage.getItem('sidebarOpen') === 'true';
   });
   const [merchantSidebarOpen, setMerchantSidebarOpen] = useState(false);
+  const [previewGateMessage, setPreviewGateMessage] = useState('');
   const [theme, setTheme] = useState(() => {
     return localStorage.getItem('dashboard-theme') || 'dark';
   });
@@ -176,6 +177,12 @@ function App() {
 
   const isMerchantPortal = Boolean(admin && admin.role !== 'super_admin');
   const activeSidebarOpen = isMerchantPortal ? merchantSidebarOpen : sidebarOpen;
+
+  useEffect(() => {
+    const onPreviewGate = (event) => setPreviewGateMessage(event.detail?.message || 'Choose a plan to use this feature.');
+    window.addEventListener('kwickbot:preview-gate', onPreviewGate);
+    return () => window.removeEventListener('kwickbot:preview-gate', onPreviewGate);
+  }, []);
 
   useEffect(() => {
     if (!merchantSidebarOpen) return undefined;
@@ -280,8 +287,8 @@ function App() {
     const syncProfile = async () => {
       try {
         const res = await api.get('/auth/profile');
-        if (res.data && res.data.data) {
-          const freshAdmin = res.data.data;
+        if (res.data?.data?.admin) {
+          const freshAdmin = res.data.data.admin;
           setAdmin(prev => {
             const updated = { ...(prev || {}), ...freshAdmin };
             localStorage.setItem('admin', JSON.stringify(updated));
@@ -475,6 +482,20 @@ function App() {
                     theme={theme}
                     onToggleTheme={handleToggleTheme}
                   />
+
+                  {admin?.role !== 'super_admin' && admin?.selfSignupTrial === true &&
+                    (admin.subscriptionStatus !== 'active' || (admin.subscriptionEndDate && new Date(admin.subscriptionEndDate) <= new Date())) && (
+                    <div className="merchant-preview-banner" role="status">
+                      <span><strong>Free preview:</strong> Connect WhatsApp and send up to two test broadcasts. Other pages are view-only until you activate a plan.</span>
+                      <Link to="/dashboard/billing">Choose a plan</Link>
+                    </div>
+                  )}
+
+                  {previewGateMessage && <div className="merchant-preview-action-gate" role="alert">
+                    <span>{previewGateMessage}</span>
+                    <Link to="/dashboard/billing" onClick={() => setPreviewGateMessage('')}>View plans</Link>
+                    <button type="button" onClick={() => setPreviewGateMessage('')} aria-label="Dismiss plan message">×</button>
+                  </div>}
 
 
                   <div className="page-content">

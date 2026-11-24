@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import api from '../../../services/api';
+import { Link } from 'react-router-dom';
 import { FaSync, FaSearch, FaFilter, FaCheckCircle, FaExclamationCircle, FaProjectDiagram, FaInfoCircle, FaFileAlt, FaPlus, FaTimes, FaSpinner, FaWhatsapp, FaImage, FaLink, FaPhoneAlt, FaEye, FaTrash, FaThList, FaThLarge } from 'react-icons/fa';
 import './Templates.css';
 
@@ -26,6 +27,8 @@ const sanitizeTemplateName = (value) => value
   .slice(0, 512);
 
 function Templates({ admin }) {
+  const isPreview = admin?.selfSignupTrial === true &&
+    (admin.subscriptionStatus !== 'active' || (admin.subscriptionEndDate && new Date(admin.subscriptionEndDate) <= new Date()));
   const [templates, setTemplates] = useState([]);
   const [connections, setConnections] = useState([]);
   const [selectedPhoneNumberId, setSelectedPhoneNumberId] = useState('');
@@ -324,6 +327,14 @@ function Templates({ admin }) {
         </div>
       </div>
 
+      {isPreview && (
+        <div className="tmpl-preview-note" role="status">
+          <strong>Templates are available during your free preview.</strong>
+          <span>You can create and submit templates to Meta. Once approved, use one in either of your two test broadcasts. Other template automations unlock with a paid plan.</span>
+          <Link to="/dashboard/billing">Choose a plan</Link>
+        </div>
+      )}
+
       <div className="tmpl-number-bar">
         <label htmlFor="template-phone-number">WhatsApp number</label>
         <select id="template-phone-number" value={selectedPhoneNumberId} onChange={(event) => { selectedPhoneRef.current = event.target.value; setTemplates([]); setSelectedPhoneNumberId(event.target.value); }} disabled={!connections.length}>
@@ -482,6 +493,7 @@ function Templates({ admin }) {
                       {hasStoreIntegration && (
                         <td className="tmpl-trigger-cell">
                           <select
+                            disabled={isPreview}
                             value={tpl.mappedEvent || 'none'}
                             onChange={(e) => handleMapEvent(tpl._id, e.target.value)}
                             className="tmpl-inline-trigger-select"
@@ -511,7 +523,7 @@ function Templates({ admin }) {
                           >
                             <FaEye />
                           </button>
-                          <button
+                          {!isPreview && <button
                             type="button"
                             className="tmpl-icon-action-btn delete"
                             onClick={() => handleDeleteTemplate(tpl)}
@@ -520,7 +532,7 @@ function Templates({ admin }) {
                             aria-label="Delete template"
                           >
                             {deletingTemplateId === tpl._id ? <FaSpinner className="spinning" /> : <FaTrash />}
-                          </button>
+                          </button>}
                         </div>
                       </td>
                     </tr>
@@ -550,7 +562,7 @@ function Templates({ admin }) {
                   <button type="button" className="template-action-button preview" onClick={() => setPreviewTemplate(tpl)}>
                     <FaEye /> Preview
                   </button>
-                  <button
+                  {!isPreview && <button
                     type="button"
                     className="template-action-button delete"
                     onClick={() => handleDeleteTemplate(tpl)}
@@ -558,7 +570,7 @@ function Templates({ admin }) {
                   >
                     {deletingTemplateId === tpl._id ? <FaSpinner className="spinning" /> : <FaTrash />}
                     {deletingTemplateId === tpl._id ? 'Removing…' : 'Delete'}
-                  </button>
+                  </button>}
                 </div>
               </div>
 
@@ -580,6 +592,7 @@ function Templates({ admin }) {
                     <FaProjectDiagram /> Map to Trigger Event:
                   </label>
                   <select
+                    disabled={isPreview}
                     value={tpl.mappedEvent || 'none'}
                     onChange={(e) => handleMapEvent(tpl._id, e.target.value)}
                     className="mapping-select"
@@ -638,9 +651,9 @@ function Templates({ admin }) {
                 <div><strong>Category</strong><span>{previewTemplate.category}</span></div>
                 <div><strong>Language</strong><code>{previewTemplate.language}</code></div>
                 <div><strong>Trigger</strong><span>{previewTemplate.mappedEvent ? previewTemplate.mappedEvent.replaceAll('_', ' ') : 'Manual dispatch only'}</span></div>
-                <button type="button" className="template-action-button delete preview-delete" onClick={() => handleDeleteTemplate(previewTemplate)} disabled={deletingTemplateId === previewTemplate._id}>
+                {!isPreview && <button type="button" className="template-action-button delete preview-delete" onClick={() => handleDeleteTemplate(previewTemplate)} disabled={deletingTemplateId === previewTemplate._id}>
                   <FaTrash /> Remove from Kwickbot list
-                </button>
+                </button>}
               </aside>
             </div>
           </div>

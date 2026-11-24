@@ -201,6 +201,15 @@ const adminSchema = new mongoose.Schema({
   trialStartedAt: {
     type: Date
   },
+  selfSignupTrial: {
+    type: Boolean,
+    default: false
+  },
+  trialBroadcastsUsed: {
+    type: Number,
+    default: 0,
+    min: 0
+  },
   whatsappAccessToken: {
     type: String,
     default: null,
@@ -341,7 +350,26 @@ const adminSchema = new mongoose.Schema({
   }
 }, {
   timestamps: true,
-  toJSON: { getters: true },
+  // Never send secrets in an API response, even when a controller returns the
+  // whole document: password hash, session tokens, the merchant's Meta access
+  // tokens (decrypted by the getters), API key, webhook secret, reset token.
+  // Code that needs them reads the document itself, not its JSON. Endpoints
+  // that show a secret on purpose (like /auth/api-key) return it explicitly.
+  toJSON: {
+    getters: true,
+    transform: (doc, ret) => {
+      delete ret.password;
+      delete ret.refreshTokens;
+      delete ret.whatsappAccessToken;
+      delete ret.apiKey;
+      delete ret.developerWebhookSecret;
+      delete ret.resetPasswordToken;
+      if (Array.isArray(ret.whatsappConnections)) {
+        ret.whatsappConnections = ret.whatsappConnections.map(({ accessToken, ...connection }) => connection);
+      }
+      return ret;
+    }
+  },
   toObject: { getters: true }
 });
 

@@ -89,6 +89,7 @@ function Dashboard() {
   const usage = stats?.usage || {};
   const limits = usage.limits || {};
   const charges = usage.charges || {};
+  const preview = usage.preview || {};
   const recentConversations = stats?.recentConversations || [];
   const recentBroadcasts = stats?.recentBroadcasts || [];
   const orders = stats?.orders || {};
@@ -110,6 +111,18 @@ function Dashboard() {
         </div>
         <button type="button" className="merchant-dashboard-refresh" onClick={refreshDashboard} aria-label="Refresh dashboard"><FaSyncAlt /> Refresh</button>
       </div>
+
+      {preview.active && (
+        <section className="merchant-preview-steps" aria-label="Get started with Kwickbot">
+          <div className="merchant-preview-heading"><div><span className="merchant-dashboard-kicker">YOUR FREE PREVIEW</span><h2>Get your WhatsApp workspace ready</h2><p>Connect a number, submit a template to Meta, and try two small broadcasts before choosing a plan.</p></div><Link to="/dashboard/billing" className="merchant-preview-upgrade">Choose a plan <FaArrowRight /></Link></div>
+          <div className="merchant-preview-grid">
+            <div><span className="merchant-preview-step">1</span><strong>{preview.whatsappConnected ? 'WhatsApp connected' : 'Connect WhatsApp first'}</strong><p>{preview.whatsappConnected ? 'Your business number is ready.' : 'Use WhatsApp Connect to link your business number.'}</p><Link to="/dashboard/whatsapp-connect">{preview.whatsappConnected ? 'View connection' : 'Connect number'} <FaArrowRight /></Link></div>
+            <div><span className="merchant-preview-step">2</span><strong>Create a message template</strong><p>Submit a template and wait for Meta approval. You can create templates during preview.</p><Link to="/dashboard/templates">Open templates <FaArrowRight /></Link></div>
+            <div><span className="merchant-preview-step">3</span><strong>{Math.max(0, preview.testBroadcastsLimit - preview.testBroadcastsUsed)} of {preview.testBroadcastsLimit} test broadcasts left</strong><p>Each test can reach up to {preview.testRecipientsLimit} CSV contacts with an approved template. Meta message charges are separate.</p><Link to="/dashboard/broadcast">Open broadcasts <FaArrowRight /></Link></div>
+          </div>
+          <p className="merchant-preview-readonly">Other pages can be explored in read-only mode. Activate a plan in Billing to use AI replies, store sync, automation and other actions.</p>
+        </section>
+      )}
 
       <div className="merchant-dashboard-metrics">
         <div className="merchant-dashboard-metric"><span className="merchant-dashboard-metric-icon blue"><FaComments /></span><span className="merchant-dashboard-metric-label">Conversations this cycle</span><strong>{formatCount(usage.conversations)}</strong><small>Recorded for your plan quota</small></div>
@@ -146,8 +159,10 @@ function Dashboard() {
           <div className="merchant-dashboard-panel-header"><div><span className="merchant-dashboard-kicker">USAGE</span><h2>Plan limits</h2></div><span className="merchant-dashboard-period">Rolling 30-day cycle</span></div>
           <UsageMeter label="WhatsApp conversations" value={usage.conversations || 0} limit={limits.conversations} detail="Started during the current usage cycle" />
           <UsageMeter label="AI message quota" value={usage.aiRepliesProcessed || 0} limit={limits.messages} detail="Replies processed by the AI assistant" />
-          {typeof limits.broadcastCampaigns === 'number' && limits.broadcastCampaigns !== 0 && <UsageMeter label="Broadcast campaigns" value={usage.broadcastCampaignsCreated || 0} limit={limits.broadcastCampaigns} detail="Campaigns created this cycle" />}
-          {typeof limits.broadcastMessages === 'number' && limits.broadcastMessages !== 0 && <UsageMeter label="Broadcast messages" value={usage.broadcastMessagesSent || 0} limit={limits.broadcastMessages} detail="Successfully sent broadcast messages" />}
+          {preview.active ? <UsageMeter label="One-time test broadcasts" value={preview.testBroadcastsUsed || 0} limit={preview.testBroadcastsLimit} detail="Available after connecting WhatsApp and choosing an approved template" /> : <>
+            {typeof limits.broadcastCampaigns === 'number' && limits.broadcastCampaigns !== 0 && <UsageMeter label="Broadcast campaigns" value={usage.broadcastCampaignsCreated || 0} limit={limits.broadcastCampaigns} detail="Campaigns created this cycle" />}
+            {typeof limits.broadcastMessages === 'number' && limits.broadcastMessages !== 0 && <UsageMeter label="Broadcast messages" value={usage.broadcastMessagesSent || 0} limit={limits.broadcastMessages} detail="Successfully sent broadcast messages" />}
+          </>}
           {usage.periodStartedAt && <p className="merchant-dashboard-fineprint">Usage counter last reset {new Date(usage.periodStartedAt).toLocaleDateString('en-IN')}.</p>}
         </section>
 

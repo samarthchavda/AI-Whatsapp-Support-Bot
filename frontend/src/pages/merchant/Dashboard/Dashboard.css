@@ -1,4 +1,17 @@
 .merchant-dashboard { max-width: 1540px; margin: 0 auto; padding: 24px 4px 40px; color: var(--text-primary); }
+.merchant-preview-steps { margin: 20px 0; padding: clamp(20px, 2.7vw, 32px); border: 1px solid #c7dcb7; border-radius: 18px; background: #fff; box-shadow: var(--shadow-sm); }
+.merchant-preview-heading { display: flex; align-items: start; justify-content: space-between; gap: 20px; }
+.merchant-preview-heading h2 { margin: 7px 0 6px; color: var(--text-primary); font-size: clamp(21px, 2vw, 27px); }
+.merchant-preview-heading p, .merchant-preview-grid p, .merchant-preview-readonly { color: var(--text-secondary); font-size: 13px; line-height: 1.55; }
+.merchant-preview-upgrade { flex: none; padding: 10px 15px; border-radius: 10px; background: var(--brand); color: white; font-weight: 700; text-decoration: none; display: inline-flex; align-items: center; gap: 8px; }
+.merchant-preview-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-top: 22px; }
+.merchant-preview-grid > div { min-width: 0; padding: 18px; border: 1px solid var(--border); border-radius: 13px; background: var(--bg-input); }
+.merchant-preview-step { display: grid; place-items: center; width: 29px; height: 29px; margin-bottom: 11px; border-radius: 50%; background: var(--brand-light); color: var(--brand); font-weight: 800; }
+.merchant-preview-grid strong { display: block; color: var(--text-primary); font-size: 15px; }
+.merchant-preview-grid p { margin: 7px 0 12px; }
+.merchant-preview-grid a { display: inline-flex; align-items: center; gap: 6px; color: var(--brand); font-weight: 700; font-size: 12px; }
+.merchant-preview-readonly { margin: 18px 0 0; }
+@media (max-width: 850px) { .merchant-preview-grid { grid-template-columns: 1fr; } .merchant-preview-heading { flex-direction: column; } }
 .merchant-dashboard-hero { display: flex; justify-content: space-between; align-items: flex-start; gap: 24px; padding: 32px 36px; border: 1px solid var(--border); border-radius: 22px; background: linear-gradient(135deg, #15171C 0%, #111318 100%); }
 .merchant-dashboard-eyebrow, .merchant-dashboard-kicker { display: inline-flex; align-items: center; gap: 8px; color: var(--brand); font-size: 11px; font-weight: 800; letter-spacing: .11em; }
 .merchant-dashboard-hero h1 { margin: 14px 0 6px; font-size: clamp(30px, 3vw, 42px); line-height: 1.12; letter-spacing: -.04em; color: var(--text-primary); }

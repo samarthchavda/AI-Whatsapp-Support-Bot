@@ -64,6 +64,9 @@ exports.signup = async (req, res) => {
       supportEmail: email,
       role: 'admin',
       profileCompleted: false,
+      selfSignupTrial: true,
+      trialBroadcastsUsed: 0,
+      aiBotEnabled: false,
       termsAcceptedAt: new Date(),
       trialStartedAt: starter.subscriptionStartDate,
       ...starter
@@ -159,6 +162,9 @@ const buildAdminPayload = (admin) => ({
   profileCompleted: admin.profileCompleted === true,
   profileCompletedAt: admin.profileCompletedAt,
   trialStartedAt: admin.trialStartedAt,
+  selfSignupTrial: admin.selfSignupTrial === true,
+  trialBroadcastsUsed: admin.trialBroadcastsUsed || 0,
+  whatsappConnected: admin.whatsappConnected === true,
   allowedPages: Array.isArray(admin.allowedPages) ? admin.allowedPages : null,
   customBranding: admin.customBranding || { logoUrl: null, brandName: null, removeCredits: false }
 });
@@ -818,6 +824,9 @@ exports.updateProfile = async (req, res) => {
     if (currency !== undefined) admin.currency = currency;
     if (timezone !== undefined) admin.timezone = timezone;
     if (theme !== undefined) admin.theme = theme;
+    if ((aiBotEnabled === true || aiDraftMode === true) && require('../../services/selfServePreview').isSelfServePreview(admin)) {
+      return res.status(403).json({ success: false, error: 'AI replies and drafts are available after you activate a paid plan.' });
+    }
     if (aiBotEnabled !== undefined) admin.aiBotEnabled = aiBotEnabled;
     if (aiDraftMode !== undefined) admin.aiDraftMode = aiDraftMode;
 

@@ -1,6 +1,8 @@
 /**
- * Official Kwickbot Public Website Knowledge Base & AI Assistant Query Matcher
+ * Official Kwickbot Public Website Knowledge Base & AI Assistant Query Matcher.
+ * Prices are never hard-coded here: pass the live plans from /api/auth/plans/public.
  */
+import { plansAsText } from '../lib/planFeatures';
 
 const WEBSITE_KNOWLEDGE = {
   overview: {
@@ -36,7 +38,7 @@ Key capabilities include:
     title: "Kwickbot Services",
     content: `Kwickbot provides end-to-end support automation services:
 
-• Gemini AI Fine-Tuning & Knowledge Base Setup (PDF ingestion & brand voice training)
+• AI knowledge base setup from your PDFs and store policies
 • WhatsApp Business API & Meta Account Verification assistance
 • Shopify, WooCommerce & Custom ERP/CRM API Synchronizations
 • Smart Agent Handoff & Escalation Rule Configurations
@@ -51,14 +53,13 @@ Key capabilities include:
 Shopify integration features:
 • Automated order confirmation and tracking messages via WhatsApp
 • Real-time order status inquiries (customers type order # to check delivery)
-• Automated abandoned checkout recovery reminders with custom discount links
-• Cancellation request handling directly through WhatsApp
-• Automatic order tagging and sync back to Shopify Admin`
+• Automatic abandoned-checkout reminders on WhatsApp (on plans that include it)
+• Cancellation request handling directly through WhatsApp (on plans that include it)`
   },
 
   wooCommerceIntegration: {
     title: "WooCommerce Integration",
-    content: `Kwickbot provides 1-click WooCommerce store synchronization using REST API keys and webhooks.
+    content: `Kwickbot connects WooCommerce stores using REST API keys and webhooks.
 
 WooCommerce integration features:
 • Real-time order creation and status webhooks
@@ -74,7 +75,6 @@ WooCommerce integration features:
 1. Official WhatsApp Cloud API (Recommended):
    • Connect using Meta Embedded Signup in under 10 minutes
    • Enables high-volume broadcasting, template messages, and interactive buttons
-   • Verified green checkmark badge application support
    • Coexistence: Run mobile WhatsApp Business App and Cloud API simultaneously on the same number
 
 2. WhatsApp Web Connection:
@@ -114,12 +114,12 @@ WooCommerce integration features:
 
   abandonedCart: {
     title: "Abandoned Cart Recovery",
-    content: `Recover up to 25% of abandoned checkouts with WhatsApp automation:
+    content: `Bring shoppers back to unfinished checkouts with WhatsApp reminders:
 
-• Detect abandoned checkouts in real-time via Shopify/WooCommerce webhooks
-• Send personalized WhatsApp reminders 30 minutes after abandonment
-• Offer dynamic coupon codes and 1-click checkout links
-• 98% open rate significantly outperforms traditional email recovery`
+• Detect abandoned checkouts via Shopify/WooCommerce webhooks
+• Send an automatic WhatsApp reminder 30 minutes after abandonment, with a link back to the checkout
+• Track which carts were recovered from your dashboard
+• Available on plans that include abandoned-cart recovery (see the pricing page)`
   },
 
   broadcasts: {
@@ -129,48 +129,21 @@ WooCommerce integration features:
 • Send bulk marketing campaigns to opted-in customer contact lists
 • Use Meta-approved rich media templates (images, videos, PDF catalogs)
 • Include interactive call-to-action (CTA) and quick-reply buttons
-• Analyze real-time delivery, read rates, and customer responses`
-  },
-
-  pricingOverview: {
-    title: "Kwickbot Pricing Plans",
-    content: `Kwickbot offers 3 straightforward monthly plans based on support volume:
-
-1. Starter Plan ($29 / month):
-   • Up to 1,000 WhatsApp Broadcast Messages / month
-   • Google Gemini 2.5 AI Auto-Replies included
-   • 1 Store Connection (Shopify or WooCommerce)
-   • PDF Knowledge Base Training (Up to 5 documents)
-   • Standard Live Chat Inbox Access
-   • Standard Email Support
-
-2. Growth Plan ($79 / month):
-   • Up to 10,000 WhatsApp Broadcast Messages / month
-   • Unlimited Gemini AI Auto-Replies
-   • Up to 3 Store Connections
-   • Unlimited PDF & Text Knowledge Base Training
-   • Advanced Human Handoff & Escalations
-   • Abandoned Cart Recovery Sequences
-   • Priority Support
-
-3. Scale Plan ($199 / month):
-   • Unlimited WhatsApp Broadcast Campaigns
-   • White-Labeling (Remove Kwickbot branding & add custom logo)
-   • Unlimited Store Connections & Custom API Integrations
-   • Dedicated Account Manager & Custom AI Fine-Tuning
-   • 24/7 SLA Support`
+• Schedule campaigns and track delivery status and replies (scheduling depends on your plan)`
   },
 
   noHiddenFees: {
     title: "Hidden Fees Policy",
-    content: `There are NO hidden fees or extra subscription charges from Kwickbot!
-Meta WhatsApp conversation charges (if applicable) are paid directly to Meta at official wholesale rates with zero markup from Kwickbot.`
+    content: `Kwickbot charges your plan price, plus a one-time setup fee only where a plan lists one (for example the CRM plans).
+AI support is included within each plan's stated limits.
+Meta bills WhatsApp message delivery separately at its current rates, and any third-party CRM fees are separate.
+Full details: https://kwickbot.in/pricing`
   },
 
   bookDemo: {
     title: "Book a Demo",
     content: `Ready to see Kwickbot in action?
-You can book a live 1-on-1 personalized demo with our engineering team at https://kwickbot.in/book-demo or by clicking the 'Book Demo' button.`
+You can book a live 1-on-1 personalized demo with our engineering team at https://kwickbot.in/demo or by clicking the 'Book Demo' button.`
   },
 
   contactInfo: {
@@ -178,12 +151,23 @@ You can book a live 1-on-1 personalized demo with our engineering team at https:
     content: `You can reach the Kwickbot team anytime:
 • Email: hello@kwickbot.in
 • Phone: +91 8128420287
-• Live Demo: https://kwickbot.in/book-demo
+• Live Demo: https://kwickbot.in/demo
 • Location: India`
   }
 };
 
-export function getGroundedWebsiteAnswer(userQuery) {
+function pricingAnswer(plans) {
+  if (!Array.isArray(plans) || plans.length === 0) {
+    return `You can see current plans, yearly prices and setup fees at https://kwickbot.in/pricing.
+Meta bills WhatsApp message delivery separately.`;
+  }
+  return `${plansAsText(plans)}
+
+Prices are in INR. Meta bills WhatsApp message delivery separately.
+Compare every feature and yearly prices at https://kwickbot.in/pricing`;
+}
+
+export function getGroundedWebsiteAnswer(userQuery, { plans } = {}) {
   const q = (userQuery || '').toLowerCase().trim();
   if (!q) {
     return "I don't have that information on the website yet. I can help you book a demo or connect you with the Kwickbot team.";
@@ -194,7 +178,7 @@ export function getGroundedWebsiteAnswer(userQuery) {
     if (q.includes('hidden') || q.includes('extra') || q.includes('markup')) {
       return WEBSITE_KNOWLEDGE.noHiddenFees.content;
     }
-    return WEBSITE_KNOWLEDGE.pricingOverview.content;
+    return pricingAnswer(plans);
   }
 
   // 2. How it works / Steps

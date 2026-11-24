@@ -48,7 +48,7 @@ export default function TermsOfService() {
         <section className="privacy-section-card">
           <h2>3. Subscription, Payments &amp; Renewals</h2>
           <p>
-            Our software runs on a recurring subscription model (Starter: ₹1499/mo, Growth: ₹2999/mo, Scale: ₹9999/mo).
+            Our software runs on a recurring subscription model. Current plan prices, yearly prices and any one-time setup fees are listed on our <Link href="/pricing">pricing page</Link>.
           </p>
           <div className="legal-callout">
             <FaFileSignature className="callout-icon" />

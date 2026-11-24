@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { safeJsonStringify } from '../../utils/jsonSanitizer';
+import { planHighlights, yearlySavingPercent } from '../lib/planFeatures';
 import { FaCheck, FaTimes, FaChevronDown, FaChevronUp, FaInfoCircle } from 'react-icons/fa';
 
 const CATEGORIES = [
@@ -11,116 +12,6 @@ const CATEGORIES = [
   { id: 'whatsapp_api', label: 'WhatsApp API' },
   { id: 'enterprise_custom', label: 'Enterprise' }
 ];
-
-// The Kwickbot CRM plans have a defined public comparison. Keep this presentation
-// layer separate from the plan API so Super Admin remains the source of truth for
-// plan price, billing cycle, publication status and CTA behaviour.
-const KWICKBOT_CRM_COMPARISON = {
-  starter: {
-    conversations: '500',
-    messages: '2,000',
-    connections: '1',
-    knowledgeBasePdfs: '1 PDF document (up to 4 pages)',
-    storeIntegrations: '1 store integration (Shopify or WooCommerce)',
-    advancedAnalytics: false,
-    liveChatEscalation: false,
-    orderCancellation: false,
-    broadcasting: true,
-    broadcastCampaigns: '5/month',
-    broadcastMessages: '5,000/month',
-    scheduledBroadcasts: false,
-    audienceSegmentation: false,
-    broadcastAnalytics: null,
-    abandonedCartRecovery: false,
-    productCatalogSync: false,
-    productCatalogAi: false,
-    customBranding: false,
-    developerApi: false
-  },
-  growth: {
-    conversations: 'Unlimited',
-    messages: 'Unlimited',
-    connections: '3',
-    knowledgeBasePdfs: '3 PDF documents',
-    storeIntegrations: '2 store integrations (Shopify or WooCommerce)',
-    advancedAnalytics: true,
-    liveChatEscalation: true,
-    orderCancellation: true,
-    broadcasting: true,
-    broadcastCampaigns: 'Unlimited',
-    broadcastMessages: 'Unlimited',
-    scheduledBroadcasts: true,
-    audienceSegmentation: true,
-    broadcastAnalytics: 'Basic',
-    abandonedCartRecovery: true,
-    productCatalogSync: true,
-    productCatalogAi: true,
-    orderConfirmationTemplates: true,
-    crmApiWebhooks: true,
-    customBranding: false,
-    developerApi: true
-  },
-  scale: {
-    conversations: 'Unlimited',
-    messages: 'Unlimited',
-    connections: '5',
-    knowledgeBasePdfs: 'Unlimited',
-    storeIntegrations: 'Multiple store integrations',
-    advancedAnalytics: true,
-    liveChatEscalation: true,
-    orderCancellation: true,
-    broadcasting: true,
-    broadcastCampaigns: 'Unlimited',
-    broadcastMessages: '25,000/month',
-    scheduledBroadcasts: true,
-    audienceSegmentation: true,
-    broadcastAnalytics: 'Advanced',
-    customBranding: true,
-    developerApi: true
-  }
-};
-
-// CRM plans have intentionally different operational boundaries. Keep these
-// customer-facing promises explicit rather than exposing internal token or
-// implementation limits from the plan service.
-const CRM_INTEGRATION_COMPARISON = {
-  crm_connect: {
-    included: [
-      '2 WhatsApp connections and 1 CRM connection',
-      'Up to 2,000 WhatsApp conversations/month',
-      'Up to 10,000 WhatsApp messages/month',
-      'AI WhatsApp support with 1 knowledge base upload',
-      'Read-only Odoo product details and order-status lookup',
-      'WhatsApp enquiry → Odoo CRM lead creation',
-      'Live Chat handoff and integration logs'
-    ],
-    excluded: [
-      'Customer/contact create or update',
-      'Quotation, sales order, invoice, return or cancellation creation',
-      'Custom automation rules and failed-event replay',
-      'WhatsApp broadcasting and broadcast campaigns',
-      'Custom webhooks, developer API and custom branding'
-    ]
-  },
-  crm_automation: {
-    included: [
-      '2 WhatsApp connections and 2 CRM connections',
-      'Up to 5,000 WhatsApp conversations/month',
-      'Up to 100,000 WhatsApp messages/month',
-      'Product and order-status sync with lead and contact sync',
-      'Live Chat handoff, templates and integration logs',
-      'Configurable CRM automation rules',
-      'Quotation and sales-order automation with event retry',
-      'Up to 5 WhatsApp broadcast campaigns/month',
-      'Up to 5,000 broadcast messages/month'
-    ],
-    excluded: [
-      'Custom webhooks and developer API',
-      'Custom branding / white-labeling',
-      'Unlimited connections and enterprise custom SLA'
-    ]
-  }
-};
 
 const faqs = [
   {
@@ -136,8 +27,8 @@ const faqs = [
     answer: "Kwickbot is equipped with an automated human handoff mechanism. If a customer expresses high frustration, asks for a human agent, or triggers a custom escalation (like a refund request), the AI pauses itself and immediately alerts your support team in the Live Chat CRM console with the full conversation history."
   },
   {
-    question: "Can we control the Google Gemini AI token budget?",
-    answer: "Yes! Super Admins have complete control over platform token limits. You can specify precise monthly token quotas (e.g., 10k, 50k, 200k tokens) and pricing structures for each merchant. Once the limit is reached, the bot automatically pauses and notifies you, preventing unexpected API bills."
+    question: "What happens when I reach my plan's AI or message limit?",
+    answer: "Each plan lists its monthly limits above. Your dashboard shows usage as you go. If a limit is reached, AI auto-replies pause and conversations stay in your Live Chat inbox so your team can keep replying, so there are no surprise AI bills. You can upgrade at any time."
   }
 ];
 export default function PricingPage() {
@@ -208,6 +99,8 @@ export default function PricingPage() {
   const filteredPlans = plans.filter((p) => p.category === activeCategory &&
     (activeCategory !== 'kwickbot_crm' || ['starter', 'growth'].includes(String(p.name).toLowerCase())));
 
+  const maxYearlySaving = filteredPlans.reduce((max, p) => Math.max(max, yearlySavingPercent(p)), 0);
+
   const breadcrumbSchema = {
     '@context': 'https://schema.org',
     '@type': 'BreadcrumbList',
@@ -247,7 +140,7 @@ export default function PricingPage() {
                   Monthly
                 </button>
                 <button type="button" className={billingCycle === 'yearly' ? 'active' : ''} aria-pressed={billingCycle === 'yearly'} onClick={() => setBillingCycle('yearly')}>
-                  Yearly <span className="save-tag">Save ~17%</span>
+                  Yearly {maxYearlySaving > 0 && <span className="save-tag">Save up to {maxYearlySaving}%</span>}
                 </button>
               </div>
 
@@ -296,12 +189,7 @@ export default function PricingPage() {
                 filteredPlans.map((plan) => {
                   const isContactSales = plan.contactSales || plan.monthlyPrice === 0;
                   const currSymbol = getCurrencySymbol(plan.currency);
-                  const crmComparison = activeCategory === 'kwickbot_crm'
-                    ? KWICKBOT_CRM_COMPARISON[String(plan.name || '').toLowerCase()]
-                    : null;
-                  const crmIntegrationComparison = activeCategory === 'crm_integration'
-                    ? CRM_INTEGRATION_COMPARISON[String(plan.name || '').toLowerCase()]
-                    : null;
+                  const highlights = planHighlights(plan);
 
                   let priceDisplay = 'Contact sales';
                   let subtext = '';
@@ -343,80 +231,16 @@ export default function PricingPage() {
                         {savingsText && <span className="plan-note" style={{ fontWeight: 700, color: isPopularCard ? 'var(--pista)' : 'var(--leaf-strong)' }}>{savingsText}</span>}
                         {plan.setupFee > 0 && <span className="plan-note">+ {currSymbol}{formatMoney(plan.setupFee)} one-time setup fee</span>}
                         {plan.connectorMaintenanceFee > 0 && <span className="plan-note">+ {currSymbol}{formatMoney(plan.connectorMaintenanceFee)}/mo connector maintenance fee</span>}
-                        {crmComparison && <span className="plan-note">AI support included in this plan. Meta WhatsApp message charges are separate.</span>}
+                        {plan.category === 'kwickbot_crm' && <span className="plan-note">AI support included in this plan. Meta WhatsApp message charges are separate.</span>}
                       </div>
 
                       <ul className="checklist">
-                        {crmComparison ? (
-                          <>
-                            <FeatureItem>{crmComparison.conversations} WhatsApp conversations / month</FeatureItem>
-                            <FeatureItem>{crmComparison.messages} WhatsApp messages / month</FeatureItem>
-                            <FeatureItem>{crmComparison.connections} active WhatsApp connection{crmComparison.connections === '1' ? '' : 's'}</FeatureItem>
-                            <FeatureItem>{crmComparison.knowledgeBasePdfs} knowledge base</FeatureItem>
-                            <FeatureItem>{crmComparison.storeIntegrations}</FeatureItem>
-                            <FeatureItem>AI WhatsApp support</FeatureItem>
-                            <FeatureItem>Live chat CRM</FeatureItem>
-                            {crmComparison.orderConfirmationTemplates && <FeatureItem>Order confirmation WhatsApp templates</FeatureItem>}
-                            {crmComparison.crmApiWebhooks && <FeatureItem>Connect your CRM through API and webhooks</FeatureItem>}
-                            {showFullComparison && (
-                              <>
-                                <FeatureItem enabled={crmComparison.advancedAnalytics}>Advanced analytics</FeatureItem>
-                                <FeatureItem enabled={crmComparison.abandonedCartRecovery ?? true}>Abandoned-cart recovery</FeatureItem>
-                                <FeatureItem enabled={crmComparison.productCatalogSync ?? true}>Product catalog sync</FeatureItem>
-                                <FeatureItem enabled={crmComparison.productCatalogAi ?? true}>Product-based AI replies on WhatsApp</FeatureItem>
-                                <FeatureItem enabled={crmComparison.liveChatEscalation}>Live chat escalation</FeatureItem>
-                                <FeatureItem enabled={crmComparison.orderCancellation}>Order cancellation</FeatureItem>
-                                <FeatureItem enabled={crmComparison.broadcasting}>WhatsApp broadcasting</FeatureItem>
-                                <FeatureItem enabled={Boolean(crmComparison.broadcastCampaigns)}>
-                                  {crmComparison.broadcastCampaigns ? `${crmComparison.broadcastCampaigns} broadcast campaigns` : 'Broadcast campaigns'}
-                                </FeatureItem>
-                                <FeatureItem enabled={Boolean(crmComparison.broadcastMessages)}>
-                                  {crmComparison.broadcastMessages ? `${crmComparison.broadcastMessages} broadcast messages` : 'Broadcast messages'}
-                                </FeatureItem>
-                                <FeatureItem enabled={crmComparison.scheduledBroadcasts}>Scheduled broadcasts</FeatureItem>
-                                <FeatureItem enabled={crmComparison.audienceSegmentation}>Audience segmentation</FeatureItem>
-                                <FeatureItem enabled={Boolean(crmComparison.broadcastAnalytics)}>
-                                  {crmComparison.broadcastAnalytics ? `${crmComparison.broadcastAnalytics} broadcast analytics` : 'Broadcast analytics'}
-                                </FeatureItem>
-                                <FeatureItem enabled={crmComparison.customBranding}>Custom branding</FeatureItem>
-                                <FeatureItem enabled={crmComparison.developerApi}>Developer API &amp; webhooks</FeatureItem>
-                              </>
-                            )}
-                          </>
-                        ) : crmIntegrationComparison ? (
-                          <>
-                            {crmIntegrationComparison.included.map((feature) => (
-                              <FeatureItem key={`included-${feature}`}>{feature}</FeatureItem>
-                            ))}
-                            {showFullComparison && crmIntegrationComparison.excluded.map((feature) => (
-                              <FeatureItem key={`excluded-${feature}`} enabled={false}>{feature}</FeatureItem>
-                            ))}
-                          </>
-                        ) : (
-                          <>
-                            {plan.usageLimits && (
-                              <>
-                                <FeatureItem>{formatLimit(plan.usageLimits.monthlyConversations)} WhatsApp conversations / month</FeatureItem>
-                                <FeatureItem>{formatLimit(plan.usageLimits.monthlyMessages)} messages / month</FeatureItem>
-                                <FeatureItem>{formatLimit(plan.usageLimits.maxWhatsAppConnections === -1 ? -1 : Math.max(2, Number(plan.usageLimits.maxWhatsAppConnections) || 0))} active WhatsApp connection(s)</FeatureItem>
-                              </>
-                            )}
-                            {plan.features?.aiAutomation && <FeatureItem>AI knowledge base &amp; automated support</FeatureItem>}
-                            {plan.features?.crmConnection && <FeatureItem>CRM / ERP two-way sync</FeatureItem>}
-                            {plan.features?.leadSync && <FeatureItem>Automated lead &amp; contact sync</FeatureItem>}
-                            {plan.features?.orderStatusSync && <FeatureItem>WhatsApp order status sync &amp; cancellations</FeatureItem>}
-                            {plan.features?.broadcasts && <FeatureItem>WhatsApp broadcast campaigns</FeatureItem>}
-                            {plan.features?.advancedAnalytics && <FeatureItem>Advanced analytics &amp; message logs</FeatureItem>}
-                            {plan.features?.humanHandoff && <FeatureItem>Automatic live chat human handoff</FeatureItem>}
-                            {showFullComparison && (
-                              <>
-                                <FeatureItem enabled={Boolean(plan.features?.customBranding)}>Custom branding &amp; white labeling</FeatureItem>
-                                <FeatureItem enabled={Boolean(plan.features?.developerApi)}>Developer API &amp; webhooks</FeatureItem>
-                              </>
-                            )}
-                          </>
-                        )}
-                        {plan.supportLevel && <FeatureItem>{plan.supportLevel}</FeatureItem>}
+                        {highlights.included.map((feature) => (
+                          <FeatureItem key={`in-${feature}`}>{feature}</FeatureItem>
+                        ))}
+                        {showFullComparison && highlights.excluded.map((feature) => (
+                          <FeatureItem key={`out-${feature}`} enabled={false}>{feature}</FeatureItem>
+                        ))}
                       </ul>
 
                       <Link href="/demo" className={`btn btn-block ${isPopularCard ? 'btn-pista' : 'btn-secondary'}`}>

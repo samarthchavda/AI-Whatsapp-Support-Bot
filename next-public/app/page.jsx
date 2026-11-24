@@ -28,6 +28,7 @@ import {
 } from 'react-icons/fa';
 import { SiWhatsapp, SiShopify, SiWoocommerce, SiMeta, SiGoogle } from 'react-icons/si';
 import { getGroundedWebsiteAnswer } from './services/websiteKnowledge';
+import { planHighlights, formatINR, sortPlans, isContactSales } from './lib/planFeatures';
 import BrandMark from './components/BrandMark';
 import OrderStory from './components/OrderStory';
 
@@ -156,77 +157,6 @@ const servicePaths = [
   }
 ];
 
-const plans = [
-  {
-    name: 'Starter',
-    price: '₹1,499',
-    desc: 'AI WhatsApp support for one e-commerce store.',
-    cta: 'Start with a demo',
-    included: [
-      'Up to 500 WhatsApp conversations / month',
-      'Up to 2,000 messages / month',
-      '1 active WhatsApp connection',
-      '1 knowledge base PDF, up to 4 pages',
-      '1 store integration (Shopify or WooCommerce)',
-      'AI support from your PDF and live chat CRM',
-      'Broadcasting: 5 campaigns and up to 5,000 messages / month'
-    ],
-    excluded: [
-      'Abandoned-cart recovery',
-      'Advanced analytics dashboard',
-      'Product catalog sync and product-based AI replies',
-      'Scheduled broadcasts and audience segmentation',
-      'Live chat handoff escalations',
-      'Automated order cancellations',
-      'Custom branding',
-      'Developer API & webhooks',
-      'Priority support'
-    ]
-  },
-  {
-    name: 'Growth',
-    price: '₹2,999',
-    desc: 'For stores managing regular order and support volume.',
-    cta: 'Book a demo',
-    featured: true,
-    included: [
-      'Up to 3,000 WhatsApp conversations / month',
-      'Up to 15,000 messages / month',
-      'Up to 2 active WhatsApp connections',
-      'Up to 3 knowledge base PDFs',
-      '1 store integration (Shopify or WooCommerce)',
-      'Knowledge base retrieval & live chat CRM',
-      'Broadcasting: 5,000 messages & 10 campaigns / month',
-      'Advanced analytics dashboard',
-      'Live chat handoff escalations',
-      'Automated order cancellations',
-      'Priority email & chat support (under 4 hours)'
-    ],
-    excluded: ['Custom branding', 'Developer API & webhooks']
-  },
-  {
-    name: 'Scale',
-    price: '₹9,999',
-    desc: 'For teams needing higher limits and custom workflows.',
-    cta: 'Talk to sales',
-    included: [
-      'Unlimited WhatsApp conversations & messages',
-      'Up to 5 active WhatsApp connections',
-      'Unlimited knowledge base PDFs',
-      'Shopify and WooCommerce together',
-      'Knowledge base retrieval & live chat CRM',
-      'Broadcasting: 25,000 messages & unlimited campaigns',
-      'Advanced analytics dashboard',
-      'Live chat handoff escalations',
-      'Automated order cancellations',
-      'Custom branding (your logo & name)',
-      'Developer API & webhooks',
-      'Premium support'
-    ],
-    excluded: []
-  }
-];
-
 // Each preview plays as a short conversation: items appear in order,
 // with a typing indicator before every AI reply ("out").
 const previewScripts = {
@@ -272,6 +202,20 @@ export default function LandingPage() {
   const [openFaqIndex, setOpenFaqIndex] = useState(0);
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [showFullPricing, setShowFullPricing] = useState(false);
+  // Live plans from Plan Manager (null = loading, [] = unavailable)
+  const [livePlans, setLivePlans] = useState(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    const apiBase = process.env.NEXT_PUBLIC_API_URL || '/api';
+    fetch(`${apiBase}/auth/plans/public`)
+      .then((res) => (res.ok ? res.json() : null))
+      .then((json) => { if (!cancelled) setLivePlans(json?.success && Array.isArray(json.data) ? json.data : []); })
+      .catch(() => { if (!cancelled) setLivePlans([]); });
+    return () => { cancelled = true; };
+  }, []);
+
+  const homePlans = sortPlans((livePlans || []).filter((plan) => plan.category === 'kwickbot_crm' && ['starter', 'growth'].includes(String(plan.name).toLowerCase())));
   const [activePreview, setActivePreview] = useState('support');
   const [autoPlay, setAutoPlay] = useState(true);
 
@@ -369,7 +313,7 @@ export default function LandingPage() {
     setIsTyping(true);
 
     setTimeout(() => {
-      const groundedAnswer = getGroundedWebsiteAnswer(trimmed);
+      const groundedAnswer = getGroundedWebsiteAnswer(trimmed, { plans: livePlans || [] });
       setChatMessages((prev) => [...prev, { role: 'assistant', content: groundedAnswer }]);
       setIsTyping(false);
     }, 600);
@@ -634,32 +578,55 @@ export default function LandingPage() {
             <div data-reveal="up" className="section-head center">
               <span className="eyebrow">Pricing</span>
               <h2>Plans built for growing WhatsApp volume</h2>
-              <p>Simple tiers for validating AI, active stores and high-volume operations.</p>
+              <p>Current e-commerce plans. Meta bills WhatsApp message delivery separately.</p>
               <button type="button" className="btn btn-soft btn-sm" onClick={() => setShowFullPricing((v) => !v)} aria-expanded={showFullPricing}>
                 {showFullPricing ? 'Show highlights only' : 'Compare every feature'}
                 {showFullPricing ? <FaChevronUp aria-hidden="true" /> : <FaChevronDown aria-hidden="true" />}
               </button>
             </div>
             <div className="plan-grid" data-stagger>
-              {plans.filter((plan) => plan.name === 'Starter').map((plan) => (
-                <article key={plan.name} className={`plan-card ${plan.featured ? 'featured' : ''}`}>
-                  {plan.featured && <span className="plan-badge">Most popular</span>}
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                    <h3>{plan.name}</h3>
-                    <p className="plan-desc">{plan.desc}</p>
+              {livePlans === null ? (
+                [0, 1].map((index) => (
+                  <div key={`home-plan-skeleton-${index}`} className="plan-card" aria-hidden="true" style={{ minHeight: 380 }}>
+                    <div className="skeleton" style={{ width: '34%', height: 16 }} />
+                    <div className="skeleton" style={{ width: '58%', height: 36 }} />
+                    <div className="skeleton" style={{ width: '88%', height: 14 }} />
+                    <div className="skeleton" style={{ width: '72%', height: 14 }} />
+                    <div className="skeleton" style={{ width: '100%', height: 50, marginTop: 'auto', borderRadius: 999 }} />
                   </div>
-                  <div className="plan-price"><strong>{plan.price}</strong><span>/ month</span></div>
-                  <ul className="checklist">
-                    {plan.included.map((feature) => (
-                      <li key={feature}><span className="check"><FaCheck aria-hidden="true" /></span>{feature}</li>
-                    ))}
-                    {showFullPricing && plan.excluded.map((feature) => (
-                      <li key={feature} className="off"><span className="check"><FaTimes aria-hidden="true" /></span><span><span className="sr-only">Not included: </span>{feature}</span></li>
-                    ))}
-                  </ul>
-                  <Link href="/demo" className={`btn btn-block ${plan.featured ? 'btn-pista' : 'btn-secondary'}`}>{plan.cta}</Link>
-                </article>
-              ))}
+                ))
+              ) : homePlans.length === 0 ? (
+                <div className="card" style={{ gridColumn: '1 / -1', alignItems: 'center', textAlign: 'center', padding: 40 }}>
+                  <h3>See current plans</h3>
+                  <p style={{ maxWidth: 460 }}>Our latest plans, limits and yearly prices are on the pricing page.</p>
+                  <Link href="/pricing" className="btn btn-primary btn-sm">View pricing</Link>
+                </div>
+              ) : homePlans.map((plan) => {
+                const { included, excluded } = planHighlights(plan);
+                const featured = Boolean(plan.isPopular);
+                const contactSales = isContactSales(plan);
+                return (
+                  <article key={plan._id || plan.name} className={`plan-card ${featured ? 'featured' : ''}`}>
+                    {(featured || plan.badge) && <span className="plan-badge">{plan.badge || 'Most popular'}</span>}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                      <h3>{plan.displayName}</h3>
+                      <p className="plan-desc">{plan.shortDescription || plan.detailedDescription}</p>
+                    </div>
+                    <div className="plan-price">
+                      {contactSales ? <strong style={{ fontSize: 32 }}>Contact sales</strong> : <><strong>{formatINR(plan.monthlyPrice, plan.currency)}</strong><span>/ month</span></>}
+                    </div>
+                    <ul className="checklist">
+                      {included.map((feature) => (
+                        <li key={feature}><span className="check"><FaCheck aria-hidden="true" /></span>{feature}</li>
+                      ))}
+                      {showFullPricing && excluded.map((feature) => (
+                        <li key={feature} className="off"><span className="check"><FaTimes aria-hidden="true" /></span><span><span className="sr-only">Not included: </span>{feature}</span></li>
+                      ))}
+                    </ul>
+                    <Link href="/demo" className={`btn btn-block ${featured ? 'btn-pista' : 'btn-secondary'}`}>{contactSales ? 'Talk to sales' : 'Start with a demo'}</Link>
+                  </article>
+                );
+              })}
             </div>
             <p style={{ textAlign: 'center', marginTop: 24 }}>
               <Link href="/pricing" className="text-link">See all plans, yearly prices and API plans <FaArrowRight aria-hidden="true" /></Link>

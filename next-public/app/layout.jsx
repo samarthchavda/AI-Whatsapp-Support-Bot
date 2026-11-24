@@ -72,7 +72,32 @@ export const viewport = {
   themeColor: '#2A3D18'
 };
 
-export default function RootLayout({ children }) {
+// Price range for the SoftwareApplication schema, read from the live plans
+// (refreshed hourly). If the plans API is unreachable the offer is left out
+// rather than showing stale prices.
+async function getPriceOffer() {
+  try {
+    const apiBase = process.env.PLANS_API_URL || 'https://kwickbot.in/api';
+    const res = await fetch(`${apiBase}/auth/plans/public`, { next: { revalidate: 3600 }, signal: AbortSignal.timeout(5000) });
+    if (!res.ok) return null;
+    const json = await res.json();
+    const prices = (json?.data || []).filter((p) => !p.contactSales && p.monthlyPrice > 0).map((p) => p.monthlyPrice);
+    if (!prices.length) return null;
+    return {
+      '@type': 'AggregateOffer',
+      priceCurrency: 'INR',
+      lowPrice: String(Math.min(...prices)),
+      highPrice: String(Math.max(...prices)),
+      offerCount: String(prices.length),
+      url: 'https://kwickbot.in/pricing'
+    };
+  } catch {
+    return null;
+  }
+}
+
+export default async function RootLayout({ children }) {
+  const priceOffer = await getPriceOffer();
   const organizationSchema = {
     '@context': 'https://schema.org',
     '@type': 'Organization',
@@ -98,13 +123,7 @@ export default function RootLayout({ children }) {
     url: 'https://kwickbot.in',
     image: 'https://kwickbot.in/og-image.jpg',
     description: 'Kwickbot connects WhatsApp Cloud API, Google Gemini AI, and Shopify/WooCommerce stores to automate order tracking, customer support, and agent handoffs 24/7.',
-    offers: {
-      '@type': 'AggregateOffer',
-      priceCurrency: 'INR',
-      lowPrice: '1499',
-      highPrice: '9999',
-      offerCount: '3'
-    }
+    ...(priceOffer ? { offers: priceOffer } : {})
   };
 
   const websiteSchema = {

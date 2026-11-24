@@ -308,6 +308,15 @@ function Billing() {
     maxWhatsAppConnections: (profile?.subscriptionPlan === 'growth' || profile?.subscriptionPlan === 'professional') ? 3 : (profile?.subscriptionPlan === 'scale' || profile?.subscriptionPlan === 'enterprise') ? 5 : 1
   };
   const currentLimits = currentPlanDetails?.usageLimits || {};
+
+  // Real payment details from the latest paid invoice (no placeholder card)
+  const PAYMENT_METHOD_LABELS = { card: 'Card', upi: 'UPI', netbanking: 'Net banking', wallet: 'Wallet', emi: 'EMI', paylater: 'Pay later' };
+  const latestPaidInvoice = invoices.find((inv) => inv.status === 'paid');
+  const paymentMethodText = latestPaidInvoice
+    ? `${PAYMENT_METHOD_LABELS[latestPaidInvoice.paymentMethod] || 'Online payment'} via Razorpay (${new Date(latestPaidInvoice.paidDate || latestPaidInvoice.issuedDate).toLocaleDateString('en-IN')})`
+    : 'No payments yet';
+  const planDisplayName = currentPlanDetails?.displayName || (profile?.subscriptionPlan ? profile.subscriptionPlan.charAt(0).toUpperCase() + profile.subscriptionPlan.slice(1) : 'Starter');
+  const planMonthlyPrice = profile?.monthlyPrice || currentPlanDetails?.monthlyPrice;
   const currentFeatures = {
     ...fallbackFeatures,
     maxConversations: currentLimits.monthlyConversations ?? fallbackFeatures.maxConversations,
@@ -342,14 +351,14 @@ function Billing() {
         <div className="billing-card active-plan-card">
           <div className="card-badge">Current Plan</div>
           <h2 className="plan-name-display">
-            {profile?.subscriptionPlan ? profile.subscriptionPlan.toUpperCase() : 'STARTER'} Plan
+            {planDisplayName} Plan
           </h2>
           
           <div className="plan-status-row">
             <span className={`status-badge-saas status-${profile?.subscriptionStatus || 'trial'}`}>
               {profile?.subscriptionStatus || 'Trial'}
             </span>
-            <span className="monthly-price-display">₹{profile?.monthlyPrice || 1499}/mo</span>
+            {planMonthlyPrice > 0 && <span className="monthly-price-display">₹{Number(planMonthlyPrice).toLocaleString('en-IN')}/mo</span>}
           </div>
           {['starter', 'growth', 'professional'].includes(profile?.subscriptionPlan) && (
             <p className="billing-meta-plan-note">AI support is included within your plan's usage limits. Meta bills WhatsApp message delivery separately.</p>
@@ -359,12 +368,14 @@ function Billing() {
             <div className="plan-meta-item">
               <FaCalendarAlt />
               <span>
-                Billing Period Started: {profile?.createdAt ? new Date(profile.createdAt).toLocaleDateString() : 'N/A'}
+                {profile?.subscriptionEndDate
+                  ? `Current period: ${profile?.subscriptionStartDate ? new Date(profile.subscriptionStartDate).toLocaleDateString('en-IN') + ' – ' : 'until '}${new Date(profile.subscriptionEndDate).toLocaleDateString('en-IN')}`
+                  : `Member since: ${profile?.createdAt ? new Date(profile.createdAt).toLocaleDateString('en-IN') : 'N/A'}`}
               </span>
             </div>
             <div className="plan-meta-item">
               <FaRegCreditCard />
-              <span>Payment Method: Visa ending in 4242</span>
+              <span>Last payment: {paymentMethodText}</span>
             </div>
           </div>
 
@@ -384,7 +395,7 @@ function Billing() {
                 Broadcast Campaigns: <strong style={{ color: 'var(--text-primary)' }}>{(profile?.broadcastCampaignsUsed || 0).toLocaleString()} / {currentFeatures.maxBroadcastCampaigns === -1 ? 'Unlimited' : (currentFeatures.maxBroadcastCampaigns || 0).toLocaleString()}</strong>
               </div>
               <div style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>
-                WhatsApp Connections: <strong style={{ color: 'var(--text-primary)' }}>{currentFeatures.maxWhatsAppConnections || 1} max</strong>
+                WhatsApp Connections: <strong style={{ color: 'var(--text-primary)' }}>{currentFeatures.maxWhatsAppConnections === -1 ? 'Unlimited' : `${currentFeatures.maxWhatsAppConnections || 1} max`}</strong>
               </div>
               <div style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>
                 AI Processing Tokens: <strong style={{ color: 'var(--text-primary)' }}>

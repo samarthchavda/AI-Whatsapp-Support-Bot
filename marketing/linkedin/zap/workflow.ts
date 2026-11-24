@@ -119,7 +119,7 @@ const workflow = defineDurable({
 </p>
 <img src="${bannerUrl}" width="600" style="width:100%;border-radius:10px;margin:16px 0" alt="Banner">
 <div style="white-space:pre-wrap;background:#F5F8EF;border-radius:10px;padding:16px;font-size:15px;line-height:1.5">${esc(post)}</div>
-<p style="font-size:13px;color:#4A5A3C">Link card: <b>${esc(cardTitle)}</b> → ${esc(topic.link)}<br>No reply by 11 PM IST means the post is skipped.</p>
+<p style="font-size:13px;color:#4A5A3C">Link card: <b>${esc(cardTitle)}</b> → ${esc(topic.link)}<br>No decision by 11 PM IST means the post is skipped.</p>
 </div>`;
 
     await ctx.step("send-approval-email", async () =>

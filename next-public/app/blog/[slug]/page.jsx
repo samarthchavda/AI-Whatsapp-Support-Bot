@@ -1003,7 +1003,7 @@ export default async function BlogPostPage({ params }) {
               <h3>Want this running on your store?</h3>
               <p>See how Kwickbot handles your real customer questions on WhatsApp.</p>
             </div>
-            <Link href="/demo" className="btn btn-primary btn-sm">Book a demo</Link>
+            <Link href="/signup" className="btn btn-primary btn-sm">Create account</Link>
           </div>
         </article>
       </main>

@@ -20,6 +20,80 @@ const GENERIC_LOGIN_ERROR = {
   message: 'Email or password is incorrect'
 };
 
+const normalizeSignupText = (value) => typeof value === 'string' ? value.trim() : '';
+
+exports.signup = async (req, res) => {
+  const name = normalizeSignupText(req.body?.name);
+  const businessName = normalizeSignupText(req.body?.businessName);
+  const businessPhone = normalizeSignupText(req.body?.businessPhone);
+  const email = normalizeSignupText(req.body?.email).toLowerCase();
+  const password = req.body?.password;
+
+  if (!name || name.length > 100 || !businessName || businessName.length > 120) {
+    return res.status(400).json({ success: false, error: 'Enter your name and business name (up to 100 and 120 characters).' });
+  }
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 254) {
+    return res.status(400).json({ success: false, error: 'Enter a valid email address.' });
+  }
+  if (!/^[+\d\s().-]+$/.test(businessPhone) || businessPhone.replace(/\D/g, '').length < 10 || businessPhone.replace(/\D/g, '').length > 15) {
+    return res.status(400).json({ success: false, error: 'Enter a valid business phone number with 10 to 15 digits.' });
+  }
+  if (typeof password !== 'string' || password.length < 12 || Buffer.byteLength(password, 'utf8') > 72 || !/[A-Za-z]/.test(password) || !/\d/.test(password)) {
+    return res.status(400).json({ success: false, error: 'Use a password with at least 12 characters, a letter and a number (maximum 72 bytes).' });
+  }
+  if (req.body?.termsAccepted !== true) {
+    return res.status(400).json({ success: false, error: 'Accept the Terms of Service and Privacy Policy to continue.' });
+  }
+  if ((req.get?.('host') || '').toLowerCase().startsWith('admin.')) {
+    return res.status(403).json({ success: false, error: 'Merchant signup is available on kwickbot.in.' });
+  }
+
+  try {
+    if (await Admin.exists({ email })) {
+      return res.status(409).json({ success: false, error: 'An account with this email already exists. Sign in or reset your password.' });
+    }
+
+    const { resolvePlanAssignment } = require('../../services/planAssignmentService');
+    const starter = await resolvePlanAssignment({ subscriptionPlan: 'starter', subscriptionStatus: 'trial' });
+    const admin = await Admin.create({
+      name,
+      email,
+      password,
+      businessName,
+      businessPhone,
+      supportEmail: email,
+      role: 'admin',
+      profileCompleted: false,
+      termsAcceptedAt: new Date(),
+      trialStartedAt: starter.subscriptionStartDate,
+      ...starter
+    });
+
+    const { accessToken, refreshToken } = issueSessionTokens(admin, req);
+    await admin.save();
+    res.cookie(getRefreshCookieName(), refreshToken, getRefreshCookieOptions());
+
+    auditLogService.logAction({
+      action: 'merchant_signup',
+      actor: { _id: admin._id, email: admin.email },
+      details: { subscriptionPlan: 'starter' },
+      req
+    }).catch((error) => console.error('Signup audit log failed:', error));
+
+    return res.status(201).json({
+      success: true,
+      message: 'Account created',
+      data: { accessToken, token: accessToken, expiresIn: 900, admin: buildAdminPayload(admin) }
+    });
+  } catch (error) {
+    if (error?.code === 11000) {
+      return res.status(409).json({ success: false, error: 'An account with this email already exists. Sign in or reset your password.' });
+    }
+    console.error('Merchant signup error:', error);
+    return res.status(500).json({ success: false, error: 'Could not create your account. Please try again.' });
+  }
+};
+
 const parseCookies = (cookieHeader = '') => cookieHeader.split(';').reduce((cookies, cookiePair) => {
   const [rawKey, ...rawValueParts] = cookiePair.trim().split('=');
 
@@ -774,10 +848,12 @@ exports.updateProfile = async (req, res) => {
     if (isNowCompleted && !admin.profileCompleted) {
       admin.profileCompleted = true;
       admin.profileCompletedAt = new Date();
-      admin.trialStartedAt = new Date();
-      admin.subscriptionStatus = 'trial';
-      admin.subscriptionStartDate = new Date();
-      admin.subscriptionEndDate = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000); // 14-day free trial
+      if (!admin.trialStartedAt) {
+        admin.trialStartedAt = new Date();
+        admin.subscriptionStatus = 'trial';
+        admin.subscriptionStartDate = new Date();
+        admin.subscriptionEndDate = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000); // 14-day free trial
+      }
     }
 
     await admin.save();

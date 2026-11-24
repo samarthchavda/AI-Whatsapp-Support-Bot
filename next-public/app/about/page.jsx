@@ -80,7 +80,7 @@ export default function AboutPage() {
               })}
             </div>
             <div style={{ textAlign: 'center', marginTop: 36 }}>
-              <Link href="/demo" className="btn btn-primary">Book a strategy call <FaArrowRight /></Link>
+              <Link href="/contact" className="btn btn-primary">Contact us <FaArrowRight /></Link>
             </div>
           </div>
         </section>

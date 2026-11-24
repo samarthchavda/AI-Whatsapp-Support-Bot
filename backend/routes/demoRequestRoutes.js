@@ -4,14 +4,10 @@ const demoRequestController = require('../controllers/superAdmin/demoRequestCont
 const superAdminController = require('../controllers/superAdmin/superAdminController');
 const { verifyToken } = require('../middleware/auth');
 
-// Public route - anyone can submit a demo request
-router.post('/', demoRequestController.createDemoRequest);
+// Legacy endpoint: existing integrations receive an explicit migration response.
+router.post('/', (_req, res) => res.status(410).json({ success: false, message: 'Demo requests are closed. Create an account at /signup or contact us at /contact.' }));
 
 // Protected management routes - super admin only
 router.get('/', verifyToken, superAdminController.requireSuperAdmin, demoRequestController.getAllDemoRequests);
-router.post('/:id/approve', verifyToken, superAdminController.requireSuperAdmin, demoRequestController.approveDemoRequest);
-router.post('/:id/reject', verifyToken, superAdminController.requireSuperAdmin, demoRequestController.rejectDemoRequest);
-router.put('/:id', verifyToken, superAdminController.requireSuperAdmin, demoRequestController.updateDemoRequestStatus);
-router.delete('/:id', verifyToken, superAdminController.requireSuperAdmin, demoRequestController.deleteDemoRequest);
 
 module.exports = router;

@@ -140,10 +140,9 @@ Meta bills WhatsApp message delivery separately at its current rates, and any th
 Full details: https://kwickbot.in/pricing`
   },
 
-  bookDemo: {
-    title: "Book a Demo",
-    content: `Ready to see Kwickbot in action?
-You can book a live 1-on-1 personalized demo with our engineering team at https://kwickbot.in/demo or by clicking the 'Book Demo' button.`
+  getStarted: {
+    title: "Create an account",
+    content: `Create your Kwickbot merchant account at https://kwickbot.in/signup. You can then complete your business profile and connect your WhatsApp number and store. For help, contact our team at https://kwickbot.in/contact.`
   },
 
   contactInfo: {
@@ -151,7 +150,8 @@ You can book a live 1-on-1 personalized demo with our engineering team at https:
     content: `You can reach the Kwickbot team anytime:
 • Email: hello@kwickbot.in
 • Phone: +91 8128420287
-• Live Demo: https://kwickbot.in/demo
+• Contact: https://kwickbot.in/contact
+• Signup: https://kwickbot.in/signup
 • Location: India`
   }
 };
@@ -170,7 +170,7 @@ Compare every feature and yearly prices at https://kwickbot.in/pricing`;
 export function getGroundedWebsiteAnswer(userQuery, { plans } = {}) {
   const q = (userQuery || '').toLowerCase().trim();
   if (!q) {
-    return "I don't have that information on the website yet. I can help you book a demo or connect you with the Kwickbot team.";
+    return "I don't have that information on the website yet. You can create an account or contact the Kwickbot team.";
   }
 
   // 1. Pricing / Cost / Plans
@@ -236,9 +236,9 @@ export function getGroundedWebsiteAnswer(userQuery, { plans } = {}) {
     return WEBSITE_KNOWLEDGE.services.content;
   }
 
-  // 13. Book Demo
+  // 13. Signup and contact
   if (q.includes('demo') || q.includes('book') || q.includes('trial') || q.includes('schedule')) {
-    return WEBSITE_KNOWLEDGE.bookDemo.content;
+    return WEBSITE_KNOWLEDGE.getStarted.content;
   }
 
   // 14. Contact / Email / Phone
@@ -247,5 +247,5 @@ export function getGroundedWebsiteAnswer(userQuery, { plans } = {}) {
   }
 
   // Fallback Rule
-  return "I don't have that information on the website yet. I can help you book a demo or connect you with the Kwickbot team.";
+  return "I don't have that information on the website yet. You can create an account or contact the Kwickbot team.";
 }

@@ -43,7 +43,7 @@ export default function RefundPolicy() {
             We stand behind our product quality, but we also enforce strict guidelines for refund requests:
           </p>
           <ul>
-            <li><strong>Trial period:</strong> We offer a free demo sandbox environment for merchants to validate Kwickbot's AI capabilities before purchasing.</li>
+            <li><strong>Trial period:</strong> New merchant accounts receive a Starter trial to evaluate Kwickbot before purchasing a plan.</li>
             <li><strong>First-time buyers:</strong> If you are unhappy with the software performance, first-time subscribers are eligible for a full refund within <strong>7 days of your initial payment</strong>.</li>
             <li><strong>Renewals:</strong> Recurring monthly renewal charges are non-refundable. Please make sure to cancel your plan before the auto-renewal date if you do not wish to continue.</li>
             <li><strong>API Cost Exclusions:</strong> WhatsApp Business API conversation charges (billed directly by Meta based on message categories) are paid to Meta and are entirely non-refundable under any circumstances.</li>

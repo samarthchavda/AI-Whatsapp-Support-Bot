@@ -243,8 +243,8 @@ export default function PricingPage() {
                         ))}
                       </ul>
 
-                      <Link href="/demo" className={`btn btn-block ${isPopularCard ? 'btn-pista' : 'btn-secondary'}`}>
-                        {isContactSales ? 'Talk to sales' : 'Start with a demo'}
+                      <Link href={isContactSales ? '/contact' : '/signup'} className={`btn btn-block ${isPopularCard ? 'btn-pista' : 'btn-secondary'}`}>
+                        {isContactSales ? 'Contact us' : 'Create account'}
                       </Link>
                     </article>
                   );
@@ -259,7 +259,7 @@ export default function PricingPage() {
                   {loadError ? (
                     <button type="button" className="btn btn-primary btn-sm" onClick={fetchPublicPlans}>Retry</button>
                   ) : (
-                    <Link href="/demo" className="btn btn-primary btn-sm">Talk to us</Link>
+                    <Link href="/contact" className="btn btn-primary btn-sm">Talk to us</Link>
                   )}
                 </div>
               )}

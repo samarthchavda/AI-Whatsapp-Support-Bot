@@ -4,7 +4,6 @@ import {
   FaBell, 
   FaExclamationTriangle, 
   FaShoppingCart, 
-  FaCalendarCheck, 
   FaBullhorn, 
   FaCheckDouble, 
   FaRedo, 
@@ -131,30 +130,7 @@ function NotificationDropdown({ admin }) {
         }
       }
 
-      // 3. Super Admin specific: Pending Demo Requests
-      if (isSuperAdmin) {
-        try {
-          const demoRes = await api.get('/demo-requests', { params: { status: 'pending', limit: 10 } });
-          if (demoRes.data?.success && Array.isArray(demoRes.data.requests)) {
-            demoRes.data.requests.forEach(item => {
-              items.push({
-                id: `demo_${item._id}`,
-                type: 'demo_request',
-                title: `Demo Request: ${item.name || 'Prospect'}`,
-                message: `${item.email || ''} ${item.companyName ? `(${item.companyName})` : ''} requested live demo`,
-                timestamp: item.createdAt || new Date().toISOString(),
-                targetPath: '/dashboard/demo-requests',
-                itemData: { requestId: item._id },
-                iconType: 'demo'
-              });
-            });
-          }
-        } catch (err) {
-          // Ignore errors
-        }
-      }
-
-      // 4. System Announcements
+      // System Announcements
       try {
         const annRes = await api.get('/dashboard/announcements');
         if (annRes.data?.success && Array.isArray(annRes.data.announcements)) {
@@ -242,7 +218,7 @@ function NotificationDropdown({ admin }) {
   const filteredNotifications = notifications.filter(n => {
     if (activeTab === 'escalations') return n.type === 'escalation';
     if (activeTab === 'carts') return n.type === 'abandoned_cart';
-    if (activeTab === 'alerts') return n.type === 'demo_request' || n.type === 'announcement';
+    if (activeTab === 'alerts') return n.type === 'announcement';
     return true;
   });
 
@@ -252,8 +228,6 @@ function NotificationDropdown({ admin }) {
         return <div className="notif-icon-badge escalation"><FaExclamationTriangle /></div>;
       case 'cart':
         return <div className="notif-icon-badge cart"><FaShoppingCart /></div>;
-      case 'demo':
-        return <div className="notif-icon-badge demo"><FaCalendarCheck /></div>;
       case 'announcement':
       default:
         return <div className="notif-icon-badge announcement"><FaBullhorn /></div>;

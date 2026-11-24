@@ -35,6 +35,44 @@ const resetPasswordLimiter = createMongoRateLimiter({
   message: 'Too many password reset attempts. Please try again later.'
 });
 
+const signupLimiter = createMongoRateLimiter({
+  prefix: 'rl:signup:ip',
+  windowMs: 60 * 60 * 1000,
+  maxRequests: 5,
+  message: 'Too many signup attempts. Please try again later.'
+});
+
+/**
+ * @openapi
+ * /api/auth/signup:
+ *   post:
+ *     tags:
+ *       - Authentication & Profile
+ *     summary: Create a merchant account on a Starter trial
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [name, businessName, businessPhone, email, password, termsAccepted]
+ *             properties:
+ *               name: { type: string }
+ *               businessName: { type: string }
+ *               businessPhone: { type: string }
+ *               email: { type: string, format: email }
+ *               password: { type: string, minLength: 12 }
+ *               termsAccepted: { type: boolean }
+ *     responses:
+ *       201:
+ *         description: Account created with an authenticated session
+ *       400:
+ *         description: Invalid signup details
+ *       409:
+ *         description: Email already registered
+ */
+router.post('/signup', signupLimiter, authController.signup);
+
 /**
  * @openapi
  * /api/auth/login:

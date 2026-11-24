@@ -195,6 +195,9 @@ const adminSchema = new mongoose.Schema({
   profileCompletedAt: {
     type: Date
   },
+  termsAcceptedAt: {
+    type: Date
+  },
   trialStartedAt: {
     type: Date
   },

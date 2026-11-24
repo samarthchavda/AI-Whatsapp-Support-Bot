@@ -30,7 +30,6 @@ import SuperAdminFeatureFlags from './pages/superAdmin/Platform/SuperAdminFeatur
 import PlanManager from './pages/superAdmin/PlanManager/PlanManager';
 import PermissionProfiles from './pages/superAdmin/PermissionProfiles/PermissionProfiles';
 import CustomerOnboardWizard from './pages/superAdmin/OnboardingWizard/CustomerOnboardWizard';
-import DemoRequests from './pages/superAdmin/DemoRequests/DemoRequests';
 import SuperAdminBudget from './pages/superAdmin/Budget/SuperAdminBudget';
 import SuperAdminSettings from './pages/superAdmin/Settings/SuperAdminSettings';
 import Billing from './pages/merchant/Billing/Billing';
@@ -155,7 +154,6 @@ function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [admin, setAdmin] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [pendingDemoRequestsCount, setPendingDemoRequestsCount] = useState(0);
   const [sidebarOpen, setSidebarOpen] = useState(() => {
     return localStorage.getItem('sidebarOpen') === 'true';
   });
@@ -396,35 +394,6 @@ function App() {
     window.location.replace('/login');
   };
 
-  useEffect(() => {
-    if (isAuthenticated && admin && admin.role === 'super_admin') {
-      const fetchPendingCount = async () => {
-        try {
-          const response = await api.get('/demo-requests', {
-            params: { status: 'pending', limit: 1 }
-          });
-          if (response.data?.success) {
-            setPendingDemoRequestsCount(response.data.total || 0);
-          }
-        } catch (error) {
-          console.error('Error fetching pending demo requests count:', error);
-        }
-      };
-
-      fetchPendingCount();
-
-      window.addEventListener('demoRequestUpdated', fetchPendingCount);
-
-      const interval = setInterval(fetchPendingCount, 60000);
-      return () => {
-        clearInterval(interval);
-        window.removeEventListener('demoRequestUpdated', fetchPendingCount);
-      };
-    } else {
-      setPendingDemoRequestsCount(0);
-    }
-  }, [isAuthenticated, admin]);
-
 
   if (loading) {
     return (
@@ -459,7 +428,6 @@ function App() {
                     onToggle={handleToggleSidebar} 
                     onOpen={isMerchantPortal ? () => setMerchantSidebarOpen(true) : undefined}
                     onClose={isMerchantPortal ? () => setMerchantSidebarOpen(false) : undefined}
-                    pendingDemoRequestsCount={pendingDemoRequestsCount} 
                   />
 
                   {activeSidebarOpen && !isMerchantPortal && (
@@ -665,7 +633,6 @@ function App() {
                         <Route path="/super-admin/audit-logs" element={<SuperAdminAuditLogs />} />
                         <Route path="/super-admin/feature-flags" element={<SuperAdminFeatureFlags />} />
                         <Route path="/super-admin/announcements" element={<SuperAdminAnnouncements />} />
-                        <Route path="/demo-requests" element={<DemoRequests />} />
                         <Route path="/super-admin/user/:userId" element={<SuperAdminUserDetail />} />
                         <Route path="/super-admin/merchants/:userId" element={<SuperAdminUserDetail />} />
                         <Route path="/super-admin/plans" element={<PlanManager />} />

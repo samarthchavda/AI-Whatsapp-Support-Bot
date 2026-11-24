@@ -12,6 +12,7 @@ const NAV = [
   { href: '/pricing', label: 'Pricing', match: (p) => p === '/pricing' },
   { href: '/blog', label: 'Blog', match: (p) => p.startsWith('/blog') },
   { href: '/about', label: 'About us', match: (p) => p === '/about' },
+  { href: '/contact', label: 'Contact us', match: (p) => p === '/contact' },
 ];
 
 export default function Header() {
@@ -55,7 +56,7 @@ export default function Header() {
 
         <div className="nav-actions">
           <a href="/login" className="link-signin">Sign in</a>
-          <Link href="/demo" className="btn btn-primary btn-sm">Book a demo</Link>
+          <Link href="/signup" className="btn btn-primary btn-sm">Create account</Link>
         </div>
 
         <button
@@ -78,7 +79,7 @@ export default function Header() {
         ))}
         <div className="menu-actions">
           <a href="/login" className="btn btn-secondary btn-sm">Sign in</a>
-          <Link href="/demo" className="btn btn-primary btn-sm">Book a demo</Link>
+          <Link href="/signup" className="btn btn-primary btn-sm">Create account</Link>
         </div>
       </div>
     </header>

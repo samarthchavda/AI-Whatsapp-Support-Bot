@@ -174,7 +174,7 @@ export default function ServicesPage() {
                 Support automation, order follow-ups, campaigns and a WhatsApp API for your own software, set up on the official Meta Cloud API and connected to your store.
               </p>
               <div className="hero-actions hero-fade" style={{ '--d': '.6s' }}>
-                <Link href="/demo" className="btn btn-primary">Discuss your workflow <FaArrowRight /></Link>
+                <Link href="/contact" className="btn btn-primary">Discuss your workflow <FaArrowRight /></Link>
                 <a href="#support" className="btn btn-secondary">See what’s included</a>
               </div>
               <div className="hero-tags hero-fade" style={{ '--d': '.75s' }}>
@@ -296,7 +296,7 @@ export default function ServicesPage() {
                 <h2 style={{ fontSize: 'clamp(24px, 3vw, 32px)', fontWeight: 800 }}>Let’s map the integration before making promises.</h2>
                 <p>Share the platform, events, data fields and actions you need. We will assess the safest path through supported APIs or scoped webhooks.</p>
               </div>
-              <Link href="/demo" className="btn btn-primary">Book a technical demo <FaArrowRight /></Link>
+              <Link href="/contact" className="btn btn-primary">Talk to our team <FaArrowRight /></Link>
             </div>
           </div>
         </section>

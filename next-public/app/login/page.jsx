@@ -121,7 +121,7 @@ export default function LoginPage() {
 
           {!isAdminPortal && (
             <p className="form-foot">
-              New to Kwickbot? <Link href="/demo" style={{ fontWeight: 700 }}>Book a demo</Link>
+              New to Kwickbot? <Link href="/signup" style={{ fontWeight: 700 }}>Create an account</Link>
             </p>
           )}
         </div>

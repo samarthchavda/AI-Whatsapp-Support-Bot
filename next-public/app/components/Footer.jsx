@@ -35,7 +35,7 @@ export default function Footer() {
             <p>Connect your WhatsApp number and store, and let Kwickbot answer routine customer questions around the clock.</p>
           </div>
           <div className="cta-actions">
-            <Link href="/demo" className="btn btn-pista">Book a demo <FaArrowRight /></Link>
+            <Link href="/signup" className="btn btn-pista">Create account <FaArrowRight /></Link>
             <Link href="/pricing" className="btn btn-outline-light">See pricing</Link>
           </div>
         </div>
@@ -61,12 +61,13 @@ export default function Footer() {
               <h4>Product</h4>
               <Link href="/services">Services</Link>
               <Link href="/pricing">Pricing</Link>
-              <Link href="/demo">Book a demo</Link>
+              <Link href="/signup">Create account</Link>
             </div>
             <div className="footer-col">
               <h4>Company</h4>
               <Link href="/about">About us</Link>
               <Link href="/blog">Blog</Link>
+              <Link href="/contact">Contact us</Link>
             </div>
             <div className="footer-col">
               <h4>Account</h4>

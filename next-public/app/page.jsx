@@ -234,7 +234,7 @@ export default function LandingPage() {
     'Pricing',
     'Shopify integration',
     'WooCommerce integration',
-    'Book a demo'
+    'Create an account'
   ];
 
   useEffect(() => {
@@ -361,7 +361,7 @@ export default function LandingPage() {
                 Kwickbot answers your customers on WhatsApp with AI, sends order confirmations and shipping updates automatically, and hands the chat to your team when a person is needed.
               </p>
               <div className="hero-actions hero-fade" style={{ '--d': '.6s' }}>
-                <Link href="/demo" className="btn btn-primary">Book a demo <FaArrowRight /></Link>
+                <Link href="/signup" className="btn btn-primary">Create account <FaArrowRight /></Link>
                 <Link href="/pricing" className="btn btn-secondary">See pricing</Link>
               </div>
               <div className="hero-tags hero-fade" style={{ '--d': '.75s' }}>
@@ -623,7 +623,7 @@ export default function LandingPage() {
                         <li key={feature} className="off"><span className="check"><FaTimes aria-hidden="true" /></span><span><span className="sr-only">Not included: </span>{feature}</span></li>
                       ))}
                     </ul>
-                    <Link href="/demo" className={`btn btn-block ${featured ? 'btn-pista' : 'btn-secondary'}`}>{contactSales ? 'Talk to sales' : 'Start with a demo'}</Link>
+                    <Link href={contactSales ? '/contact' : '/signup'} className={`btn btn-block ${featured ? 'btn-pista' : 'btn-secondary'}`}>{contactSales ? 'Contact us' : 'Create account'}</Link>
                   </article>
                 );
               })}

@@ -138,21 +138,21 @@ const servicePaths = [
     icon: FaHeadset,
     title: 'Support automation for stores',
     copy: 'AI answers order, policy and product questions on WhatsApp, with live chat handoff to your team when it matters.',
-    href: '/services#support',
+    href: '/services',
     cta: 'Explore support plans'
   },
   {
     icon: FaCode,
     title: 'WhatsApp API for your software',
     copy: 'Connect the official WhatsApp Cloud API to your own systems with API keys, webhooks and delivery logs.',
-    href: '/services#developer',
+    href: '/services',
     cta: 'See the developer API'
   },
   {
     icon: FaBroadcastTower,
     title: 'Broadcasts & cart recovery',
     copy: 'Send approved templates, scheduled campaigns and abandoned-cart reminders, and see what was delivered.',
-    href: '/services#campaigns',
+    href: '/services',
     cta: 'See campaign tools'
   }
 ];
@@ -347,23 +347,29 @@ export default function LandingPage() {
           <div className="container hero-grid">
             <div className="hero-copy">
               <span className="pill hero-fade" style={{ alignSelf: 'flex-start', '--d': '0s' }}>
-                <span className="dot" /> AI support for Shopify &amp; WooCommerce
+                <span className="dot" /> For Shopify &amp; WooCommerce stores
               </span>
-              <h1 className="rise" aria-label="WhatsApp support that knows your store.">
+              <h1 className="rise" aria-label="WhatsApp AI support that knows your store.">
                 <span style={{ '--w': 0 }}>WhatsApp</span>{' '}
-                <span style={{ '--w': 1 }}>support</span>{' '}
-                <span style={{ '--w': 2 }}>that</span>{' '}
-                <span style={{ '--w': 3 }}>knows</span>{' '}
-                <span style={{ '--w': 4 }} className="highlight swipe">your store.</span>
+                <span style={{ '--w': 1 }}>AI</span>{' '}
+                <span style={{ '--w': 2 }}>support</span>{' '}
+                <span style={{ '--w': 3 }}>that</span>{' '}
+                <span style={{ '--w': 4 }}>knows</span>{' '}
+                <span style={{ '--w': 5 }} className="highlight swipe">your store.</span>
               </h1>
               <p className="hero-lead hero-fade" style={{ '--d': '.45s' }}>
-                Answer product and order questions with AI, send timely updates, and bring your team into the same WhatsApp conversation when a person is needed.
+                Kwickbot answers your customers on WhatsApp with AI, sends order confirmations and shipping updates automatically, and hands the chat to your team when a person is needed.
               </p>
               <div className="hero-actions hero-fade" style={{ '--d': '.6s' }}>
-                <Link href="/signup" className="btn btn-primary">Create free account <FaArrowRight aria-hidden="true" /></Link>
-                <a href="#how-it-works" className="btn btn-secondary">See how it works</a>
+                <Link href="/signup" className="btn btn-primary">Create account <FaArrowRight /></Link>
+                <Link href="/pricing" className="btn btn-secondary">See pricing</Link>
               </div>
-              <p className="hero-assurance hero-fade" style={{ '--d': '.75s' }}><FaCheck aria-hidden="true" /> No payment needed to sign up. Connect your WhatsApp number when ready.</p>
+              <div className="hero-tags hero-fade" style={{ '--d': '.75s' }}>
+                <span className="pill pill-white"><SiWhatsapp aria-hidden="true" /> WhatsApp Cloud API</span>
+                <span className="pill pill-white"><SiShopify aria-hidden="true" /> Shopify</span>
+                <span className="pill pill-white"><SiWoocommerce aria-hidden="true" /> WooCommerce</span>
+                <span className="pill pill-white"><FaBrain aria-hidden="true" /> Gemini AI</span>
+              </div>
             </div>
 
             <div className="hero-visual">
@@ -373,9 +379,8 @@ export default function LandingPage() {
                     <span className="preview-avatar"><BrandMark variant="dark" className="" /></span>
                     <div className="preview-title">
                       <strong>Commerce support workspace</strong>
-                      <span>AI replies · team handoff</span>
+                      <span>● AI active</span>
                     </div>
-                    <span className="preview-example">Example workflow</span>
                   </div>
 
                   <div className="preview-tabs" role="tablist" aria-label="Kwickbot workflow preview">
@@ -404,7 +409,7 @@ export default function LandingPage() {
                       </div>
                     )}
                   </div>
-                  <div className="preview-foot">Store context, WhatsApp messages and human support in one place</div>
+                  <div className="preview-foot">WhatsApp Cloud API · Shopify &amp; WooCommerce · Gemini AI</div>
                 </div>
               </div>
             </div>
@@ -472,7 +477,7 @@ export default function LandingPage() {
         </section>
 
         {/* HOW IT WORKS */}
-        <section id="how-it-works" className="section">
+        <section className="section">
           <div className="container">
             <div data-reveal="up" className="section-head center">
               <span className="eyebrow">From connection to operation</span>

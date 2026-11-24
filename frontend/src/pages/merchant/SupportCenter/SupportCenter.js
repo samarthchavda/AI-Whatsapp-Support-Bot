@@ -17,7 +17,9 @@ import {
   FaCode,
   FaCoins,
   FaBook,
-  FaTag
+  FaTag,
+  FaShieldAlt,
+  FaEnvelope
 } from 'react-icons/fa';
 import { 
   getSupportTickets, 
@@ -52,10 +54,18 @@ export default function SupportCenter({ admin }) {
   const [error, setError] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
 
-  // Search & Filter
-  const [searchTerm, setSearchTerm] = useState('');
+  // Search & Filter with 300ms debounce
+  const [searchInput, setSearchInput] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [categoryFilter, setCategoryFilter] = useState('all');
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchInput.trim());
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchInput]);
 
   // New Ticket Modal State
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -81,7 +91,7 @@ export default function SupportCenter({ admin }) {
       const params = {};
       if (statusFilter !== 'all') params.status = statusFilter;
       if (categoryFilter !== 'all') params.category = categoryFilter;
-      if (searchTerm.trim()) params.search = searchTerm.trim();
+      if (debouncedSearch) params.search = debouncedSearch;
 
       const res = await getSupportTickets(params);
       if (res.data && res.data.success) {
@@ -96,7 +106,7 @@ export default function SupportCenter({ admin }) {
     } finally {
       setLoading(false);
     }
-  }, [statusFilter, categoryFilter, searchTerm]);
+  }, [statusFilter, categoryFilter, debouncedSearch]);
 
   useEffect(() => {
     fetchTickets();
@@ -219,29 +229,79 @@ export default function SupportCenter({ admin }) {
             <div>
               <h1 className="support-title">Customer Support & Helpdesk</h1>
               <p className="support-subtitle">
-                Submit technical requests, track ticket status in real-time, or connect directly with our engineering team.
+                Submit assistance requests, track ticket status in real-time, or connect directly with our engineering team.
               </p>
             </div>
           </div>
         </div>
 
-        <div className="header-actions">
-          <a 
-            href="https://wa.me/919876543210?text=Hello%20Kwickbot%20Support,%20I%20need%20assistance%20with%20my%20account" 
-            target="_blank" 
-            rel="noreferrer" 
-            className="btn-whatsapp-direct"
-            title="Chat directly on WhatsApp"
-          >
-            <FaWhatsapp /> Chat on WhatsApp
-          </a>
+        <button 
+          className="btn-create-ticket"
+          onClick={() => setIsCreateModalOpen(true)}
+        >
+          <FaPlus /> New Support Request
+        </button>
+      </div>
 
-          <button 
-            className="btn-create-ticket"
-            onClick={() => setIsCreateModalOpen(true)}
-          >
-            <FaPlus /> New Support Request
-          </button>
+      {/* Quick Channels & Helpful Resources (Restored) */}
+      <div className="quick-help-banner">
+        <div className="quick-help-card whatsapp-channel">
+          <div className="channel-icon">
+            <FaWhatsapp />
+          </div>
+          <div className="channel-info">
+            <h3>Urgent WhatsApp Helpdesk</h3>
+            <p>Connect with a dedicated integration specialist right away on WhatsApp for live support.</p>
+            <a 
+              href="https://wa.me/919876543210?text=Hello%20Kwickbot%20Support,%20I%20need%20assistance%20with%20my%20account" 
+              target="_blank" 
+              rel="noreferrer" 
+              className="channel-action-link"
+            >
+              Chat on WhatsApp <FaExternalLinkAlt />
+            </a>
+          </div>
+        </div>
+
+        <div className="quick-help-card docs-channel">
+          <div className="channel-icon">
+            <FaBook />
+          </div>
+          <div className="channel-info">
+            <h3>Shopify & Bot Documentation</h3>
+            <p>Step-by-step connection guides with screenshots for Shopify custom apps, webhooks & AI training.</p>
+            <div className="doc-links-row">
+              <a 
+                href="/guide/Shopify_Kwickbot_Integration_Guide.pdf" 
+                target="_blank" 
+                rel="noreferrer" 
+                className="doc-pill-btn"
+              >
+                Shopify Connection Guide (PDF)
+              </a>
+              <a 
+                href="/guide/Kwickbot_AI_Agent_KnowledgeBase_Catalog.pdf" 
+                target="_blank" 
+                rel="noreferrer" 
+                className="doc-pill-btn"
+              >
+                AI Agent Handbook (PDF)
+              </a>
+            </div>
+          </div>
+        </div>
+
+        <div className="quick-help-card sla-channel">
+          <div className="channel-icon">
+            <FaShieldAlt />
+          </div>
+          <div className="channel-info">
+            <h3>Dedicated Enterprise SLA</h3>
+            <p>Your tickets receive priority triage by our core engineering team within <strong>&lt; 2 hours</strong>.</p>
+            <span className="email-hint">
+              <FaEnvelope /> Direct Email: <strong>support@kwickbot.in</strong>
+            </span>
+          </div>
         </div>
       </div>
 
@@ -254,68 +314,24 @@ export default function SupportCenter({ admin }) {
       {/* Main Support Tickets Panel */}
       <div className="support-tickets-panel">
         
-        {/* Status Filter Tabs (Segmented Control) */}
-        <div className="status-segmented-bar">
-          <div className="status-tabs-list">
-            <button 
-              type="button"
-              className={`status-tab-btn ${statusFilter === 'all' ? 'active' : ''}`}
-              onClick={() => setStatusFilter('all')}
-            >
-              All Statuses
-              {stats.total > 0 && <span className="tab-badge">{stats.total}</span>}
-            </button>
-            <button 
-              type="button"
-              className={`status-tab-btn ${statusFilter === 'open' ? 'active' : ''}`}
-              onClick={() => setStatusFilter('open')}
-            >
-              <span className="status-dot dot-open"></span>
-              Open
-              {stats.open > 0 && <span className="tab-badge badge-open">{stats.open}</span>}
-            </button>
-            <button 
-              type="button"
-              className={`status-tab-btn ${statusFilter === 'in_progress' ? 'active' : ''}`}
-              onClick={() => setStatusFilter('in_progress')}
-            >
-              <span className="status-dot dot-progress"></span>
-              In Progress
-              {stats.in_progress > 0 && <span className="tab-badge badge-progress">{stats.in_progress}</span>}
-            </button>
-            <button 
-              type="button"
-              className={`status-tab-btn ${statusFilter === 'resolved' ? 'active' : ''}`}
-              onClick={() => setStatusFilter('resolved')}
-            >
-              <span className="status-dot dot-resolved"></span>
-              Resolved
-              {stats.resolved > 0 && <span className="tab-badge badge-resolved">{stats.resolved}</span>}
-            </button>
-          </div>
-
-          <div className="status-bar-right">
-            <button className="btn-refresh-simple" onClick={fetchTickets} title="Refresh Tickets">
-              <FaSyncAlt className={loading ? 'spin' : ''} />
-            </button>
-          </div>
-        </div>
-
-        {/* Toolbar: Search & Category Dropdown */}
-        <div className="panel-sub-toolbar">
+        {/* Panel Toolbar: Search & Clean Dropdown Filters */}
+        <div className="panel-toolbar">
           <div className="search-box">
             <FaSearch className="search-icon" />
             <input 
               type="text" 
-              placeholder="Search by Ticket ID (e.g. TKT-1001) or Subject..." 
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder="Search by Ticket ID (e.g. TKT-1001), Subject or Message..." 
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
             />
-            {searchTerm && (
+            {searchInput && (
               <button 
                 type="button" 
                 className="clear-search-btn" 
-                onClick={() => setSearchTerm('')}
+                onClick={() => {
+                  setSearchInput('');
+                  setDebouncedSearch('');
+                }}
                 title="Clear search"
               >
                 <FaTimes />
@@ -323,17 +339,43 @@ export default function SupportCenter({ admin }) {
             )}
           </div>
 
-          <div className="category-filter-wrapper">
-            <select 
-              className="category-dropdown-select"
-              value={categoryFilter} 
-              onChange={(e) => setCategoryFilter(e.target.value)}
+          <div className="filters-row">
+            <div className="filter-dropdown-wrapper">
+              <select 
+                className="filter-dropdown-select"
+                value={statusFilter} 
+                onChange={(e) => setStatusFilter(e.target.value)}
+                aria-label="Filter by Status"
+              >
+                <option value="all">All Statuses {stats.total > 0 ? `(${stats.total})` : ''}</option>
+                <option value="open">Open {stats.open > 0 ? `(${stats.open})` : ''}</option>
+                <option value="in_progress">In Progress {stats.in_progress > 0 ? `(${stats.in_progress})` : ''}</option>
+                <option value="resolved">Resolved {stats.resolved > 0 ? `(${stats.resolved})` : ''}</option>
+              </select>
+            </div>
+
+            <div className="filter-dropdown-wrapper">
+              <select 
+                className="filter-dropdown-select"
+                value={categoryFilter} 
+                onChange={(e) => setCategoryFilter(e.target.value)}
+                aria-label="Filter by Category"
+              >
+                <option value="all">All Categories</option>
+                {CATEGORIES.map(cat => (
+                  <option key={cat.id} value={cat.id}>{cat.label}</option>
+                ))}
+              </select>
+            </div>
+
+            <button 
+              className="btn-refresh" 
+              onClick={fetchTickets} 
+              title="Refresh Tickets"
+              disabled={loading}
             >
-              <option value="all">All Categories</option>
-              {CATEGORIES.map(cat => (
-                <option key={cat.id} value={cat.id}>{cat.label}</option>
-              ))}
-            </select>
+              <FaSyncAlt className={loading ? 'spin' : ''} />
+            </button>
           </div>
         </div>
 
@@ -355,16 +397,31 @@ export default function SupportCenter({ admin }) {
             </div>
             <h3>No Support Tickets Found</h3>
             <p>
-              {searchTerm || statusFilter !== 'all' || categoryFilter !== 'all'
-                ? 'No tickets match your active filter criteria. Try clearing search filters.'
+              {searchInput || statusFilter !== 'all' || categoryFilter !== 'all'
+                ? 'No tickets match your active filter criteria. Try clearing search or status filters.'
                 : 'Need help with your Shopify integration, WhatsApp Cloud API, or bot settings? Submit a request above!'}
             </p>
-            <button 
-              className="btn-create-ticket"
-              onClick={() => setIsCreateModalOpen(true)}
-            >
-              <FaPlus /> Create Your First Ticket
-            </button>
+            {searchInput || statusFilter !== 'all' || categoryFilter !== 'all' ? (
+              <button 
+                type="button"
+                className="btn-clear-filters"
+                onClick={() => {
+                  setSearchInput('');
+                  setDebouncedSearch('');
+                  setStatusFilter('all');
+                  setCategoryFilter('all');
+                }}
+              >
+                Reset All Filters
+              </button>
+            ) : (
+              <button 
+                className="btn-create-ticket"
+                onClick={() => setIsCreateModalOpen(true)}
+              >
+                <FaPlus /> Create Your First Ticket
+              </button>
+            )}
           </div>
         ) : (
           <div className="table-responsive">
@@ -482,10 +539,10 @@ export default function SupportCenter({ admin }) {
               </div>
 
               <div className="form-group">
-                <label>Detailed Description & Steps to Reproduce <span className="required">*</span></label>
+                <label>Problem Description <span className="required">*</span></label>
                 <textarea 
-                  rows="5"
-                  placeholder="Please describe what happened, expected behavior, store name, or relevant phone number..."
+                  rows={4}
+                  placeholder="Please describe the issue in detail, including steps to reproduce, relevant URLs, or customer numbers..."
                   value={formData.description}
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                   required
@@ -496,16 +553,16 @@ export default function SupportCenter({ admin }) {
                 <label>Screenshot or Reference URL (Optional)</label>
                 <input 
                   type="url" 
-                  placeholder="https://imgur.com/... or Google Drive public link" 
+                  placeholder="https://imgur.com/... or Google Drive link" 
                   value={formData.attachmentUrl}
                   onChange={(e) => setFormData({ ...formData, attachmentUrl: e.target.value })}
                 />
               </div>
 
-              <div className="modal-footer">
+              <div className="modal-actions">
                 <button 
                   type="button" 
-                  className="btn-cancel"
+                  className="btn-modal-cancel" 
                   onClick={() => setIsCreateModalOpen(false)}
                   disabled={submitting}
                 >
@@ -513,10 +570,10 @@ export default function SupportCenter({ admin }) {
                 </button>
                 <button 
                   type="submit" 
-                  className="btn-submit-ticket"
+                  className="btn-modal-submit" 
                   disabled={submitting}
                 >
-                  <FaPaperPlane /> {submitting ? 'Submitting Request...' : 'Submit Support Ticket'}
+                  {submitting ? 'Submitting...' : 'Submit Support Ticket'}
                 </button>
               </div>
             </form>
@@ -524,21 +581,21 @@ export default function SupportCenter({ admin }) {
         </div>
       )}
 
-      {/* MODAL 2: Ticket Conversation Thread & Details */}
+      {/* MODAL 2: Ticket Conversation Thread & Reply */}
       {selectedTicket && (
         <div className="support-modal-backdrop" onClick={() => setSelectedTicket(null)}>
-          <div className="support-modal detail-modal" onClick={(e) => e.stopPropagation()}>
+          <div className="support-modal modal-large" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <div className="modal-title-row">
-                <span className="ticket-id-badge large">{selectedTicket.ticketId}</span>
-                <div className="ticket-header-meta">
+                <span className="ticket-id-tag">{selectedTicket.ticketId}</span>
+                <div>
                   <h3>{selectedTicket.subject}</h3>
-                  <div className="meta-pills">
-                    {getStatusBadge(selectedTicket.status)}
-                    <span className="category-pill">{getCategoryLabel(selectedTicket.category)}</span>
-                    <span className={`priority-badge priority-${selectedTicket.priority}`}>
-                      {selectedTicket.priority?.toUpperCase()} Priority
-                    </span>
+                  <div className="modal-ticket-meta">
+                    <span className="meta-item">Category: <strong>{getCategoryLabel(selectedTicket.category)}</strong></span>
+                    <span className="meta-separator">•</span>
+                    <span className="meta-item">Priority: <strong>{selectedTicket.priority?.toUpperCase()}</strong></span>
+                    <span className="meta-separator">•</span>
+                    <span className="meta-item">Status: {getStatusBadge(selectedTicket.status)}</span>
                   </div>
                 </div>
               </div>
@@ -547,66 +604,91 @@ export default function SupportCenter({ admin }) {
               </button>
             </div>
 
-            <div className="ticket-thread-body">
-              {/* Messages list */}
-              <div className="messages-stream">
-                {selectedTicket.messages && selectedTicket.messages.map((msg, idx) => (
-                  <div 
-                    key={msg._id || idx} 
-                    className={`message-bubble-wrapper ${msg.sender === 'merchant' ? 'from-merchant' : msg.sender === 'system' ? 'from-system' : 'from-agent'}`}
-                  >
-                    <div className="message-sender-name">
-                      {msg.sender === 'merchant' ? 'You' : msg.sender === 'system' ? 'System Notification' : `Kwickbot Support (${msg.senderName || 'Agent'})`}
-                      <span className="message-time">
-                        {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', month: 'short', day: 'numeric' })}
-                      </span>
-                    </div>
-                    <div className="message-content">
-                      {msg.message}
-                    </div>
-                    {msg.attachments && msg.attachments.length > 0 && (
-                      <div className="message-attachments">
-                        {msg.attachments.map((att, aIdx) => (
-                          <a key={aIdx} href={att} target="_blank" rel="noreferrer" className="attachment-link">
-                            <FaExternalLinkAlt /> View Attachment
-                          </a>
-                        ))}
+            <div className="modal-body-scroll">
+              <div className="ticket-conversation-stream">
+                {selectedTicket.messages && selectedTicket.messages.map((msg, idx) => {
+                  const isAgent = msg.sender === 'support_agent';
+                  const isSystem = msg.sender === 'system';
+                  return (
+                    <div 
+                      key={idx} 
+                      className={`message-bubble-wrapper ${isAgent ? 'agent' : isSystem ? 'system' : 'merchant'}`}
+                    >
+                      <div className="message-header-line">
+                        <span className="sender-name">
+                          {isAgent ? '🛡️ Kwickbot Engineering' : isSystem ? '⚙️ System Notice' : `👤 ${msg.senderName || 'Merchant'}`}
+                        </span>
+                        <span className="message-time">
+                          {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} • {new Date(msg.createdAt).toLocaleDateString([], { month: 'short', day: 'numeric' })}
+                        </span>
                       </div>
-                    )}
-                  </div>
-                ))}
+                      <div className="message-body-text">
+                        {msg.message}
+                      </div>
+                      {msg.attachments && msg.attachments.length > 0 && (
+                        <div className="message-attachments-list">
+                          {msg.attachments.map((att, aIdx) => (
+                            <a key={aIdx} href={att} target="_blank" rel="noreferrer" className="attachment-chip">
+                              Attachment {aIdx + 1} <FaExternalLinkAlt />
+                            </a>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
+            </div>
 
-              {/* Reply Box */}
-              {selectedTicket.status !== 'closed' && (
-                <form onSubmit={handleSendReply} className="reply-form">
-                  <textarea 
-                    rows="3" 
-                    placeholder="Type your reply or additional information here..."
+            {/* Reply or Resolve Footer */}
+            <div className="modal-footer-toolbar">
+              {selectedTicket.status !== 'resolved' && selectedTicket.status !== 'closed' ? (
+                <form onSubmit={handleSendReply} className="reply-form-row">
+                  <input 
+                    type="text" 
+                    placeholder="Type your response to support engineering..." 
                     value={replyText}
                     onChange={(e) => setReplyText(e.target.value)}
-                    required
-                  ></textarea>
-
-                  <div className="reply-actions-row">
-                    <button 
-                      type="button" 
-                      className="btn-resolve-ticket"
-                      onClick={handleCloseTicket}
-                      disabled={closingTicket || selectedTicket.status === 'resolved'}
-                    >
-                      <FaCheckCircle /> {closingTicket ? 'Closing...' : 'Mark as Resolved'}
-                    </button>
-
+                    disabled={sendingReply}
+                  />
+                  <button 
+                    type="submit" 
+                    className="btn-send-reply" 
+                    disabled={sendingReply || !replyText.trim()}
+                  >
+                    <FaPaperPlane /> {sendingReply ? 'Sending...' : 'Send'}
+                  </button>
+                  <button 
+                    type="button" 
+                    className="btn-resolve-ticket"
+                    onClick={handleCloseTicket}
+                    disabled={closingTicket}
+                    title="Mark ticket as resolved"
+                  >
+                    <FaCheck /> Mark Resolved
+                  </button>
+                </form>
+              ) : (
+                <div className="resolved-notice-bar">
+                  <FaCheckCircle className="check-icon" />
+                  <span>This ticket is marked as <strong>Resolved</strong>. Sending a new reply will automatically reopen it for engineer assistance.</span>
+                  <form onSubmit={handleSendReply} className="reopen-reply-box">
+                    <input 
+                      type="text" 
+                      placeholder="Type a message to reopen this ticket..." 
+                      value={replyText}
+                      onChange={(e) => setReplyText(e.target.value)}
+                      disabled={sendingReply}
+                    />
                     <button 
                       type="submit" 
-                      className="btn-send-reply"
+                      className="btn-send-reply" 
                       disabled={sendingReply || !replyText.trim()}
                     >
-                      <FaPaperPlane /> {sendingReply ? 'Sending...' : 'Send Reply'}
+                      <FaPaperPlane /> Reopen & Send
                     </button>
-                  </div>
-                </form>
+                  </form>
+                </div>
               )}
             </div>
           </div>

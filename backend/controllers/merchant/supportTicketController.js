@@ -1,3 +1,4 @@
+const mongoose = require('mongoose');
 const SupportTicket = require('../../models/SupportTicket');
 const Counter = require('../../models/Counter');
 
@@ -79,36 +80,75 @@ exports.getMyTickets = async (req, res) => {
   try {
     const { status, category, priority, search, page = 1, limit = 15 } = req.query;
 
-    const query = {};
+    const conditions = [];
+
+    // Ownership filter: merchants only see their tickets, super_admin sees all or filtered by adminId
     if (req.admin.role !== 'super_admin') {
-      query.admin = req.admin._id;
+      const adminId = mongoose.Types.ObjectId.isValid(req.admin._id)
+        ? new mongoose.Types.ObjectId(req.admin._id)
+        : req.admin._id;
+
+      conditions.push({
+        $or: [
+          { admin: adminId },
+          { merchantEmail: req.admin.email }
+        ]
+      });
     } else if (req.query.adminId) {
-      query.admin = req.query.adminId;
+      const targetAdminId = mongoose.Types.ObjectId.isValid(req.query.adminId)
+        ? new mongoose.Types.ObjectId(req.query.adminId)
+        : req.query.adminId;
+      conditions.push({ admin: targetAdminId });
     }
 
     if (status && status !== 'all') {
-      query.status = status;
+      conditions.push({ status });
     }
     if (category && category !== 'all') {
-      query.category = category;
+      conditions.push({ category });
     }
     if (priority && priority !== 'all') {
-      query.priority = priority;
+      conditions.push({ priority });
     }
 
     if (search && search.trim()) {
-      const searchRegex = new RegExp(search.trim(), 'i');
-      query.$or = [
-        { ticketId: searchRegex },
-        { subject: searchRegex },
-        { description: searchRegex }
-      ];
+      const escaped = search.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const searchRegex = new RegExp(escaped, 'i');
+      conditions.push({
+        $or: [
+          { ticketId: searchRegex },
+          { subject: searchRegex },
+          { description: searchRegex },
+          { category: searchRegex },
+          { merchantName: searchRegex },
+          { merchantEmail: searchRegex },
+          { 'messages.message': searchRegex }
+        ]
+      });
     }
+
+    const query = conditions.length > 0 ? { $and: conditions } : {};
 
     const skip = (parseInt(page, 10) - 1) * parseInt(limit, 10);
     const parsedLimit = parseInt(limit, 10);
 
-    const matchStage = req.admin.role === 'super_admin' && !req.query.adminId ? {} : { admin: req.admin._id };
+    let matchStage = {};
+    if (req.admin.role !== 'super_admin') {
+      const adminId = mongoose.Types.ObjectId.isValid(req.admin._id)
+        ? new mongoose.Types.ObjectId(req.admin._id)
+        : req.admin._id;
+      matchStage = {
+        $or: [
+          { admin: adminId },
+          { merchantEmail: req.admin.email }
+        ]
+      };
+    } else if (req.query.adminId) {
+      const targetAdminId = mongoose.Types.ObjectId.isValid(req.query.adminId)
+        ? new mongoose.Types.ObjectId(req.query.adminId)
+        : req.query.adminId;
+      matchStage = { admin: targetAdminId };
+    }
 
     const [tickets, totalCount, statsAgg] = await Promise.all([
       SupportTicket.find(query)
@@ -162,24 +202,44 @@ exports.getMyTickets = async (req, res) => {
 };
 
 /**
+ * Helper to build lookup query by ObjectId or ticketId with tenant isolation
+ */
+function buildTicketLookupQuery(id, admin) {
+  const idMatch = {
+    $or: [
+      { _id: id.match(/^[0-9a-fA-F]{24}$/) ? id : null },
+      { ticketId: id }
+    ].filter(item => item._id !== null || item.ticketId !== undefined)
+  };
+
+  if (admin.role !== 'super_admin') {
+    const adminId = mongoose.Types.ObjectId.isValid(admin._id)
+      ? new mongoose.Types.ObjectId(admin._id)
+      : admin._id;
+    return {
+      $and: [
+        idMatch,
+        {
+          $or: [
+            { admin: adminId },
+            { merchantEmail: admin.email }
+          ]
+        }
+      ]
+    };
+  }
+
+  return idMatch;
+}
+
+/**
  * @desc    Get single ticket details with complete conversation thread
  * @route   GET /api/support-tickets/:id
  */
 exports.getTicketDetails = async (req, res) => {
   try {
     const { id } = req.params;
-
-    const query = {
-      $or: [
-        { _id: id.match(/^[0-9a-fA-F]{24}$/) ? id : null },
-        { ticketId: id }
-      ].filter(item => item._id !== null || item.ticketId !== undefined)
-    };
-
-    // If not super admin, restrict to tenant
-    if (req.admin.role !== 'super_admin') {
-      query.admin = req.admin._id;
-    }
+    const query = buildTicketLookupQuery(id, req.admin);
 
     const ticket = await SupportTicket.findOne(query);
 
@@ -210,17 +270,7 @@ exports.addReply = async (req, res) => {
       return res.status(400).json({ success: false, error: 'Reply message cannot be empty' });
     }
 
-    const query = {
-      $or: [
-        { _id: id.match(/^[0-9a-fA-F]{24}$/) ? id : null },
-        { ticketId: id }
-      ].filter(item => item._id !== null || item.ticketId !== undefined)
-    };
-
-    if (req.admin.role !== 'super_admin') {
-      query.admin = req.admin._id;
-    }
-
+    const query = buildTicketLookupQuery(id, req.admin);
     const ticket = await SupportTicket.findOne(query);
 
     if (!ticket) {
@@ -273,17 +323,7 @@ exports.closeTicket = async (req, res) => {
     const { id } = req.params;
     const { resolutionNote } = req.body;
 
-    const query = {
-      $or: [
-        { _id: id.match(/^[0-9a-fA-F]{24}$/) ? id : null },
-        { ticketId: id }
-      ].filter(item => item._id !== null || item.ticketId !== undefined)
-    };
-
-    if (req.admin.role !== 'super_admin') {
-      query.admin = req.admin._id;
-    }
-
+    const query = buildTicketLookupQuery(id, req.admin);
     const ticket = await SupportTicket.findOne(query);
 
     if (!ticket) {

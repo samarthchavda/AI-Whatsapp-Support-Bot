@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const abandonedCartController = require('../controllers/merchant/abandonedCartController');
 const { verifyToken, requireFeature } = require('../middleware/auth');
+const requireConnectedShopify = require('../middleware/requireConnectedShopify');
 
 /**
  * @openapi
@@ -16,7 +17,7 @@ const { verifyToken, requireFeature } = require('../middleware/auth');
  *       200:
  *         description: List of abandoned checkouts
  */
-router.get('/', verifyToken, requireFeature('abandonedCartRecovery'), abandonedCartController.getAllAbandonedCarts);
+router.get('/', verifyToken, requireFeature('abandonedCartRecovery'), requireConnectedShopify, abandonedCartController.getAllAbandonedCarts);
 
 /**
  * @openapi
@@ -31,7 +32,7 @@ router.get('/', verifyToken, requireFeature('abandonedCartRecovery'), abandonedC
  *       200:
  *         description: Abandoned cart metrics
  */
-router.get('/stats', verifyToken, requireFeature('abandonedCartRecovery'), abandonedCartController.getAbandonedCartStats);
+router.get('/stats', verifyToken, requireFeature('abandonedCartRecovery'), requireConnectedShopify, abandonedCartController.getAbandonedCartStats);
 
 /**
  * @openapi
@@ -52,6 +53,6 @@ router.get('/stats', verifyToken, requireFeature('abandonedCartRecovery'), aband
  *       200:
  *         description: Reminder sent to customer on WhatsApp
  */
-router.post('/:id/send-reminder', verifyToken, requireFeature('abandonedCartRecovery'), abandonedCartController.sendManualReminder);
+router.post('/:id/send-reminder', verifyToken, requireFeature('abandonedCartRecovery'), requireConnectedShopify, abandonedCartController.sendManualReminder);
 
 module.exports = router;

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { getAbandonedCarts, getAbandonedCartStats, sendAbandonedCartReminder } from '../../../services/api';
+import { fetchStoreConnections } from '../../../services/storeConnections';
 import { FaShoppingCart, FaCheckCircle, FaPaperPlane, FaClock, FaSearch, FaExternalLinkAlt } from 'react-icons/fa';
 import './AbandonedCarts.css';
 
@@ -41,6 +42,9 @@ function AbandonedCarts({ admin }) {
   const [error, setError] = useState(null);
   const [reminderError, setReminderError] = useState(null);
   const [sendingReminderId, setSendingReminderId] = useState(null);
+  const [connectionStatus, setConnectionStatus] = useState('checking');
+  const [connectionError, setConnectionError] = useState('');
+  const [hasWooCommerce, setHasWooCommerce] = useState(false);
 
   const [filters, setFilters] = useState({
     status: '',
@@ -64,11 +68,52 @@ function AbandonedCarts({ admin }) {
   }, [searchInput]);
 
   useEffect(() => {
+    if (plan === 'starter') return;
+    let active = true;
+    const checkConnection = async () => {
+      setConnectionStatus('checking');
+      setConnectionError('');
+      try {
+        const connections = await fetchStoreConnections();
+        if (!active) return;
+        setHasWooCommerce(Boolean(connections.woocommerce));
+        setConnectionStatus(connections.shopify ? 'ready' : 'disconnected');
+        if (!connections.shopify) {
+          setCarts([]);
+          setStats(null);
+        }
+      } catch (err) {
+        if (!active) return;
+        setConnectionStatus('error');
+        setConnectionError(err.response?.data?.error || err.message || 'Store connection could not be checked.');
+        setCarts([]);
+        setStats(null);
+      }
+    };
+    checkConnection();
+    return () => { active = false; };
+  }, [plan]);
+
+  useEffect(() => {
+    if (plan === 'starter' || connectionStatus !== 'ready') return;
     setPage(1);
     fetchCarts(1);
     fetchStats();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filters.status, filters.search]);
+  }, [filters.status, filters.search, connectionStatus, plan]);
+
+  const retryConnection = async () => {
+    setConnectionStatus('checking');
+    setConnectionError('');
+    try {
+      const connections = await fetchStoreConnections();
+      setHasWooCommerce(Boolean(connections.woocommerce));
+      setConnectionStatus(connections.shopify ? 'ready' : 'disconnected');
+    } catch (err) {
+      setConnectionStatus('error');
+      setConnectionError(err.response?.data?.error || err.message || 'Store connection could not be checked.');
+    }
+  };
 
   const fetchCarts = async (currentPage = page) => {
     try {
@@ -85,6 +130,12 @@ function AbandonedCarts({ admin }) {
       }
       setError(null);
     } catch (err) {
+      if (err.response?.data?.code === 'STORE_CONNECTION_REQUIRED') {
+        setConnectionStatus('disconnected');
+        setCarts([]);
+        setStats(null);
+        return;
+      }
       setError('Failed to load abandoned carts');
       console.error(err);
     } finally {
@@ -99,6 +150,12 @@ function AbandonedCarts({ admin }) {
         setStats(response.data.stats);
       }
     } catch (err) {
+      if (err.response?.data?.code === 'STORE_CONNECTION_REQUIRED') {
+        setConnectionStatus('disconnected');
+        setCarts([]);
+        setStats(null);
+        return;
+      }
       console.error('Failed to load stats:', err);
     }
   };
@@ -121,6 +178,11 @@ function AbandonedCarts({ admin }) {
         setReminderError(response.data.error || 'Failed to send WhatsApp reminder');
       }
     } catch (err) {
+      if (err.response?.data?.code === 'STORE_CONNECTION_REQUIRED') {
+        setConnectionStatus('disconnected');
+        setCarts([]);
+        setStats(null);
+      }
       setReminderError(err.response?.data?.error || 'Failed to send recovery message');
       console.error(err);
     } finally {
@@ -213,37 +275,36 @@ function AbandonedCarts({ admin }) {
           </div>
         </div>
         
-        <div className="carts-paywall-card" style={{
-          background: 'rgba(15, 23, 42, 0.4)',
-          border: '1px dashed rgba(16, 185, 129, 0.3)',
-          borderRadius: '16px',
-          padding: '60px 20px',
-          textAlign: 'center',
-          marginTop: '30px',
-          backdropFilter: 'blur(8px)',
-          boxShadow: '0 8px 32px 0 rgba(0, 0, 0, 0.37)'
-        }}>
-          <span style={{ fontSize: '48px', display: 'block', marginBottom: '16px' }}>🔒</span>
-          <h2 style={{ fontSize: '22px', fontWeight: 'bold', color: '#10b981', marginBottom: '10px' }}>
+        <div className="carts-access-card">
+          <FaShoppingCart className="carts-access-icon" />
+          <h2>
             Abandoned Cart Recovery is Locked
           </h2>
-          <p style={{ maxWidth: '550px', margin: '0 auto 24px', fontSize: '14px', color: '#cbd5e1', lineHeight: '1.6' }}>
+          <p>
             Upgrade to access abandoned checkout tracking and manual WhatsApp recovery reminders.
           </p>
-          <Link to="/dashboard/billing" style={{
-            display: 'inline-block',
-            background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
-            color: 'white',
-            fontWeight: 'bold',
-            padding: '12px 30px',
-            borderRadius: '8px',
-            textDecoration: 'none',
-            fontSize: '14px',
-            boxShadow: '0 4px 14px rgba(16, 185, 129, 0.4)',
-            transition: 'all 0.2s ease'
-          }}>
+          <Link to="/dashboard/billing" className="carts-access-action">
             Upgrade Subscription Plan
           </Link>
+        </div>
+      </div>
+    );
+  }
+
+  if (connectionStatus !== 'ready') {
+    return (
+      <div className="abandoned-carts-container">
+        <div className="page-header">
+          <div>
+            <h1 className="page-title">Abandoned Cart Recovery</h1>
+            <p className="page-subtitle">Review abandoned checkouts and send WhatsApp recovery reminders.</p>
+          </div>
+        </div>
+        <div className="carts-access-card" role={connectionStatus === 'error' ? 'alert' : 'status'}>
+          <FaShoppingCart className="carts-access-icon" />
+          <h2>{connectionStatus === 'checking' ? 'Checking store connection…' : connectionStatus === 'error' ? 'Could not check store connection' : 'Connect Shopify to view abandoned carts'}</h2>
+          <p>{connectionStatus === 'error' ? connectionError : connectionStatus === 'checking' ? 'Checking your active Shopify store.' : hasWooCommerce ? 'Your WooCommerce store is connected, but abandoned checkout recovery currently uses Shopify events.' : 'Connect an active Shopify store first. Abandoned checkout records and recovery metrics will appear here after setup.'}</p>
+          {connectionStatus === 'error' ? <button type="button" onClick={retryConnection} className="carts-access-action">Retry</button> : connectionStatus === 'disconnected' ? <Link to="/dashboard/integrations#shopify" className="carts-access-action">Connect Shopify Store</Link> : null}
         </div>
       </div>
     );

@@ -616,8 +616,12 @@ exports.syncShopifyProducts = async (req, res) => {
       const formattedPrice = `${currencySymbol}${price}`;
       const sku = variant.sku || '';
       const bodyText = (product.body_html || '').replace(/<[^>]*>?/gm, '');
+      const stockQuantity = variant.inventory_management && variant.inventory_quantity != null && Number.isFinite(Number(variant.inventory_quantity))
+        ? Number(variant.inventory_quantity)
+        : null;
+      const stockLabel = stockQuantity == null ? 'Not tracked' : stockQuantity > 0 ? 'In Stock' : 'Out of Stock';
 
-      const textContent = `Product Name: ${title}\nPrice: ${formattedPrice}\nSKU: ${sku}\nStatus: In Stock\nCategory: ${product.product_type || 'General'}\nDescription: ${bodyText}`;
+      const textContent = `Product Name: ${title}\nPrice: ${formattedPrice}\nSKU: ${sku}\nStatus: ${stockLabel}\nCategory: ${product.product_type || 'General'}\nDescription: ${bodyText}`;
 
       const imageSrc = product.image?.src || product.images?.[0]?.src || '';
       const categoryName = product.product_type || 'Shopify Product';
@@ -634,7 +638,7 @@ exports.syncShopifyProducts = async (req, res) => {
           image: imageSrc,
           sku: sku || 'N/A',
           category: categoryName,
-          stock: variant.inventory_quantity || 15
+          stock: stockQuantity
         };
         await kb.save();
       } else {
@@ -654,7 +658,7 @@ exports.syncShopifyProducts = async (req, res) => {
             image: imageSrc,
             sku: sku || 'N/A',
             category: categoryName,
-            stock: variant.inventory_quantity || 15
+            stock: stockQuantity
           }
         });
         await kb.save();

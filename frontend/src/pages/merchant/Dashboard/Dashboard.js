@@ -1,8 +1,9 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import io from 'socket.io-client';
-import { FaArrowRight, FaBroadcastTower, FaChartLine, FaComments, FaFileAlt, FaPaperPlane, FaSyncAlt, FaWhatsapp } from 'react-icons/fa';
+import { FaArrowRight, FaBoxOpen, FaBroadcastTower, FaChartLine, FaComments, FaFileAlt, FaPaperPlane, FaShoppingCart, FaStore, FaSyncAlt, FaWhatsapp } from 'react-icons/fa';
 import { getDashboardStats } from '../../../services/api';
+import { fetchStoreConnections } from '../../../services/storeConnections';
 import MetaCostTracker from './MetaCostTracker';
 import './Dashboard.css';
 
@@ -36,11 +37,13 @@ function Dashboard() {
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [storeConnections, setStoreConnections] = useState({ loading: true, error: '', shopify: null, woocommerce: null });
 
   const fetchStats = useCallback(async (silent = false) => {
     try {
       if (!silent) setLoading(true);
       const response = await getDashboardStats();
+      if (!response.data?.orders || !response.data?.usage) throw new Error('Incomplete dashboard response');
       setStats(response.data);
       setError(null);
     } catch (err) {
@@ -51,8 +54,24 @@ function Dashboard() {
     }
   }, []);
 
+  const refreshStoreConnections = useCallback(async () => {
+    setStoreConnections(previous => ({ ...previous, loading: true, error: '' }));
+    try {
+      const connections = await fetchStoreConnections();
+      setStoreConnections({ loading: false, error: '', ...connections });
+    } catch (err) {
+      setStoreConnections({ loading: false, error: err.response?.data?.error || err.message || 'Connection status unavailable.', shopify: null, woocommerce: null });
+    }
+  }, []);
+
+  const refreshDashboard = () => {
+    fetchStats(true);
+    refreshStoreConnections();
+  };
+
   useEffect(() => {
     fetchStats();
+    refreshStoreConnections();
     const socket = io(SOCKET_URL, { transports: ['websocket'] });
     const refresh = () => fetchStats(true);
     socket.on('new_message', refresh);
@@ -62,7 +81,7 @@ function Dashboard() {
       clearInterval(interval);
       socket.disconnect();
     };
-  }, [fetchStats]);
+  }, [fetchStats, refreshStoreConnections]);
 
   if (loading) return <div className="loading"><div className="spinner" /><span>Loading dashboard...</span></div>;
   if (error && !stats) return <div className="merchant-dashboard"><div className="merchant-dashboard-error">{error}<button onClick={() => fetchStats()}>Retry</button></div></div>;
@@ -72,6 +91,9 @@ function Dashboard() {
   const charges = usage.charges || {};
   const recentConversations = stats?.recentConversations || [];
   const recentBroadcasts = stats?.recentBroadcasts || [];
+  const orders = stats?.orders || {};
+  const hasShopify = Boolean(storeConnections.shopify);
+  const hasWooCommerce = Boolean(storeConnections.woocommerce);
 
   return (
     <div className="merchant-dashboard">
@@ -86,7 +108,7 @@ function Dashboard() {
             <span>{usage.billingCycle || 'monthly'} billing</span>
           </div>
         </div>
-        <button type="button" className="merchant-dashboard-refresh" onClick={() => fetchStats(true)} aria-label="Refresh dashboard"><FaSyncAlt /> Refresh</button>
+        <button type="button" className="merchant-dashboard-refresh" onClick={refreshDashboard} aria-label="Refresh dashboard"><FaSyncAlt /> Refresh</button>
       </div>
 
       <div className="merchant-dashboard-metrics">
@@ -94,6 +116,29 @@ function Dashboard() {
         <div className="merchant-dashboard-metric"><span className="merchant-dashboard-metric-icon violet"><FaPaperPlane /></span><span className="merchant-dashboard-metric-label">AI replies processed</span><strong>{formatCount(usage.aiRepliesProcessed)}</strong><small>AI usage, not all outgoing messages</small></div>
         <div className="merchant-dashboard-metric"><span className="merchant-dashboard-metric-icon green"><FaBroadcastTower /></span><span className="merchant-dashboard-metric-label">Broadcast messages sent</span><strong>{formatCount(usage.broadcastMessagesSent)}</strong><small>{formatCount(usage.broadcastCampaignsCreated)} campaigns created this cycle</small></div>
         <div className="merchant-dashboard-metric"><span className="merchant-dashboard-metric-icon amber"><FaWhatsapp /></span><span className="merchant-dashboard-metric-label">Open chats</span><strong>{formatCount(stats?.conversations?.active)}</strong><small>Current retained conversations</small></div>
+      </div>
+
+      <div className="merchant-dashboard-panels merchant-dashboard-commerce">
+        <section className="merchant-dashboard-panel">
+          <div className="merchant-dashboard-panel-header"><div><span className="merchant-dashboard-kicker">STORE SETUP</span><h2>Store connections</h2></div><Link to="/dashboard/integrations">Manage stores <FaArrowRight /></Link></div>
+          {storeConnections.loading ? <p className="merchant-dashboard-fineprint">Checking connected stores…</p> : storeConnections.error ? <div className="merchant-dashboard-inline-error" role="alert">{storeConnections.error}<button type="button" onClick={refreshStoreConnections}>Retry</button></div> : <>
+            <div className="merchant-dashboard-store-row"><FaStore /><div><strong>Shopify</strong><span>{hasShopify ? storeConnections.shopify.metadata?.storeName || storeConnections.shopify.storeUrl : 'Connect to sync products and recover abandoned carts'}</span></div><b className={hasShopify ? 'connected' : ''}>{hasShopify ? 'Active' : 'Not connected'}</b></div>
+            <div className="merchant-dashboard-store-row"><FaStore /><div><strong>WooCommerce</strong><span>{hasWooCommerce ? storeConnections.woocommerce.metadata?.storeName || storeConnections.woocommerce.storeUrl : 'Connect to sync store orders'}</span></div><b className={hasWooCommerce ? 'connected' : ''}>{hasWooCommerce ? 'Active' : 'Not connected'}</b></div>
+            {!hasShopify && <p className="merchant-dashboard-setup-note"><FaShoppingCart /> Products and abandoned carts need an active Shopify connection.</p>}
+          </>}
+          <div className="merchant-dashboard-shortcuts"><Link to="/dashboard/products"><FaBoxOpen /> Products</Link><Link to="/dashboard/abandoned-carts"><FaShoppingCart /> Abandoned carts</Link></div>
+        </section>
+        <section className="merchant-dashboard-panel">
+          <div className="merchant-dashboard-panel-header"><div><span className="merchant-dashboard-kicker">COMMERCE</span><h2>Orders overview</h2></div><Link to="/dashboard/orders">View orders <FaArrowRight /></Link></div>
+          <p className="merchant-dashboard-fineprint">Current orders from your workspace, including manual and synced orders.</p>
+          <div className="merchant-dashboard-order-grid">
+            <div><strong>{formatCount(orders.total)}</strong><span>Total orders</span></div>
+            <div><strong>{formatCount(orders.pending)}</strong><span>Pending</span></div>
+            <div><strong>{formatCount(orders.shipped)}</strong><span>Shipped</span></div>
+            <div><strong>{formatCount(orders.delivered)}</strong><span>Delivered</span></div>
+          </div>
+          {Number(orders.total) === 0 && !hasShopify && !hasWooCommerce && !storeConnections.loading && !storeConnections.error && <p className="merchant-dashboard-setup-note">Connect a store and sync orders in Integrations, or add an order manually.</p>}
+        </section>
       </div>
 
       <div className="merchant-dashboard-panels">

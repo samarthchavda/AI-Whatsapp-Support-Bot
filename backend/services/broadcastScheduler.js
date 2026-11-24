@@ -9,6 +9,7 @@ const scheduledTasks = new Map();
 async function checkAbandonedCarts() {
   try {
     const AbandonedCart = require('../models/AbandonedCart');
+    const Integration = require('../models/Integration');
     const webhookService = require('./webhookService');
 
     const now = new Date();
@@ -27,8 +28,15 @@ async function checkAbandonedCarts() {
       console.log(`⏰ Found ${abandonedCarts.length} abandoned carts to send reminders.`);
     }
 
+    const connectionCache = new Map();
     for (const candidate of abandonedCarts) {
       try {
+        const adminKey = String(candidate.admin);
+        if (!connectionCache.has(adminKey)) {
+          connectionCache.set(adminKey, Boolean(await Integration.exists({ adminId: candidate.admin, platform: 'shopify', isActive: true })));
+        }
+        const storeConnected = connectionCache.get(adminKey);
+        if (!storeConnected) continue;
         // Claim the cart first so only one worker / one run ever sends this reminder
         const cart = await AbandonedCart.findOneAndUpdate(
           { _id: candidate._id, status: 'abandoned' },
@@ -48,7 +56,7 @@ async function checkAbandonedCarts() {
           console.error(`❌ Failed to send cart recovery reminder for cart ${cart.cartId}:`, result.error);
         }
       } catch (err) {
-        console.error(`Error processing cart recovery for cart ${cart.cartId}:`, err);
+        console.error(`Error processing cart recovery for cart ${candidate.cartId}:`, err);
       }
     }
   } catch (error) {

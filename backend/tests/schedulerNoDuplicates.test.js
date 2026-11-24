@@ -11,13 +11,18 @@ jest.mock('../models/Admin', () => ({ findById: jest.fn(() => Promise.resolve(nu
 
 const mockCart = { find: jest.fn(), findOneAndUpdate: jest.fn(), updateOne: jest.fn(() => Promise.resolve()) };
 jest.mock('../models/AbandonedCart', () => mockCart);
+const mockIntegration = { exists: jest.fn() };
+jest.mock('../models/Integration', () => mockIntegration);
 const mockSendCart = jest.fn(() => Promise.resolve({ success: true }));
 jest.mock('../services/webhookService', () => ({ sendCartRecoveryMessage: (...a) => mockSendCart(...a) }));
 
 const cron = require('node-cron');
 
 describe('scheduled jobs never run twice', () => {
-  beforeEach(() => jest.clearAllMocks());
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockIntegration.exists.mockResolvedValue(true);
+  });
 
   test('loading the scheduler does not start cron tasks; startScheduler does', () => {
     const scheduler = require('../services/broadcastScheduler');
@@ -67,5 +72,17 @@ describe('scheduled jobs never run twice', () => {
       { _id: 'c2', status: 'reminder_sent' },
       expect.objectContaining({ $set: { status: 'abandoned' } })
     );
+  });
+
+  test('does not send reminders after the Shopify store disconnects', async () => {
+    const scheduler = require('../services/broadcastScheduler');
+    mockIntegration.exists.mockResolvedValue(false);
+    mockCart.find.mockResolvedValue([{ _id: 'c3', admin: 'merchant-a', cartId: 'cart-3', status: 'abandoned' }]);
+
+    await scheduler.checkAbandonedCarts();
+
+    expect(mockIntegration.exists).toHaveBeenCalledWith({ adminId: 'merchant-a', platform: 'shopify', isActive: true });
+    expect(mockCart.findOneAndUpdate).not.toHaveBeenCalled();
+    expect(mockSendCart).not.toHaveBeenCalled();
   });
 });

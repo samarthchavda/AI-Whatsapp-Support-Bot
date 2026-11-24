@@ -41,6 +41,29 @@ module.exports = {
         NODE_ENV: "production",
         ...envConfig
       }
+    },
+    {
+      // New super admin API (plans, coupons, offers, pricing, website promotions).
+      // Uses the same database and login secret as the backend (from backend/.env).
+      // nginx must send /sa-api/ to it (see deploy/nginx.conf).
+      name: "super-admin-api",
+      cwd: "./super-admin/api",
+      script: "./server.js",
+      instances: 1,
+      exec_mode: "fork",
+      autorestart: true,
+      max_restarts: 10,
+      min_uptime: "10s",
+      watch: false,
+      max_memory_restart: "300M",
+      env: {
+        NODE_ENV: "production",
+        PORT: envConfig.SUPER_ADMIN_API_PORT || "5003",
+        MONGODB_URI: envConfig.MONGODB_URI,
+        JWT_ACCESS_SECRET: envConfig.JWT_ACCESS_SECRET,
+        // Same value as the backend's SUPER_ADMIN_API_KEY (checkout hook)
+        INTERNAL_API_KEY: envConfig.SUPER_ADMIN_API_KEY || ""
+      }
     }
   ]
 };

@@ -22,6 +22,12 @@ jobs:
           cd backend
           npm install
 
+      - name: Test Super Admin API
+        run: |
+          cd super-admin/api
+          npm ci
+          npm test
+
       - name: Test React Frontend Build
         run: |
           cd frontend
@@ -56,6 +62,11 @@ jobs:
             cd backend
             npm install --production
             
+            # 1b. Install super admin API (plans, coupons, offers)
+            cd ../super-admin/api
+            npm install --production
+            cd ../../backend
+
             # 2. Build React frontend dashboard
             cd ../frontend
             npm install
@@ -66,7 +77,9 @@ jobs:
             npm install
             NODE_OPTIONS="--max-old-space-size=1536" CI=false npm run build
             
-            # 4. Restart all PM2 services (whatsapp-ai-backend & next-public)
+            # 4. Start or reload the super admin API, then restart all PM2 services
+            cd /home/ubuntu/whatsapp-bot
+            pm2 startOrReload ecosystem.config.js --only super-admin-api
             pm2 restart all
             pm2 save
             

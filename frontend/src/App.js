@@ -43,6 +43,7 @@ import SupportCenter from './pages/merchant/SupportCenter/SupportCenter';
 // Access Control & Platform Module Imports
 import { EffectiveAccessProvider } from './context/EffectiveAccessContext';
 import ProtectedFeatureRoute from './components/ProtectedFeatureRoute/ProtectedFeatureRoute';
+import { SaMerchants, SaMerchantDetail, SaPlans, SaPlanEditor, SaCoupons } from './super-admin-ui';
 
 // WhatsApp API / Developer Platform Pages
 import ApiDashboard from './pages/merchant/DeveloperPlatform/ApiDashboard';
@@ -646,7 +647,9 @@ function App() {
                     {/* Super Admin Routes */}
                     {admin && admin.role === 'super_admin' ? (
                       <>
-                        <Route path="/super-admin" element={<SuperAdmin />} />
+                        {/* New design (super-admin-ui). The old pages stay under /classic */}
+                        <Route path="/super-admin" element={<SaMerchants />} />
+                        <Route path="/super-admin/classic" element={<SuperAdmin />} />
                         <Route path="/super-admin/leads" element={<LeadsCRM />} />
                         <Route path="/super-admin/system-health" element={<SuperAdminHealth />} />
                         <Route path="/super-admin/whatsapp-ops" element={<SuperAdminWhatsAppOps />} />
@@ -657,9 +660,14 @@ function App() {
                         <Route path="/super-admin/audit-logs" element={<SuperAdminAuditLogs />} />
                         <Route path="/super-admin/feature-flags" element={<SuperAdminFeatureFlags />} />
                         <Route path="/super-admin/announcements" element={<SuperAdminAnnouncements />} />
-                        <Route path="/super-admin/user/:userId" element={<SuperAdminUserDetail />} />
-                        <Route path="/super-admin/merchants/:userId" element={<SuperAdminUserDetail />} />
-                        <Route path="/super-admin/plans" element={<PlanManager />} />
+                        <Route path="/super-admin/user/:userId" element={<SaMerchantDetail />} />
+                        <Route path="/super-admin/merchants/:userId" element={<SaMerchantDetail />} />
+                        <Route path="/super-admin/classic/merchants/:userId" element={<SuperAdminUserDetail />} />
+                        <Route path="/super-admin/plans" element={<SaPlans />} />
+                        <Route path="/super-admin/plans/new" element={<SaPlanEditor />} />
+                        <Route path="/super-admin/plans/:planId" element={<SaPlanEditor />} />
+                        <Route path="/super-admin/coupons" element={<SaCoupons />} />
+                        <Route path="/super-admin/classic/plans" element={<PlanManager />} />
                         <Route path="/super-admin/permission-profiles" element={<PermissionProfiles />} />
                         <Route path="/super-admin/customers/onboard" element={<CustomerOnboardWizard />} />
                         <Route path="/super-admin/onboard" element={<CustomerOnboardWizard />} />

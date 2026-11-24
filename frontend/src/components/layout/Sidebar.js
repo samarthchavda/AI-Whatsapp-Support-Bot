@@ -114,9 +114,15 @@ export default function Sidebar({ admin, onLogout, isOpen, onToggle, onOpen, onC
                   </Link>
                 </li>
                 <li>
-                  <Link to="/dashboard/super-admin/plans" className={isActive('/dashboard/super-admin/plans')} title="Plan Manager">
+                  <Link to="/dashboard/super-admin/plans" className={location.pathname.startsWith('/dashboard/super-admin/plans') ? 'active' : ''} title="Plans">
                     <FaCog />
-                    <span className="nav-label">Plan Manager</span>
+                    <span className="nav-label">Plans</span>
+                  </Link>
+                </li>
+                <li>
+                  <Link to="/dashboard/super-admin/coupons" className={isActive('/dashboard/super-admin/coupons')} title="Coupons and offers">
+                    <FaTags />
+                    <span className="nav-label">Coupons and offers</span>
                   </Link>
                 </li>
                 <li>

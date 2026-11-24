@@ -53,6 +53,7 @@ video .zip
 # Exception for public assets
 !frontend/public/*.png
 !frontend/public/*.ico
+!next-public/public/linkedin/*.png
 !frontend/public/*.svg
 !frontend/public/*.jpg
 !frontend/public/*.jpeg

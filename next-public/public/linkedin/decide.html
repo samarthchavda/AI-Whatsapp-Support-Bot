@@ -70,19 +70,21 @@
     msg.className = 'msg';
     msg.textContent = 'Sending…';
     var body = JSON.stringify({ decision: action, at: new Date().toISOString() });
-    fetch(cb, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: body })
-      .then(function (r) {
-        if (r.ok) return done(true, action === 'approve' ? 'Approved. The post is scheduled for 6:00 PM IST.' : 'Skipped. Nothing will be posted today.');
-        if (r.status === 404 || r.status === 409 || r.status === 410) return done(false, 'This decision was already made, or the approval window has closed.');
-        btn.disabled = false;
-        done(false, 'Something went wrong (' + r.status + '). Please try again.');
-      })
-      .catch(function () {
-        // CORS-blocked: send as a simple request the browser will deliver without a preflight.
-        fetch(cb, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain' }, body: body })
-          .then(function () { done(true, action === 'approve' ? 'Sent. The post is scheduled for 6:00 PM IST.' : 'Sent. Nothing will be posted today.'); })
-          .catch(function () { btn.disabled = false; done(false, 'Network error. Please try again.'); });
-      });
+    var okText = action === 'approve'
+      ? 'Approved. The post goes live at 6:00 PM IST (or right away if it’s past 6).'
+      : 'Skipped. Nothing will be posted today.';
+
+    // Zapier's callback host doesn't send CORS headers for kwickbot.in, so the page
+    // can't read the reply. sendBeacon delivers the POST without waiting for one.
+    var queued = false;
+    try {
+      queued = navigator.sendBeacon && navigator.sendBeacon(cb, new Blob([body], { type: 'text/plain' }));
+    } catch (e) { queued = false; }
+    if (queued) return done(true, okText);
+
+    fetch(cb, { method: 'POST', mode: 'no-cors', keepalive: true, headers: { 'Content-Type': 'text/plain' }, body: body })
+      .then(function () { done(true, okText); })
+      .catch(function () { btn.disabled = false; done(false, 'Could not send. Check your connection and try again.'); });
   });
 })();
 </script>

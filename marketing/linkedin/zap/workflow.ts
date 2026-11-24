@@ -9,7 +9,7 @@ const APPROVER_EMAIL = "chavdasamarth007@gmail.com";
 const BANNER_BASE = "https://kwickbot.in/linkedin";
 const DECIDE_PAGE = "https://kwickbot.in/linkedin/decide.html";
 // First posting day; topic 1 is used on this date, then one topic per Mon–Sat day.
-const ANCHOR_DATE = "2026-11-25";
+const ANCHOR_DATE = "2026-11-24";
 const POST_HOUR_IST = 18; // 6:00 PM IST
 const IST_OFFSET_MIN = 330;
 

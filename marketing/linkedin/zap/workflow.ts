@@ -38,6 +38,16 @@ function postingDaysBetween(fromIso: string, toIso: string): number {
   return n;
 }
 
+// The confirm page posts JSON; a no-CORS fallback may arrive as a JSON string.
+function readDecision(value: unknown): "approved" | "skipped" {
+  let v: unknown = value;
+  if (typeof v === "string") {
+    try { v = JSON.parse(v); } catch { return "skipped"; }
+  }
+  const d = v && typeof v === "object" ? (v as { decision?: unknown }).decision : undefined;
+  return d === "approve" ? "approved" : "skipped";
+}
+
 const esc = (s: string) =>
   s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
@@ -92,22 +102,18 @@ const workflow = defineDurable({
       throw new Error("AI returned an empty post");
     }
 
-    // Approval window closes at 11 PM IST on the run day.
-    const [approvePromise, approveUrl] = await ctx.createCallback({
-      name: "wait-for-approve",
-      payloadSchema: z.unknown(),
-      timeoutSeconds: 6 * 3600,
-    });
-    const [skipPromise, skipUrl] = await ctx.createCallback({
-      name: "wait-for-skip",
+    // Approval window closes at 11 PM IST on the run day. Both email buttons share
+    // one callback; the confirm page posts { decision: "approve" | "skip" }.
+    const [decisionPromise, decisionUrl] = await ctx.createCallback({
+      name: "wait-for-decision",
       payloadSchema: z.unknown(),
       timeoutSeconds: 6 * 3600,
     });
 
     // Email links open a confirm page on kwickbot.in that POSTs to the callback
     // (callbacks reject plain GET link clicks, and a confirm click stops link scanners from deciding).
-    const approveLink = `${DECIDE_PAGE}?a=approve&cb=${encodeURIComponent(approveUrl)}`;
-    const skipLink = `${DECIDE_PAGE}?a=skip&cb=${encodeURIComponent(skipUrl)}`;
+    const approveLink = `${DECIDE_PAGE}?a=approve&cb=${encodeURIComponent(decisionUrl)}`;
+    const skipLink = `${DECIDE_PAGE}?a=skip&cb=${encodeURIComponent(decisionUrl)}`;
 
     const html = `<div style="font-family:Arial,sans-serif;max-width:640px;color:#1F2E12">
 <p style="font-size:13px;color:#4F8A2B;letter-spacing:1px;font-weight:bold">KWICKBOT LINKEDIN · DAY ${dayLabel} · ${esc(topic.kicker)}</p>
@@ -137,10 +143,8 @@ const workflow = defineDurable({
       }),
     );
 
-    const decision = await Promise.race([
-      approvePromise.then((r) => (r.status === "delivered" ? "approved" : "expired")),
-      skipPromise.then((r) => (r.status === "delivered" ? "skipped" : "expired")),
-    ]);
+    const result = await decisionPromise;
+    const decision = result.status === "delivered" ? readDecision(result.value) : "expired";
 
     if (decision !== "approved") {
       return { posted: false, reason: decision, day: topic.day, headline: topic.headline };

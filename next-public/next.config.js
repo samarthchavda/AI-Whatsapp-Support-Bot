@@ -7,7 +7,7 @@ const cspHeader = `
   img-src 'self' data: blob: https: http:;
   media-src 'self' https://d8j0ntlcm91z4.cloudfront.net https:;
   font-src 'self' https://fonts.gstatic.com data:;
-  connect-src 'self' https://kwickbot.in https://www.kwickbot.in https://api.kwickbot.in http://localhost:5001 http://127.0.0.1:5001 wss://api.kwickbot.in ws://localhost:5001 ws://127.0.0.1:5001;
+  connect-src 'self' https://kwickbot.in https://www.kwickbot.in https://api.kwickbot.in http://localhost:5001 http://127.0.0.1:5001 wss://api.kwickbot.in ws://localhost:5001 ws://127.0.0.1:5001 https://code-substrate-runner.zapier.com;
   frame-src 'self';
   frame-ancestors 'none';
   object-src 'none';

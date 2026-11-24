@@ -1,6 +1,7 @@
 import './globals.css';
 import { SITE_URL, DEFAULT_OG_IMAGE } from './seo';
 import Header from './components/Header';
+import PromoBanner from './components/PromoBanner';
 import Footer from './components/Footer';
 import MotionProvider from './components/MotionProvider';
 import { safeJsonStringify } from '../utils/jsonSanitizer';
@@ -157,6 +158,7 @@ export default async function RootLayout({ children }) {
       </head>
       <body>
         <a href="#main" className="sr-only">Skip to content</a>
+        <PromoBanner />
         <Header />
         <div id="main">{children}</div>
         <Footer />

@@ -191,6 +191,13 @@ export const retryFailedWebhook = (id) => api.post(`/developer/failed-webhooks/$
 export const getApiKey = () => api.get('/auth/api-key');
 export const regenerateApiKey = (data) => api.post('/auth/api-key/regenerate', data);
 
+// Customer Support & Helpdesk
+export const createSupportTicket = (data) => api.post('/support-tickets', data);
+export const getSupportTickets = (params) => api.get('/support-tickets', { params });
+export const getSupportTicketDetails = (id) => api.get(`/support-tickets/${id}`);
+export const replySupportTicket = (id, data) => api.post(`/support-tickets/${id}/reply`, data);
+export const closeSupportTicket = (id, data) => api.patch(`/support-tickets/${id}/close`, data);
+
 export const refreshAuth = () => refreshAccessToken();
 
 export const clearAuthState = () => clearStoredAuth();

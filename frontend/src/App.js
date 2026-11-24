@@ -38,6 +38,7 @@ import AbandonedCarts from './pages/merchant/AbandonedCarts/AbandonedCarts';
 import SuperAdminBlog from './pages/superAdmin/Blog/SuperAdminBlog';
 import Products from './pages/merchant/Products/Products';
 import MerchantLeads from './pages/merchant/Leads/MerchantLeads';
+import SupportCenter from './pages/merchant/SupportCenter/SupportCenter';
 
 // Access Control & Platform Module Imports
 import { EffectiveAccessProvider } from './context/EffectiveAccessContext';
@@ -138,7 +139,8 @@ const MERCHANT_VISIBLE_PATHS = new Set([
   '/dashboard/developer/failed-webhooks',
   '/dashboard/developer/usage',
   '/dashboard/billing',
-  '/dashboard/profile'
+  '/dashboard/profile',
+  '/dashboard/support'
 ]);
 
 function MerchantPageGate({ admin, children }) {
@@ -581,6 +583,7 @@ function App() {
                     />
                     <Route path="/billing" element={<Billing />} />
                     <Route path="/profile" element={<Profile admin={admin} onUpdateAdmin={handleUpdateAdmin} />} />
+                    <Route path="/support" element={<SupportCenter admin={admin} />} />
 
                     {/* WhatsApp API Developer Routes */}
                     <Route 

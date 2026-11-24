@@ -72,7 +72,7 @@ test('merchant pages follow the support, commerce, automation, and setup workflo
     '/dashboard/knowledge-base', '/dashboard/templates', '/dashboard/broadcast',
     '/dashboard/analytics', '/dashboard/whatsapp-connect', '/dashboard/integrations#shopify',
     '/dashboard/integrations#woocommerce', '/dashboard/developer',
-    '/dashboard/billing', '/dashboard/profile'
+    '/dashboard/billing', '/dashboard/profile', '/dashboard/support'
   ]);
 });
 

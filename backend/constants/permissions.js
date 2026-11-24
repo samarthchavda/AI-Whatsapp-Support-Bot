@@ -18,6 +18,7 @@ const CANONICAL_PAGES = {
   API_KEYS: 'api-keys',
   PROFILE: 'profile',
   BILLING: 'billing',
+  SUPPORT: 'support',
 
   // 2. Shared WhatsApp Modules
   WHATSAPP_TEMPLATES: 'whatsapp-templates',

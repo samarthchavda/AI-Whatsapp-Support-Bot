@@ -75,3 +75,4 @@ backend/scratch/
 
 new-database/
 docs/postgres-migration-review.md
+.claude/

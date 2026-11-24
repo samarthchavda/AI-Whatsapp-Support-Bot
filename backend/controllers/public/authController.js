@@ -1069,6 +1069,26 @@ exports.verifyCoupon = async (req, res) => {
     if (!code) {
       return res.status(400).json({ success: false, error: 'Promo code is required' });
     }
+
+    // Super admin pricing service: full coupon rules when it is set up (otherwise the checks below)
+    const superAdminCheck = await require('../../services/superAdminPricingHook')
+      .checkCode({ code, adminId: req.admin && req.admin._id });
+    if (superAdminCheck) {
+      if (!superAdminCheck.ok) {
+        return res.status(400).json({ success: false, error: superAdminCheck.error });
+      }
+      return res.json({
+        success: true,
+        message: 'Coupon verified successfully!',
+        data: {
+          code: superAdminCheck.code,
+          discountPercent: superAdminCheck.discountPercent,
+          discountType: superAdminCheck.discountType,
+          amountOff: superAdminCheck.amountOff,
+          detail: superAdminCheck.detail
+        }
+      });
+    }
     
     const Coupon = require('../../models/Coupon');
     const coupon = await Coupon.findOne({ code: code.toUpperCase() });
@@ -1165,6 +1185,23 @@ exports.createRazorpayOrder = async (req, res) => {
       finalPrice = basePrice - discountAmount;
     }
 
+    // Super admin pricing service: coupons, offers and personal discounts.
+    // When it is not set up or not reachable, the price worked out above is used.
+    const superAdminQuote = await require('../../services/superAdminPricingHook')
+      .getQuote({ planId: planDetails._id, billingCycle: cycle, couponCode, adminId: admin._id });
+    if (superAdminQuote) {
+      if (couponCode && superAdminQuote.couponError) {
+        return res.status(400).json({ success: false, error: superAdminQuote.couponError });
+      }
+      if (!(superAdminQuote.total >= 1)) {
+        return res.status(400).json({ success: false, error: 'This discount makes the plan free. Please contact Kwickbot support to activate it.' });
+      }
+      finalPrice = superAdminQuote.total;
+      discountAmount = superAdminQuote.discount ? superAdminQuote.discount.amount : 0;
+    } else if (!Number.isFinite(finalPrice)) {
+      return res.status(400).json({ success: false, error: "This coupon can't be used right now. Please try again later." });
+    }
+
     const amountInPaise = Math.round(finalPrice * 100);
     const currency = planDetails.currency || 'INR';
 
@@ -1194,6 +1231,12 @@ exports.createRazorpayOrder = async (req, res) => {
         couponCode: couponCode || ''
       }
     };
+
+    if (superAdminQuote) {
+      // The coupon or offer actually applied (shown on the invoice, counted as one use)
+      options.notes.couponCode = (superAdminQuote.discount && superAdminQuote.discount.code) || '';
+      options.notes.discountLabel = (superAdminQuote.discount && superAdminQuote.discount.label) || '';
+    }
 
     const order = await razorpay.orders.create(options);
 
@@ -1327,6 +1370,9 @@ exports.verifyRazorpayPayment = async (req, res) => {
       payment: rzpPayment
     });
     const amountPaid = invoice.totalAmount;
+
+    // Count one use of the applied coupon or offer (super admin pricing service, if set up)
+    require('../../services/superAdminPricingHook').recordRedemption(orderNotes.couponCode);
 
     // Notify super admins via WhatsApp of subscription upgrade
     try {

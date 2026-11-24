@@ -36,7 +36,7 @@ test('Swagger documents every mounted API method and path without stale entries'
     )
   );
 
-  expect(actual.size).toBe(200);
+  expect(actual.size).toBe(205);
   expect([...actual].filter((operation) => !documented.has(operation))).toEqual([]);
   expect([...documented].filter((operation) => !actual.has(operation))).toEqual([]);
 });

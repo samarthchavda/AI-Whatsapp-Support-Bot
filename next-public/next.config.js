@@ -68,6 +68,11 @@ const nextConfig = {
       {
         source: '/uploads/:path*',
         destination: 'http://localhost:5001/uploads/:path*'
+      },
+      {
+        // Super admin API (website promotions banner)
+        source: '/sa-api/:path*',
+        destination: `${process.env.SA_API_URL || 'http://localhost:5003'}/sa-api/:path*`
       }
     ];
   }

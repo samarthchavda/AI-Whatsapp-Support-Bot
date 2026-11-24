@@ -76,7 +76,7 @@ const MerchantLeads = ({ admin }) => {
   });
 
   return (
-    <div className="merchant-leads-container">
+    <div className="merchant-leads-container merchant-data-page leads-page">
       {/* Page Header */}
       <div className="merchant-leads-header">
         <div>

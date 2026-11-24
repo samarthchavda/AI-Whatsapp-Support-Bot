@@ -264,7 +264,7 @@ function Integrations({ admin, onUpdateAdmin }) {
   const isProfileComplete = !!(admin?.businessName?.trim() && admin?.businessPhone?.trim() && admin?.supportEmail?.trim());
 
   return (
-    <div className="container">
+    <div className="container merchant-data-page integrations-page">
       <div className="page-header">
         <div className="page-header-info">
           <h1 className="page-title">Integrations</h1>
@@ -287,18 +287,7 @@ function Integrations({ admin, onUpdateAdmin }) {
       )}
 
       {!isProfileComplete && !loading && (
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '12px',
-          padding: '16px 20px',
-          background: 'rgba(234, 179, 8, 0.15)',
-          border: '1px solid rgba(234, 179, 8, 0.4)',
-          borderRadius: '12px',
-          color: '#fef08a',
-          marginBottom: '24px',
-          fontSize: '14px'
-        }}>
+        <div className="integration-profile-alert">
           <span style={{ fontSize: '20px' }}>⚠️</span>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', flexWrap: 'wrap', gap: '10px' }}>
             <span>
@@ -325,23 +314,15 @@ function Integrations({ admin, onUpdateAdmin }) {
       )}
 
       {loading ? (
-        <div style={{ padding: '40px', textAlign: 'center', color: '#71717a' }}>
+        <div style={{ padding: '40px', textAlign: 'center', color: 'var(--text-secondary)' }}>
           <div className="spinner" style={{ margin: '0 auto 16px' }}></div>
           Loading integrations...
         </div>
       ) : visiblePlatforms.length === 0 ? (
-        <div style={{ 
-          textAlign: 'center', 
-          padding: '60px 40px', 
-          background: 'rgba(39, 39, 42, 0.2)', 
-          border: '1px dashed rgba(63, 63, 70, 0.4)', 
-          borderRadius: '16px', 
-          color: '#a1a1aa',
-          margin: '20px 0'
-        }}>
-          <FaPlug style={{ fontSize: '48px', color: '#71717a', marginBottom: '16px' }} />
-          <h3 style={{ color: '#fafafa', fontWeight: '600' }}>No Integrations Available</h3>
-          <p style={{ marginTop: '8px', fontSize: '14px', color: '#71717a' }}>E-commerce integrations are disabled for your account by the Super Admin. Please contact support.</p>
+        <div className="integration-empty-state">
+          <FaPlug style={{ fontSize: '48px', marginBottom: '16px' }} />
+          <h3>No Integrations Available</h3>
+          <p>E-commerce integrations are disabled for your account by the Super Admin. Please contact support.</p>
         </div>
       ) : (
         <div className="integrations-grid">
@@ -377,7 +358,7 @@ function Integrations({ admin, onUpdateAdmin }) {
                         borderRadius: '8px', 
                         background: 'rgba(239, 68, 68, 0.1)', 
                         marginBottom: '12px',
-                        color: '#f87171',
+                        color: '#9b2c1f',
                         fontSize: '13px',
                         fontWeight: '600'
                       }}>

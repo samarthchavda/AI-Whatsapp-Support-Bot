@@ -57,6 +57,7 @@ import Sidebar from './components/layout/Sidebar';
 import TopBar from './components/layout/TopBar';
 import './App.css';
 import './MerchantTheme.css';
+import './MerchantDataPages.css';
 
 function ExternalRedirect({ to }) {
   useEffect(() => {

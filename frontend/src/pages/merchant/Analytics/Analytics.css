@@ -1,33 +1,32 @@
-.analytics-grid {
+.analytics-page .analytics-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr));
   gap: 24px;
   margin-bottom: 24px;
 }
 
-.analytics-grid.full-width {
+.analytics-page .analytics-grid.full-width {
   grid-template-columns: 1fr;
 }
 
 /* Sentiment Widget */
-.sentiment-widget {
-  background: rgba(39, 39, 42, 0.6);
-  backdrop-filter: blur(20px);
-  border: 1px solid rgba(63, 63, 70, 0.5);
+.analytics-page .sentiment-widget {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
   border-radius: 16px;
   padding: 28px;
   grid-column: 1 / -1;
 }
 
-.widget-header {
+.analytics-page .widget-header {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
   margin-bottom: 24px;
 }
 
-.widget-header h3 {
-  color: #fafafa;
+.analytics-page .widget-header h3 {
+  color: var(--text-primary);
   font-size: 18px;
   font-weight: 600;
   margin: 0 0 8px 0;
@@ -36,139 +35,139 @@
   gap: 10px;
 }
 
-.widget-header p {
-  color: #71717a;
-  font-size: 13px;
+.analytics-page .widget-header p {
+  color: var(--text-secondary);
+  font-size: 14px;
   margin: 0;
 }
 
-.sentiment-display {
+.analytics-page .sentiment-display {
   display: flex;
   align-items: center;
   gap: 32px;
   padding: 24px;
-  background: rgba(24, 24, 27, 0.6);
+  background: var(--bg-app);
+  border: 1px solid var(--border);
   border-radius: 12px;
   margin-bottom: 24px;
 }
 
-.sentiment-emoji {
+.analytics-page .sentiment-emoji {
   font-size: 80px;
   line-height: 1;
   animation: fadeIn 0.5s ease;
 }
 
-.sentiment-info h2 {
+.analytics-page .sentiment-info h2 {
   font-size: 32px;
   font-weight: 700;
   margin: 0 0 8px 0;
 }
 
-.sentiment-info p {
-  color: #a1a1aa;
+.analytics-page .sentiment-info p {
+  color: var(--text-secondary);
   font-size: 14px;
   margin: 0;
 }
 
-.sentiment-happy {
+.analytics-page .sentiment-happy {
   color: #10b981;
 }
 
-.sentiment-neutral {
-  color: #6366f1;
+.analytics-page .sentiment-neutral {
+  color: var(--brand);
 }
 
-.sentiment-frustrated {
+.analytics-page .sentiment-frustrated {
   color: #ef4444;
 }
 
 /* Sentiment Breakdown */
-.sentiment-breakdown {
+.analytics-page .sentiment-breakdown {
   display: flex;
   flex-direction: column;
   gap: 16px;
   margin-bottom: 20px;
 }
 
-.breakdown-item {
+.analytics-page .breakdown-item {
   display: grid;
   grid-template-columns: 100px 1fr 60px;
   align-items: center;
   gap: 12px;
 }
 
-.breakdown-label {
-  color: #d4d4d8;
+.analytics-page .breakdown-label {
+  color: var(--text-secondary);
   font-size: 14px;
   font-weight: 500;
 }
 
-.breakdown-bar {
+.analytics-page .breakdown-bar {
   height: 24px;
-  background: rgba(24, 24, 27, 0.8);
+  background: #e8efdd;
   border-radius: 12px;
   overflow: hidden;
   position: relative;
 }
 
-.breakdown-fill {
+.analytics-page .breakdown-fill {
   height: 100%;
   border-radius: 12px;
   transition: width 0.5s ease;
 }
 
-.breakdown-fill.happy {
+.analytics-page .breakdown-fill.happy {
   background: linear-gradient(90deg, #10b981 0%, #059669 100%);
 }
 
-.breakdown-fill.neutral {
-  background: linear-gradient(90deg, #6366f1 0%, #4f46e5 100%);
+.analytics-page .breakdown-fill.neutral {
+  background: linear-gradient(90deg, #8dbf64 0%, #4f7a2b 100%);
 }
 
-.breakdown-fill.frustrated {
+.analytics-page .breakdown-fill.frustrated {
   background: linear-gradient(90deg, #ef4444 0%, #dc2626 100%);
 }
 
-.breakdown-value {
-  color: #fafafa;
+.analytics-page .breakdown-value {
+  color: var(--text-primary);
   font-size: 14px;
   font-weight: 600;
   text-align: right;
 }
 
-.sentiment-reasoning {
+.analytics-page .sentiment-reasoning {
   padding: 16px;
-  background: rgba(99, 102, 241, 0.1);
-  border: 1px solid rgba(99, 102, 241, 0.3);
+  background: #f0f6e8;
+  border: 1px solid #d4e1c1;
   border-radius: 10px;
-  color: #d4d4d8;
-  font-size: 13px;
+  color: var(--text-secondary);
+  font-size: 14px;
   line-height: 1.6;
 }
 
-.sentiment-reasoning strong {
-  color: #a5b4fc;
+.analytics-page .sentiment-reasoning strong {
+  color: var(--brand);
 }
 
 /* Chart Containers */
-.chart-container {
-  background: rgba(39, 39, 42, 0.6);
-  backdrop-filter: blur(20px);
-  border: 1px solid rgba(63, 63, 70, 0.5);
+.analytics-page .chart-container {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
   border-radius: 16px;
   padding: 28px;
 }
 
-.chart-container.full-width {
+.analytics-page .chart-container.full-width {
   grid-column: 1 / -1;
 }
 
-.chart-header {
+.analytics-page .chart-header {
   margin-bottom: 24px;
 }
 
-.chart-header h3 {
-  color: #fafafa;
+.analytics-page .chart-header h3 {
+  color: var(--text-primary);
   font-size: 18px;
   font-weight: 600;
   margin: 0;
@@ -177,31 +176,31 @@
   gap: 10px;
 }
 
-.chart-legend {
+.analytics-page .chart-legend {
   display: flex;
   justify-content: center;
   gap: 32px;
   margin-top: 20px;
   padding-top: 20px;
-  border-top: 1px solid rgba(63, 63, 70, 0.3);
+  border-top: 1px solid var(--border);
 }
 
-.legend-item {
+.analytics-page .legend-item {
   display: flex;
   align-items: center;
   gap: 8px;
-  color: #d4d4d8;
+  color: var(--text-secondary);
   font-size: 14px;
 }
 
-.legend-dot {
+.analytics-page .legend-dot {
   width: 12px;
   height: 12px;
   border-radius: 50%;
 }
 
 /* Spinning animation for refresh button */
-.spinning {
+.analytics-page .spinning {
   animation: spin 1s linear infinite;
 }
 
@@ -227,11 +226,11 @@
 
 /* Responsive */
 @media (max-width: 1200px) {
-  .analytics-grid {
+  .analytics-page .analytics-grid {
     grid-template-columns: 1fr;
   }
   
-  .sentiment-display {
+  .analytics-page .sentiment-display {
     flex-direction: column;
     text-align: center;
   }

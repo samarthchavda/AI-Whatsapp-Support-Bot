@@ -72,11 +72,11 @@ function Analytics({ admin }) {
 
   // Colors for charts
   const COLORS = {
-    aiResolved: '#10b981',
-    humanEscalated: '#f59e0b',
-    happy: '#10b981',
-    neutral: '#6366f1',
-    frustrated: '#ef4444'
+    aiResolved: '#3d5a22',
+    humanEscalated: '#b47720',
+    happy: '#3d7a40',
+    neutral: '#759950',
+    frustrated: '#a44738'
   };
 
   // Prepare pie chart data for resolution rate
@@ -101,8 +101,8 @@ function Analytics({ admin }) {
 
   if (loading) {
     return (
-      <div className="container">
-        <div style={{ padding: '40px', textAlign: 'center', color: '#71717a' }}>
+      <div className="container merchant-data-page analytics-page">
+        <div style={{ padding: '40px', textAlign: 'center', color: 'var(--text-secondary)' }}>
           <div className="spinner" style={{ margin: '0 auto 16px' }}></div>
           Loading analytics...
         </div>
@@ -112,7 +112,7 @@ function Analytics({ admin }) {
 
   if (plan === 'starter') {
     return (
-      <div className="container" style={{ position: 'relative' }}>
+      <div className="container merchant-data-page analytics-page" style={{ position: 'relative' }}>
         <div className="page-header">
           <div>
             <h1 className="page-title">Analytics Overview</h1>
@@ -120,35 +120,15 @@ function Analytics({ admin }) {
           </div>
         </div>
         
-        <div className="analytics-paywall-card" style={{
-          background: 'rgba(15, 23, 42, 0.4)',
-          border: '1px dashed rgba(236, 72, 153, 0.3)',
-          borderRadius: '16px',
-          padding: '60px 20px',
-          textAlign: 'center',
-          marginTop: '30px',
-          backdropFilter: 'blur(8px)',
-          boxShadow: '0 8px 32px 0 rgba(0, 0, 0, 0.37)'
-        }}>
+        <div className="analytics-paywall-card">
           <span style={{ fontSize: '48px', display: 'block', marginBottom: '16px' }}>🔒</span>
-          <h2 style={{ fontSize: '22px', fontWeight: 'bold', color: '#f472b6', marginBottom: '10px' }}>
+          <h2>
             Advanced Analytics is Locked
           </h2>
-          <p style={{ maxWidth: '500px', margin: '0 auto 24px', fontSize: '14px', color: '#cbd5e1', lineHeight: '1.6' }}>
+          <p>
             Upgrade your plan to the Professional or Enterprise tier to unlock real-time message volume charts, resolution ratios, and sentiment analysis for your customers.
           </p>
-          <Link to="/dashboard/billing" style={{
-            display: 'inline-block',
-            background: 'linear-gradient(135deg, #ec4899 0%, #be185d 100%)',
-            color: 'white',
-            fontWeight: 'bold',
-            padding: '12px 30px',
-            borderRadius: '8px',
-            textDecoration: 'none',
-            fontSize: '14px',
-            boxShadow: '0 4px 14px rgba(236, 72, 153, 0.4)',
-            transition: 'all 0.2s ease'
-          }}>
+          <Link to="/dashboard/billing" className="btn btn-primary">
             Upgrade Subscription Plan
           </Link>
         </div>
@@ -157,7 +137,7 @@ function Analytics({ admin }) {
   }
 
   return (
-    <div className="container">
+    <div className="container merchant-data-page analytics-page">
       <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
         <div>
           <h1 className="page-title">Analytics Overview</h1>
@@ -210,18 +190,18 @@ function Analytics({ admin }) {
           
           <div className="sentiment-display">
             <div className="sentiment-emoji" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '32px' }}>
-              {sentimentData?.sentiment === 'happy' && <FaSmile style={{ color: '#10b981' }} />}
-              {sentimentData?.sentiment === 'neutral' && <FaMeh style={{ color: '#6366f1' }} />}
-              {sentimentData?.sentiment === 'frustrated' && <FaFrown style={{ color: '#ef4444' }} />}
-              {!sentimentData?.sentiment && <FaMeh style={{ color: '#6366f1' }} />}
+              {sentimentData?.sentiment === 'happy' && <FaSmile style={{ color: COLORS.happy }} />}
+              {sentimentData?.sentiment === 'neutral' && <FaMeh style={{ color: COLORS.neutral }} />}
+              {sentimentData?.sentiment === 'frustrated' && <FaFrown style={{ color: COLORS.frustrated }} />}
+              {!sentimentData?.sentiment && <FaMeh style={{ color: COLORS.neutral }} />}
             </div>
             <div className="sentiment-info">
               <h2 className={`sentiment-${sentimentData?.sentiment || 'neutral'}`}>
-                {sentimentData?.sentiment ? 
+                {!sentimentData?.totalMessages ? 'No data yet' : sentimentData?.sentiment ?
                   sentimentData.sentiment.charAt(0).toUpperCase() + sentimentData.sentiment.slice(1) 
                   : 'Neutral'}
               </h2>
-              <p>Confidence: {sentimentData?.confidence ? (sentimentData.confidence * 100).toFixed(0) : 0}%</p>
+              <p>{sentimentData?.totalMessages ? `Confidence: ${sentimentData?.confidence ? (sentimentData.confidence * 100).toFixed(0) : 0}%` : 'Sentiment appears after customer messages arrive.'}</p>
             </div>
           </div>
 
@@ -277,27 +257,27 @@ function Analytics({ admin }) {
           </div>
           <ResponsiveContainer width="100%" height={300}>
             <BarChart data={conversationsData}>
-              <CartesianGrid strokeDasharray="3 3" stroke="rgba(63, 63, 70, 0.3)" />
+              <CartesianGrid strokeDasharray="3 3" stroke="#dce8cd" />
               <XAxis 
                 dataKey="day" 
-                stroke="#a1a1aa"
+                stroke="#556447"
                 style={{ fontSize: '12px' }}
               />
               <YAxis 
-                stroke="#a1a1aa"
+                stroke="#556447"
                 style={{ fontSize: '12px' }}
               />
               <Tooltip 
                 contentStyle={{
-                  background: 'rgba(39, 39, 42, 0.95)',
-                  border: '1px solid rgba(63, 63, 70, 0.5)',
+                  background: '#ffffff',
+                  border: '1px solid #d4e1c1',
                   borderRadius: '8px',
-                  color: '#fafafa'
+                  color: '#1d2a13'
                 }}
               />
               <Bar 
                 dataKey="count" 
-                fill="#6366f1"
+                fill="#729e4d"
                 radius={[8, 8, 0, 0]}
               />
             </BarChart>
@@ -318,7 +298,7 @@ function Analytics({ admin }) {
                 labelLine={false}
                 label={({ name, percentage }) => `${name}: ${percentage}%`}
                 outerRadius={80}
-                fill="#8884d8"
+                fill="#729e4d"
                 dataKey="value"
               >
                 {resolutionPieData.map((entry, index) => (
@@ -330,10 +310,10 @@ function Analytics({ admin }) {
               </Pie>
               <Tooltip 
                 contentStyle={{
-                  background: 'rgba(39, 39, 42, 0.95)',
-                  border: '1px solid rgba(63, 63, 70, 0.5)',
+                  background: '#ffffff',
+                  border: '1px solid #d4e1c1',
                   borderRadius: '8px',
-                  color: '#fafafa'
+                  color: '#1d2a13'
                 }}
               />
             </PieChart>
@@ -359,7 +339,7 @@ function Analytics({ admin }) {
               <h3><FaChartPie /> Sentiment Distribution</h3>
             </div>
             {sentimentPieData.length === 0 ? (
-              <div style={{ padding: '40px', textAlign: 'center', color: '#71717a', fontSize: '14px' }}>
+              <div style={{ padding: '40px', textAlign: 'center', color: 'var(--text-secondary)', fontSize: '14px' }}>
                 No sentiment data available yet.
               </div>
             ) : (
@@ -373,7 +353,7 @@ function Analytics({ admin }) {
                       labelLine={false}
                       label={false}
                       outerRadius={100}
-                      fill="#8884d8"
+                      fill="#729e4d"
                       dataKey="value"
                     >
                       {sentimentPieData.map((entry, index) => (
@@ -385,10 +365,10 @@ function Analytics({ admin }) {
                     </Pie>
                     <Tooltip
                       contentStyle={{
-                        background: 'rgba(39, 39, 42, 0.95)',
-                        border: '1px solid rgba(63, 63, 70, 0.5)',
+                        background: '#ffffff',
+                        border: '1px solid #d4e1c1',
                         borderRadius: '8px',
-                        color: '#fafafa'
+                        color: '#1d2a13'
                       }}
                       formatter={(value) => `${value.toFixed(1)}%`}
                     />

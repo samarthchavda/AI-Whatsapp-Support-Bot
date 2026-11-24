@@ -155,7 +155,7 @@ function KnowledgeBase() {
   };
 
   return (
-    <div className="container">
+    <div className="container merchant-data-page knowledge-page">
       <div className="page-header">
         <div className="page-header-info">
           <h1 className="page-title">AI Knowledge Base</h1>

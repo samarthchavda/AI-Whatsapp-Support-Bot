@@ -1,0 +1,270 @@
+/* Readable data surfaces for the merchant portal. Keep these rules out of Super Admin. */
+.merchant-portal .merchant-data-page {
+  color: var(--text-primary);
+}
+
+.merchant-portal .merchant-data-page .page-title,
+.merchant-portal .merchant-data-page .merchant-leads-title {
+  color: #1d2a13;
+  font-weight: 750;
+  letter-spacing: -.035em;
+}
+
+.merchant-portal .merchant-data-page .page-subtitle,
+.merchant-portal .merchant-data-page .merchant-leads-subtitle {
+  color: #48583a;
+  line-height: 1.55;
+}
+
+.merchant-portal .merchant-data-page :is(.table-container, .table-container-premium, .orders-table-card, .leads-table-wrapper) {
+  background: #fff;
+  border: 1px solid #d4e1c1;
+  box-shadow: 0 8px 28px rgba(42, 61, 24, .055);
+}
+
+.merchant-portal .merchant-data-page :is(.table-header, .table-header-premium) {
+  background: #fff;
+  border-bottom: 1px solid #d4e1c1;
+}
+
+.merchant-portal .merchant-data-page :is(.table-header h2, .table-header-premium h2) {
+  color: #1d2a13;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.merchant-portal .merchant-data-page :is(thead, .premium-table thead) {
+  background: #edf4e5;
+}
+
+.merchant-portal .merchant-data-page :is(thead th, .premium-table thead th, .leads-table th) {
+  background: #edf4e5;
+  color: #344b26;
+  border-bottom: 1px solid #d4e1c1;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: .035em;
+}
+
+.merchant-portal .merchant-data-page :is(tbody td, .premium-table tbody td, .leads-table td) {
+  background: #fff;
+  color: #2d3a23;
+  border-color: #e1e9d3;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.merchant-portal .merchant-data-page tbody tr:hover td {
+  background: #f5f9ef;
+}
+
+.merchant-portal .merchant-data-page :is(tbody td strong, .customer-name, .customer-phone) {
+  color: #1d2a13;
+}
+
+.merchant-portal .merchant-data-page .text-muted {
+  color: #526246 !important;
+}
+
+.merchant-portal .merchant-data-page :is(.btn-secondary, .btn-icon) {
+  color: #344b26;
+  background: #f0f6e8;
+  border-color: #d4e1c1;
+}
+
+.merchant-portal .merchant-data-page :is(.btn-secondary, .btn-icon):hover {
+  color: #1d2a13;
+  background: #e4f0d5;
+}
+
+.merchant-portal .merchant-data-page :is(input, select, textarea) {
+  color: #1d2a13;
+}
+
+.merchant-portal .merchant-data-page :is(input, textarea)::placeholder {
+  color: #66765a;
+}
+
+/* Connection cards remain compact even when only one platform is connected. */
+.merchant-portal .integrations-page .integrations-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: start;
+}
+
+.merchant-portal .integrations-page .integration-card {
+  min-height: 0;
+  justify-content: flex-start;
+  border-color: #d4e1c1;
+}
+
+.merchant-portal .integrations-page .integration-details {
+  background: #f5f8ef;
+  border-color: #d4e1c1;
+}
+
+.merchant-portal .integrations-page .detail-label,
+.merchant-portal .integrations-page .webhook-hint {
+  color: #526246;
+}
+
+.merchant-portal .integrations-page .detail-value,
+.merchant-portal .integrations-page .webhook-url-input {
+  color: #1d2a13;
+  overflow-wrap: anywhere;
+}
+
+.merchant-portal .integrations-page .connected-badge,
+.merchant-portal .integrations-page .status-badge.active {
+  background: #e4f0d5;
+  border-color: #b9d39e;
+  color: #2e5123;
+}
+
+.merchant-portal .integrations-page .webhook-url-container {
+  min-width: 0;
+}
+
+.merchant-portal .integrations-page .webhook-url-input {
+  min-width: 0;
+}
+
+.merchant-portal .integrations-page .integration-disconnected {
+  margin-top: 12px;
+}
+
+.merchant-portal .integrations-page .integration-profile-alert {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 20px;
+  margin-bottom: 24px;
+  background: #fff8e9;
+  border: 1px solid #e8d5a9;
+  border-radius: 12px;
+  color: #684716;
+  font-size: 14px;
+  line-height: 1.55;
+}
+
+.merchant-portal .integrations-page .integration-empty-state {
+  margin: 20px 0;
+  padding: 56px 32px;
+  text-align: center;
+  color: #48583a;
+  background: #fff;
+  border: 1px dashed #b9d39e;
+  border-radius: 16px;
+}
+
+.merchant-portal .integrations-page .integration-empty-state h3 {
+  color: #1d2a13;
+  font-weight: 700;
+}
+
+.merchant-portal .integrations-page .integration-empty-state p {
+  margin-top: 8px;
+}
+
+/* Analytics charts and the plan prompt use the same light surfaces. */
+.merchant-portal .analytics-page :is(.sentiment-widget, .chart-container) {
+  box-shadow: 0 8px 28px rgba(42, 61, 24, .055);
+}
+
+.merchant-portal .analytics-page .analytics-paywall-card {
+  max-width: 680px;
+  margin: 30px auto 0;
+  padding: clamp(28px, 5vw, 56px);
+  text-align: center;
+  background: #fff;
+  border: 1px solid #d4e1c1;
+  border-radius: 20px;
+  box-shadow: 0 12px 32px rgba(42, 61, 24, .08);
+}
+
+.merchant-portal .analytics-page .analytics-paywall-card h2 {
+  margin: 0 0 10px;
+  color: #1d2a13;
+  font-size: 24px;
+}
+
+.merchant-portal .analytics-page .analytics-paywall-card p {
+  max-width: 540px;
+  margin: 0 auto 24px;
+  color: #48583a;
+  line-height: 1.6;
+}
+
+.merchant-portal .analytics-page .sentiment-emoji {
+  width: 72px;
+  height: 72px;
+  border-radius: 18px;
+  background: #e4f0d5;
+  flex: 0 0 auto;
+}
+
+.merchant-portal .analytics-page .sentiment-info h2 {
+  font-size: 28px;
+}
+
+/* Orders retain color coded states while keeping labels and amounts legible. */
+.merchant-portal .orders-page .orders-stat-pill {
+  box-shadow: 0 5px 18px rgba(42, 61, 24, .045);
+}
+
+.merchant-portal .orders-page .orders-stat-pill .label {
+  color: #48583a;
+}
+
+.merchant-portal .orders-page .table-wrapper {
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  margin: 0;
+}
+
+.merchant-portal .orders-page .order-id-cell {
+  color: #345927;
+}
+
+/* The leads screen uses the brand color for navigation actions. */
+.merchant-portal .leads-page .header-icon,
+.merchant-portal .leads-page .phone-icon {
+  color: #3d5a22;
+}
+
+.merchant-portal .leads-page .product-tag {
+  color: #345927;
+  background: #e9f2df;
+}
+
+.merchant-portal .leads-page .wa-direct-btn,
+.merchant-portal .leads-page .upgrade-plan-btn {
+  background: #3d5a22;
+  color: #fff;
+}
+
+.merchant-portal .leads-page .wa-direct-btn:hover,
+.merchant-portal .leads-page .upgrade-plan-btn:hover {
+  background: #2a3d18;
+}
+
+@media (max-width: 900px) {
+  .merchant-portal .integrations-page .integrations-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 640px) {
+  .merchant-portal .merchant-data-page :is(.table-container, .orders-table-card, .leads-table-wrapper) {
+    overflow-x: auto !important;
+  }
+
+  .merchant-portal .merchant-data-page :is(thead th, .premium-table thead th, .leads-table th) {
+    white-space: nowrap;
+  }
+
+  .merchant-portal .analytics-page .sentiment-display {
+    gap: 16px;
+    padding: 20px;
+  }
+}

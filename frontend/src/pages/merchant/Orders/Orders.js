@@ -294,7 +294,7 @@ Bob Johnson,+1234567892,bob@example.com,Standard Item,3,149.99,shipped`;
   // No full page loading blocker so headers and stats render instantly
 
   return (
-    <div className="container">
+    <div className="container merchant-data-page orders-page">
       <div className="page-header orders-page-header">
         <div>
           <h1 className="page-title">Orders</h1>
@@ -349,8 +349,8 @@ Bob Johnson,+1234567892,bob@example.com,Standard Item,3,149.99,shipped`;
 
       {/* Bulk Upload Modal */}
       {showBulkUpload && (
-        <div className="table-container" style={{ marginBottom: '28px', background: 'rgba(99, 102, 241, 0.05)' }}>
-          <div className="table-header" style={{ background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.2) 0%, rgba(139, 92, 246, 0.2) 100%)' }}>
+        <div className="table-container" style={{ marginBottom: '28px', background: 'var(--bg-card)' }}>
+          <div className="table-header" style={{ background: 'var(--bg-hover)' }}>
             <h2>📤 Bulk Upload Orders from CSV</h2>
           </div>
           <form onSubmit={handleBulkUpload} style={{ padding: '28px' }} encType="multipart/form-data">
@@ -363,13 +363,13 @@ Bob Johnson,+1234567892,bob@example.com,Standard Item,3,149.99,shipped`;
                   padding: '16px',
                   marginBottom: '20px'
                 }}>
-                  <h3 style={{ color: '#f59e0b', fontSize: '14px', fontWeight: '600', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <h3 style={{ color: '#76500e', fontSize: '14px', fontWeight: '600', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '8px' }}>
                     Shopify CSV import option
                   </h3>
-                  <p style={{ color: '#d4d4d8', fontSize: '13px', lineHeight: '1.6', margin: 0 }}>
+                  <p style={{ color: 'var(--text-secondary)', fontSize: '14px', lineHeight: '1.6', margin: 0 }}>
                     If automatic store sync is unavailable or you need to import historical orders, export a CSV from Shopify and upload it here. Check Store Integrations for the current connection and sync result.
                   </p>
-                  <ol style={{ color: '#a1a1aa', fontSize: '12px', lineHeight: '1.7', paddingLeft: '20px', marginTop: '8px', marginBottom: 0 }}>
+                  <ol style={{ color: 'var(--text-secondary)', fontSize: '14px', lineHeight: '1.7', paddingLeft: '20px', marginTop: '8px', marginBottom: 0 }}>
                     <li>Go to your <strong>Shopify Admin Panel</strong> ➔ <strong>Orders</strong>.</li>
                     <li>Click the <strong>Export</strong> button at the top and select <strong>CSV for Excel, Numbers, or other spreadsheet programs</strong>.</li>
                     <li>Choose either "Current page" or "All orders" and download the CSV.</li>
@@ -379,16 +379,16 @@ Bob Johnson,+1234567892,bob@example.com,Standard Item,3,149.99,shipped`;
               )}
 
               <div style={{ 
-                background: 'rgba(99, 102, 241, 0.1)', 
-                border: '1px solid rgba(99, 102, 241, 0.3)',
+                background: '#f0f6e8',
+                border: '1px solid #d4e1c1',
                 borderRadius: '12px',
                 padding: '16px',
                 marginBottom: '20px'
               }}>
-                <h3 style={{ color: '#a5b4fc', fontSize: '14px', fontWeight: '600', marginBottom: '12px' }}>
+                <h3 style={{ color: '#345927', fontSize: '14px', fontWeight: '600', marginBottom: '12px' }}>
                   📋 CSV Format Requirements:
                 </h3>
-                <ul style={{ color: '#a1a1aa', fontSize: '13px', lineHeight: '1.8', paddingLeft: '20px', margin: 0 }}>
+                <ul style={{ color: 'var(--text-secondary)', fontSize: '14px', lineHeight: '1.8', paddingLeft: '20px', margin: 0 }}>
                   <li><strong>Shopify Export CSV:</strong> Directly upload the raw CSV file exported from your Shopify store! The uploader automatically consolidates multi-item orders, uses the Shopify order ID, and maps fulfillment statuses.</li>
                   <li><strong>Standard Columns (Custom CSV):</strong> Required fields are: <code>customerName</code>, <code>customerPhone</code>, <code>productName</code>, <code>quantity</code>, <code>totalAmount</code>. Optional fields: <code>customerEmail</code>, <code>status</code>.</li>
                   <li><strong>Status values:</strong> pending, processing, shipped, delivered, cancelled</li>
@@ -408,15 +408,15 @@ Bob Johnson,+1234567892,bob@example.com,Standard Item,3,149.99,shipped`;
                   style={{
                     width: '100%',
                     padding: '14px',
-                    border: '2px dashed rgba(99, 102, 241, 0.5)',
+                    border: '2px dashed #b9d39e',
                     borderRadius: '12px',
                     fontSize: '14px',
-                    background: 'rgba(39, 39, 42, 0.6)',
-                    color: '#fafafa',
+                    background: '#f5f8ef',
+                    color: '#1d2a13',
                     cursor: 'pointer'
                   }}
                 />
-                <small style={{ color: '#71717a', fontSize: '12px', marginTop: '8px', display: 'block' }}>
+                <small style={{ color: 'var(--text-secondary)', fontSize: '12px', marginTop: '8px', display: 'block' }}>
                   Upload a CSV file with multiple orders (max 10MB)
                 </small>
               </div>
@@ -424,11 +424,11 @@ Bob Johnson,+1234567892,bob@example.com,Standard Item,3,149.99,shipped`;
 
             {uploadProgress && (
               <div style={{
-                background: 'rgba(99, 102, 241, 0.1)',
-                border: '1px solid rgba(99, 102, 241, 0.3)',
+                background: '#f0f6e8',
+                border: '1px solid #d4e1c1',
                 padding: '12px 16px',
                 borderRadius: '10px',
-                color: '#a5b4fc',
+                color: '#345927',
                 fontSize: '14px',
                 marginBottom: '16px',
                 textAlign: 'center'
@@ -507,15 +507,15 @@ Bob Johnson,+1234567892,bob@example.com,Standard Item,3,149.99,shipped`;
                   style={{
                     width: '100%',
                     padding: '10px 14px',
-                    border: '1px solid rgba(63, 63, 70, 0.5)',
+                    border: '1px solid #d4e1c1',
                     borderRadius: '10px',
                     fontSize: '14px',
-                    background: 'rgba(39, 39, 42, 0.6)',
-                    color: '#fafafa',
+                    background: '#f5f8ef',
+                    color: '#1d2a13',
                     cursor: 'pointer'
                   }}
                 />
-                <small style={{ color: '#71717a', fontSize: '12px', marginTop: '6px', display: 'block' }}>
+                <small style={{ color: 'var(--text-secondary)', fontSize: '12px', marginTop: '6px', display: 'block' }}>
                   Upload a CSV file with additional order data (max 5MB)
                 </small>
               </div>
@@ -596,7 +596,7 @@ Bob Johnson,+1234567892,bob@example.com,Standard Item,3,149.99,shipped`;
                       </td>
                       <td>
                         <div className="customer-cell">
-                          <div className="avatar" style={{ background: isShopifyBasicRedacted ? '#3f3f46' : undefined }}>
+                          <div className="avatar" style={{ background: isShopifyBasicRedacted ? '#3d5a22' : undefined }}>
                             {isShopifyBasicRedacted ? '🔑' : (order.customerName?.charAt(0) || 'C')}
                           </div>
                           <span className="customer-name">
@@ -604,13 +604,13 @@ Bob Johnson,+1234567892,bob@example.com,Standard Item,3,149.99,shipped`;
                             {isShopifyBasicRedacted && (
                               <span style={{ 
                                 fontSize: '10px', 
-                                color: '#eab308', 
-                                background: 'rgba(234, 179, 8, 0.15)', 
+                                color: '#76500e',
+                                background: '#fff3d9',
                                 padding: '2px 6px', 
                                 borderRadius: '4px', 
                                 marginLeft: '8px',
                                 fontWeight: '600',
-                                border: '1px solid rgba(234, 179, 8, 0.2)',
+                                border: '1px solid #e8d5a9',
                                 display: 'inline-block'
                               }}>
                                 Basic Plan
@@ -625,14 +625,14 @@ Bob Johnson,+1234567892,bob@example.com,Standard Item,3,149.99,shipped`;
                             title="Shopify Basic plan restricts API access to customer contact details." 
                             style={{ 
                               fontSize: '11px', 
-                              color: '#a1a1aa', 
+                              color: '#48583a',
                               display: 'inline-flex', 
                               alignItems: 'center', 
                               gap: '4px',
-                              background: 'rgba(161, 161, 170, 0.1)',
+                              background: '#f1f4ed',
                               padding: '2px 8px',
                               borderRadius: '6px',
-                              border: '1px solid rgba(161, 161, 170, 0.15)'
+                              border: '1px solid #d4e1c1'
                             }}
                           >
                             🔒 Redacted
@@ -647,14 +647,14 @@ Bob Johnson,+1234567892,bob@example.com,Standard Item,3,149.99,shipped`;
                             title="Shopify Basic plan restricts API access to customer contact details." 
                             style={{ 
                               fontSize: '11px', 
-                              color: '#a1a1aa', 
+                              color: '#48583a',
                               display: 'inline-flex', 
                               alignItems: 'center', 
                               gap: '4px',
-                              background: 'rgba(161, 161, 170, 0.1)',
+                              background: '#f1f4ed',
                               padding: '2px 8px',
                               borderRadius: '6px',
-                              border: '1px solid rgba(161, 161, 170, 0.15)'
+                              border: '1px solid #d4e1c1'
                             }}
                           >
                             🔒 Redacted
@@ -677,11 +677,11 @@ Bob Johnson,+1234567892,bob@example.com,Standard Item,3,149.99,shipped`;
                             title="Status is automatically updated from your Shopify store."
                             style={{
                               fontSize: '11px',
-                              color: '#10b981',
-                              background: 'rgba(16, 185, 129, 0.12)',
+                              color: '#2e6e38',
+                              background: '#e8f3e7',
                               padding: '4px 10px',
                               borderRadius: '6px',
-                              border: '1px solid rgba(16, 185, 129, 0.25)',
+                              border: '1px solid #b9dbb9',
                               fontWeight: '500',
                               display: 'inline-flex',
                               alignItems: 'center',
@@ -723,7 +723,7 @@ Bob Johnson,+1234567892,bob@example.com,Standard Item,3,149.99,shipped`;
             </table>
           ) : (
             <div className="orders-empty">
-              <FaBox style={{ fontSize: '40px', color: '#6366f1', opacity: 0.5 }} />
+              <FaBox style={{ fontSize: '40px', color: '#3d5a22', opacity: 0.65 }} />
               <h3>No orders yet</h3>
               <p>Add an order manually or import from CSV to get started.</p>
             </div>

@@ -238,7 +238,7 @@ function Broadcast() {
   };
 
   return (
-    <div className="container">
+    <div className="container merchant-data-page broadcast-page">
       <div className="page-header">
         <div className="page-header-info">
           <h1 className="page-title">Marketing Broadcasts</h1>

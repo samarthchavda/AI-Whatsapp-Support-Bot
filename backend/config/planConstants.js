@@ -216,13 +216,37 @@ function normalizePlanName(planName) {
  * @param {string} featureKey 
  * @returns {boolean}
  */
+// Live plans (Plan Manager) are the source of truth; PLAN_DEFINITIONS only fill gaps.
+// Loaded lazily to avoid a circular require with the PricingPlan model.
+function cachedPlan(planKey) {
+  try {
+    return require('../services/planCache').getCachedPlan(planKey);
+  } catch (e) {
+    return null;
+  }
+}
+
+// Template used for keys the live plan does not define. Plans that are not in
+// PLAN_DEFINITIONS use the template for their category instead of Starter, so an
+// Enterprise or API plan never silently gets Starter limits.
+function baseDefinition(planKey, live) {
+  if (PLAN_DEFINITIONS[planKey]) return PLAN_DEFINITIONS[planKey];
+  if (live && live.category === 'enterprise_custom') return PLAN_DEFINITIONS.custom;
+  if (live && live.category === 'crm_integration') return PLAN_DEFINITIONS.crm_connect;
+  return PLAN_DEFINITIONS.starter;
+}
+
 function isFeatureAllowed(rawPlanName, featureKey) {
   // Broadcasting is accessible to all admin users platform-wide
   if (featureKey === 'broadcastingAccess') {
     return true;
   }
   const planKey = normalizePlanName(rawPlanName);
-  const def = PLAN_DEFINITIONS[planKey] || PLAN_DEFINITIONS.starter;
+  const live = cachedPlan(planKey);
+  if (live && typeof live.flags[featureKey] === 'boolean') {
+    return live.flags[featureKey];
+  }
+  const def = baseDefinition(planKey, live);
   return Boolean(def.features[featureKey]);
 }
 
@@ -234,7 +258,11 @@ function isFeatureAllowed(rawPlanName, featureKey) {
  */
 function getPlanLimit(rawPlanName, limitKey) {
   const planKey = normalizePlanName(rawPlanName);
-  const def = PLAN_DEFINITIONS[planKey] || PLAN_DEFINITIONS.starter;
+  const live = cachedPlan(planKey);
+  if (live && typeof live.limits[limitKey] === 'number') {
+    return live.limits[limitKey];
+  }
+  const def = baseDefinition(planKey, live);
   if (typeof def.features[limitKey] === 'number') {
     return def.features[limitKey];
   }

@@ -959,6 +959,7 @@ exports.createOrUpdatePlan = async (req, res) => {
     let plan;
     if (id) {
       plan = await PricingPlan.findByIdAndUpdate(id, planData, { new: true, runValidators: true });
+      require('../../services/planCache').refreshPlanCache();
       if (!plan) {
         return res.status(404).json({ success: false, error: 'Plan not found' });
       }
@@ -970,6 +971,7 @@ exports.createOrUpdatePlan = async (req, res) => {
     } else {
       plan = new PricingPlan(planData);
       await plan.save();
+      require('../../services/planCache').refreshPlanCache();
       await auditLogService.logAction(
         req.admin?.email || 'super_admin',
         'plan_create',
@@ -1018,6 +1020,7 @@ exports.duplicatePlan = async (req, res) => {
 
     const newPlan = new PricingPlan(dupObj);
     await newPlan.save();
+    require('../../services/planCache').refreshPlanCache();
 
     await auditLogService.logAction(
       req.admin?.email || 'super_admin',
@@ -1053,6 +1056,7 @@ exports.togglePublishPlan = async (req, res) => {
     if (isActive !== undefined) plan.isActive = Boolean(isActive);
 
     await plan.save();
+    require('../../services/planCache').refreshPlanCache();
 
     await auditLogService.logAction(
       req.admin?.email || 'super_admin',
@@ -1130,6 +1134,7 @@ exports.deletePlan = async (req, res) => {
     }
 
     await PricingPlan.findByIdAndDelete(id);
+    require('../../services/planCache').refreshPlanCache();
 
     await auditLogService.logAction(
       req.admin?.email || 'super_admin',

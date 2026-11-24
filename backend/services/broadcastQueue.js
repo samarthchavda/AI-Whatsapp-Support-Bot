@@ -8,12 +8,23 @@ let useQueue = false;
 console.log('⚠️  Using fallback broadcast method (Redis not configured)');
 
 // Fallback method without queue (if Redis is not available)
-async function sendBroadcastWithoutQueue(broadcastId) {
+async function sendBroadcastWithoutQueue(broadcastId, { claimed = false } = {}) {
   try {
-    const broadcast = await Broadcast.findById(broadcastId);
-    
+    // Atomically claim the broadcast so it can only ever be sent once, even when the
+    // per-broadcast timer, the every-minute check and several PM2 workers race.
+    const broadcast = claimed
+      ? await Broadcast.findOne({ _id: broadcastId, status: 'sending' })
+      : await Broadcast.findOneAndUpdate(
+        { _id: broadcastId, status: { $in: ['draft', 'scheduled'] } },
+        { $set: { status: 'sending', startedAt: new Date() } },
+        { new: true }
+      );
+
     if (!broadcast) {
-      throw new Error('Broadcast not found');
+      const existing = await Broadcast.findById(broadcastId).select('status').lean();
+      if (!existing) throw new Error('Broadcast not found');
+      console.log(`⏭️  Broadcast ${broadcastId} skipped: already ${existing.status}`);
+      return { skipped: true, status: existing.status };
     }
 
     // Fetch admin credentials for sending messages
@@ -27,9 +38,10 @@ async function sendBroadcastWithoutQueue(broadcastId) {
       };
     }
 
-    broadcast.status = 'sending';
-    broadcast.startedAt = new Date();
-    await broadcast.save();
+    if (!broadcast.startedAt) {
+      broadcast.startedAt = new Date();
+      await broadcast.save();
+    }
 
     const Template = require('../models/Template');
     let matchedTemplate = null;
@@ -212,9 +224,9 @@ async function sendBroadcastWithoutQueue(broadcastId) {
 }
 
 // Add broadcast to queue (always uses fallback)
-async function addBroadcastToQueue(broadcastId) {
+async function addBroadcastToQueue(broadcastId, options = {}) {
   console.log('📋 Using fallback broadcast method');
-  return await sendBroadcastWithoutQueue(broadcastId);
+  return await sendBroadcastWithoutQueue(broadcastId, options);
 }
 
 // Get queue stats

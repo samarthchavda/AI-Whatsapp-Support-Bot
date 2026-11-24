@@ -223,6 +223,17 @@ mongoose.connect(mongoUri, {
       console.log('📱 WhatsApp Web Bot not available - using demo mode');
     }
 
+    // Keep plan limits in sync with Plan Manager (read synchronously by enforcement code)
+    require('./services/planCache').startPlanCacheRefresh();
+
+    // Scheduled jobs (broadcasts, cart reminders, token resets, retention, Shopify sync)
+    // must run in exactly one process. PM2 cluster mode sets NODE_APP_INSTANCE per worker.
+    const isJobWorker = process.env.NODE_APP_INSTANCE === undefined || process.env.NODE_APP_INSTANCE === '0';
+    if (!isJobWorker) {
+      console.log(`⏭️  Worker ${process.env.NODE_APP_INSTANCE}: scheduled jobs run on worker 0 only`);
+      return;
+    }
+
     // Initialize broadcast scheduler
     const { initializeScheduler, startScheduler } = require('./services/broadcastScheduler');
     initializeScheduler().then(() => {

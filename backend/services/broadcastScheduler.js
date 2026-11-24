@@ -27,17 +27,24 @@ async function checkAbandonedCarts() {
       console.log(`⏰ Found ${abandonedCarts.length} abandoned carts to send reminders.`);
     }
 
-    for (const cart of abandonedCarts) {
+    for (const candidate of abandonedCarts) {
       try {
-        console.log(`📱 Sending cart recovery reminder to ${cart.customerPhone} for cart ${cart.cartId}`);
+        // Claim the cart first so only one worker / one run ever sends this reminder
+        const cart = await AbandonedCart.findOneAndUpdate(
+          { _id: candidate._id, status: 'abandoned' },
+          { $set: { status: 'reminder_sent', reminderSentAt: new Date() } },
+          { new: true }
+        );
+        if (!cart) continue;
+
+        console.log(`📱 Sending cart recovery reminder for cart ${cart.cartId}`);
         const result = await webhookService.sendCartRecoveryMessage(cart);
-        
+
         if (result.success) {
-          cart.status = 'reminder_sent';
-          cart.reminderSentAt = new Date();
-          await cart.save();
           console.log(`✅ Cart recovery reminder sent successfully for cart ${cart.cartId}`);
         } else {
+          // Release the claim so the next run can retry (same behaviour as before)
+          await AbandonedCart.updateOne({ _id: cart._id, status: 'reminder_sent' }, { $set: { status: 'abandoned' }, $unset: { reminderSentAt: 1 } });
           console.error(`❌ Failed to send cart recovery reminder for cart ${cart.cartId}:`, result.error);
         }
       } catch (err) {
@@ -49,8 +56,12 @@ async function checkAbandonedCarts() {
   }
 }
 
+// Cron tasks are created only when startScheduler() runs (one PM2 worker), never on import.
+let schedulerTask = null;
+let dailySuperAdminTask = null;
+
 // Check for scheduled broadcasts every minute
-const schedulerTask = cron.schedule('* * * * *', async () => {
+async function runMinuteTick() {
   try {
     const now = new Date();
     
@@ -77,7 +88,7 @@ const schedulerTask = cron.schedule('* * * * *', async () => {
   } catch (error) {
     console.error('Error in broadcast scheduler:', error);
   }
-});
+}
 
 // Schedule a specific broadcast
 function scheduleBroadcast(broadcastId, scheduledDate) {
@@ -294,23 +305,23 @@ Have a great day!`;
 }
 
 // Daily Super Admin Task scheduled for 1:00 AM daily
-const dailySuperAdminTask = cron.schedule('0 1 * * *', async () => {
+async function runDailySuperAdminTask() {
   console.log('⏰ Running daily Super Admin conversation pruning and retargeting follow-up...');
   await runConversationPruning();
   await runProductFollowUps();
-});
+}
 
 // Start the scheduler
 function startScheduler() {
-  schedulerTask.start();
-  dailySuperAdminTask.start();
+  if (!schedulerTask) schedulerTask = cron.schedule('* * * * *', runMinuteTick);
+  if (!dailySuperAdminTask) dailySuperAdminTask = cron.schedule('0 1 * * *', runDailySuperAdminTask);
   console.log('✅ Broadcast scheduler started');
 }
 
 // Stop the scheduler
 function stopScheduler() {
-  schedulerTask.stop();
-  dailySuperAdminTask.stop();
+  if (schedulerTask) { schedulerTask.stop(); schedulerTask = null; }
+  if (dailySuperAdminTask) { dailySuperAdminTask.stop(); dailySuperAdminTask = null; }
   
   // Cancel all scheduled tasks
   for (const [broadcastId, task] of scheduledTasks) {
@@ -328,5 +339,6 @@ module.exports = {
   scheduleBroadcast,
   cancelScheduledBroadcast,
   runConversationPruning,
-  runProductFollowUps
+  runProductFollowUps,
+  checkAbandonedCarts
 };

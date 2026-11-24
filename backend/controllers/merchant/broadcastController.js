@@ -582,12 +582,19 @@ exports.sendBroadcastNow = async (req, res) => {
       cancelScheduledBroadcast(broadcast._id);
     }
 
-    // Update status to sending and save
-    broadcast.status = 'sending';
-    await broadcast.save();
+    // Atomically move to "sending" so a double click or a racing scheduler cannot send twice
+    const claimed = await Broadcast.findOneAndUpdate(
+      { _id: broadcast._id, status: { $nin: ['completed', 'sending', 'cancelled'] } },
+      { $set: { status: 'sending', startedAt: new Date() } },
+      { new: true }
+    );
+    if (!claimed) {
+      return res.status(409).json({ success: false, error: 'Broadcast is already being sent' });
+    }
+    broadcast.status = claimed.status;
 
     // Trigger queue sending in background without blocking HTTP response
-    addBroadcastToQueue(broadcast._id).catch((err) => {
+    addBroadcastToQueue(broadcast._id, { claimed: true }).catch((err) => {
       console.error('Error executing immediate background broadcast:', err);
     });
 

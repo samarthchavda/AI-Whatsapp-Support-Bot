@@ -6,7 +6,8 @@ const embeddedSignupController = require('../controllers/merchant/embeddedSignup
 const { verifyToken } = require('../middleware/auth');
 
 // Webhook routes - IMPORTANT: Must accept both GET (verification) and POST (incoming messages)
-router.all('/whatsapp', webhookController.handleWebhook);
+const { verifyMetaSignature } = require('../middleware/metaSignature');
+router.all('/whatsapp', verifyMetaSignature, webhookController.handleWebhook);
 
 // Protected routes
 router.post('/embedded-signup', verifyToken, embeddedSignupController.handleEmbeddedSignup);

@@ -849,22 +849,24 @@ exports.updateProfile = async (req, res) => {
       };
     }
 
-    // Check if the profile is newly completed (all required fields present)
-    const isNowCompleted = !!(
-      (businessName !== undefined ? businessName : admin.businessName) &&
-      (businessPhone !== undefined ? businessPhone : admin.businessPhone) &&
-      (storeUrl !== undefined ? storeUrl : admin.storeUrl) &&
-      (supportEmail !== undefined ? supportEmail : admin.supportEmail)
-    );
+    // Check if the merchant profile is newly completed (never run trial logic for super_admin)
+    if (admin.role !== 'super_admin') {
+      const isNowCompleted = !!(
+        (businessName !== undefined ? businessName : admin.businessName) &&
+        (businessPhone !== undefined ? businessPhone : admin.businessPhone) &&
+        (storeUrl !== undefined ? storeUrl : admin.storeUrl) &&
+        (supportEmail !== undefined ? supportEmail : admin.supportEmail)
+      );
 
-    if (isNowCompleted && !admin.profileCompleted) {
-      admin.profileCompleted = true;
-      admin.profileCompletedAt = new Date();
-      if (!admin.trialStartedAt) {
-        admin.trialStartedAt = new Date();
-        admin.subscriptionStatus = 'trial';
-        admin.subscriptionStartDate = new Date();
-        admin.subscriptionEndDate = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000); // 14-day free trial
+      if (isNowCompleted && !admin.profileCompleted) {
+        admin.profileCompleted = true;
+        admin.profileCompletedAt = new Date();
+        if (!admin.trialStartedAt) {
+          admin.trialStartedAt = new Date();
+          admin.subscriptionStatus = 'trial';
+          admin.subscriptionStartDate = new Date();
+          admin.subscriptionEndDate = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000); // 14-day free trial
+        }
       }
     }
 

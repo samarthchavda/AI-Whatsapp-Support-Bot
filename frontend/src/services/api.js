@@ -171,6 +171,7 @@ export const getPricingPlans = () => api.get('/auth/plans');
 export const upgradePricingPlan = (planName, couponCode) => api.post('/auth/upgrade-plan', { planName, couponCode });
 export const getAdminProfile = () => api.get('/auth/profile');
 export const updateAdminProfile = (data) => api.put('/auth/profile', data);
+export const changeAdminPassword = (data) => api.post('/auth/change-password', data);
 export const getEffectiveAccess = () => api.get('/auth/effective-access');
 
 // Razorpay Payments

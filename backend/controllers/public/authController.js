@@ -1156,6 +1156,21 @@ exports.createRazorpayOrder = async (req, res) => {
       return res.status(404).json({ success: false, error: 'Merchant admin not found' });
     }
 
+    const { isFeatureEnabled } = require('../../services/featureFlagService');
+    const billingService = require('../../services/billingService');
+    if (await isFeatureEnabled('requireBillingDetailsOnPurchase')) {
+      const { errors, missingFields } = billingService.validateBuyerBillingDetails(admin.billingDetails || {}, { strict: true });
+      if (errors.length > 0) {
+        return res.status(400).json({
+          success: false,
+          code: 'BILLING_DETAILS_REQUIRED',
+          error: errors[0],
+          errors,
+          missingFields
+        });
+      }
+    }
+
     const PricingPlan = require('../../models/PricingPlan');
     let planDetails = null;
 

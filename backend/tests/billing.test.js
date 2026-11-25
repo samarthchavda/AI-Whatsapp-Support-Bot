@@ -79,3 +79,41 @@ describe('billing: invoice numbering and words', () => {
     expect(pdf.length).toBeGreaterThan(2000);
   });
 });
+
+describe('billing: mandatory buyer billing details validation', () => {
+  test('strict mode rejects missing address, city, state, and pincode', () => {
+    const res = billing.validateBuyerBillingDetails({ legalName: 'Acme Pvt Ltd' }, { strict: true });
+    expect(res.errors.length).toBeGreaterThanOrEqual(4);
+    expect(res.missingFields).toEqual(expect.arrayContaining(['addressLine', 'city', 'state', 'pincode']));
+  });
+
+  test('strict mode accepts a complete buyer billing profile with valid GSTIN', () => {
+    const res = billing.validateBuyerBillingDetails({
+      legalName: 'Acme Pvt Ltd',
+      gstin: '24ABCDE1234F1Z5',
+      addressLine: '201 SG Highway',
+      city: 'Ahmedabad',
+      state: 'Gujarat',
+      pincode: '380015'
+    }, { strict: true });
+    expect(res.errors).toEqual([]);
+    expect(res.missingFields).toEqual([]);
+  });
+
+  test('strict mode rejects GSTIN state code mismatch', () => {
+    const res = billing.validateBuyerBillingDetails({
+      legalName: 'Acme Pvt Ltd',
+      gstin: '24ABCDE1234F1Z5',
+      addressLine: '101 MG Road',
+      city: 'Mumbai',
+      state: 'Maharashtra',
+      pincode: '400001'
+    }, { strict: true });
+    expect(res.errors.join(' ')).toMatch(/state code 24/i);
+  });
+
+  test('non-strict mode allows optional address/city/state/pincode', () => {
+    const res = billing.validateBuyerBillingDetails({ legalName: 'Acme Pvt Ltd' }, { strict: false });
+    expect(res.errors).toEqual([]);
+  });
+});

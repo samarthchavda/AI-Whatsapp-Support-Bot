@@ -50,6 +50,13 @@ const FEATURE_FLAGS = [
     description: 'Controls public self-service merchant trial registration on kwickbot.in.',
     scope: 'Public Auth',
     defaultEnabled: true
+  },
+  {
+    key: 'requireBillingDetailsOnPurchase',
+    name: 'Require Billing Details Before Purchase',
+    description: 'Requires merchants to save complete billing details (Legal Name, Address, City, State, PIN) before purchasing or upgrading a plan.',
+    scope: 'Billing + Checkout',
+    defaultEnabled: true
   }
 ];
 

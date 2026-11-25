@@ -352,36 +352,37 @@ exports.previewSampleInvoice = async (req, res) => {
 
 // Merchant billing details printed on their invoices
 exports.getBillingDetails = async (req, res) => {
-  const admin = await Admin.findById(req.admin._id).select('billingDetails businessName name email').lean();
+  const { isFeatureEnabled } = require('../../services/featureFlagService');
+  const [admin, requireOnPurchase] = await Promise.all([
+    Admin.findById(req.admin._id).select('billingDetails businessName name email').lean(),
+    isFeatureEnabled('requireBillingDetailsOnPurchase')
+  ]);
   res.json({
     success: true,
     data: { ...(admin?.billingDetails || {}) },
     defaults: { legalName: admin?.businessName || admin?.name || '' },
-    states: billing.INDIAN_STATES
+    states: billing.INDIAN_STATES,
+    requireOnPurchase
   });
 };
 
 exports.updateBillingDetails = async (req, res) => {
   try {
-    const input = req.body || {};
-    const clean = (v, max = 200) => (typeof v === 'string' ? v.trim().slice(0, max) : '');
-    const details = {
-      legalName: clean(input.legalName),
-      gstin: clean(input.gstin, 15).toUpperCase(),
-      addressLine: clean(input.addressLine, 300),
-      city: clean(input.city, 120),
-      state: clean(input.state, 120),
-      pincode: clean(input.pincode, 12)
-    };
-    if (details.gstin && !billing.GSTIN_RE.test(details.gstin)) {
-      return res.status(400).json({ success: false, error: 'GSTIN format looks invalid (15 characters, e.g. 27ABCDE1234F1Z5)' });
+    const { isFeatureEnabled } = require('../../services/featureFlagService');
+    const requireOnPurchase = await isFeatureEnabled('requireBillingDetailsOnPurchase');
+    const { details, errors, missingFields } = billing.validateBuyerBillingDetails(req.body || {}, {
+      strict: requireOnPurchase
+    });
+
+    if (errors.length > 0) {
+      return res.status(400).json({
+        success: false,
+        error: errors[0],
+        errors,
+        missingFields
+      });
     }
-    if (details.state && !billing.INDIAN_STATES.includes(details.state)) {
-      return res.status(400).json({ success: false, error: 'Choose a valid Indian state' });
-    }
-    if (details.pincode && !/^[1-9][0-9]{5}$/.test(details.pincode)) {
-      return res.status(400).json({ success: false, error: 'PIN code must be 6 digits' });
-    }
+
     await Admin.updateOne({ _id: req.admin._id }, { $set: { billingDetails: details } });
     res.json({ success: true, data: details, message: 'Billing details saved. They will appear on your next invoice.' });
   } catch (error) {

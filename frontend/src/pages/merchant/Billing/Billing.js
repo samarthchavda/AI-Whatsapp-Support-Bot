@@ -53,8 +53,13 @@ function Billing() {
   const [razorpayKeyId, setRazorpayKeyId] = useState('');
   const [selectedCycle, setSelectedCycle] = useState('monthly');
 
-  // Checkout confirmation modal + manual Trial summary popup
+  // Checkout confirmation modal + manual Trial summary popup + mandatory billing prompt
   const [checkoutPlan, setCheckoutPlan] = useState(null);
+  const [pendingCheckoutPlan, setPendingCheckoutPlan] = useState(null);
+  const [requireBillingOnPurchase, setRequireBillingOnPurchase] = useState(true);
+  const [savedBillingDetails, setSavedBillingDetails] = useState(null);
+  const [modalBillingError, setModalBillingError] = useState('');
+  const [savingModalDetails, setSavingModalDetails] = useState(false);
   const [showTrialDetailsModal, setShowTrialDetailsModal] = useState(false);
 
   // Invoices & buyer billing details
@@ -99,11 +104,27 @@ function Billing() {
     try {
       const res = await api.get('/invoices/billing-details');
       const data = res.data?.data || {};
+      const resolved = {
+        legalName: data.legalName || res.data?.defaults?.legalName || '',
+        gstin: data.gstin || '',
+        addressLine: data.addressLine || '',
+        city: data.city || '',
+        state: data.state || '',
+        pincode: data.pincode || ''
+      };
       setBillingDetails((prev) => ({
         ...prev,
-        ...data,
-        legalName: data.legalName || res.data?.defaults?.legalName || ''
+        ...resolved
       }));
+      setSavedBillingDetails({
+        legalName: data.legalName || '',
+        gstin: data.gstin || '',
+        addressLine: data.addressLine || '',
+        city: data.city || '',
+        state: data.state || '',
+        pincode: data.pincode || ''
+      });
+      setRequireBillingOnPurchase(res.data?.requireOnPurchase !== false);
       setIndianStates(res.data?.states || []);
     } catch (error) {
       console.error('Error fetching billing details:', error);
@@ -146,11 +167,13 @@ function Billing() {
     setDetailsMessage(null);
   };
 
-  const validateBillingDetailsClient = () => {
-    const legal = String(billingDetails.legalName || '').trim();
-    const gstin = String(billingDetails.gstin || '').trim().toUpperCase();
-    const state = String(billingDetails.state || '').trim();
-    const pincode = String(billingDetails.pincode || '').trim();
+  const validateBillingDetailsClient = (targetDetails = billingDetails, strict = requireBillingOnPurchase) => {
+    const legal = String(targetDetails?.legalName || '').trim();
+    const gstin = String(targetDetails?.gstin || '').trim().toUpperCase();
+    const addressLine = String(targetDetails?.addressLine || '').trim();
+    const city = String(targetDetails?.city || '').trim();
+    const state = String(targetDetails?.state || '').trim();
+    const pincode = String(targetDetails?.pincode || '').trim();
 
     if (legal.length < 2) {
       return 'Legal business name is required (minimum 2 characters).';
@@ -161,7 +184,20 @@ function Billing() {
     if (gstin && state && STATE_CODE_MAP[gstin.slice(0, 2)] && STATE_CODE_MAP[gstin.slice(0, 2)] !== state) {
       return `GSTIN state code ${gstin.slice(0, 2)} (${STATE_CODE_MAP[gstin.slice(0, 2)]}) does not match selected state (${state}).`;
     }
-    if (pincode && !PINCODE_RE.test(pincode)) {
+    if (strict) {
+      if (addressLine.length < 5) {
+        return 'Registered address is required (minimum 5 characters).';
+      }
+      if (city.length < 2) {
+        return 'City is required (minimum 2 characters).';
+      }
+      if (!state) {
+        return 'State is required.';
+      }
+      if (!PINCODE_RE.test(pincode)) {
+        return 'PIN code is required and must be a valid 6-digit Indian PIN.';
+      }
+    } else if (pincode && !PINCODE_RE.test(pincode)) {
       return 'PIN code must be a valid 6-digit Indian PIN.';
     }
     return null;
@@ -169,7 +205,7 @@ function Billing() {
 
   const saveBillingDetails = async (e) => {
     e.preventDefault();
-    const validationErr = validateBillingDetailsClient();
+    const validationErr = validateBillingDetailsClient(billingDetails, requireBillingOnPurchase);
     if (validationErr) {
       setDetailsMessage({ type: 'error', text: validationErr });
       return;
@@ -178,11 +214,41 @@ function Billing() {
     try {
       setSavingDetails(true);
       const res = await api.put('/invoices/billing-details', billingDetails);
+      const updated = res.data?.data || billingDetails;
+      setBillingDetails((prev) => ({ ...prev, ...updated }));
+      setSavedBillingDetails(updated);
       setDetailsMessage({ type: 'success', text: res.data?.message || 'Billing details saved.' });
     } catch (error) {
       setDetailsMessage({ type: 'error', text: error.response?.data?.error || 'Could not save billing details.' });
     } finally {
       setSavingDetails(false);
+    }
+  };
+
+  const saveModalBillingAndContinue = async (e) => {
+    e.preventDefault();
+    const validationErr = validateBillingDetailsClient(billingDetails, true);
+    if (validationErr) {
+      setModalBillingError(validationErr);
+      return;
+    }
+
+    try {
+      setSavingModalDetails(true);
+      setModalBillingError('');
+      const res = await api.put('/invoices/billing-details', billingDetails);
+      const updated = res.data?.data || billingDetails;
+      setBillingDetails((prev) => ({ ...prev, ...updated }));
+      setSavedBillingDetails(updated);
+      const nextPlan = pendingCheckoutPlan;
+      setPendingCheckoutPlan(null);
+      if (nextPlan) {
+        setCheckoutPlan(nextPlan);
+      }
+    } catch (error) {
+      setModalBillingError(error.response?.data?.error || 'Could not save billing details.');
+    } finally {
+      setSavingModalDetails(false);
     }
   };
 
@@ -292,18 +358,30 @@ function Billing() {
       return;
     }
 
-    setCheckoutPlan({
+    const payload = {
       plan,
       cycle: selectedCycle,
       basePrice,
       discountAmount,
       totalPayable
-    });
+    };
+
+    if (requireBillingOnPurchase) {
+      const missingErr = validateBillingDetailsClient(savedBillingDetails || billingDetails, true);
+      if (missingErr) {
+        setModalBillingError(missingErr);
+        setPendingCheckoutPlan(payload);
+        return;
+      }
+    }
+
+    setCheckoutPlan(payload);
   };
 
   const executeRazorpayCheckout = async () => {
     if (!checkoutPlan) return;
-    const { plan, cycle } = checkoutPlan;
+    const currentCheckout = checkoutPlan;
+    const { plan, cycle } = currentCheckout;
     setCheckoutPlan(null);
 
     try {
@@ -396,7 +474,14 @@ function Billing() {
       rzp.open();
     } catch (error) {
       console.error('Error initiating payment:', error);
-      showAlert('error', error.response?.data?.error || 'Failed to initiate Razorpay checkout order.');
+      if (error.response?.data?.code === 'BILLING_DETAILS_REQUIRED') {
+        setRequireBillingOnPurchase(true);
+        setModalBillingError(error.response?.data?.error || 'Please complete your billing details before purchasing a plan.');
+        setPendingCheckoutPlan(currentCheckout);
+        fetchBillingDetails();
+      } else {
+        showAlert('error', error.response?.data?.error || 'Failed to initiate Razorpay checkout order.');
+      }
       setUpgradingPlanName(null);
     }
   };
@@ -888,7 +973,10 @@ function Billing() {
         <h3 className="card-title-with-icon" style={{ display: 'flex', alignItems: 'center', gap: '8px', margin: 0 }}>
           <FaBuilding /> Billing details for invoices
         </h3>
-        <p className="billing-muted">These details appear in the “Billed to” section of your Kwickbot GST invoices.</p>
+        <p className="billing-muted">
+          These details appear in the “Billed to” section of your Kwickbot GST invoices.
+          {requireBillingOnPurchase && ' Complete billing details are required before purchasing a plan.'}
+        </p>
         <form className="billing-details-form" onSubmit={saveBillingDetails}>
           <div className="bd-field bd-wide">
             <label htmlFor="bd-legalName">Legal business name *</label>
@@ -899,23 +987,23 @@ function Billing() {
             <input id="bd-gstin" name="gstin" value={billingDetails.gstin} onChange={handleDetailsChange} placeholder="27ABCDE1234F1Z5" maxLength={15} autoComplete="off" />
           </div>
           <div className="bd-field bd-wide">
-            <label htmlFor="bd-address">Address</label>
-            <input id="bd-address" name="addressLine" value={billingDetails.addressLine} onChange={handleDetailsChange} placeholder="Building, street, area" maxLength={300} autoComplete="street-address" />
+            <label htmlFor="bd-address">Address {requireBillingOnPurchase ? '*' : ''}</label>
+            <input id="bd-address" name="addressLine" required={requireBillingOnPurchase} value={billingDetails.addressLine} onChange={handleDetailsChange} placeholder="Building, street, area" maxLength={300} autoComplete="street-address" />
           </div>
           <div className="bd-field">
-            <label htmlFor="bd-city">City</label>
-            <input id="bd-city" name="city" value={billingDetails.city} onChange={handleDetailsChange} maxLength={120} autoComplete="address-level2" />
+            <label htmlFor="bd-city">City {requireBillingOnPurchase ? '*' : ''}</label>
+            <input id="bd-city" name="city" required={requireBillingOnPurchase} value={billingDetails.city} onChange={handleDetailsChange} maxLength={120} autoComplete="address-level2" />
           </div>
           <div className="bd-field">
-            <label htmlFor="bd-state">State</label>
-            <select id="bd-state" name="state" value={billingDetails.state} onChange={handleDetailsChange}>
+            <label htmlFor="bd-state">State {requireBillingOnPurchase ? '*' : ''}</label>
+            <select id="bd-state" name="state" required={requireBillingOnPurchase} value={billingDetails.state} onChange={handleDetailsChange}>
               <option value="">Select state</option>
               {indianStates.map((st) => <option key={st} value={st}>{st}</option>)}
             </select>
           </div>
           <div className="bd-field">
-            <label htmlFor="bd-pincode">PIN code</label>
-            <input id="bd-pincode" name="pincode" value={billingDetails.pincode} onChange={handleDetailsChange} inputMode="numeric" maxLength={6} autoComplete="postal-code" />
+            <label htmlFor="bd-pincode">PIN code {requireBillingOnPurchase ? '*' : ''}</label>
+            <input id="bd-pincode" name="pincode" required={requireBillingOnPurchase} value={billingDetails.pincode} onChange={handleDetailsChange} inputMode="numeric" maxLength={6} autoComplete="postal-code" />
           </div>
           <div className="bd-actions">
             <button type="submit" className="btn-primary" disabled={savingDetails}>
@@ -989,6 +1077,119 @@ function Billing() {
           )}
         </div>
       </div>
+
+      {/* Mandatory Billing Details Modal before Checkout */}
+      {pendingCheckoutPlan && (
+        <div className="billing-checkout-backdrop">
+          <div className="billing-checkout-modal billing-checkout-modal-wide">
+            <h3>Complete Billing Details to Continue</h3>
+            <p className="billing-muted" style={{ marginTop: 0 }}>
+              Please fill in your complete billing details before purchasing the{' '}
+              <strong>{pendingCheckoutPlan.plan.displayName || pendingCheckoutPlan.plan.name}</strong> plan.
+            </p>
+            <form className="billing-details-form billing-modal-form" onSubmit={saveModalBillingAndContinue}>
+              <div className="bd-field bd-wide">
+                <label htmlFor="modal-bd-legalName">Legal business name *</label>
+                <input
+                  id="modal-bd-legalName"
+                  name="legalName"
+                  required
+                  value={billingDetails.legalName}
+                  onChange={(e) => { handleDetailsChange(e); setModalBillingError(''); }}
+                  placeholder="As registered for GST"
+                  maxLength={200}
+                />
+              </div>
+              <div className="bd-field">
+                <label htmlFor="modal-bd-gstin">GSTIN <span className="billing-muted">(optional)</span></label>
+                <input
+                  id="modal-bd-gstin"
+                  name="gstin"
+                  value={billingDetails.gstin}
+                  onChange={(e) => { handleDetailsChange(e); setModalBillingError(''); }}
+                  placeholder="27ABCDE1234F1Z5"
+                  maxLength={15}
+                  autoComplete="off"
+                />
+              </div>
+              <div className="bd-field bd-wide">
+                <label htmlFor="modal-bd-address">Address *</label>
+                <input
+                  id="modal-bd-address"
+                  name="addressLine"
+                  required
+                  value={billingDetails.addressLine}
+                  onChange={(e) => { handleDetailsChange(e); setModalBillingError(''); }}
+                  placeholder="Building, street, area"
+                  maxLength={300}
+                  autoComplete="street-address"
+                />
+              </div>
+              <div className="bd-field">
+                <label htmlFor="modal-bd-city">City *</label>
+                <input
+                  id="modal-bd-city"
+                  name="city"
+                  required
+                  value={billingDetails.city}
+                  onChange={(e) => { handleDetailsChange(e); setModalBillingError(''); }}
+                  maxLength={120}
+                  autoComplete="address-level2"
+                />
+              </div>
+              <div className="bd-field">
+                <label htmlFor="modal-bd-state">State *</label>
+                <select
+                  id="modal-bd-state"
+                  name="state"
+                  required
+                  value={billingDetails.state}
+                  onChange={(e) => { handleDetailsChange(e); setModalBillingError(''); }}
+                >
+                  <option value="">Select state</option>
+                  {indianStates.map((st) => <option key={st} value={st}>{st}</option>)}
+                </select>
+              </div>
+              <div className="bd-field">
+                <label htmlFor="modal-bd-pincode">PIN code *</label>
+                <input
+                  id="modal-bd-pincode"
+                  name="pincode"
+                  required
+                  value={billingDetails.pincode}
+                  onChange={(e) => { handleDetailsChange(e); setModalBillingError(''); }}
+                  inputMode="numeric"
+                  maxLength={6}
+                  autoComplete="postal-code"
+                />
+              </div>
+              {modalBillingError && (
+                <div className="bd-actions" style={{ marginTop: 2 }}>
+                  <span role="alert" className="bd-msg bd-error">{modalBillingError}</span>
+                </div>
+              )}
+              <div className="bd-actions billing-checkout-actions" style={{ marginTop: 6 }}>
+                <button
+                  type="button"
+                  className="invoice-download-btn"
+                  onClick={() => { setPendingCheckoutPlan(null); setModalBillingError(''); }}
+                  disabled={savingModalDetails}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="btn-primary"
+                  style={{ padding: '9px 18px', borderRadius: '8px', fontSize: '13.5px' }}
+                  disabled={savingModalDetails}
+                >
+                  {savingModalDetails ? 'Saving…' : 'Save & Continue to Checkout'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* Checkout Confirmation Modal */}
       {checkoutPlan && (

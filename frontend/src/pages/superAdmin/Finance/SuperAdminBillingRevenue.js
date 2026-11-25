@@ -118,6 +118,8 @@ function SuperAdminBillingRevenue() {
   const [profileForm, setProfileForm] = useState(null);
   const [savingStyle, setSavingStyle] = useState(false);
   const [previewingPdf, setPreviewingPdf] = useState(false);
+  const [requireBillingOnPurchase, setRequireBillingOnPurchase] = useState(true);
+  const [togglingBillingReq, setTogglingBillingReq] = useState(false);
 
   // Create Invoice Modal
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -160,6 +162,9 @@ function SuperAdminBillingRevenue() {
       setData(payload);
       if (payload.businessProfile) {
         setProfileForm((prev) => (isRefresh && prev ? prev : payload.businessProfile));
+      }
+      if (typeof payload.requireBillingDetailsOnPurchase === 'boolean') {
+        setRequireBillingOnPurchase(payload.requireBillingDetailsOnPurchase);
       }
     } catch (err) {
       console.error('Error fetching Billing & Revenue data:', err);
@@ -336,6 +341,28 @@ function SuperAdminBillingRevenue() {
       flashNotice('error', err.response?.data?.error || 'Could not save billing style.');
     } finally {
       setSavingStyle(false);
+    }
+  };
+
+  const handleToggleBillingRequirement = async () => {
+    const nextValue = !requireBillingOnPurchase;
+    try {
+      setTogglingBillingReq(true);
+      await api.post('/super-admin/feature-flags/toggle', {
+        key: 'requireBillingDetailsOnPurchase',
+        isEnabled: nextValue
+      });
+      setRequireBillingOnPurchase(nextValue);
+      flashNotice(
+        'success',
+        nextValue
+          ? 'Mandatory billing details before plan purchase is now ON.'
+          : 'Mandatory billing details before plan purchase is now OFF.'
+      );
+    } catch (err) {
+      flashNotice('error', err.response?.data?.error || 'Failed to toggle purchase billing requirement.');
+    } finally {
+      setTogglingBillingReq(false);
     }
   };
 
@@ -728,6 +755,36 @@ function SuperAdminBillingRevenue() {
           {activeTab === 'style' && profileForm && (
             <div className="billing-style-grid">
               <form className="billing-config-col" onSubmit={handleSaveBillingStyle}>
+                <div className="billing-config-section">
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
+                    <div>
+                      <h3 style={{ marginBottom: 4 }}>Checkout Billing Details Rule</h3>
+                      <p style={{ margin: 0 }}>
+                        Require merchants to fill Legal Name, Address, City, State &amp; PIN Code before purchasing a plan.
+                      </p>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                      <span
+                        className={`billing-status-pill ${requireBillingOnPurchase ? 'paid' : 'cancelled'}`}
+                      >
+                        {requireBillingOnPurchase ? 'ON · Mandatory' : 'OFF · Optional'}
+                      </span>
+                      <button
+                        type="button"
+                        className={requireBillingOnPurchase ? 'billing-act-btn danger' : 'billing-act-btn accent'}
+                        onClick={handleToggleBillingRequirement}
+                        disabled={togglingBillingReq}
+                      >
+                        {togglingBillingReq
+                          ? 'Updating...'
+                          : requireBillingOnPurchase
+                            ? 'Turn OFF'
+                            : 'Turn ON'}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
                 <div className="billing-config-section">
                   <h3>Invoice Theme &amp; Layout</h3>
                   <p>Choose the visual style applied to generated PDF invoices and merchant downloads.</p>

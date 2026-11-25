@@ -2833,8 +2833,9 @@ exports.getBillingRevenueStatus = async (req, res) => {
   try {
     const Invoice = require('../../models/Invoice');
     const billing = require('../../services/billingService');
+    const { isFeatureEnabled } = require('../../services/featureFlagService');
 
-    const [merchants, allInvoices, businessProfile] = await Promise.all([
+    const [merchants, allInvoices, businessProfile, requireBillingDetailsOnPurchase] = await Promise.all([
       Admin.find({ role: 'admin' })
         .select('name email businessName subscriptionPlan subscriptionStatus monthlyPrice customDiscount trialStartedAt subscriptionEndDate createdAt')
         .sort({ createdAt: -1 })
@@ -2843,7 +2844,8 @@ exports.getBillingRevenueStatus = async (req, res) => {
         .sort({ issuedDate: -1, createdAt: -1 })
         .limit(300)
         .lean(),
-      billing.getBusinessProfile()
+      billing.getBusinessProfile(),
+      isFeatureEnabled('requireBillingDetailsOnPurchase')
     ]);
 
     const isPaidInvoice = (inv) => inv.paymentStatus === 'completed' || inv.status === 'paid';
@@ -2932,6 +2934,7 @@ exports.getBillingRevenueStatus = async (req, res) => {
         merchants: merchantRows,
         invoices: allInvoices,
         businessProfile,
+        requireBillingDetailsOnPurchase,
         states: billing.INDIAN_STATES,
         summary: {
           totalRevenue,

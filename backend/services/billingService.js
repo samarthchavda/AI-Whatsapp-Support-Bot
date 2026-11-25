@@ -159,6 +159,59 @@ function buyerSnapshot(admin) {
   };
 }
 
+function validateBuyerBillingDetails(input = {}, { strict = false } = {}) {
+  const details = {
+    legalName: clean(input.legalName),
+    gstin: clean(input.gstin, 15).toUpperCase().replace(/[^A-Z0-9]/g, ''),
+    addressLine: clean(input.addressLine, 300),
+    city: clean(input.city, 120),
+    state: clean(input.state, 120),
+    pincode: clean(input.pincode, 12)
+  };
+  const errors = [];
+  const missingFields = [];
+
+  if (strict) {
+    if (details.legalName.length < 2) {
+      missingFields.push('legalName');
+      errors.push('Legal business name is required (at least 2 characters)');
+    }
+    if (details.addressLine.length < 5) {
+      missingFields.push('addressLine');
+      errors.push('Registered billing address is required (at least 5 characters)');
+    }
+    if (details.city.length < 2) {
+      missingFields.push('city');
+      errors.push('Billing city is required');
+    }
+    if (!details.state || !INDIAN_STATES.includes(details.state)) {
+      missingFields.push('state');
+      errors.push('Select a valid billing state');
+    }
+    if (!/^[1-9][0-9]{5}$/.test(details.pincode)) {
+      missingFields.push('pincode');
+      errors.push('Enter a valid 6-digit Indian PIN code');
+    }
+  } else {
+    if (details.state && !INDIAN_STATES.includes(details.state)) {
+      errors.push('Choose a valid Indian state');
+    }
+    if (details.pincode && !/^[1-9][0-9]{5}$/.test(details.pincode)) {
+      errors.push('PIN code must be 6 digits');
+    }
+  }
+
+  if (details.gstin) {
+    if (!GSTIN_RE.test(details.gstin)) {
+      errors.push('GSTIN format looks invalid (15 characters, e.g. 27ABCDE1234F1Z5)');
+    } else if (details.state && STATE_CODES[details.gstin.slice(0, 2)] && STATE_CODES[details.gstin.slice(0, 2)] !== details.state) {
+      errors.push(`GSTIN state code ${details.gstin.slice(0, 2)} is ${STATE_CODES[details.gstin.slice(0, 2)]}, but the selected state is ${details.state}`);
+    }
+  }
+
+  return { details, errors, missingFields };
+}
+
 /**
  * Create the invoice for a verified Razorpay payment.
  */
@@ -294,6 +347,7 @@ module.exports = {
   nextInvoiceNumber,
   computeTax,
   buyerSnapshot,
+  validateBuyerBillingDetails,
   createInvoiceForPayment,
   createManualInvoice,
   round2

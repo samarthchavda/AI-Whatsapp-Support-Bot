@@ -2625,27 +2625,126 @@ exports.getIntegrationHealthStatus = async (req, res) => {
 // Get AI Usage platform-wide monitoring metrics
 exports.getAIUsageStatus = async (req, res) => {
   try {
-    const merchants = await Admin.find({ role: 'admin' })
-      .select('name email geminiTokensUsed geminiTokensLimit updatedAt');
+    const AILog = require('../../models/AILog');
+
+    const [merchants, aiByMerchant, aiPlatformTotals, modelStats] = await Promise.all([
+      Admin.find({ role: 'admin' })
+        .select('name email businessName subscriptionPlan aiModel geminiTokensUsed geminiTokensLimit updatedAt')
+        .sort({ createdAt: -1 })
+        .lean(),
+      AILog.aggregate([
+        { $match: { admin: { $ne: null } } },
+        {
+          $group: {
+            _id: '$admin',
+            loggedCalls: { $sum: 1 },
+            aiGeneratedCalls: {
+              $sum: {
+                $cond: [{ $eq: ['$structuredOutput.metadata.usedAI', true] }, 1, 0]
+              }
+            },
+            failedCalls: {
+              $sum: {
+                $cond: [{ $eq: ['$error.occurred', true] }, 1, 0]
+              }
+            },
+            loggedTokens: {
+              $sum: {
+                $ifNull: [
+                  '$totalTokens',
+                  { $add: [{ $ifNull: ['$promptTokens', 0] }, { $ifNull: ['$completionTokens', 0] }] }
+                ]
+              }
+            },
+            lastAiAt: { $max: '$createdAt' }
+          }
+        }
+      ]),
+      AILog.aggregate([
+        {
+          $group: {
+            _id: null,
+            totalLoggedCalls: { $sum: 1 },
+            totalAiGeneratedCalls: {
+              $sum: {
+                $cond: [{ $eq: ['$structuredOutput.metadata.usedAI', true] }, 1, 0]
+              }
+            },
+            totalFailedCalls: {
+              $sum: {
+                $cond: [{ $eq: ['$error.occurred', true] }, 1, 0]
+              }
+            },
+            systemLoggedCalls: {
+              $sum: {
+                $cond: [{ $eq: ['$admin', null] }, 1, 0]
+              }
+            },
+            totalLoggedTokens: {
+              $sum: {
+                $ifNull: [
+                  '$totalTokens',
+                  { $add: [{ $ifNull: ['$promptTokens', 0] }, { $ifNull: ['$completionTokens', 0] }] }
+                ]
+              }
+            }
+          }
+        }
+      ]),
+      AILog.aggregate([
+        {
+          $group: {
+            _id: { $ifNull: ['$aiModel', 'unknown'] },
+            calls: { $sum: 1 },
+            totalTokens: {
+              $sum: {
+                $ifNull: [
+                  '$totalTokens',
+                  { $add: [{ $ifNull: ['$promptTokens', 0] }, { $ifNull: ['$completionTokens', 0] }] }
+                ]
+              }
+            }
+          }
+        },
+        { $sort: { calls: -1 } },
+        { $limit: 5 }
+      ])
+    ]);
+
+    const aiByMerchantMap = new Map(aiByMerchant.map((row) => [String(row._id), row]));
+    const platformStats = aiPlatformTotals[0] || {
+      totalLoggedCalls: 0,
+      totalAiGeneratedCalls: 0,
+      totalFailedCalls: 0,
+      systemLoggedCalls: 0,
+      totalLoggedTokens: 0
+    };
 
     const totalUsed = merchants.reduce((sum, m) => sum + (m.geminiTokensUsed || 0), 0);
-    
+
     // Ignore unlimited limits (-1 or Infinity) when calculating total limit
     const totalLimit = merchants.reduce((sum, m) => {
-      const limit = m.geminiTokensLimit;
+      const limit = m.geminiTokensLimit ?? 50000;
       if (limit === -1 || limit === Infinity) return sum;
       return sum + limit;
     }, 0);
 
-    // Calculate usage percentage for each merchant
-    const merchantRows = merchants.map(m => {
+    // Calculate usage percentage + AILog metrics for each merchant
+    const merchantRows = merchants.map((m) => {
       const used = m.geminiTokensUsed || 0;
-      const limit = m.geminiTokensLimit;
-      
+      const limit = m.geminiTokensLimit ?? 50000;
+      const aiStats = aiByMerchantMap.get(String(m._id)) || {
+        loggedCalls: 0,
+        aiGeneratedCalls: 0,
+        failedCalls: 0,
+        loggedTokens: 0,
+        lastAiAt: null
+      };
+
       let usagePct = 0;
       let isUnlimited = false;
       let remaining = 'Unlimited';
-      
+
       if (limit === -1 || limit === Infinity) {
         isUnlimited = true;
       } else if (limit > 0) {
@@ -2654,32 +2753,39 @@ exports.getAIUsageStatus = async (req, res) => {
       }
 
       let status = 'Normal';
-      if (!isUnlimited) {
-        if (usagePct >= 95) {
-          status = 'Critical';
-        } else if (usagePct >= 80) {
-          status = 'Warning';
-        }
+      if (isUnlimited) {
+        status = 'Unlimited';
+      } else if (usagePct >= 95) {
+        status = 'Critical';
+      } else if (usagePct >= 80) {
+        status = 'Warning';
       }
 
       return {
         _id: m._id,
         name: m.name,
         email: m.email,
+        businessName: m.businessName || '',
+        subscriptionPlan: m.subscriptionPlan || 'starter',
+        aiModel: m.aiModel || 'gemini-2.5-flash',
         geminiTokensUsed: used,
         geminiTokensLimit: limit,
         remaining,
         usagePct,
         status,
-        updatedAt: m.updatedAt
+        loggedTokens: aiStats.loggedTokens || 0,
+        loggedCalls: aiStats.loggedCalls || 0,
+        aiGeneratedCalls: aiStats.aiGeneratedCalls || 0,
+        failedCalls: aiStats.failedCalls || 0,
+        lastAiAt: aiStats.lastAiAt || null
       };
     });
 
     // Count near limit merchants (usage >= 80%)
-    const nearLimitCount = merchantRows.filter(m => m.status === 'Warning' || m.status === 'Critical').length;
+    const nearLimitCount = merchantRows.filter((m) => m.status === 'Warning' || m.status === 'Critical').length;
 
     // Calculate average usage % for merchants with limits
-    const limitedMerchants = merchantRows.filter(m => m.geminiTokensLimit > 0);
+    const limitedMerchants = merchantRows.filter((m) => m.geminiTokensLimit > 0);
     const avgUsagePct = limitedMerchants.length > 0
       ? parseFloat((limitedMerchants.reduce((sum, m) => sum + m.usagePct, 0) / limitedMerchants.length).toFixed(1))
       : 0;
@@ -2690,7 +2796,17 @@ exports.getAIUsageStatus = async (req, res) => {
         totalUsed,
         totalLimit,
         avgUsagePct,
-        nearLimitCount
+        nearLimitCount,
+        totalLoggedTokens: platformStats.totalLoggedTokens || 0,
+        totalLoggedCalls: platformStats.totalLoggedCalls || 0,
+        totalAiGeneratedCalls: platformStats.totalAiGeneratedCalls || 0,
+        totalFailedCalls: platformStats.totalFailedCalls || 0,
+        systemLoggedCalls: platformStats.systemLoggedCalls || 0,
+        modelBreakdown: modelStats.map((row) => ({
+          model: row._id,
+          calls: row.calls || 0,
+          totalTokens: row.totalTokens || 0
+        }))
       }
     };
 

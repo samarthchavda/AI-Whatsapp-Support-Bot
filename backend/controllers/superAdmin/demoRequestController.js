@@ -118,7 +118,13 @@ exports.createDemoRequest = async (req, res) => {
           text: customerText
         });
 
-        const adminRecipient = process.env.ESCALATION_EMAIL || process.env.SMTP_USER;
+        const runtimeConfig = require('../../services/runtimeConfigService');
+        const [escalationEmail, smtpUserEmail, adminEmailFallback] = await Promise.all([
+          runtimeConfig.get('escalation_email'),
+          runtimeConfig.get('smtp_user'),
+          runtimeConfig.get('admin_email')
+        ]);
+        const adminRecipient = escalationEmail || adminEmailFallback || smtpUserEmail;
         if (adminRecipient) {
           const adminHtml = `
             <!DOCTYPE html>
@@ -163,7 +169,7 @@ exports.createDemoRequest = async (req, res) => {
             subject: `New Demo Request from ${businessName}`,
             html: adminHtml,
             text: adminText,
-            from: `"Kwickbot System" <${process.env.SMTP_USER}>`
+            from: smtpUserEmail ? `"Kwickbot System" <${smtpUserEmail}>` : undefined
           });
         }
       } catch (emailErr) {

@@ -278,6 +278,11 @@
   padding-right: 40px;
 }
 
+.cfg-input-masked {
+  -webkit-text-security: disc;
+  text-security: disc;
+}
+
 .cfg-eye-btn {
   position: absolute;
   right: 10px;

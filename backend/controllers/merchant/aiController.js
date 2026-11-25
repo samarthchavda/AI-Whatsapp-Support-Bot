@@ -299,11 +299,12 @@ exports.getConversationWithLogs = async (req, res) => {
 exports.verifyGeminiKey = async (req, res) => {
   try {
     const axios = require('axios');
-    const apiKey = process.env.GEMINI_API_KEY;
+    const runtimeConfig = require('../../services/runtimeConfigService');
+    const apiKey = await runtimeConfig.get('gemini_api_key');
     if (!apiKey) {
       return res.status(400).json({
         success: false,
-        message: 'GEMINI_API_KEY not configured in .env'
+        message: 'GEMINI_API_KEY not configured in Super Admin Settings or .env'
       });
     }
 

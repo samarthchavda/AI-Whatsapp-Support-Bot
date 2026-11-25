@@ -2,10 +2,31 @@ const fs = require('fs').promises;
 const pdfParse = require('pdf-parse');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 const KnowledgeBaseChunk = require('../models/KnowledgeBaseChunk');
+const runtimeConfig = require('./runtimeConfigService');
 
 class KnowledgeBaseService {
   constructor() {
-    this.genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+    this._activeGeminiKey = null;
+    this.genAI = process.env.GEMINI_API_KEY
+      ? new GoogleGenerativeAI(process.env.GEMINI_API_KEY)
+      : null;
+    if (process.env.GEMINI_API_KEY) {
+      this._activeGeminiKey = process.env.GEMINI_API_KEY;
+    }
+  }
+
+  async _getGeminiClient() {
+    const apiKey = await runtimeConfig.get('gemini_api_key');
+    if (!apiKey) {
+      this._activeGeminiKey = null;
+      this.genAI = null;
+      return null;
+    }
+    if (apiKey !== this._activeGeminiKey || !this.genAI) {
+      this._activeGeminiKey = apiKey;
+      this.genAI = new GoogleGenerativeAI(apiKey);
+    }
+    return this.genAI;
   }
 
   /**
@@ -151,11 +172,12 @@ class KnowledgeBaseService {
    */
   async generateEmbedding(text) {
     try {
-      if (!process.env.GEMINI_API_KEY) {
+      const client = await this._getGeminiClient();
+      if (!client) {
         throw new Error('GEMINI_API_KEY not configured');
       }
 
-      const model = this.genAI.getGenerativeModel({ model: "gemini-embedding-001" });
+      const model = client.getGenerativeModel({ model: "gemini-embedding-001" });
       const result = await model.embedContent(text);
       
       if (result && result.embedding && result.embedding.values) {
@@ -361,8 +383,13 @@ ${combinedKB}
 
 Now answer the customer's question accurately using ONLY the Knowledge Base above.`;
 
-      const model = this.genAI.getGenerativeModel({
-        model: process.env.GEMINI_MODEL || 'gemini-2.5-flash',
+      const client = await this._getGeminiClient();
+      if (!client) {
+        throw new Error('GEMINI_API_KEY not configured');
+      }
+      const geminiModelName = (await runtimeConfig.get('gemini_model', 'gemini-2.5-flash')) || 'gemini-2.5-flash';
+      const model = client.getGenerativeModel({
+        model: geminiModelName,
         systemInstruction: systemInstruction,
         generationConfig: {
           temperature: 0.2, // Low temperature for high factual precision

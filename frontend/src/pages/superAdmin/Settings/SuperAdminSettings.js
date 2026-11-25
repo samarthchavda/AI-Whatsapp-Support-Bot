@@ -599,13 +599,6 @@ function SuperAdminSettings() {
     }
   };
 
-  const handleChange = (e) => {
-    setFormData((prev) => ({
-      ...prev,
-      [e.target.name]: e.target.value
-    }));
-  };
-
   const handleInvoiceProfileChange = (e) => {
     const { name, value } = e.target;
     setInvoiceProfile((prev) => ({
@@ -732,13 +725,20 @@ function SuperAdminSettings() {
         <div className="cfg-input-wrap">
           <input
             id={`cfg-${keyName}`}
-            type={isVisible ? 'text' : 'password'}
+            type="text"
+            name={`cfg_secret_${keyName}`}
             value={integrations[keyName] || ''}
             onChange={(e) => handleFieldChange(keyName, e.target.value)}
             placeholder={effectivePlaceholder}
-            className="cfg-input cfg-input-secret"
-            autoComplete="new-password"
+            className={`cfg-input cfg-input-secret${!isVisible && integrations[keyName] ? ' cfg-input-masked' : ''}`}
+            autoComplete="off"
+            aria-autocomplete="none"
+            autoCorrect="off"
+            autoCapitalize="none"
             data-lpignore="true"
+            data-1p-ignore="true"
+            data-bwignore="true"
+            data-form-type="other"
             spellCheck={false}
           />
           <button
@@ -768,11 +768,20 @@ function SuperAdminSettings() {
         <input
           id={`cfg-${keyName}`}
           type={type}
+          name={`cfg_field_${keyName}`}
           value={integrations[keyName] || ''}
           onChange={(e) => handleFieldChange(keyName, e.target.value)}
           placeholder={placeholder}
           className="cfg-input"
           autoComplete="off"
+          aria-autocomplete="none"
+          autoCorrect="off"
+          autoCapitalize="none"
+          data-lpignore="true"
+          data-1p-ignore="true"
+          data-bwignore="true"
+          data-form-type="other"
+          spellCheck={false}
         />
         {hint && <span className="cfg-hint">{hint}</span>}
       </div>
@@ -857,7 +866,7 @@ function SuperAdminSettings() {
 
       {/* TAB 1: AI ENGINE */}
       {activeTab === 'ai' && (
-        <form onSubmit={(e) => handleSaveTab('ai', e)} className="cfg-stack">
+        <form onSubmit={(e) => handleSaveTab('ai', e)} className="cfg-stack" autoComplete="off">
           <section className="cfg-panel">
             <div className="cfg-panel-head">
               <div>
@@ -999,7 +1008,7 @@ function SuperAdminSettings() {
 
       {/* TAB 2: EMAIL & SMTP */}
       {activeTab === 'smtp' && (
-        <form onSubmit={(e) => handleSaveTab('smtp', e)} className="cfg-stack">
+        <form onSubmit={(e) => handleSaveTab('smtp', e)} className="cfg-stack" autoComplete="off">
           <section className="cfg-panel">
             <div className="cfg-panel-head">
               <div>
@@ -1096,10 +1105,17 @@ function SuperAdminSettings() {
                 <input
                   id="test-email-recipient"
                   type="email"
+                  name="cfg_test_recipient_address"
                   className="cfg-input"
                   placeholder="Enter email to test saved delivery"
                   value={testEmailAddress}
                   onChange={(e) => setTestEmailAddress(e.target.value)}
+                  autoComplete="off"
+                  aria-autocomplete="none"
+                  data-lpignore="true"
+                  data-1p-ignore="true"
+                  data-bwignore="true"
+                  data-form-type="other"
                 />
               </div>
               <button
@@ -1195,7 +1211,7 @@ function SuperAdminSettings() {
             </div>
           </section>
 
-          <form onSubmit={(e) => handleSaveTab('meta', e)} className="cfg-stack">
+          <form onSubmit={(e) => handleSaveTab('meta', e)} className="cfg-stack" autoComplete="off">
             <section className="cfg-panel">
               <div className="cfg-panel-head">
                 <div>
@@ -1345,7 +1361,7 @@ function SuperAdminSettings() {
               <StatusTag source={tabSources.payments} />
             </div>
 
-            <form onSubmit={handleSaveRazorpay}>
+            <form onSubmit={handleSaveRazorpay} autoComplete="off">
               <div className="cfg-grid-2">
                 <div className="cfg-field">
                   <div className="cfg-label-row">
@@ -1357,18 +1373,25 @@ function SuperAdminSettings() {
                   <div className="cfg-input-wrap">
                     <input
                       id="rzp-key-id"
-                      type={showRazorpayKey ? 'text' : 'password'}
-                      name="razorpay_key_id"
+                      type="text"
+                      name="cfg_secret_razorpay_key_id"
                       value={formData.razorpay_key_id}
-                      onChange={handleChange}
+                      onChange={(e) => setFormData((prev) => ({ ...prev, razorpay_key_id: e.target.value }))}
                       placeholder={
                         sources.razorpay_key_id === 'env'
                           ? 'Active via .env — enter Key ID to override'
                           : 'rzp_live_...'
                       }
-                      className="cfg-input cfg-input-secret"
-                      autoComplete="new-password"
+                      className={`cfg-input cfg-input-secret${!showRazorpayKey && formData.razorpay_key_id ? ' cfg-input-masked' : ''}`}
+                      autoComplete="off"
+                      aria-autocomplete="none"
+                      autoCorrect="off"
+                      autoCapitalize="none"
                       data-lpignore="true"
+                      data-1p-ignore="true"
+                      data-bwignore="true"
+                      data-form-type="other"
+                      spellCheck={false}
                       required
                     />
                     <button
@@ -1392,18 +1415,25 @@ function SuperAdminSettings() {
                   <div className="cfg-input-wrap">
                     <input
                       id="rzp-key-secret"
-                      type={showRazorpaySecret ? 'text' : 'password'}
-                      name="razorpay_key_secret"
+                      type="text"
+                      name="cfg_secret_razorpay_key_secret"
                       value={formData.razorpay_key_secret}
-                      onChange={handleChange}
+                      onChange={(e) => setFormData((prev) => ({ ...prev, razorpay_key_secret: e.target.value }))}
                       placeholder={
                         sources.razorpay_key_secret === 'env'
                           ? 'Active via .env — enter Key Secret to override'
                           : 'Enter Key Secret'
                       }
-                      className="cfg-input cfg-input-secret"
-                      autoComplete="new-password"
+                      className={`cfg-input cfg-input-secret${!showRazorpaySecret && formData.razorpay_key_secret ? ' cfg-input-masked' : ''}`}
+                      autoComplete="off"
+                      aria-autocomplete="none"
+                      autoCorrect="off"
+                      autoCapitalize="none"
                       data-lpignore="true"
+                      data-1p-ignore="true"
+                      data-bwignore="true"
+                      data-form-type="other"
+                      spellCheck={false}
                       required
                     />
                     <button
@@ -1453,7 +1483,7 @@ function SuperAdminSettings() {
             </div>
 
             {invoiceProfile ? (
-              <form onSubmit={handleSaveInvoiceProfile} className="cfg-grid-2">
+              <form onSubmit={handleSaveInvoiceProfile} className="cfg-grid-2" autoComplete="off">
                 {[
                   ['legalName', 'Legal business name', 'Registered business name', 200],
                   ['tradeName', 'Trade name', 'Kwickbot', 120],
@@ -1483,6 +1513,12 @@ function SuperAdminSettings() {
                       onChange={handleInvoiceProfileChange}
                       placeholder={placeholder}
                       maxLength={max}
+                      autoComplete="off"
+                      aria-autocomplete="none"
+                      data-lpignore="true"
+                      data-1p-ignore="true"
+                      data-bwignore="true"
+                      data-form-type="other"
                     />
                   </div>
                 ))}

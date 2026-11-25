@@ -759,7 +759,10 @@ exports.getStatus = async (req, res) => {
       connections,
       connectionLimit: getWhatsappConnectionLimit(adminDoc),
       webhookUrl: `${process.env.BACKEND_URL || (req.protocol + '://' + req.get('host'))}/api/webhook/whatsapp`,
-      verifyToken: adminDoc?.whatsappVerifyToken || process.env.WEBHOOK_VERIFY_TOKEN || 'secure_webhook_token_123',
+      verifyToken:
+        adminDoc?.whatsappVerifyToken ||
+        require('../../services/runtimeConfigService').getSync('whatsapp_webhook_verify_token') ||
+        'secure_webhook_token_123',
       credentials: {
         whatsappPhoneNumberId: adminDoc?.whatsappPhoneNumberId || '',
         whatsappBusinessAccountId: adminDoc?.whatsappBusinessAccountId || '',

@@ -242,12 +242,15 @@ async function getRazorpayCredentials() {
   let keySecret = process.env.RAZORPAY_KEY_SECRET;
   try {
     const GlobalSettings = require('../../models/GlobalSettings');
+    const { decrypt } = require('../../services/whatsappCredentialService');
     const [idSetting, secretSetting] = await Promise.all([
       GlobalSettings.findOne({ key: 'razorpay_key_id' }),
       GlobalSettings.findOne({ key: 'razorpay_key_secret' })
     ]);
     if (idSetting && idSetting.value) keyId = idSetting.value;
-    if (secretSetting && secretSetting.value) keySecret = secretSetting.value;
+    if (secretSetting && secretSetting.value) {
+      keySecret = decrypt(secretSetting.value) || secretSetting.value;
+    }
   } catch (err) {
     console.error('Error fetching Razorpay credentials from DB:', err.message);
   }

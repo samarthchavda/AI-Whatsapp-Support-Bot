@@ -337,3 +337,268 @@
 .invoice-profile-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px 18px; }
 .invoice-profile-grid .span-2 { grid-column: 1 / -1; }
 @media (max-width: 760px) { .invoice-profile-grid { grid-template-columns: 1fr; } }
+
+/* ============================================================
+   INTEGRATIONS HUB (4-Card Strip + 4-Tab Workspace + Source Pills)
+   ============================================================ */
+.super-admin-settings-container.integrations-hub {
+  max-width: 1120px;
+  gap: 22px;
+}
+
+.breadcrumb-chip {
+  display: inline-block;
+  font-size: 11.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #1677FF;
+  background: rgba(22, 119, 255, 0.09);
+  border: 1px solid rgba(22, 119, 255, 0.18);
+  padding: 4px 10px;
+  border-radius: 999px;
+  margin-bottom: 10px;
+}
+
+.integration-status-strip {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.status-summary-card {
+  text-align: left;
+  padding: 16px;
+  border-radius: 14px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-default);
+  cursor: pointer;
+  transition: transform 0.16s ease, border-color 0.16s ease, box-shadow 0.16s ease;
+  font-family: inherit;
+}
+
+.status-summary-card:hover {
+  transform: translateY(-2px);
+  border-color: rgba(22, 119, 255, 0.35);
+}
+
+.status-summary-card.is-selected {
+  border-color: #1677FF;
+  box-shadow: 0 0 0 1px rgba(22, 119, 255, 0.35), 0 8px 20px rgba(22, 119, 255, 0.08);
+}
+
+.status-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.status-icon-box {
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+}
+
+.status-icon-box.ai { background: rgba(22, 119, 255, 0.12); color: #1677FF; }
+.status-icon-box.smtp { background: rgba(99, 102, 241, 0.12); color: #6366f1; }
+.status-icon-box.meta { background: rgba(37, 211, 102, 0.12); color: #25d366; }
+.status-icon-box.pay { background: rgba(245, 158, 11, 0.12); color: #f59e0b; }
+
+.status-card-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.status-card-meta {
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-top: 3px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.integration-tabs {
+  display: flex;
+  gap: 8px;
+  padding: 6px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-default);
+  border-radius: 12px;
+  flex-wrap: wrap;
+}
+
+.integration-tab-btn {
+  flex: 1;
+  min-width: 140px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border-radius: 8px;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  font-family: inherit;
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.16s ease, color 0.16s ease;
+}
+
+.integration-tab-btn:hover {
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.integration-tab-btn.active {
+  background: linear-gradient(135deg, #1677FF 0%, #4f46e5 100%);
+  color: #FFFFFF;
+  box-shadow: 0 4px 12px rgba(22, 119, 255, 0.25);
+}
+
+.integrations-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+
+.card-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.field-label-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.source-pill {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+.source-db {
+  background: rgba(16, 185, 129, 0.12);
+  color: #10b981;
+  border: 1px solid rgba(16, 185, 129, 0.25);
+}
+
+.source-env {
+  background: rgba(22, 119, 255, 0.12);
+  color: #38bdf8;
+  border: 1px solid rgba(22, 119, 255, 0.25);
+}
+
+.source-default {
+  background: rgba(148, 163, 184, 0.12);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-default);
+}
+
+.source-unset {
+  background: rgba(245, 158, 11, 0.1);
+  color: #f59e0b;
+  border: 1px solid rgba(245, 158, 11, 0.22);
+}
+
+.form-grid-2 {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.form-grid-3 {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.btn-test-outline,
+.btn-reset-env {
+  padding: 11px 18px;
+  border-radius: 10px;
+  border: 1px solid var(--border-default);
+  background: transparent;
+  color: var(--text-primary);
+  font-family: inherit;
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  white-space: nowrap;
+  transition: border-color 0.16s ease, background 0.16s ease;
+}
+
+.btn-test-outline:hover,
+.btn-reset-env:hover {
+  border-color: #1677FF;
+  background: rgba(22, 119, 255, 0.06);
+}
+
+.test-email-bar {
+  display: flex;
+  gap: 12px;
+  align-items: flex-end;
+  margin-top: 20px;
+  padding-top: 18px;
+  border-top: 1px dashed var(--border-default);
+}
+
+.bootstrap-note-card {
+  padding: 20px 24px;
+}
+
+.bootstrap-note-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 12px;
+  color: var(--text-primary);
+  font-size: 14px;
+}
+
+.bootstrap-key-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.bootstrap-key-chip {
+  font-size: 11.5px;
+  padding: 4px 9px;
+  border-radius: 6px;
+  background: var(--bg-input);
+  border: 1px solid var(--border-default);
+  color: var(--text-secondary);
+}
+
+@media (max-width: 980px) {
+  .integration-status-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .form-grid-3 { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 720px) {
+  .integration-status-strip { grid-template-columns: 1fr; }
+  .form-grid-2 { grid-template-columns: 1fr; }
+  .test-email-bar { flex-direction: column; align-items: stretch; }
+}

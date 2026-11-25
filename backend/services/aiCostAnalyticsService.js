@@ -2,6 +2,7 @@ const Admin = require('../models/Admin');
 const AILog = require('../models/AILog');
 const Invoice = require('../models/Invoice');
 const GlobalSettings = require('../models/GlobalSettings');
+const runtimeConfig = require('./runtimeConfigService');
 
 // Official per-1M-token USD pricing used for cost estimation.
 // Input and output tokens are priced separately because output tokens cost more.
@@ -20,8 +21,8 @@ const DEFAULT_GEMINI_RATE = MODEL_RATES_PER_1M_USD['gemini-2.5-flash'];
 const BUDGET_ALERT_KEY = 'geminiApiFundsAdded';
 
 function getUsdToInrRate() {
-  const envRate = Number(process.env.USD_TO_INR_RATE);
-  return Number.isFinite(envRate) && envRate > 0 ? envRate : 85;
+  const configuredRate = Number(runtimeConfig.getSync('usd_to_inr_rate', process.env.USD_TO_INR_RATE));
+  return Number.isFinite(configuredRate) && configuredRate > 0 ? configuredRate : 85;
 }
 
 function getModelRates(aiModel = '') {

@@ -1,19 +1,40 @@
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 const OpenAI = require('openai');
+const runtimeConfig = require('./runtimeConfigService');
 
 class TranslationService {
   constructor() {
-    const geminiApiKey = process.env.GEMINI_API_KEY;
+    this._activeGeminiKey = null;
+    this._activeOpenAiKey = null;
+    this._syncClientsFromValues(process.env.GEMINI_API_KEY, process.env.OPENAI_API_KEY);
     this.geminiModelName = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
-    this.gemini = geminiApiKey && geminiApiKey !== 'your_gemini_api_key_here'
-      ? new GoogleGenerativeAI(geminiApiKey)
-      : null;
-
-    const apiKey = process.env.OPENAI_API_KEY;
     this.openaiModelName = process.env.OPENAI_MODEL || 'gpt-3.5-turbo';
-    this.openai = apiKey && apiKey !== 'your_openai_api_key_here' && apiKey !== 'sk-test-key'
-      ? new OpenAI({ apiKey })
-      : null;
+  }
+
+  _syncClientsFromValues(geminiApiKey, apiKey) {
+    const normalizedGemini = geminiApiKey && geminiApiKey !== 'your_gemini_api_key_here' ? geminiApiKey : null;
+    if (normalizedGemini !== this._activeGeminiKey) {
+      this._activeGeminiKey = normalizedGemini;
+      this.gemini = normalizedGemini ? new GoogleGenerativeAI(normalizedGemini) : null;
+    }
+
+    const normalizedOpenAi = apiKey && apiKey !== 'your_openai_api_key_here' && apiKey !== 'sk-test-key' ? apiKey : null;
+    if (normalizedOpenAi !== this._activeOpenAiKey) {
+      this._activeOpenAiKey = normalizedOpenAi;
+      this.openai = normalizedOpenAi ? new OpenAI({ apiKey: normalizedOpenAi }) : null;
+    }
+  }
+
+  async ensureRuntimeConfig() {
+    const [geminiKey, geminiModel, openaiKey, openaiModel] = await Promise.all([
+      runtimeConfig.get('gemini_api_key'),
+      runtimeConfig.get('gemini_model', 'gemini-2.5-flash'),
+      runtimeConfig.get('openai_api_key'),
+      runtimeConfig.get('openai_model', 'gpt-3.5-turbo')
+    ]);
+    this.geminiModelName = geminiModel || 'gemini-2.5-flash';
+    this.openaiModelName = openaiModel || 'gpt-3.5-turbo';
+    this._syncClientsFromValues(geminiKey, openaiKey);
   }
 
   /**
@@ -28,6 +49,8 @@ class TranslationService {
     if (/^\s*\d+\s*$/.test(text)) {
       return { detectedLanguage: 'English', isForeign: false, translation: null };
     }
+
+    await this.ensureRuntimeConfig();
 
     try {
       if (this.gemini) {
@@ -95,6 +118,8 @@ Do not return markdown or any additional formatting.`;
     if (!text || !targetLanguage || targetLanguage.toLowerCase() === 'english' || targetLanguage.toLowerCase() === 'gujarati') {
       return text;
     }
+
+    await this.ensureRuntimeConfig();
 
     try {
       if (this.gemini) {

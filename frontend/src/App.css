@@ -409,6 +409,95 @@ body {
   box-shadow: 0 0 8px rgba(40, 184, 242, 0.6);
 }
 
+/* ---- Expandable Submenu (e.g., Super Admin Settings -> Integrations) ---- */
+.nav-links li .nav-submenu-trigger {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 10px 10px;
+  border-radius: 10px;
+  border: none;
+  background: transparent;
+  color: var(--sidebar-text);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.16s ease, color 0.16s ease;
+  position: relative;
+  white-space: nowrap;
+  overflow: hidden;
+  text-align: left;
+}
+
+.sidebar-expanded .nav-links li .nav-submenu-trigger {
+  justify-content: flex-start;
+  padding: 10px 12px;
+}
+
+.nav-links li .nav-submenu-trigger svg {
+  font-size: 17px;
+  flex-shrink: 0;
+  min-width: 17px;
+  opacity: 0.75;
+  transition: opacity 0.16s, transform 0.16s;
+}
+
+.nav-links li .nav-submenu-trigger:hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: #FFFFFF;
+}
+
+.nav-links li .nav-submenu-trigger:hover svg {
+  opacity: 1;
+  color: #FFFFFF;
+}
+
+.nav-links li .nav-submenu-trigger.active {
+  background: rgba(40, 184, 242, 0.09);
+  color: var(--sidebar-text-active);
+  font-weight: 600;
+}
+
+.nav-links li .nav-submenu-trigger.active svg {
+  opacity: 1;
+  color: var(--sidebar-text-active);
+}
+
+.nav-submenu-caret {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  opacity: 0.7;
+}
+
+.nav-submenu-caret svg {
+  font-size: 11px !important;
+  min-width: 11px !important;
+}
+
+.nav-submenu-list {
+  list-style: none;
+  margin: 4px 0 4px 18px;
+  padding: 0 0 0 10px;
+  border-left: 1px solid rgba(255, 255, 255, 0.1);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.sidebar-expanded .nav-links li .nav-submenu-list li a {
+  padding: 8px 10px;
+  font-size: 12.5px;
+}
+
+.sidebar-expanded .nav-links li .nav-submenu-list li a svg {
+  font-size: 14px;
+  min-width: 14px;
+}
+
 /* ---- AI status dot ---- */
 .ai-status-indicator {
   display: inline-flex;

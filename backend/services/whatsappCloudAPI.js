@@ -206,15 +206,18 @@ class WhatsAppCloudAPI {
 
     try {
       const GlobalSettings = require('../models/GlobalSettings');
+      const { decrypt } = require('./whatsappCredentialService');
       const tokenSetting = await GlobalSettings.findOne({ key: 'whatsapp_access_token' });
       const phoneIdSetting = await GlobalSettings.findOne({ key: 'whatsapp_phone_number_id' });
       const bizIdSetting = await GlobalSettings.findOne({ key: 'whatsapp_business_account_id' });
       const verifyTokenSetting = await GlobalSettings.findOne({ key: 'whatsapp_webhook_verify_token' });
 
-      if (tokenSetting && tokenSetting.value) accessToken = tokenSetting.value;
+      if (tokenSetting && tokenSetting.value) accessToken = decrypt(tokenSetting.value) || tokenSetting.value;
       if (phoneIdSetting && phoneIdSetting.value) phoneNumberId = phoneIdSetting.value;
       if (bizIdSetting && bizIdSetting.value) businessAccountId = bizIdSetting.value;
-      if (verifyTokenSetting && verifyTokenSetting.value) webhookVerifyToken = verifyTokenSetting.value;
+      if (verifyTokenSetting && verifyTokenSetting.value) {
+        webhookVerifyToken = decrypt(verifyTokenSetting.value) || verifyTokenSetting.value;
+      }
     } catch (err) {
       console.error('Error fetching dynamic WhatsApp credentials from DB:', err.message);
     }

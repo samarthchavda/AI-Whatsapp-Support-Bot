@@ -11,10 +11,13 @@
  * META_WEBHOOK_EXTRA_APP_SECRETS.
  */
 const crypto = require('crypto');
+const runtimeConfig = require('../services/runtimeConfigService');
 
 function getSecrets() {
-  const secrets = [process.env.META_APP_SECRET, process.env.META_CLIENT_SECRET]
-    .concat(String(process.env.META_WEBHOOK_EXTRA_APP_SECRETS || '').split(','))
+  const dynamicClientSecret = runtimeConfig.getSync('meta_client_secret');
+  const dynamicExtra = runtimeConfig.getSync('meta_webhook_extra_app_secrets', '');
+  const secrets = [process.env.META_APP_SECRET, process.env.META_CLIENT_SECRET, dynamicClientSecret]
+    .concat(String(dynamicExtra || process.env.META_WEBHOOK_EXTRA_APP_SECRETS || '').split(','))
     .map((s) => (s || '').trim())
     .filter(Boolean);
   return [...new Set(secrets)];
@@ -33,7 +36,7 @@ function isValidSignature(rawBody, header, secrets) {
 function verifyMetaSignature(req, res, next) {
   if (req.method !== 'POST') return next();
 
-  const mode = (process.env.META_WEBHOOK_SIGNATURE_MODE || 'monitor').toLowerCase();
+  const mode = String(runtimeConfig.getSync('meta_webhook_signature_mode', 'monitor') || 'monitor').toLowerCase();
   if (mode === 'off') return next();
 
   const secrets = getSecrets();

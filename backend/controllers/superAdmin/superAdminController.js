@@ -1158,9 +1158,27 @@ exports.deletePlan = async (req, res) => {
 
 // Global settings
 const GlobalSettings = require('../../models/GlobalSettings');
+const runtimeConfig = require('../../services/runtimeConfigService');
+
+const BOOTSTRAP_ENV_KEYS = [
+  'MONGODB_URI',
+  'PORT',
+  'NODE_ENV',
+  'JWT_ACCESS_SECRET',
+  'JWT_REFRESH_SECRET',
+  'CREDENTIALS_ENCRYPTION_KEY',
+  'FILE_SIGNING_SECRET',
+  'SWAGGER_USER',
+  'SWAGGER_PASS_HASH',
+  'SUPER_ADMIN_API_URL',
+  'SUPER_ADMIN_API_KEY'
+];
 
 exports.getGlobalSettings = async (req, res) => {
   try {
+    const includeIntegrations =
+      req?.query?.includeIntegrations === '1' || req?.query?.includeIntegrations === 'true';
+
     const whitelistedKeys = [
       'whatsapp_access_token',
       'whatsapp_phone_number_id',
@@ -1193,6 +1211,14 @@ exports.getGlobalSettings = async (req, res) => {
       }
     });
 
+    if (includeIntegrations) {
+      const snapshot = await runtimeConfig.getIntegrationsSnapshot();
+      Object.assign(settingsMap, snapshot.values);
+      settingsMap['integrationSources'] = snapshot.sources;
+      settingsMap['envDefaults'] = snapshot.envDefaults;
+      settingsMap['bootstrapEnvKeys'] = BOOTSTRAP_ENV_KEYS;
+    }
+
     // Always return a complete invoice profile (defaults merged) and the state list
     const billing = require('../../services/billingService');
     settingsMap['invoice_business_profile'] = billing.sanitizeProfile(settingsMap['invoice_business_profile'] || {});
@@ -1224,6 +1250,84 @@ exports.getGlobalSettings = async (req, res) => {
 
 exports.updateGlobalSettings = async (req, res) => {
   try {
+    const { testAction, testEmail, apiKey, model } = req.body || {};
+
+    if (testAction === 'gemini') {
+      const candidateKey =
+        apiKey && apiKey !== '******' && String(apiKey).trim()
+          ? String(apiKey).trim()
+          : await runtimeConfig.get('gemini_api_key');
+      const modelName =
+        (model && String(model).trim()) ||
+        (await runtimeConfig.get('gemini_model', 'gemini-2.5-flash'));
+
+      if (!candidateKey) {
+        return res.status(400).json({
+          success: false,
+          error: 'Gemini API key is not configured in Super Admin settings or .env'
+        });
+      }
+
+      const startedAt = Date.now();
+      const { GoogleGenerativeAI } = require('@google/generative-ai');
+      const client = new GoogleGenerativeAI(candidateKey);
+      const genModel = client.getGenerativeModel({
+        model: modelName,
+        generationConfig: { maxOutputTokens: 16, temperature: 0 }
+      });
+      const result = await genModel.generateContent('Reply with OK');
+      const text = result?.response?.text ? result.response.text().trim() : 'OK';
+      return res.json({
+        success: true,
+        message: `Gemini connected (${modelName}) in ${Date.now() - startedAt}ms`,
+        data: {
+          model: modelName,
+          latencyMs: Date.now() - startedAt,
+          replyPreview: text.slice(0, 40)
+        }
+      });
+    }
+
+    if (testAction === 'smtp') {
+      const fallbackRecipient =
+        testEmail ||
+        req.admin?.email ||
+        (await runtimeConfig.get('admin_email')) ||
+        (await runtimeConfig.get('smtp_user'));
+
+      if (!fallbackRecipient) {
+        return res.status(400).json({
+          success: false,
+          error: 'Please enter a recipient email address to send the test email'
+        });
+      }
+
+      const { sendEmail } = require('../../services/emailService');
+      const result = await sendEmail({
+        to: String(fallbackRecipient).trim(),
+        subject: 'Kwickbot System Settings — Email Delivery Test',
+        text: `Your Kwickbot email integration is working properly. Tested at ${new Date().toISOString()}.`,
+        html: `<div style="font-family:Inter,Arial,sans-serif;padding:24px;border:1px solid #e5e7eb;border-radius:12px;">
+          <h2 style="margin:0 0 8px;color:#0f172a;">Kwickbot Email Delivery Test</h2>
+          <p style="margin:0 0 12px;color:#475569;">Your Super Admin Email / SMTP integration is active and working properly.</p>
+          <p style="margin:0;font-size:12px;color:#64748b;">Tested at: ${new Date().toISOString()}</p>
+        </div>`
+      });
+
+      if (!result?.success) {
+        return res.status(400).json({
+          success: false,
+          error: result?.message || 'Email credentials not configured (SMTP / Resend missing)'
+        });
+      }
+
+      return res.json({
+        success: true,
+        message: `Test email sent via ${String(result.provider || 'smtp').toUpperCase()} to ${fallbackRecipient}`,
+        data: result
+      });
+    }
+
     const { settings } = req.body;
     if (!settings || typeof settings !== 'object') {
       return res.status(400).json({
@@ -1232,18 +1336,7 @@ exports.updateGlobalSettings = async (req, res) => {
       });
     }
 
-    const whitelistedKeys = [
-      'whatsapp_access_token',
-      'whatsapp_phone_number_id',
-      'whatsapp_business_account_id',
-      'whatsapp_webhook_verify_token',
-      'razorpay_key_id',
-      'razorpay_key_secret',
-      'geminiApiFundsAdded',
-      'webBotEnabled',
-      'invoice_business_profile'
-    ];
-
+    const whitelistedKeys = runtimeConfig.ALL_INTEGRATION_KEYS;
     const whatsappWebBot = require('../../services/whatsappWebBot');
 
     // Invoice business profile: sanitise and validate before anything is saved
@@ -1256,6 +1349,9 @@ exports.updateGlobalSettings = async (req, res) => {
       }
       settings.invoice_business_profile = profile;
     }
+
+    const updatedKeys = [];
+    const clearedKeys = [];
 
     for (const [key, value] of Object.entries(settings)) {
       // Security Whitelist restriction on input setting keys
@@ -1270,12 +1366,15 @@ exports.updateGlobalSettings = async (req, res) => {
 
       if (value === '' || value === null || value === undefined) {
         await GlobalSettings.deleteOne({ key });
+        clearedKeys.push(key);
       } else {
+        const storedValue = runtimeConfig.encodeValueForStorage(key, value);
         await GlobalSettings.findOneAndUpdate(
           { key },
-          { key, value },
+          { key, value: storedValue },
           { upsert: true, new: true }
         );
+        updatedKeys.push(key);
       }
 
       // Handle dynamic activation/deactivation of WhatsApp Web Bot
@@ -1301,6 +1400,23 @@ exports.updateGlobalSettings = async (req, res) => {
       }
     }
 
+    runtimeConfig.invalidateCache();
+    await runtimeConfig.refreshCache(true);
+
+    if (req.admin && (updatedKeys.length > 0 || clearedKeys.length > 0)) {
+      try {
+        const { logAction } = require('../../services/auditLogService');
+        await logAction({
+          action: 'update_global_settings',
+          actor: req.admin,
+          details: { updatedKeys, clearedKeys },
+          req
+        });
+      } catch (auditErr) {
+        console.error('Audit log warning on updateGlobalSettings:', auditErr.message);
+      }
+    }
+
     res.json({
       success: true,
       message: 'Global settings updated successfully'
@@ -1309,7 +1425,7 @@ exports.updateGlobalSettings = async (req, res) => {
     console.error('Error updating global settings:', error);
     res.status(500).json({
       success: false,
-      error: 'Failed to update settings'
+      error: error?.message || 'Failed to update settings'
     });
   }
 };
@@ -2703,8 +2819,8 @@ exports.getSystemHealthStatus = async (req, res) => {
     const offlineMerchants = merchants.filter(m => m.whatsappConnected === false).length;
     const whatsAppStatus = offlineMerchants > 0 ? 'Degraded' : 'Operational';
 
-    // Gemini API configuration check
-    const geminiStatus = process.env.GEMINI_API_KEY ? 'Operational' : 'Not Available';
+    // Gemini API configuration check (DB override or .env fallback)
+    const geminiStatus = runtimeConfig.getSync('gemini_api_key') ? 'Operational' : 'Not Available';
 
     // Shopify & WooCommerce checking based on active integrations
     const integrations = await Integration.find({}).select('platform isActive');

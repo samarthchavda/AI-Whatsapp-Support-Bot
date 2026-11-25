@@ -1,4 +1,5 @@
 const crypto = require('crypto');
+const runtimeConfig = require('../services/runtimeConfigService');
 
 /**
  * Middleware to verify webhook authenticity
@@ -9,7 +10,7 @@ class WebhookAuth {
    */
   static verifySecretToken(req, res, next) {
     const providedToken = req.headers['x-webhook-secret'] || req.headers['authorization']?.replace('Bearer ', '');
-    const expectedToken = process.env.WEBHOOK_SECRET_TOKEN;
+    const expectedToken = runtimeConfig.getSync('webhook_secret_token');
 
     if (!expectedToken) {
       console.warn('⚠️ WEBHOOK_SECRET_TOKEN not set in environment variables');
@@ -40,7 +41,7 @@ class WebhookAuth {
    */
   static verifyShopifyHMAC(req, res, next) {
     const hmacHeader = req.headers['x-shopify-hmac-sha256'];
-    const shopifySecret = process.env.SHOPIFY_WEBHOOK_SECRET;
+    const shopifySecret = runtimeConfig.getSync('shopify_webhook_secret');
 
     if (!shopifySecret) {
       console.warn('⚠️ SHOPIFY_WEBHOOK_SECRET not set - skipping HMAC verification');
@@ -75,7 +76,7 @@ class WebhookAuth {
    */
   static verifyWooCommerceSignature(req, res, next) {
     const signature = req.headers['x-wc-webhook-signature'];
-    const wooSecret = process.env.WOOCOMMERCE_WEBHOOK_SECRET;
+    const wooSecret = runtimeConfig.getSync('woocommerce_webhook_secret');
 
     if (!wooSecret) {
       console.warn('⚠️ WOOCOMMERCE_WEBHOOK_SECRET not set - skipping signature verification');

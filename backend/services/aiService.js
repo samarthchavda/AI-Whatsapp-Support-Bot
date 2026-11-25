@@ -12,26 +12,21 @@ const Admin = require('../models/Admin');
 const emailService = require('./emailService');
 const knowledgeBaseService = require('./knowledgeBaseService');
 const subscriptionService = require('./subscriptionService');
+const runtimeConfig = require('./runtimeConfigService');
 
 class AIService {
   constructor() {
-    const geminiApiKey = process.env.GEMINI_API_KEY;
+    this._activeGeminiKey = null;
+    this._activeOpenAiKey = null;
+    this._syncClientsFromValues(process.env.GEMINI_API_KEY, process.env.OPENAI_API_KEY);
     this.geminiModelName = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
-    this.gemini = geminiApiKey && geminiApiKey !== 'your_gemini_api_key_here'
-      ? new GoogleGenerativeAI(geminiApiKey)
-      : null;
-
-    //open ai api key also use whenever gemini is not available or not working 
-    const apiKey = process.env.OPENAI_API_KEY;
     this.openaiModelName = process.env.OPENAI_MODEL || 'gpt-3.5-turbo';
-    this.openai = apiKey && apiKey !== 'your_openai_api_key_here' && apiKey !== 'sk-test-key'
-      ? new OpenAI({ apiKey })
-      : null;
-    
+
     this.highPriorityKeywords = (process.env.HIGH_PRIORITY_KEYWORDS || 'urgent,critical,emergency,refund,complaint,angry,frustrated,unacceptable')
       .toLowerCase()
       .split(',')
-      .map(k => k.trim());
+      .map(k => k.trim())
+      .filter(Boolean);
 
     // In-memory cache keeps repeated WhatsApp questions off the Gemini/OpenAI path.
     // This can be swapped for Redis later without changing the public AIService API.
@@ -49,6 +44,69 @@ class AIService {
     this.maxTypingDelayMs = Number(process.env.AI_MAX_TYPING_DELAY_MS || 800);
     this.maxResponseSplitLength = Number(process.env.AI_RESPONSE_SPLIT_LENGTH || 220);
     this.maxOutputTokens = Number(process.env.AI_MAX_OUTPUT_TOKENS || 1000);
+  }
+
+  _syncClientsFromValues(geminiApiKey, openaiApiKey) {
+    const normalizedGemini = geminiApiKey && geminiApiKey !== 'your_gemini_api_key_here' ? geminiApiKey : null;
+    if (normalizedGemini !== this._activeGeminiKey) {
+      this._activeGeminiKey = normalizedGemini;
+      this.gemini = normalizedGemini ? new GoogleGenerativeAI(normalizedGemini) : null;
+    }
+
+    const normalizedOpenAi =
+      openaiApiKey && openaiApiKey !== 'your_openai_api_key_here' && openaiApiKey !== 'sk-test-key'
+        ? openaiApiKey
+        : null;
+    if (normalizedOpenAi !== this._activeOpenAiKey) {
+      this._activeOpenAiKey = normalizedOpenAi;
+      this.openai = normalizedOpenAi ? new OpenAI({ apiKey: normalizedOpenAi }) : null;
+    }
+  }
+
+  async ensureRuntimeConfig() {
+    try {
+      const [
+        geminiKey,
+        geminiModel,
+        openaiKey,
+        openaiModel,
+        keywords,
+        maxTokens,
+        maxPerMin
+      ] = await Promise.all([
+        runtimeConfig.get('gemini_api_key'),
+        runtimeConfig.get('gemini_model', 'gemini-2.5-flash'),
+        runtimeConfig.get('openai_api_key'),
+        runtimeConfig.get('openai_model', 'gpt-3.5-turbo'),
+        runtimeConfig.get('high_priority_keywords'),
+        runtimeConfig.get('ai_max_output_tokens'),
+        runtimeConfig.get('ai_max_messages_per_minute')
+      ]);
+
+      this._syncClientsFromValues(geminiKey, openaiKey);
+      this.geminiModelName = geminiModel || 'gemini-2.5-flash';
+      this.openaiModelName = openaiModel || 'gpt-3.5-turbo';
+
+      if (keywords && typeof keywords === 'string') {
+        this.highPriorityKeywords = keywords
+          .toLowerCase()
+          .split(',')
+          .map(k => k.trim())
+          .filter(Boolean);
+      }
+
+      const parsedTokens = Number(maxTokens);
+      if (Number.isFinite(parsedTokens) && parsedTokens > 0) {
+        this.maxOutputTokens = parsedTokens;
+      }
+
+      const parsedRate = Number(maxPerMin);
+      if (Number.isFinite(parsedRate) && parsedRate > 0) {
+        this.maxMessagesPerMinute = parsedRate;
+      }
+    } catch (err) {
+      console.error('Failed to sync runtime AI config (keeping existing values):', err.message);
+    }
   }
 
   normalizeMessage(message = '') {
@@ -324,6 +382,8 @@ STRICT KNOWLEDGE BASE GROUNDING RULES:
     }
 
     try {
+      await this.ensureRuntimeConfig();
+
       // Validate input
       const validation = this.validateInput({ customerPhone, customerName, message });
       if (!validation.valid) {
@@ -1340,6 +1400,7 @@ STRICT KNOWLEDGE BASE GROUNDING RULES:
   }
 
   async detectProductInquiry(message, adminId) {
+    await this.ensureRuntimeConfig();
     let knownProducts = [];
     try {
       if (adminId && (mongoose.connection.readyState === 1 || (Order && typeof Order.distinct === 'function' && (Order.distinct._isMockFunction || typeof Order.distinct.mockResolvedValue === 'function')))) {
@@ -2356,7 +2417,10 @@ Response format must be ONLY the product name or "NONE". Do not write any other 
     const emailService = require('../services/emailService');
 
     try {
-      let recipientEmail = process.env.ESCALATION_EMAIL || process.env.ADMIN_EMAIL || 'support@store.com';
+      let recipientEmail =
+        (await runtimeConfig.get('escalation_email')) ||
+        (await runtimeConfig.get('admin_email')) ||
+        'support@store.com';
       let adminName = 'Store Administrator';
 
       if (escalation.admin) {
@@ -2475,6 +2539,7 @@ Response format must be ONLY the product name or "NONE". Do not write any other 
   }
 
   async analyzeWithGemini(prompt, history = []) {
+    await this.ensureRuntimeConfig();
     // Try Gemini first
     if (this.gemini) {
       try {

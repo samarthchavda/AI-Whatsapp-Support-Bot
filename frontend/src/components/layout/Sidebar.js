@@ -1,12 +1,20 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { FaHome, FaComments, FaBox, FaExclamationTriangle, FaPlug, FaSignOutAlt, FaUser, FaBrain, FaCommentDots, FaBroadcastTower, FaChartLine, FaCog, FaCrown, FaFileAlt, FaShoppingCart, FaCoins, FaHeartbeat, FaBullhorn, FaBlog, FaWhatsapp, FaShieldAlt, FaToggleOn, FaTimes, FaTags, FaUserTag, FaCode, FaUserPlus, FaShopify, FaWordpress, FaHeadset } from 'react-icons/fa';
+import { FaHome, FaComments, FaBox, FaExclamationTriangle, FaPlug, FaSignOutAlt, FaUser, FaBrain, FaCommentDots, FaBroadcastTower, FaChartLine, FaCog, FaCrown, FaFileAlt, FaShoppingCart, FaCoins, FaHeartbeat, FaBullhorn, FaBlog, FaWhatsapp, FaShieldAlt, FaToggleOn, FaTimes, FaTags, FaUserTag, FaCode, FaUserPlus, FaShopify, FaWordpress, FaHeadset, FaChevronDown, FaChevronRight } from 'react-icons/fa';
 import { useEffectiveAccess } from '../../context/EffectiveAccessContext';
 
 export default function Sidebar({ admin, onLogout, isOpen, onToggle, onOpen, onClose }) {
   const location = useLocation();
   const { canViewPage } = useEffectiveAccess();
   const isMerchant = Boolean(admin && admin.role !== 'super_admin');
+  const isSuperAdminSettingsRoute = location.pathname.startsWith('/dashboard/super-admin/settings');
+  const [settingsMenuOpen, setSettingsMenuOpen] = useState(isSuperAdminSettingsRoute);
+
+  useEffect(() => {
+    if (isSuperAdminSettingsRoute) {
+      setSettingsMenuOpen(true);
+    }
+  }, [isSuperAdminSettingsRoute]);
 
   const isActive = (path) => {
     if (path === '/dashboard/developer' && location.pathname.startsWith('/dashboard/developer/')) return 'active';
@@ -155,11 +163,43 @@ export default function Sidebar({ admin, onLogout, isOpen, onToggle, onOpen, onC
                     <span className="nav-label">Blog Manager</span>
                   </Link>
                 </li>
-                <li>
-                  <Link to="/dashboard/super-admin/settings" className={isActive('/dashboard/super-admin/settings')} title="System Connection">
-                    <FaPlug />
-                    <span className="nav-label">System Connection</span>
-                  </Link>
+                <li className={`nav-submenu-group${settingsMenuOpen ? ' open' : ''}`}>
+                  <button
+                    type="button"
+                    className={`nav-submenu-trigger${isSuperAdminSettingsRoute ? ' active' : ''}`}
+                    onClick={() => {
+                      if (!isOpen) {
+                        (onOpen || onToggle)?.();
+                        setSettingsMenuOpen(true);
+                        return;
+                      }
+                      setSettingsMenuOpen((prev) => !prev);
+                    }}
+                    aria-expanded={settingsMenuOpen}
+                    title="Settings"
+                  >
+                    <FaCog />
+                    <span className="nav-label">Settings</span>
+                    {isOpen && (
+                      <span className="nav-submenu-caret">
+                        {settingsMenuOpen ? <FaChevronDown /> : <FaChevronRight />}
+                      </span>
+                    )}
+                  </button>
+                  {settingsMenuOpen && isOpen && (
+                    <ul className="nav-submenu-list">
+                      <li>
+                        <Link
+                          to="/dashboard/super-admin/settings"
+                          className={isActive('/dashboard/super-admin/settings')}
+                          title="Integrations"
+                        >
+                          <FaPlug />
+                          <span className="nav-label">Integrations</span>
+                        </Link>
+                      </li>
+                    </ul>
+                  )}
                 </li>
                 <li>
                   <Link to="/dashboard/profile" className={isActive('/dashboard/profile')} title="Profile Settings">

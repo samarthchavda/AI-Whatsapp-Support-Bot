@@ -1,5 +1,6 @@
 const axios = require('axios');
 const Admin = require('../../models/Admin');
+const runtimeConfig = require('../../services/runtimeConfigService');
 
 // Helper to mask secrets in logs
 const maskSecret = (secret) => {
@@ -19,14 +20,16 @@ exports.handleEmbeddedSignup = async (req, res) => {
       });
     }
 
-    const appId = process.env.META_APP_ID || '2242808243238982';
-    const appSecret = process.env.META_CLIENT_SECRET || process.env.META_APP_SECRET || process.env.FACEBOOK_CLIENT_SECRET;
+    const [appId, appSecret] = await Promise.all([
+      runtimeConfig.get('meta_app_id', '2242808243238982'),
+      runtimeConfig.get('meta_client_secret')
+    ]);
 
     if (!appSecret) {
-      console.error('❌ Meta Client Secret is missing from environment variables (META_CLIENT_SECRET).');
+      console.error('❌ Meta Client Secret is missing (check Super Admin Meta & Webhooks settings or META_CLIENT_SECRET in .env).');
       return res.status(500).json({
         success: false,
-        error: 'Meta Client Secret is not configured in backend environment variables (.env)'
+        error: 'Meta Client Secret is not configured in Super Admin settings or backend environment variables (.env)'
       });
     }
 

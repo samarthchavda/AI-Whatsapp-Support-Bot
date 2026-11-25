@@ -4,14 +4,30 @@ const DemoRequest = require('../models/DemoRequest');
 const Invoice = require('../models/Invoice');
 const WebhookLog = require('../models/WebhookLog');
 const whatsappCloudAPI = require('./whatsappCloudAPI');
+const runtimeConfig = require('./runtimeConfigService');
 
 class SuperAdminBotService {
   constructor() {
-    const geminiApiKey = process.env.GEMINI_API_KEY;
+    this._activeGeminiKey = null;
+    this._syncGeminiClient(process.env.GEMINI_API_KEY);
     this.geminiModelName = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
-    this.gemini = geminiApiKey && geminiApiKey !== 'your_gemini_api_key_here'
-      ? new GoogleGenerativeAI(geminiApiKey)
-      : null;
+  }
+
+  _syncGeminiClient(geminiApiKey) {
+    const normalized = geminiApiKey && geminiApiKey !== 'your_gemini_api_key_here' ? geminiApiKey : null;
+    if (normalized !== this._activeGeminiKey) {
+      this._activeGeminiKey = normalized;
+      this.gemini = normalized ? new GoogleGenerativeAI(normalized) : null;
+    }
+  }
+
+  async ensureRuntimeConfig() {
+    const [geminiKey, geminiModel] = await Promise.all([
+      runtimeConfig.get('gemini_api_key'),
+      runtimeConfig.get('gemini_model', 'gemini-2.5-flash')
+    ]);
+    this.geminiModelName = geminiModel || 'gemini-2.5-flash';
+    this._syncGeminiClient(geminiKey);
   }
 
   /**
@@ -53,7 +69,7 @@ class SuperAdminBotService {
 
     const dbState = mongoose.connection.readyState;
     const dbStatus = dbState === 1 ? 'Operational' : 'Down';
-    const geminiStatus = process.env.GEMINI_API_KEY ? 'Operational' : 'Not Available';
+    const geminiStatus = runtimeConfig.getSync('gemini_api_key') ? 'Operational' : 'Not Available';
 
     return {
       backendStatus: 'Operational',
@@ -373,6 +389,8 @@ RESPONSE RULES:
 - If asked about a specific merchant, find them in the merchants list and give full details
 - If asked about revenue, orders, conversations, escalations — use the exact numbers from data
 - Be concise, operational, and accurate`;
+
+    await this.ensureRuntimeConfig();
 
     let replyMessage = '';
     if (this.gemini) {

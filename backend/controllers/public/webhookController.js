@@ -23,8 +23,11 @@ exports.handleWebhook = async (req, res) => {
         let globalVerifyToken = process.env.WEBHOOK_VERIFY_TOKEN;
         try {
           const GlobalSettings = require('../../models/GlobalSettings');
+          const { decrypt } = require('../../services/whatsappCredentialService');
           const verifyTokenSetting = await GlobalSettings.findOne({ key: 'whatsapp_webhook_verify_token' });
-          if (verifyTokenSetting && verifyTokenSetting.value) globalVerifyToken = verifyTokenSetting.value;
+          if (verifyTokenSetting && verifyTokenSetting.value) {
+            globalVerifyToken = decrypt(verifyTokenSetting.value) || verifyTokenSetting.value;
+          }
         } catch (err) {
           console.error('Error fetching dynamic WhatsApp webhook verify token from DB:', err.message);
         }

@@ -49,6 +49,14 @@ exports.signup = async (req, res) => {
   }
 
   try {
+    const { isFeatureEnabled } = require('../../services/featureFlagService');
+    if (!(await isFeatureEnabled('merchantSignupEnabled'))) {
+      return res.status(403).json({
+        success: false,
+        error: 'Merchant self-signup is temporarily paused by platform administrators. Please try again later.'
+      });
+    }
+
     if (await Admin.exists({ email })) {
       return res.status(409).json({ success: false, error: 'An account with this email already exists. Sign in or reset your password.' });
     }

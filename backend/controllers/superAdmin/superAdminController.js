@@ -3328,51 +3328,20 @@ exports.deleteAnnouncement = async (req, res) => {
 // Get Feature Flags using GlobalSettings
 exports.getFeatureFlags = async (req, res) => {
   try {
-    const predefinedFlags = ['webBotEnabled', 'shopifySyncEnabled', 'wooSyncEnabled', 'aiAutoResponseEnabled', 'merchantTemplateCreationEnabled'];
-    
+    const { FEATURE_FLAGS, PREDEFINED_FLAG_KEYS } = require('../../services/featureFlagService');
+
     // Explicit security whitelist: fetch only the predefined flags to protect other sensitive settings/secrets
-    const settings = await GlobalSettings.find({ key: { $in: predefinedFlags } });
+    const settings = await GlobalSettings.find({ key: { $in: PREDEFINED_FLAG_KEYS } });
     const settingsMap = {};
-    settings.forEach(s => {
+    settings.forEach((s) => {
       settingsMap[s.key] = s;
     });
 
-    const defaultFlags = [
-      {
-        key: 'webBotEnabled',
-        name: 'Web Chatbot Widget',
-        description: 'Controls whether the web chat client widget and socket listeners are active.',
-        scope: 'Global'
-      },
-      {
-        key: 'shopifySyncEnabled',
-        name: 'Shopify Realtime Sync',
-        description: 'Controls Shopify connection cron job triggers and customer data syncing.',
-        scope: 'Global'
-      },
-      {
-        key: 'wooSyncEnabled',
-        name: 'WooCommerce Webhook Listeners',
-        description: 'Controls WooCommerce real-time webhook routing for automated orders updates.',
-        scope: 'Global'
-      },
-      {
-        key: 'aiAutoResponseEnabled',
-        name: 'AI Auto-Response Engine',
-        description: 'Controls whether Gemini AI answers incoming messages without human agent escalation.',
-        scope: 'Global'
-      },
-      {
-        key: 'merchantTemplateCreationEnabled',
-        name: 'Merchant Template Creation',
-        description: 'Allows merchants to create and submit WhatsApp message templates to their own Meta Business account for review.',
-        scope: 'Global'
-      }
-    ];
-
-    const flagsList = defaultFlags.map(df => {
+    const flagsList = FEATURE_FLAGS.map((df) => {
       const dbSetting = settingsMap[df.key];
-      const isEnabled = dbSetting ? dbSetting.value === true : false;
+      const isEnabled = dbSetting && typeof dbSetting.value === 'boolean'
+        ? dbSetting.value === true
+        : df.defaultEnabled;
       return {
         key: df.key,
         name: df.name,
@@ -3384,7 +3353,7 @@ exports.getFeatureFlags = async (req, res) => {
     });
 
     const totalFeatures = flagsList.length;
-    const enabledCount = flagsList.filter(f => f.isEnabled).length;
+    const enabledCount = flagsList.filter((f) => f.isEnabled).length;
     const disabledCount = totalFeatures - enabledCount;
 
     res.json({
@@ -3410,7 +3379,7 @@ exports.getFeatureFlags = async (req, res) => {
 // Toggle a Feature Flag value in GlobalSettings
 exports.toggleFeatureFlag = async (req, res) => {
   try {
-    const predefinedFlags = ['webBotEnabled', 'shopifySyncEnabled', 'wooSyncEnabled', 'aiAutoResponseEnabled', 'merchantTemplateCreationEnabled'];
+    const { PREDEFINED_FLAG_KEYS, FEATURE_FLAG_MAP } = require('../../services/featureFlagService');
     const { key, isEnabled } = req.body;
 
     if (!key) {
@@ -3418,16 +3387,18 @@ exports.toggleFeatureFlag = async (req, res) => {
     }
 
     // Security check: Only predefined whitelisted flags can be modified
-    if (!predefinedFlags.includes(key)) {
+    if (!PREDEFINED_FLAG_KEYS.includes(key)) {
       return res.status(400).json({
         success: false,
         error: 'Unauthorized key modification. Only predefined feature flags can be toggled.'
       });
     }
 
-    // Retrieve old state to log old/new values in AuditLog
+    const def = FEATURE_FLAG_MAP.get(key);
     const oldSetting = await GlobalSettings.findOne({ key });
-    const oldValue = oldSetting ? oldSetting.value === true : false;
+    const oldValue = oldSetting && typeof oldSetting.value === 'boolean'
+      ? oldSetting.value === true
+      : Boolean(def?.defaultEnabled);
     const newValue = isEnabled === true;
 
     const updatedSetting = await GlobalSettings.findOneAndUpdate(

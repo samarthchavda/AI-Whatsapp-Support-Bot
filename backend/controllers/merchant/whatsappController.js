@@ -133,8 +133,8 @@ exports.getTemplates = async (req, res) => {
 // Create a template directly in the merchant's connected Meta WABA.
 exports.createTemplate = async (req, res) => {
   try {
-    const creationFlag = await GlobalSettings.findOne({ key: 'merchantTemplateCreationEnabled' });
-    if (!creationFlag?.value) {
+    const { isFeatureEnabled } = require('../../services/featureFlagService');
+    if (!(await isFeatureEnabled('merchantTemplateCreationEnabled'))) {
       return res.status(403).json({
         success: false,
         error: 'Template creation is currently disabled by the platform administrator.'

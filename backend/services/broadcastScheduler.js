@@ -8,6 +8,11 @@ const scheduledTasks = new Map();
 // Helper to check and send reminders for abandoned carts
 async function checkAbandonedCarts() {
   try {
+    const { isFeatureEnabled } = require('./featureFlagService');
+    if (!(await isFeatureEnabled('abandonedCartRemindersEnabled'))) {
+      return;
+    }
+
     const AbandonedCart = require('../models/AbandonedCart');
     const Integration = require('../models/Integration');
     const webhookService = require('./webhookService');
@@ -72,12 +77,13 @@ let dailySuperAdminTask = null;
 async function runMinuteTick() {
   try {
     const now = new Date();
-    
+    const { isFeatureEnabled } = require('./featureFlagService');
+    const broadcastsAllowed = await isFeatureEnabled('broadcastsEnabled');
+
     // Find broadcasts scheduled for now or earlier that haven't been sent
-    const broadcasts = await Broadcast.find({
-      status: 'scheduled',
-      scheduledFor: { $lte: now }
-    });
+    const broadcasts = broadcastsAllowed
+      ? await Broadcast.find({ status: 'scheduled', scheduledFor: { $lte: now } })
+      : [];
 
     for (const broadcast of broadcasts) {
       console.log(`⏰ Starting scheduled broadcast: ${broadcast.title}`);

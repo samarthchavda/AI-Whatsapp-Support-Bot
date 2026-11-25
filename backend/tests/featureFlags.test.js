@@ -130,7 +130,8 @@ describe('Super Admin Feature Flags Backend Enforcement', () => {
   });
 
   describe('Feature Flags Security Whitelisting & Audit Logging', () => {
-    test('getFeatureFlags queries only the predefined flags', async () => {
+    test('getFeatureFlags queries only the predefined flags and syncs defaultEnabled state', async () => {
+      const { PREDEFINED_FLAG_KEYS } = require('../services/featureFlagService');
       GlobalSettings.find.mockResolvedValue([]);
       const req = {};
       const res = {
@@ -140,8 +141,11 @@ describe('Super Admin Feature Flags Backend Enforcement', () => {
       await getFeatureFlags(req, res);
 
       expect(GlobalSettings.find).toHaveBeenCalledWith({
-        key: { $in: ['webBotEnabled', 'shopifySyncEnabled', 'wooSyncEnabled', 'aiAutoResponseEnabled', 'merchantTemplateCreationEnabled'] }
+        key: { $in: PREDEFINED_FLAG_KEYS }
       });
+      const responsePayload = res.json.mock.calls[0][0].data;
+      expect(responsePayload.flags.length).toBe(PREDEFINED_FLAG_KEYS.length);
+      expect(responsePayload.flags.every((f) => f.isEnabled === true)).toBe(true);
     });
 
     test('toggleFeatureFlag allows predefined flags and saves log to AuditLog', async () => {

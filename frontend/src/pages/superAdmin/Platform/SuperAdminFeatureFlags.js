@@ -1,339 +1,304 @@
-import React, { useState, useEffect } from 'react';
-import api from '../../../services/api';
-import { 
-  FaToggleOn, 
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import {
+  FaToggleOn,
   FaToggleOff,
-  FaTimesCircle,
+  FaSync,
+  FaSearch,
   FaCheckCircle,
-  FaInfoCircle,
   FaExclamationTriangle
 } from 'react-icons/fa';
-import '../Dashboard/SuperAdmin.css'; // Reuse SuperAdmin layout and tables CSS
+import api from '../../../services/api';
+import './SuperAdminFeatureFlags.css';
 
 function SuperAdminFeatureFlags() {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  
-  // Interaction & State states
+  const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [searchQuery, setSearchQuery] = useState('');
+
   const [togglingKey, setTogglingKey] = useState(null);
-  const [confirmModal, setConfirmModal] = useState({ show: false, key: '', name: '', isEnabled: false });
-  const [feedback, setFeedback] = useState({ message: '', type: '' }); // type: 'success' | 'error'
+  const [confirmModal, setConfirmModal] = useState(null);
+  const [feedback, setFeedback] = useState(null);
 
-  useEffect(() => {
-    fetchFeatureFlags();
-  }, []);
-
-  const fetchFeatureFlags = async () => {
+  const fetchFeatureFlags = useCallback(async (isRefresh = false) => {
     try {
-      setLoading(true);
-      setError(null);
+      if (isRefresh) {
+        setRefreshing(true);
+      } else {
+        setLoading(true);
+      }
+      setError('');
       const response = await api.get('/super-admin/feature-flags');
-      setData(response.data.data);
+      setData(response.data?.data || null);
     } catch (err) {
       console.error('Error fetching feature flags:', err);
-      setError(err.response?.data?.error || 'Failed to load Feature Flags configuration');
+      setError(err.response?.data?.error || 'Failed to load feature flags');
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
-  };
+  }, []);
 
-  const triggerToggleConfirm = (flag) => {
-    setConfirmModal({
-      show: true,
-      key: flag.key,
-      name: flag.name,
-      isEnabled: flag.isEnabled
-    });
-  };
-
-  const closeConfirmModal = () => {
-    setConfirmModal({ show: false, key: '', name: '', isEnabled: false });
-  };
+  useEffect(() => {
+    fetchFeatureFlags(false);
+  }, [fetchFeatureFlags]);
 
   const executeToggleFlag = async () => {
-    const { key, isEnabled } = confirmModal;
-    closeConfirmModal();
-    
+    if (!confirmModal) return;
+    const { key, name, isEnabled } = confirmModal;
+    setConfirmModal(null);
+
     try {
       setTogglingKey(key);
-      setFeedback({ message: '', type: '' });
-      
+      setFeedback(null);
+
       const response = await api.post('/super-admin/feature-flags/toggle', {
         key,
         isEnabled: !isEnabled
       });
 
-      if (response.data.success) {
-        // Update local state summary and flag state
-        setData(prev => {
+      if (response.data?.success) {
+        setData((prev) => {
           if (!prev) return prev;
-          const updatedFlags = prev.flags.map(f => {
-            if (f.key === key) {
-              return { ...f, isEnabled: !isEnabled, updatedAt: new Date() };
-            }
-            return f;
-          });
-          const enabledCount = updatedFlags.filter(f => f.isEnabled).length;
-          const disabledCount = updatedFlags.length - enabledCount;
+          const updatedFlags = prev.flags.map((f) =>
+            f.key === key ? { ...f, isEnabled: !isEnabled, updatedAt: new Date() } : f
+          );
+          const enabledCount = updatedFlags.filter((f) => f.isEnabled).length;
           return {
             ...prev,
             flags: updatedFlags,
             summary: {
               ...prev.summary,
               enabledCount,
-              disabledCount
+              disabledCount: updatedFlags.length - enabledCount
             }
           };
         });
-        
+
         setFeedback({
-          message: `Successfully ${!isEnabled ? 'enabled' : 'disabled'} feature: "${confirmModal.name}"!`,
-          type: 'success'
+          type: 'success',
+          text: `${!isEnabled ? 'Enabled' : 'Disabled'} "${name}".`
         });
-        
-        // Clear success message after 5 seconds
-        setTimeout(() => {
-          setFeedback(prev => prev.message.includes(confirmModal.name) ? { message: '', type: '' } : prev);
-        }, 5000);
+        setTimeout(() => setFeedback(null), 4000);
       }
     } catch (err) {
       console.error('Error toggling feature flag:', err);
       setFeedback({
-        message: err.response?.data?.error || `Failed to toggle feature: "${confirmModal.name}"`,
-        type: 'error'
+        type: 'error',
+        text: err.response?.data?.error || `Failed to update "${name}".`
       });
     } finally {
       setTogglingKey(null);
     }
   };
 
+  const flags = useMemo(() => data?.flags || [], [data]);
+  const summary = data?.summary || { totalFeatures: 0, enabledCount: 0, disabledCount: 0 };
+
+  const filteredFlags = useMemo(() => {
+    const q = searchQuery.toLowerCase().trim();
+    return flags.filter((flag) => {
+      if (statusFilter === 'enabled' && !flag.isEnabled) return false;
+      if (statusFilter === 'disabled' && flag.isEnabled) return false;
+      if (!q) return true;
+      return (
+        (flag.name || '').toLowerCase().includes(q) ||
+        (flag.key || '').toLowerCase().includes(q) ||
+        (flag.description || '').toLowerCase().includes(q) ||
+        (flag.scope || '').toLowerCase().includes(q)
+      );
+    });
+  }, [flags, statusFilter, searchQuery]);
+
   if (loading && !data) {
     return (
-      <div className="container">
-        <div style={{ padding: '60px', textAlign: 'center', color: 'var(--text-secondary)' }}>
-          <div className="spinner" style={{ margin: '0 auto 16px' }}></div>
-          Loading Feature Flags configuration...
-        </div>
+      <div className="ff-loading">
+        <div className="spinner"></div>
       </div>
     );
   }
 
-  if (error) {
-    return (
-      <div className="container">
-        <div className="detail-card" style={{ padding: '30px', textAlign: 'center', border: '1px solid rgba(239, 68, 68, 0.2)' }}>
-          <FaTimesCircle style={{ fontSize: '40px', color: '#ef4444', marginBottom: '12px' }} />
-          <h3 style={{ margin: '0 0 8px 0', color: 'var(--text-primary)' }}>Error Loading Dashboard</h3>
-          <p style={{ margin: '0 0 20px 0', color: 'var(--text-secondary)', fontSize: '14px' }}>{error}</p>
-          <button onClick={fetchFeatureFlags} className="btn-primary">
+  return (
+    <div className="ff-page">
+      <div className="ff-header">
+        <div>
+          <div className="ff-breadcrumb">Platform / Feature Flags</div>
+          <h1 className="ff-title">Feature Flags</h1>
+          <p className="ff-subtitle">
+            Live runtime switches enforced across AI auto-replies, store webhooks, campaigns, templates, and public signups.
+          </p>
+        </div>
+
+        <button
+          type="button"
+          className="ff-refresh-btn"
+          onClick={() => fetchFeatureFlags(true)}
+          disabled={refreshing}
+        >
+          <FaSync className={refreshing ? 'spin' : ''} />
+          {refreshing ? 'Refreshing...' : 'Refresh'}
+        </button>
+      </div>
+
+      {error && (
+        <div className="ff-notice error">
+          <span><FaExclamationTriangle style={{ marginRight: '8px' }} />{error}</span>
+          <button type="button" className="ff-refresh-btn" onClick={() => fetchFeatureFlags(false)}>
             Retry
           </button>
         </div>
-      </div>
-    );
-  }
+      )}
 
-  const { flags, summary } = data || {
-    flags: [],
-    summary: { totalFeatures: 0, enabledCount: 0, disabledCount: 0 }
-  };
-
-  return (
-    <div className="container super-admin-page">
-      <div className="page-header super-admin-header">
-        <div>
-          <h1 className="page-title super-admin-title" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <FaToggleOn className="feature-flags-title-icon" style={{ color: '#10b981' }} />
-            Feature Flags
-          </h1>
-          <p className="page-subtitle">Configure system capability rollouts, toggle external synchronizations, and configure platform components</p>
-        </div>
-      </div>
-
-      {/* Success/Error Feedback Alerts */}
-      {feedback.message && (
-        <div 
-          className={`premium-alert ${feedback.type === 'success' ? 'premium-alert-success' : 'premium-alert-danger'}`}
-          style={{ marginBottom: '24px', display: 'flex', alignItems: 'center', gap: '10px' }}
-        >
-          {feedback.type === 'success' ? <FaCheckCircle style={{ color: '#10b981' }} /> : <FaTimesCircle style={{ color: '#ef4444' }} />}
-          <span>{feedback.message}</span>
+      {feedback && (
+        <div className={`ff-notice ${feedback.type}`}>
+          <span>
+            {feedback.type === 'success' ? <FaCheckCircle style={{ marginRight: '8px' }} /> : <FaExclamationTriangle style={{ marginRight: '8px' }} />}
+            {feedback.text}
+          </span>
         </div>
       )}
 
-      {/* KPI Stats Cards */}
-      <div className="analytics-cards" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '20px', marginBottom: '24px' }}>
-        <div className="stat-card" style={{ background: 'var(--bg-card)', border: '1px solid var(--border-subtle)', borderRadius: '16px', padding: '20px', display: 'flex', alignItems: 'center', gap: '16px' }}>
-          <div className="stat-icon" style={{ background: 'rgba(16, 185, 129, 0.1)', color: '#10b981', padding: '16px', borderRadius: '12px', fontSize: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <FaInfoCircle />
+      {!error && (
+        <div className="ff-panel">
+          <div className="ff-summary-strip">
+            <div className="ff-metric">
+              <span className="ff-metric-label">Declared platform flags</span>
+              <span className="ff-metric-value">{summary.totalFeatures}</span>
+              <span className="ff-metric-sub">Enforced in runtime code</span>
+            </div>
+            <div className="ff-metric">
+              <span className="ff-metric-label">Enabled</span>
+              <span className="ff-metric-value" style={{ color: '#34d399' }}>{summary.enabledCount}</span>
+              <span className="ff-metric-sub">Active across platform</span>
+            </div>
+            <div className="ff-metric">
+              <span className="ff-metric-label">Disabled</span>
+              <span className="ff-metric-value">{summary.disabledCount}</span>
+              <span className="ff-metric-sub">Paused / kill-switch active</span>
+            </div>
           </div>
-          <div className="stat-info">
-            <h3 style={{ margin: 0, fontSize: '13px', color: 'var(--text-secondary)' }}>Total Features</h3>
-            <p className="stat-value" style={{ margin: '4px 0 0 0', fontSize: '26px', fontWeight: '700', color: 'var(--text-primary)' }}>{summary.totalFeatures}</p>
-            <small style={{ color: 'var(--text-secondary)' }}>Declared key flags</small>
-          </div>
-        </div>
 
-        <div className="stat-card" style={{ background: 'var(--bg-card)', border: '1px solid var(--border-subtle)', borderRadius: '16px', padding: '20px', display: 'flex', alignItems: 'center', gap: '16px' }}>
-          <div className="stat-icon" style={{ background: 'rgba(16, 185, 129, 0.1)', color: '#10b981', padding: '16px', borderRadius: '12px', fontSize: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <FaCheckCircle />
-          </div>
-          <div className="stat-info">
-            <h3 style={{ margin: 0, fontSize: '13px', color: 'var(--text-secondary)' }}>Active (Enabled)</h3>
-            <p className="stat-value" style={{ margin: '4px 0 0 0', fontSize: '26px', fontWeight: '700', color: '#10b981' }}>{summary.enabledCount}</p>
-            <small style={{ color: 'var(--text-secondary)' }}>Live system capabilities</small>
-          </div>
-        </div>
-
-        <div className="stat-card" style={{ background: 'var(--bg-card)', border: '1px solid var(--border-subtle)', borderRadius: '16px', padding: '20px', display: 'flex', alignItems: 'center', gap: '16px' }}>
-          <div className="stat-icon" style={{ background: 'rgba(113, 113, 122, 0.1)', color: 'var(--text-secondary)', padding: '16px', borderRadius: '12px', fontSize: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <FaTimesCircle />
-          </div>
-          <div className="stat-info">
-            <h3 style={{ margin: 0, fontSize: '13px', color: 'var(--text-secondary)' }}>Inactive (Disabled)</h3>
-            <p className="stat-value" style={{ margin: '4px 0 0 0', fontSize: '26px', fontWeight: '700', color: 'var(--text-secondary)' }}>{summary.disabledCount}</p>
-            <small style={{ color: 'var(--text-secondary)' }}>Disabled components</small>
-          </div>
-        </div>
-      </div>
-
-      {/* Monitoring Table */}
-      <div className="table-container-premium super-admin-table">
-        <div className="table-header-premium super-admin-table-header">
-          <h2><FaToggleOn /> System Feature Registry ({flags.length})</h2>
-        </div>
-
-        <div className="table-wrapper">
-          <table className="premium-table">
-            <thead>
-              <tr>
-                <th>Feature Name</th>
-                <th>Description</th>
-                <th>Scope</th>
-                <th>Updated At</th>
-                <th>Status</th>
-                <th style={{ textAlign: 'center' }}>Action</th>
-              </tr>
-            </thead>
-            <tbody>
-              {flags.map((flag) => (
-                <tr key={flag.key}>
-                  <td>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                      <strong style={{ color: 'var(--text-primary)' }}>{flag.name}</strong>
-                      <span style={{ fontSize: '11px', color: 'var(--text-secondary)', fontFamily: 'monospace' }}>{flag.key}</span>
-                    </div>
-                  </td>
-                  <td style={{ maxWidth: '320px', fontSize: '13px', color: 'var(--text-secondary)', lineHeight: '1.4' }}>
-                    {flag.description}
-                  </td>
-                  <td>
-                    <span className="role-badge-pill" style={{ fontSize: '11px' }}>
-                      {flag.scope}
-                    </span>
-                  </td>
-                  <td>
-                    {flag.updatedAt 
-                      ? new Date(flag.updatedAt).toLocaleString() 
-                      : 'Never'}
-                  </td>
-                  <td>
-                    <span 
-                      className="badge" 
-                      style={{ 
-                        background: flag.isEnabled ? 'rgba(16, 185, 129, 0.15)' : 'var(--border-subtle)', 
-                        color: flag.isEnabled ? '#10b981' : 'var(--text-secondary)' 
-                      }}
-                    >
-                      {flag.isEnabled ? 'Enabled' : 'Disabled'}
-                    </span>
-                  </td>
-                  <td style={{ textAlign: 'center' }}>
-                    <button
-                      onClick={() => triggerToggleConfirm(flag)}
-                      disabled={togglingKey === flag.key}
-                      className={flag.isEnabled ? 'btn-secondary btn-danger' : 'btn-primary'}
-                      style={{ 
-                        display: 'inline-flex', 
-                        alignItems: 'center', 
-                        gap: '6px', 
-                        padding: '6px 16px', 
-                        fontSize: '12px',
-                        minWidth: '96px',
-                        justifyContent: 'center',
-                        background: flag.isEnabled ? 'rgba(239, 68, 68, 0.12)' : undefined,
-                        color: flag.isEnabled ? '#dc2626' : undefined,
-                        border: flag.isEnabled ? '1px solid rgba(239, 68, 68, 0.2)' : undefined
-                      }}
-                    >
-                      {togglingKey === flag.key ? (
-                        'Updating...'
-                      ) : flag.isEnabled ? (
-                        <>
-                          <FaToggleOff /> Disable
-                        </>
-                      ) : (
-                        <>
-                          <FaToggleOn /> Enable
-                        </>
-                      )}
-                    </button>
-                  </td>
-                </tr>
+          <div className="ff-toolbar">
+            <div className="ff-filter-tabs">
+              {[
+                { key: 'all', label: `All (${summary.totalFeatures})` },
+                { key: 'enabled', label: `Enabled (${summary.enabledCount})` },
+                { key: 'disabled', label: `Disabled (${summary.disabledCount})` }
+              ].map((tab) => (
+                <button
+                  key={tab.key}
+                  type="button"
+                  className={`ff-filter-tab ${statusFilter === tab.key ? 'active' : ''}`}
+                  onClick={() => setStatusFilter(tab.key)}
+                >
+                  {tab.label}
+                </button>
               ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
+            </div>
 
-      {/* Confirmation Modal */}
-      {confirmModal.show && (
-        <div className="modal-overlay" style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          background: 'rgba(0, 0, 0, 0.6)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 1000,
-          backdropFilter: 'blur(4px)'
-        }}>
-          <div className="modal-content glass-card" style={{
-            width: '100%',
-            maxWidth: '460px',
-            padding: '24px',
-            borderRadius: '16px',
-            border: '1px solid var(--border-subtle)',
-            background: 'var(--bg-card)'
-          }}>
-            <h3 style={{ margin: '0 0 16px 0', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <div className="ff-search">
+              <FaSearch />
+              <input
+                type="text"
+                placeholder="Search feature, key, or scope..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+            </div>
+          </div>
+
+          <div className="ff-table-wrap">
+            <table className="ff-table">
+              <thead>
+                <tr>
+                  <th>Feature</th>
+                  <th>Description</th>
+                  <th>Enforcement</th>
+                  <th>Last Updated</th>
+                  <th>Status</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredFlags.length === 0 ? (
+                  <tr>
+                    <td colSpan="6" style={{ textAlign: 'center', padding: '32px', color: 'var(--text-secondary)' }}>
+                      No feature flags match the current filter.
+                    </td>
+                  </tr>
+                ) : (
+                  filteredFlags.map((flag) => (
+                    <tr key={flag.key}>
+                      <td>
+                        <div className="ff-flag-name">{flag.name}</div>
+                        <div className="ff-flag-key">{flag.key}</div>
+                      </td>
+                      <td className="ff-flag-desc">{flag.description}</td>
+                      <td>
+                        <span className="ff-scope-pill">{flag.scope}</span>
+                      </td>
+                      <td style={{ whiteSpace: 'nowrap', color: 'var(--text-secondary)' }}>
+                        {flag.updatedAt ? new Date(flag.updatedAt).toLocaleString('en-IN') : 'Default'}
+                      </td>
+                      <td>
+                        <span className={`ff-status-pill ${flag.isEnabled ? 'on' : 'off'}`}>
+                          {flag.isEnabled ? 'Enabled' : 'Disabled'}
+                        </span>
+                      </td>
+                      <td>
+                        <button
+                          type="button"
+                          onClick={() => setConfirmModal(flag)}
+                          disabled={togglingKey === flag.key}
+                          className={`ff-toggle-btn ${flag.isEnabled ? 'disable' : 'enable'}`}
+                        >
+                          {togglingKey === flag.key ? (
+                            'Updating...'
+                          ) : flag.isEnabled ? (
+                            <>
+                              <FaToggleOff /> Disable
+                            </>
+                          ) : (
+                            <>
+                              <FaToggleOn /> Enable
+                            </>
+                          )}
+                        </button>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {confirmModal && (
+        <div className="ff-modal-backdrop">
+          <div className="ff-modal">
+            <h3>
               <FaExclamationTriangle style={{ color: '#fbbf24' }} />
               Confirm Feature Toggle
             </h3>
-            <p style={{ color: 'var(--text-secondary)', fontSize: '14px', lineHeight: '1.5', margin: '0 0 24px 0' }}>
-              Are you sure you want to {confirmModal.isEnabled ? 'disable' : 'enable'} the feature <strong>"{confirmModal.name}"</strong>? This will immediately affect global platform behavior.
+            <p>
+              Are you sure you want to {confirmModal.isEnabled ? 'disable' : 'enable'}{' '}
+              <strong>&quot;{confirmModal.name}&quot;</strong>? This takes effect immediately across the platform.
             </p>
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
-              <button 
-                onClick={closeConfirmModal}
-                className="btn-secondary"
-                style={{ padding: '8px 20px', fontSize: '13px' }}
+            <div className="ff-modal-actions">
+              <button
+                type="button"
+                className="ff-refresh-btn"
+                onClick={() => setConfirmModal(null)}
               >
                 Cancel
               </button>
-              <button 
+              <button
+                type="button"
                 onClick={executeToggleFlag}
-                className="btn-primary"
-                style={{
-                  padding: '8px 20px',
-                  fontSize: '13px',
-                  background: confirmModal.isEnabled ? '#dc2626' : undefined,
-                  border: confirmModal.isEnabled ? '1px solid #dc2626' : undefined
-                }}
+                className={`ff-toggle-btn ${confirmModal.isEnabled ? 'disable' : 'enable'}`}
               >
                 Yes, {confirmModal.isEnabled ? 'Disable' : 'Enable'}
               </button>

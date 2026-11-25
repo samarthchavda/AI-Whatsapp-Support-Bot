@@ -9,19 +9,21 @@ exports.handleExternalOrder = async (req, res) => {
   const source = req.params.source || 'custom';
   const webhookData = req.body;
 
-  if (source === 'woocommerce') {
+  if (source === 'woocommerce' || source === 'shopify') {
+    const flagKey = source === 'woocommerce' ? 'wooSyncEnabled' : 'shopifySyncEnabled';
     try {
       const GlobalSettings = require('../../models/GlobalSettings');
-      const flag = await GlobalSettings.findOne({ key: 'wooSyncEnabled' });
+      const flag = await GlobalSettings.findOne({ key: flagKey });
       if (flag && flag.value === false) {
-        console.log('🛍️ WooCommerce webhook processing skipped (wooSyncEnabled flag is false)');
+        const label = source === 'woocommerce' ? 'WooCommerce' : 'Shopify';
+        console.log(`🛍️ ${label} webhook processing skipped (${flagKey} flag is false)`);
         return res.status(200).json({
           success: true,
-          message: 'WooCommerce sync is globally disabled by Super Admin. Webhook received but not processed.'
+          message: `${label} sync is globally disabled by Super Admin. Webhook received but not processed.`
         });
       }
     } catch (dbErr) {
-      console.error('Error checking wooSyncEnabled flag:', dbErr);
+      console.error(`Error checking ${flagKey} flag:`, dbErr);
     }
   }
   
@@ -389,7 +391,16 @@ exports.testWebhook = async (req, res) => {
 exports.handleShopifyFulfillment = async (req, res) => {
   const startTime = Date.now();
   const webhookData = req.body;
-  
+
+  const { isFeatureEnabled } = require('../../services/featureFlagService');
+  if (!(await isFeatureEnabled('shopifySyncEnabled'))) {
+    console.log('🛍️ Shopify fulfillment webhook skipped (shopifySyncEnabled flag is false)');
+    return res.status(200).json({
+      success: true,
+      message: 'Shopify sync is globally disabled by Super Admin. Webhook received but not processed.'
+    });
+  }
+
   let webhookLog = null;
   
   try {
@@ -572,6 +583,15 @@ exports.handleShopifyCheckout = async (req, res) => {
   const startTime = Date.now();
   const webhookData = req.body;
   let webhookLog = null;
+
+  const { isFeatureEnabled } = require('../../services/featureFlagService');
+  if (!(await isFeatureEnabled('shopifySyncEnabled'))) {
+    console.log('🛒 Shopify checkout webhook skipped (shopifySyncEnabled flag is false)');
+    return res.status(200).json({
+      success: true,
+      message: 'Shopify sync is globally disabled by Super Admin. Webhook received but not processed.'
+    });
+  }
 
   try {
     if (!webhookData || Object.keys(webhookData).length === 0) {

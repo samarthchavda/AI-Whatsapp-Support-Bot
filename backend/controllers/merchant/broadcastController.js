@@ -596,6 +596,14 @@ exports.cancelBroadcast = async (req, res) => {
 exports.sendBroadcastNow = async (req, res) => {
   let previewReserved = false;
   try {
+    const { isFeatureEnabled } = require('../../services/featureFlagService');
+    if (!(await isFeatureEnabled('broadcastsEnabled'))) {
+      return res.status(403).json({
+        success: false,
+        error: 'Campaign broadcasting is temporarily paused by the platform administrator.'
+      });
+    }
+
     const broadcast = await Broadcast.findOne({
       _id: req.params.id,
       admin: req.admin._id

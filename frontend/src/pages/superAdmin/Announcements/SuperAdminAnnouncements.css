@@ -1,0 +1,335 @@
+/* System Announcements — Clean two-panel layout with live merchant banner preview */
+
+.ann-page {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 8px 0 40px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.ann-loading {
+  min-height: 70vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ann-header {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.ann-breadcrumb {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-muted);
+}
+
+.ann-title {
+  font-size: 24px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0;
+  line-height: 1.25;
+}
+
+.ann-subtitle {
+  font-size: 14px;
+  color: var(--text-secondary);
+  margin: 0;
+}
+
+.ann-alert {
+  padding: 12px 16px;
+  border-radius: 8px;
+  font-size: 13.5px;
+  font-weight: 500;
+  border: 1px solid var(--border-default);
+  background: var(--bg-elevated);
+  color: var(--text-primary);
+}
+
+.ann-alert.success {
+  border-color: rgba(16, 185, 129, 0.35);
+  color: var(--success);
+}
+
+.ann-alert.error {
+  border-color: rgba(239, 68, 68, 0.4);
+  color: var(--danger);
+}
+
+.ann-grid {
+  display: grid;
+  grid-template-columns: 380px minmax(0, 1fr);
+  gap: 20px;
+  align-items: start;
+}
+
+.ann-panel {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-default);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.ann-panel-head {
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border-default);
+  background: var(--bg-surface);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.ann-panel-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.ann-count {
+  font-size: 12px;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.ann-form {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.ann-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.ann-label {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+.ann-input,
+.ann-textarea {
+  width: 100%;
+  padding: 10px 12px;
+  background: var(--bg-input);
+  border: 1px solid var(--border-default);
+  border-radius: 8px;
+  color: var(--text-primary);
+  font-family: inherit;
+  font-size: 13.5px;
+  outline: none;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+
+.ann-input {
+  height: 40px;
+}
+
+.ann-textarea {
+  resize: vertical;
+  min-height: 88px;
+  line-height: 1.45;
+}
+
+.ann-input:focus,
+.ann-textarea:focus {
+  border-color: var(--text-secondary);
+  background: var(--bg-surface);
+}
+
+.ann-form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.ann-preview-box {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.ann-preview-strip {
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid var(--border-default);
+}
+
+.ann-preview-strip .system-announcement-banner {
+  padding: 8px 12px;
+  font-size: 12.5px;
+  animation: none;
+  box-shadow: none;
+  border-bottom: none;
+}
+
+.ann-submit-btn {
+  height: 40px;
+  padding: 0 16px;
+  border-radius: 8px;
+  background: var(--text-primary);
+  color: var(--bg-base);
+  border: 1px solid var(--text-primary);
+  font-family: inherit;
+  font-size: 13.5px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: opacity 0.15s ease;
+}
+
+.ann-submit-btn:hover:not(:disabled) {
+  opacity: 0.9;
+}
+
+.ann-submit-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.ann-empty {
+  padding: 36px 20px;
+  text-align: center;
+  font-size: 13.5px;
+  color: var(--text-secondary);
+}
+
+.ann-table-wrap {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.ann-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.ann-table th {
+  text-align: left;
+  padding: 10px 16px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-muted);
+  border-bottom: 1px solid var(--border-default);
+  background: var(--bg-surface);
+}
+
+.ann-table td {
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border-default);
+  vertical-align: top;
+  color: var(--text-primary);
+}
+
+.ann-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.ann-item-title {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 4px;
+}
+
+.ann-item-content {
+  font-size: 12.5px;
+  color: var(--text-secondary);
+  line-height: 1.45;
+  max-width: 300px;
+  word-break: break-word;
+}
+
+.ann-type-label {
+  display: inline-block;
+  font-size: 12px;
+  font-weight: 500;
+  text-transform: capitalize;
+  color: var(--text-secondary);
+}
+
+.ann-status-btn {
+  background: none;
+  border: 1px solid var(--border-default);
+  border-radius: 6px;
+  padding: 4px 10px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.ann-status-btn:hover {
+  background: var(--bg-hover);
+  border-color: var(--text-muted);
+}
+
+.ann-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--text-muted);
+}
+
+.ann-dot.active {
+  background: var(--success);
+}
+
+.ann-dot.expired {
+  background: var(--warning);
+}
+
+.ann-date {
+  font-size: 12px;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.ann-delete-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  border: 1px solid var(--border-default);
+  background: transparent;
+  color: var(--text-muted);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: color 0.15s ease, border-color 0.15s ease, background-color 0.15s ease;
+}
+
+.ann-delete-btn:hover {
+  color: var(--danger);
+  border-color: rgba(239, 68, 68, 0.35);
+  background: rgba(239, 68, 68, 0.08);
+}
+
+@media (max-width: 900px) {
+  .ann-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 560px) {
+  .ann-form-row {
+    grid-template-columns: 1fr;
+  }
+}

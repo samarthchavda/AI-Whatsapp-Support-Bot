@@ -1,42 +1,15 @@
-import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { 
-  FaBullhorn, 
-  FaArrowLeft, 
-  FaTrash,
-  FaToggleOn,
-  FaToggleOff
-} from 'react-icons/fa';
-import '../Dashboard/SuperAdmin.css'; // Reuse existing glassmorphic SuperAdmin styles
-
-const API_BASE = process.env.REACT_APP_API_URL || (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' ? 'http://localhost:5001/api' : '/api');
+import { FaTrash } from 'react-icons/fa';
+import api from '../../../services/api';
+import './SuperAdminAnnouncements.css';
 
 function SuperAdminAnnouncements() {
   const navigate = useNavigate();
-  const storedAdmin = localStorage.getItem('admin');
-  const admin = storedAdmin ? JSON.parse(storedAdmin) : null;
-
-  // Protect route
-  useEffect(() => {
-    if (!admin || admin.role !== 'super_admin') {
-      navigate('/dashboard');
-    }
-  }, [admin?.role, navigate]);
-
-  // System Announcements states
-  const getAnnouncementBadgeStyle = (type) => {
-    const styles = {
-      danger: { background: 'rgba(239, 68, 68, 0.1)', color: '#dc2626' },
-      warning: { background: 'rgba(245, 158, 11, 0.1)', color: '#d97706' },
-      success: { background: 'rgba(16, 185, 129, 0.1)', color: '#059669' },
-      info: { background: 'rgba(59, 130, 246, 0.1)', color: '#2563eb' }
-    };
-    return styles[type] || { background: 'rgba(59, 130, 246, 0.1)', color: '#2563eb' };
-  };
-
   const [announcements, setAnnouncements] = useState([]);
-  const [announcementsLoading, setAnnouncementsLoading] = useState(true);
+  const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
+  const [statusMessage, setStatusMessage] = useState(null);
   const [newAnnouncement, setNewAnnouncement] = useState({
     title: '',
     content: '',
@@ -45,36 +18,46 @@ function SuperAdminAnnouncements() {
     isActive: true
   });
 
-  const fetchAnnouncements = async () => {
-    const token = localStorage.getItem('token') || localStorage.getItem('accessToken');
+  useEffect(() => {
+    const storedAdmin = localStorage.getItem('admin');
+    const admin = storedAdmin ? JSON.parse(storedAdmin) : null;
+    if (!admin || admin.role !== 'super_admin') {
+      navigate('/dashboard');
+    }
+  }, [navigate]);
+
+  const fetchAnnouncements = useCallback(async () => {
     try {
-      setAnnouncementsLoading(true);
-      const res = await axios.get(`${API_BASE}/super-admin/announcements`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      if (res.data.success) {
-        setAnnouncements(res.data.data);
+      setLoading(true);
+      const res = await api.get('/super-admin/announcements');
+      if (res.data?.success) {
+        setAnnouncements(res.data.data || []);
       }
     } catch (err) {
-      console.error('Error fetching announcements:', err);
+      setStatusMessage({
+        type: 'error',
+        text: err.response?.data?.error || 'Could not load announcements.'
+      });
     } finally {
-      setAnnouncementsLoading(false);
+      setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     fetchAnnouncements();
-  }, []);
+  }, [fetchAnnouncements]);
 
   const handleCreateAnnouncement = async (e) => {
     e.preventDefault();
-    const token = localStorage.getItem('token') || localStorage.getItem('accessToken');
     try {
-      const res = await axios.post(`${API_BASE}/super-admin/announcements`, newAnnouncement, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      if (res.data.success) {
-        alert('Announcement created successfully!');
+      setSubmitting(true);
+      setStatusMessage(null);
+      const res = await api.post('/super-admin/announcements', newAnnouncement);
+      if (res.data?.success) {
+        setStatusMessage({
+          type: 'success',
+          text: 'Announcement published to merchant dashboards and notification bells.'
+        });
         setNewAnnouncement({
           title: '',
           content: '',
@@ -82,254 +65,250 @@ function SuperAdminAnnouncements() {
           expiresAt: '',
           isActive: true
         });
-        fetchAnnouncements();
+        await fetchAnnouncements();
       }
     } catch (err) {
-      alert(err.response?.data?.error || 'Failed to create announcement');
+      setStatusMessage({
+        type: 'error',
+        text: err.response?.data?.error || 'Failed to publish announcement.'
+      });
+    } finally {
+      setSubmitting(false);
     }
   };
 
   const handleToggleAnnouncement = async (annId) => {
-    const token = localStorage.getItem('token') || localStorage.getItem('accessToken');
     try {
-      const res = await axios.post(`${API_BASE}/super-admin/announcements/${annId}/toggle`, {}, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      if (res.data.success) {
-        fetchAnnouncements();
+      setStatusMessage(null);
+      const res = await api.post(`/super-admin/announcements/${annId}/toggle`, {});
+      if (res.data?.success) {
+        setStatusMessage({
+          type: 'success',
+          text: res.data.message || 'Announcement status updated.'
+        });
+        await fetchAnnouncements();
       }
     } catch (err) {
-      alert('Failed to toggle announcement status');
+      setStatusMessage({
+        type: 'error',
+        text: err.response?.data?.error || 'Failed to update announcement status.'
+      });
     }
   };
 
   const handleDeleteAnnouncement = async (annId) => {
-    if (!window.confirm('Are you sure you want to delete this announcement?')) return;
-    const token = localStorage.getItem('token') || localStorage.getItem('accessToken');
+    if (!window.confirm('Delete this announcement?')) return;
     try {
-      const res = await axios.delete(`${API_BASE}/super-admin/announcements/${annId}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      if (res.data.success) {
-        alert('Announcement deleted');
-        fetchAnnouncements();
+      setStatusMessage(null);
+      const res = await api.delete(`/super-admin/announcements/${annId}`);
+      if (res.data?.success) {
+        setStatusMessage({
+          type: 'success',
+          text: 'Announcement deleted.'
+        });
+        await fetchAnnouncements();
       }
     } catch (err) {
-      alert('Failed to delete announcement');
+      setStatusMessage({
+        type: 'error',
+        text: err.response?.data?.error || 'Failed to delete announcement.'
+      });
     }
   };
 
-  if (announcementsLoading && announcements.length === 0) {
+  const getRowState = (ann) => {
+    const isExpired = Boolean(ann.expiresAt && new Date(ann.expiresAt) <= new Date());
+    if (!ann.isActive) return { label: 'Paused', dotClass: '' };
+    if (isExpired) return { label: 'Expired', dotClass: 'expired' };
+    return { label: 'Active', dotClass: 'active' };
+  };
+
+  if (loading && announcements.length === 0) {
     return (
-      <div style={{
-        minHeight: '80vh',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        color: '#fafafa'
-      }}>
+      <div className="ann-loading">
         <div className="spinner"></div>
       </div>
     );
   }
 
   return (
-    <div className="container super-admin-page">
-      {/* Header and Back Button */}
-      <div className="page-header super-admin-header" style={{ marginBottom: '28px' }}>
-        <div>
-          <button 
-            onClick={() => navigate('/dashboard/super-admin')}
-            style={{
-              background: 'none',
-              border: 'none',
-              color: 'var(--accent)',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-              fontSize: '14px',
-              fontWeight: '600',
-              padding: 0,
-              marginBottom: '12px'
-            }}
-          >
-            <FaArrowLeft /> Back to Super Admin
-          </button>
-          <h1 className="page-title super-admin-title" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <FaBullhorn className="announcements-icon" style={{ color: '#8b5cf6' }} />
-            System Announcements Manager
-          </h1>
-          <p className="page-subtitle">Configure, publish, and schedule notice banners for all merchant workspaces</p>
-        </div>
-      </div>
+    <div className="ann-page">
+      <header className="ann-header">
+        <div className="ann-breadcrumb">Super Admin / Announcements</div>
+        <h1 className="ann-title">System Announcements</h1>
+        <p className="ann-subtitle">
+          Publish notice banners shown at the top of merchant workspaces and inside the notification bell.
+        </p>
+      </header>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.5fr', gap: '24px', alignItems: 'start' }}>
-        {/* Create announcement form */}
-        <div className="table-container-premium super-admin-table" style={{ margin: 0 }}>
-          <div className="table-header-premium super-admin-table-header">
-            <h2>📣 Publish Announcement</h2>
+      {statusMessage && (
+        <div
+          role="status"
+          className={`ann-alert ${statusMessage.type === 'error' ? 'error' : 'success'}`}
+        >
+          {statusMessage.text}
+        </div>
+      )}
+
+      <div className="ann-grid">
+        {/* Publish form + Live Banner Preview */}
+        <section className="ann-panel">
+          <div className="ann-panel-head">
+            <h2 className="ann-panel-title">New announcement</h2>
           </div>
-          <div style={{ padding: '24px', textAlign: 'left' }}>
-            <form onSubmit={handleCreateAnnouncement} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              <div className="form-group">
-                <label style={{ display: 'block', marginBottom: '6px', fontSize: '14px', fontWeight: '500', color: 'var(--text-primary)' }}>Title *</label>
+
+          <form onSubmit={handleCreateAnnouncement} className="ann-form" autoComplete="off">
+            <div className="ann-field">
+              <label className="ann-label" htmlFor="ann-title-input">
+                Title
+              </label>
+              <input
+                id="ann-title-input"
+                type="text"
+                className="ann-input"
+                required
+                placeholder="Scheduled maintenance"
+                value={newAnnouncement.title}
+                onChange={(e) => setNewAnnouncement({ ...newAnnouncement, title: e.target.value })}
+              />
+            </div>
+
+            <div className="ann-field">
+              <label className="ann-label" htmlFor="ann-content-input">
+                Message
+              </label>
+              <textarea
+                id="ann-content-input"
+                className="ann-textarea"
+                required
+                placeholder="Database upgrades tonight between 2:00 AM and 2:30 AM IST."
+                value={newAnnouncement.content}
+                onChange={(e) => setNewAnnouncement({ ...newAnnouncement, content: e.target.value })}
+              />
+            </div>
+
+            <div className="ann-form-row">
+              <div className="ann-field">
+                <label className="ann-label" htmlFor="ann-type-select">
+                  Severity
+                </label>
+                <select
+                  id="ann-type-select"
+                  className="ann-input"
+                  value={newAnnouncement.type}
+                  onChange={(e) => setNewAnnouncement({ ...newAnnouncement, type: e.target.value })}
+                >
+                  <option value="info">Info</option>
+                  <option value="warning">Warning</option>
+                  <option value="success">Success</option>
+                  <option value="danger">Critical</option>
+                </select>
+              </div>
+
+              <div className="ann-field">
+                <label className="ann-label" htmlFor="ann-expiry-input">
+                  Expires (optional)
+                </label>
                 <input
-                  type="text"
-                  required
-                  placeholder="e.g. Scheduled Maintenance"
-                  value={newAnnouncement.title}
-                  onChange={(e) => setNewAnnouncement({ ...newAnnouncement, title: e.target.value })}
-                  style={{ 
-                    width: '100%', 
-                    padding: '12px', 
-                    background: 'var(--bg-input)', 
-                    border: '1px solid var(--border-default)', 
-                    borderRadius: '10px', 
-                    color: 'var(--text-primary)' 
-                  }}
+                  id="ann-expiry-input"
+                  type="datetime-local"
+                  className="ann-input"
+                  value={newAnnouncement.expiresAt}
+                  onChange={(e) => setNewAnnouncement({ ...newAnnouncement, expiresAt: e.target.value })}
                 />
               </div>
-              <div className="form-group">
-                <label style={{ display: 'block', marginBottom: '6px', fontSize: '14px', fontWeight: '500', color: 'var(--text-primary)' }}>Message Content *</label>
-                <textarea
-                  required
-                  placeholder="e.g. We will be performing database upgrades tonight at 2 AM UTC..."
-                  rows="4"
-                  value={newAnnouncement.content}
-                  onChange={(e) => setNewAnnouncement({ ...newAnnouncement, content: e.target.value })}
-                  style={{ 
-                    width: '100%', 
-                    padding: '12px', 
-                    background: 'var(--bg-input)', 
-                    border: '1px solid var(--border-default)', 
-                    borderRadius: '10px', 
-                    color: 'var(--text-primary)', 
-                    resize: 'vertical' 
-                  }}
-                />
-              </div>
-              <div className="form-row" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-                <div className="form-group">
-                  <label style={{ display: 'block', marginBottom: '6px', fontSize: '14px', fontWeight: '500', color: 'var(--text-primary)' }}>Severity Type</label>
-                  <select
-                    value={newAnnouncement.type}
-                    onChange={(e) => setNewAnnouncement({ ...newAnnouncement, type: e.target.value })}
-                    style={{ 
-                      width: '100%', 
-                      padding: '12px', 
-                      background: 'var(--bg-input)', 
-                      border: '1px solid var(--border-default)', 
-                      borderRadius: '10px', 
-                      color: 'var(--text-primary)' 
-                    }}
-                  >
-                    <option value="info">Info (Blue)</option>
-                    <option value="warning">Warning (Amber)</option>
-                    <option value="success">Success (Green)</option>
-                    <option value="danger">Danger (Red)</option>
-                  </select>
-                </div>
-                <div className="form-group">
-                  <label style={{ display: 'block', marginBottom: '6px', fontSize: '14px', fontWeight: '500', color: 'var(--text-primary)' }}>Expiry Date</label>
-                  <input
-                    type="datetime-local"
-                    value={newAnnouncement.expiresAt}
-                    onChange={(e) => setNewAnnouncement({ ...newAnnouncement, expiresAt: e.target.value })}
-                    style={{ 
-                      width: '100%', 
-                      padding: '12px', 
-                      background: 'var(--bg-input)', 
-                      border: '1px solid var(--border-default)', 
-                      borderRadius: '10px', 
-                      color: 'var(--text-primary)' 
-                    }}
-                  />
-                </div>
-              </div>
-              <button type="submit" className="btn-primary" style={{ padding: '12px', borderRadius: '10px', fontWeight: '600' }}>
-                Publish Banner
-              </button>
-            </form>
-          </div>
-        </div>
+            </div>
 
-        {/* List of announcements */}
-        <div className="table-container-premium super-admin-table" style={{ margin: 0 }}>
-          <div className="table-header-premium super-admin-table-header">
-            <h2>📣 Active Announcements ({announcements.length})</h2>
+            <div className="ann-preview-box">
+              <span className="ann-label">Merchant banner preview</span>
+              <div className="ann-preview-strip">
+                <div className={`system-announcement-banner banner-${newAnnouncement.type}`}>
+                  <div className="announcement-content">
+                    <span className="announcement-badge">{newAnnouncement.type}</span>
+                    <span>
+                      <strong>{newAnnouncement.title || 'Announcement title'}</strong>
+                      {': '}
+                      {newAnnouncement.content || 'Your notice message will appear here for all merchants.'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <button type="submit" className="ann-submit-btn" disabled={submitting}>
+              {submitting ? 'Publishing...' : 'Publish banner'}
+            </button>
+          </form>
+        </section>
+
+        {/* All announcements list */}
+        <section className="ann-panel">
+          <div className="ann-panel-head">
+            <h2 className="ann-panel-title">All announcements</h2>
+            <span className="ann-count">{announcements.length} total</span>
           </div>
-          <div style={{ padding: '24px' }}>
-            {announcementsLoading ? (
-              <div style={{ color: '#71717a', textAlign: 'center', padding: '20px' }}>Refreshing announcements list...</div>
-            ) : announcements.length === 0 ? (
-              <div style={{ color: '#71717a', textAlign: 'center', padding: '20px' }}>No system announcements created yet.</div>
-            ) : (
-              <div className="table-wrapper">
-                <table className="premium-table">
-                  <thead>
-                    <tr>
-                      <th>Announcement</th>
-                      <th>Type</th>
-                      <th>Active</th>
-                      <th>Expires</th>
-                      <th>Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {announcements.map(ann => (
+
+          {loading ? (
+            <div className="ann-empty">Loading announcements...</div>
+          ) : announcements.length === 0 ? (
+            <div className="ann-empty">No system announcements created yet.</div>
+          ) : (
+            <div className="ann-table-wrap">
+              <table className="ann-table">
+                <thead>
+                  <tr>
+                    <th>Announcement</th>
+                    <th>Type</th>
+                    <th>Status</th>
+                    <th>Expires</th>
+                    <th aria-label="Delete" />
+                  </tr>
+                </thead>
+                <tbody>
+                  {announcements.map((ann) => {
+                    const rowState = getRowState(ann);
+                    return (
                       <tr key={ann._id}>
                         <td>
-                          <div style={{ display: 'flex', flexDirection: 'column', textAlign: 'left' }}>
-                            <strong style={{ color: 'var(--text-primary)', fontSize: '14px' }}>{ann.title}</strong>
-                            <span style={{ color: 'var(--text-secondary)', fontSize: '12px', marginTop: '4px', whiteSpace: 'normal', maxWidth: '300px', display: 'block', wordBreak: 'break-word' }}>
-                              {ann.content}
-                            </span>
-                          </div>
+                          <div className="ann-item-title">{ann.title}</div>
+                          <div className="ann-item-content">{ann.content}</div>
                         </td>
                         <td>
-                          <span 
-                            className="badge"
-                            style={{ 
-                              ...getAnnouncementBadgeStyle(ann.type),
-                              padding: '2px 8px',
-                              borderRadius: '12px',
-                              fontSize: '11px'
-                            }}
-                          >
-                            {ann.type}
-                          </span>
+                          <span className="ann-type-label">{ann.type}</span>
                         </td>
                         <td>
                           <button
+                            type="button"
+                            className="ann-status-btn"
                             onClick={() => handleToggleAnnouncement(ann._id)}
-                            style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '22px', color: ann.isActive ? '#10b981' : '#71717a' }}
+                            title={ann.isActive ? 'Click to pause' : 'Click to activate'}
                           >
-                            {ann.isActive ? <FaToggleOn /> : <FaToggleOff />}
+                            <span className={`ann-dot ${rowState.dotClass}`} />
+                            {rowState.label}
                           </button>
                         </td>
-                        <td>
-                          <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
-                            {ann.expiresAt ? new Date(ann.expiresAt).toLocaleString() : 'Never'}
-                          </span>
+                        <td className="ann-date">
+                          {ann.expiresAt ? new Date(ann.expiresAt).toLocaleString() : 'Never'}
                         </td>
                         <td>
                           <button
+                            type="button"
                             onClick={() => handleDeleteAnnouncement(ann._id)}
-                            className="btn-icon btn-danger"
+                            className="ann-delete-btn"
+                            aria-label="Delete announcement"
                             title="Delete"
                           >
                             <FaTrash />
                           </button>
                         </td>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
-        </div>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </section>
       </div>
     </div>
   );

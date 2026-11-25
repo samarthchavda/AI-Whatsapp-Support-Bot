@@ -133,13 +133,16 @@ function NotificationDropdown({ admin }) {
       // System Announcements
       try {
         const annRes = await api.get('/dashboard/announcements');
-        if (annRes.data?.success && Array.isArray(annRes.data.announcements)) {
-          annRes.data.announcements.forEach(item => {
+        const annItems = Array.isArray(annRes.data?.data)
+          ? annRes.data.data
+          : (Array.isArray(annRes.data?.announcements) ? annRes.data.announcements : []);
+        if (annRes.data?.success && annItems.length > 0) {
+          annItems.forEach(item => {
             items.push({
               id: `ann_${item._id}`,
               type: 'announcement',
               title: item.title || 'System Announcement',
-              message: item.message,
+              message: item.content || item.message || '',
               timestamp: item.createdAt || new Date().toISOString(),
               targetPath: '/dashboard',
               itemData: { announcementId: item._id },

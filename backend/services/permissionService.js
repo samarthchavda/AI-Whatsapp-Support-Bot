@@ -151,8 +151,8 @@ async function resolveEffectivePermissions(adminDoc) {
   let effectivePages = new Set(defaultProfile.pages || []);
   let effectivePermissions = new Set(defaultProfile.permissions || []);
 
-  // Step 4: Merge Plan allowedPages if defined
-  if (plan && Array.isArray(plan.allowedPages) && plan.allowedPages.length > 0) {
+  // Step 4: Use Plan allowedPages if defined, unless a merchant-level customPermissionProfile override is active
+  if (!adminDoc.customPermissionProfile && plan && Array.isArray(plan.allowedPages) && plan.allowedPages.length > 0) {
     effectivePages = new Set(plan.allowedPages);
   }
 

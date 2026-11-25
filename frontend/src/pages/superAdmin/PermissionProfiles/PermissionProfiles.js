@@ -628,7 +628,9 @@ export default function PermissionProfiles() {
 
                     {/* Checklists for Pages Grouped */}
                     <h3 className="prof-section-title">Module & Page Permissions</h3>
-                    <p className="prof-section-sub">Select the dashboard pages this profile grants merchants access to:</p>
+                    <p className="prof-section-sub">
+                      Select the dashboard pages this profile grants. Applies directly to merchants assigned this profile as an override, and to any plan whose own page list is empty (set to &ldquo;Inherit from profile&rdquo;). Platform core &amp; connection pages remain available unless denied per merchant.
+                    </p>
 
                     {metadata?.pageGroups && Object.entries(metadata.pageGroups).map(([grpKey, grpPages]) => {
                       const allSelected = grpPages.every(p => formData.pages?.includes(p.key));
@@ -728,8 +730,8 @@ export default function PermissionProfiles() {
                 {/* TAB 3: USAGE LIMIT DEFAULTS */}
                 {activeModalTab === 'limits' && (
                   <div className="prof-tab-content">
-                    <h3 className="prof-section-title">Default Resource Quotas</h3>
-                    <p className="prof-section-sub">Default monthly limits applied to plans using this profile:</p>
+                    <h3 className="prof-section-title">Default Resource Quotas Preset</h3>
+                    <p className="prof-section-sub">Reusable quota preset you can apply via &ldquo;Apply profile limits&rdquo; in Plan Editor (existing plans keep their own limits unless explicitly updated):</p>
 
                     <div className="prof-limits-grid">
                       <div className="prof-form-group">

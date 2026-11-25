@@ -236,8 +236,9 @@ exports.updateUserSubscription = async (req, res) => {
     await user.save();
 
     // Emit real-time Socket.IO notification for instant frontend plan sync
-    if (req.io) {
-      req.io.to(`merchant:${user._id.toString()}`).to('super_admin_room').emit('user_subscription_updated', {
+    const io = req.io || req.app?.get('io') || global.io;
+    if (io) {
+      io.to(`merchant:${user._id.toString()}`).to('super_admin_room').emit('user_subscription_updated', {
         userId: user._id.toString(),
         subscriptionPlan: user.subscriptionPlan,
         subscriptionStatus: user.subscriptionStatus,
@@ -3046,8 +3047,9 @@ exports.getUserEffectiveAccess = async (req, res) => {
     // 1. Calculate standard effective access payload
     const effectivePayload = await permissionService.getEffectiveAccessPayload(user);
 
-    // 2. Base profile details
-    const profileKey = user.customPermissionProfile || effectivePayload.data.subscription.planSlug || user.subscriptionPlan || 'default';
+    // 2. Plan & Base profile details
+    const plan = await permissionService.getAdminPricingPlan(user);
+    const profileKey = user.customPermissionProfile || plan?.permissionProfile || effectivePayload.data.subscription.planSlug || user.subscriptionPlan || 'default';
     let dbProfile = null;
     try {
       dbProfile = await PermissionProfile.findOne({ key: profileKey, isArchived: { $ne: true } });
@@ -3058,7 +3060,6 @@ exports.getUserEffectiveAccess = async (req, res) => {
     const baseProfilePermissions = dbProfile?.permissions || staticProfile?.permissions || [];
 
     // 3. Plan details
-    const plan = await permissionService.getAdminPricingPlan(user);
     const { withoutRetiredPages, withoutRetiredPermissions, withoutRetiredPlanSettings } = require('../../constants/retiredCrmConfig');
 
     // 4. Diagnostics Breakdown
@@ -3175,10 +3176,11 @@ exports.updateUserEffectiveAccess = async (req, res) => {
 
     await user.save();
 
-    await auditLogService.logAction(
-      req.admin?.email || 'super_admin',
-      'user_effective_access_updated',
-      {
+    await auditLogService.logAction({
+      action: 'user_effective_access_updated',
+      actor: req.admin || { email: 'super_admin' },
+      target: user.email,
+      details: {
         userId: user._id,
         email: user.email,
         resetToPlanDefaults: Boolean(resetToPlanDefaults),
@@ -3190,17 +3192,19 @@ exports.updateUserEffectiveAccess = async (req, res) => {
           deniedPermissions: user.deniedPermissions,
           customPermissionProfile: user.customPermissionProfile
         }
-      }
-    );
+      },
+      req
+    });
 
     // Real-time broadcast
-    if (req.io) {
-      req.io.to(`merchant:${user._id.toString()}`).emit('effective_access_updated', {
+    const io = req.io || req.app?.get('io') || global.io;
+    if (io) {
+      io.to(`merchant:${user._id.toString()}`).emit('effective_access_updated', {
         userId: user._id.toString(),
         resetToPlanDefaults: Boolean(resetToPlanDefaults)
       });
       if (revokeActiveSessions) {
-        req.io.to(`merchant:${user._id.toString()}`).emit('session_revoked', {
+        io.to(`merchant:${user._id.toString()}`).emit('session_revoked', {
           userId: user._id.toString(),
           reason: 'Access permissions were modified by administrator. Please log in again.'
         });
@@ -3237,14 +3241,17 @@ exports.revokeUserSessions = async (req, res) => {
     user.tokenVersion = (user.tokenVersion || 0) + 1;
     await user.save();
 
-    await auditLogService.logAction(
-      req.admin?.email || 'super_admin',
-      'user_sessions_revoked',
-      { userId: user._id, email: user.email }
-    );
+    await auditLogService.logAction({
+      action: 'user_sessions_revoked',
+      actor: req.admin || { email: 'super_admin' },
+      target: user.email,
+      details: { userId: user._id, email: user.email },
+      req
+    });
 
-    if (req.io) {
-      req.io.to(`merchant:${user._id.toString()}`).emit('session_revoked', {
+    const io = req.io || req.app?.get('io') || global.io;
+    if (io) {
+      io.to(`merchant:${user._id.toString()}`).emit('session_revoked', {
         userId: user._id.toString(),
         reason: 'Session revoked by administrator'
       });

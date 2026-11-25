@@ -303,9 +303,13 @@ function App() {
     };
     syncProfile();
 
-    // 2. Listen to real-time Socket.IO subscription updates from Super Admin
+    // 2. Listen to real-time Socket.IO subscription & permission updates from Super Admin
     const SOCKET_URL = process.env.REACT_APP_API_URL?.replace('/api', '') || (window.location.hostname === 'localhost' ? 'http://localhost:5001' : window.location.origin);
-    const socket = io(SOCKET_URL, { transports: ['websocket'] });
+    const token = getStoredAccessToken();
+    const socket = io(SOCKET_URL, {
+      transports: ['websocket'],
+      auth: token ? { token } : undefined
+    });
 
     socket.on('user_subscription_updated', (data) => {
       const currentAdmin = JSON.parse(localStorage.getItem('admin') || '{}');
@@ -320,6 +324,15 @@ function App() {
         };
         setAdmin(updatedAdmin);
         localStorage.setItem('admin', JSON.stringify(updatedAdmin));
+        window.dispatchEvent(new CustomEvent('kwickbot:effective-access-updated'));
+      }
+    });
+
+    socket.on('effective_access_updated', (data) => {
+      const currentAdmin = JSON.parse(localStorage.getItem('admin') || '{}');
+      if (!data?.userId || currentAdmin._id === data.userId || currentAdmin.id === data.userId) {
+        syncProfile();
+        window.dispatchEvent(new CustomEvent('kwickbot:effective-access-updated'));
       }
     });
 

@@ -271,11 +271,18 @@ export default function PlanEditor() {
         )}
       </Card>
 
-      <Card title="Pages merchants can open">
+      <Card
+        title="Pages merchants can open"
+        action={plan.allowedPages.length > 0 ? (
+          <Button type="button" variant="ghost" size="sm" onClick={() => set({ allowedPages: [] })}>
+            Inherit from profile
+          </Button>
+        ) : null}
+      >
         <p className="sa-card-sub">
           {plan.allowedPages.length
-            ? `${plan.allowedPages.length} pages selected. Merchants on this plan see exactly these pages.`
-            : 'No pages selected: merchants get the pages of the permission profile below.'}
+            ? `${plan.allowedPages.length} pages selected. Merchants on this plan see these pages (overriding the profile below).`
+            : 'No pages selected: merchants dynamically inherit all pages from the selected permission profile below.'}
         </p>
         {shownPageGroups.map((group) => (
           <div className="sa-setting-group" key={group.key}>
@@ -320,7 +327,32 @@ export default function PlanEditor() {
         ))}
       </Card>
 
-      <Card title="Limits">
+      <Card
+        title="Limits"
+        action={(() => {
+          const selectedProfile = profiles.find((p) => p.key === plan.permissionProfile);
+          const defaults = selectedProfile?.usageLimitDefaults;
+          if (!defaults || !Object.keys(defaults).length) return null;
+          return (
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              onClick={() => {
+                const nextLimits = { ...plan.usageLimits };
+                Object.entries(defaults).forEach(([k, v]) => {
+                  if (typeof v === 'number' && Number.isFinite(v) && k in nextLimits) {
+                    nextLimits[k] = v;
+                  }
+                });
+                set({ usageLimits: nextLimits });
+              }}
+            >
+              Apply profile limits
+            </Button>
+          );
+        })()}
+      >
         <p className="sa-card-sub">Per merchant. Tick Unlimited for no limit.</p>
         {LIMIT_GROUPS.map((group) => (
           <div className="sa-setting-group" key={group.label}>

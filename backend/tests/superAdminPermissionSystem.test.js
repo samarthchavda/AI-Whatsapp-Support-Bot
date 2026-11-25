@@ -300,4 +300,99 @@ describe('Super Admin Permission System & 10 Standard Plans Verification', () =>
       expect(result.issues).toEqual([]);
     });
   });
+
+  describe('6. Dynamic Permission Profile Precedence & Existing Plan Preservation', () => {
+    const mongoose = require('mongoose');
+    const PricingPlan = require('../models/PricingPlan');
+    const PermissionProfile = require('../models/PermissionProfile');
+    const originalReadyState = mongoose.connection.readyState;
+
+    afterEach(() => {
+      mongoose.connection.readyState = originalReadyState;
+      jest.restoreAllMocks();
+    });
+
+    test('Existing plans with explicit allowedPages (e.g. 1299 / 2999 plans) preserve their pages when no customPermissionProfile is set', async () => {
+      const existingPlan = {
+        _id: new mongoose.Types.ObjectId(),
+        name: 'custom_1299',
+        category: 'kwickbot_crm',
+        permissionProfile: 'starter',
+        allowedPages: ['dashboard', 'conversations', 'analytics']
+      };
+      mongoose.connection.readyState = 1;
+      jest.spyOn(PricingPlan, 'findById').mockResolvedValue(existingPlan);
+      jest.spyOn(PermissionProfile, 'findOne').mockResolvedValue({
+        key: 'starter',
+        pages: ['dashboard', 'conversations', 'broadcast'],
+        permissions: ['usage.view']
+      });
+
+      const result = await resolveEffectivePermissions({
+        role: 'admin',
+        pricingPlanId: existingPlan._id,
+        subscriptionPlan: 'custom_1299'
+      });
+
+      expect(result.pages).toContain('analytics');
+      expect(result.pages).not.toContain('broadcast');
+    });
+
+    test('Merchant customPermissionProfile overrides plan.allowedPages without altering the plan', async () => {
+      const existingPlan = {
+        _id: new mongoose.Types.ObjectId(),
+        name: 'custom_2999',
+        category: 'kwickbot_crm',
+        permissionProfile: 'growth',
+        allowedPages: ['dashboard', 'conversations', 'analytics']
+      };
+      mongoose.connection.readyState = 1;
+      jest.spyOn(PricingPlan, 'findById').mockResolvedValue(existingPlan);
+      jest.spyOn(PermissionProfile, 'findOne').mockResolvedValue({
+        key: 'vip_profile',
+        pages: ['dashboard', 'conversations', 'escalations', 'leads'],
+        permissions: ['settings.manage']
+      });
+
+      const result = await resolveEffectivePermissions({
+        role: 'admin',
+        pricingPlanId: existingPlan._id,
+        subscriptionPlan: 'custom_2999',
+        customPermissionProfile: 'vip_profile'
+      });
+
+      expect(result.profile).toBe('vip_profile');
+      expect(result.pages).toContain('escalations');
+      expect(result.pages).toContain('leads');
+      expect(result.pages).not.toContain('analytics');
+      expect(result.permissions).toContain('settings.manage');
+    });
+
+    test('Plans with empty allowedPages inherit pages dynamically from their linked PermissionProfile', async () => {
+      const inheritedPlan = {
+        _id: new mongoose.Types.ObjectId(),
+        name: 'inherited_plan',
+        category: 'kwickbot_crm',
+        permissionProfile: 'custom_dyn_profile',
+        allowedPages: []
+      };
+      mongoose.connection.readyState = 1;
+      jest.spyOn(PricingPlan, 'findById').mockResolvedValue(inheritedPlan);
+      jest.spyOn(PermissionProfile, 'findOne').mockResolvedValue({
+        key: 'custom_dyn_profile',
+        pages: ['dashboard', 'broadcast', 'templates'],
+        permissions: ['whatsappTemplates.manage']
+      });
+
+      const result = await resolveEffectivePermissions({
+        role: 'admin',
+        pricingPlanId: inheritedPlan._id,
+        subscriptionPlan: 'inherited_plan'
+      });
+
+      expect(result.profile).toBe('custom_dyn_profile');
+      expect(result.pages).toEqual(expect.arrayContaining(['dashboard', 'broadcast', 'templates']));
+      expect(result.permissions).toContain('whatsappTemplates.manage');
+    });
+  });
 });

@@ -137,17 +137,9 @@ async function seedProfiles(dryRun = false) {
       results.created++;
     } else {
       if (!dryRun) {
-        const wasSystemDefault = existing.isSystemDefault;
-        existing.name = p.name;
-        existing.description = p.description;
-        existing.category = p.category;
         existing.isSystemDefault = true;
-        // If it was system default, sync default pages/permissions if empty
-        if (p.key === 'growth' && wasSystemDefault) {
-          existing.pages = p.pages;
-          existing.permissions = p.permissions;
-          existing.features = p.features;
-        } else if (existing.pages.length === 0 && p.pages.length > 0) {
+        // Preserve Super Admin customizations; only backfill pages/permissions if completely empty
+        if (existing.pages.length === 0 && p.pages.length > 0) {
           existing.pages = p.pages;
           existing.permissions = p.permissions;
         }

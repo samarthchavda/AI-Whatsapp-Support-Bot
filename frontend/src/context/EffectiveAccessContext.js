@@ -61,6 +61,15 @@ export function EffectiveAccessProvider({ children, admin }) {
     }
   }, [fetchEffectiveAccess]);
 
+  useEffect(() => {
+    const onRefresh = () => {
+      const token = localStorage.getItem('accessToken') || localStorage.getItem('token');
+      if (token) fetchEffectiveAccess();
+    };
+    window.addEventListener('kwickbot:effective-access-updated', onRefresh);
+    return () => window.removeEventListener('kwickbot:effective-access-updated', onRefresh);
+  }, [fetchEffectiveAccess]);
+
   const canViewPage = useCallback((pageKey) => {
     if (!pageKey) return true;
     if (admin?.selfSignupTrial === true && (admin.subscriptionStatus !== 'active' || (admin.subscriptionEndDate && new Date(admin.subscriptionEndDate) <= new Date()))) return true;

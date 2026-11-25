@@ -238,11 +238,13 @@ exports.createPermissionProfile = async (req, res) => {
 
     await newProfile.save();
 
-    await auditLogService.logAction(
-      req.admin?.email || 'super_admin',
-      'permission_profile_create',
-      { profileId: newProfile._id, profileKey: newProfile.key, name: newProfile.name }
-    );
+    await auditLogService.logAction({
+      action: 'permission_profile_create',
+      actor: req.admin || { email: 'super_admin' },
+      target: newProfile.key,
+      details: { profileId: newProfile._id, profileKey: newProfile.key, name: newProfile.name },
+      req
+    });
 
     res.status(201).json({
       success: true,
@@ -279,11 +281,36 @@ exports.updatePermissionProfile = async (req, res) => {
 
     await profile.save();
 
-    await auditLogService.logAction(
-      req.admin?.email || 'super_admin',
-      'permission_profile_update',
-      { profileId: profile._id, profileKey: profile.key, name: profile.name }
-    );
+    await auditLogService.logAction({
+      action: 'permission_profile_update',
+      actor: req.admin || { email: 'super_admin' },
+      target: profile.key,
+      details: { profileId: profile._id, profileKey: profile.key, name: profile.name },
+      req
+    });
+
+    // Notify connected merchants affected by this permission profile so their UI refreshes
+    const io = req.io || req.app?.get('io') || global.io;
+    if (io) {
+      const linkedPlans = await PricingPlan.find({ permissionProfile: profile.key }).select('name').lean();
+      const planNames = linkedPlans.map(p => p.name).filter(Boolean);
+      const affectedMerchants = await Admin.find({
+        role: { $ne: 'super_admin' },
+        $or: [
+          { customPermissionProfile: profile.key },
+          ...(planNames.length ? [{
+            subscriptionPlan: { $in: planNames },
+            $or: [{ customPermissionProfile: null }, { customPermissionProfile: { $exists: false } }]
+          }] : [])
+        ]
+      }).select('_id').lean();
+      affectedMerchants.forEach(m => {
+        io.to(`merchant:${m._id.toString()}`).emit('effective_access_updated', {
+          userId: m._id.toString(),
+          profileKey: profile.key
+        });
+      });
+    }
 
     res.json({
       success: true,
@@ -328,11 +355,13 @@ exports.duplicatePermissionProfile = async (req, res) => {
 
     await duplicated.save();
 
-    await auditLogService.logAction(
-      req.admin?.email || 'super_admin',
-      'permission_profile_duplicate',
-      { originalId: original._id, newProfileId: duplicated._id, newKey: duplicated.key }
-    );
+    await auditLogService.logAction({
+      action: 'permission_profile_duplicate',
+      actor: req.admin || { email: 'super_admin' },
+      target: duplicated.key,
+      details: { originalId: original._id, newProfileId: duplicated._id, newKey: duplicated.key },
+      req
+    });
 
     res.status(201).json({
       success: true,
@@ -378,11 +407,13 @@ exports.archivePermissionProfile = async (req, res) => {
     profile.isArchived = true;
     await profile.save();
 
-    await auditLogService.logAction(
-      req.admin?.email || 'super_admin',
-      'permission_profile_archive',
-      { profileId: profile._id, profileKey: profile.key }
-    );
+    await auditLogService.logAction({
+      action: 'permission_profile_archive',
+      actor: req.admin || { email: 'super_admin' },
+      target: profile.key,
+      details: { profileId: profile._id, profileKey: profile.key },
+      req
+    });
 
     res.json({
       success: true,

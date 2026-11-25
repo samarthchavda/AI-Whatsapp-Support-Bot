@@ -798,6 +798,7 @@ exports.upgradePlan = async (req, res) => {
     admin.monthlyPrice = originalPrice - (originalPrice * discountPercent / 100);
     admin.customDiscount = discountPercent;
     admin.subscriptionStatus = 'active';
+    admin.selfSignupTrial = false;
     admin.subscriptionStartDate = new Date();
     const endDate = new Date();
     endDate.setDate(endDate.getDate() + 30);
@@ -1377,6 +1378,7 @@ exports.verifyRazorpayPayment = async (req, res) => {
       ? planDetails.allowedPages
       : admin.allowedPages;
     admin.subscriptionStatus = 'active';
+    admin.selfSignupTrial = false;
     admin.subscriptionStartDate = new Date();
     admin.subscriptionEndDate = new Date(Date.now() + durationDays * 24 * 60 * 60 * 1000);
     admin.totalMessagesProcessed = 0;

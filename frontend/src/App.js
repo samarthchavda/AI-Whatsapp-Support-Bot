@@ -144,33 +144,170 @@ const MERCHANT_VISIBLE_PATHS = new Set([
 
 function PreviewBanner({ admin }) {
   const access = useEffectiveAccess();
-  if (!admin || admin.role === 'super_admin' || admin.selfSignupTrial !== true) return null;
+  if (!admin || admin.role === 'super_admin') return null;
   const expired = Boolean(admin.subscriptionEndDate && new Date(admin.subscriptionEndDate) <= new Date());
-  if (admin.subscriptionStatus === 'active' && !expired) return null;
+  const isTrialStatus = admin.subscriptionStatus === 'trial';
+  const isPreviewSandbox = admin.selfSignupTrial === true && (admin.subscriptionStatus !== 'active' || expired);
+
+  if (!isTrialStatus && !isPreviewSandbox) return null;
 
   const policy = access?.trialPolicy || {};
-  const title = policy.bannerTitle || 'Free preview:';
-  const rawMessage = policy.bannerMessage || 'Connect WhatsApp and send up to {broadcastLimit} test broadcasts. Other pages are view-only until you activate a plan.';
-  const message = String(rawMessage)
-    .replace(/\{broadcastLimit\}/g, String(policy.testBroadcastLimit ?? 2))
-    .replace(/\{recipientLimit\}/g, String(policy.testRecipientLimit ?? 5))
-    .replace(/\{trialDays\}/g, String(policy.trialDays ?? 14));
-
   const daysLeft = admin.subscriptionEndDate
     ? Math.max(0, Math.ceil((new Date(admin.subscriptionEndDate).getTime() - Date.now()) / (24 * 60 * 60 * 1000)))
     : null;
+
+  let title = policy.bannerTitle || 'Free preview:';
+  let message;
+
+  if (isPreviewSandbox) {
+    const rawMessage = policy.bannerMessage || 'Connect WhatsApp and send up to {broadcastLimit} test broadcasts. Other pages are view-only until you activate a plan.';
+    message = String(rawMessage)
+      .replace(/\{broadcastLimit\}/g, String(policy.testBroadcastLimit ?? 2))
+      .replace(/\{recipientLimit\}/g, String(policy.testRecipientLimit ?? 5))
+      .replace(/\{trialDays\}/g, String(policy.trialDays ?? 14));
+  } else {
+    const planLabel = String(admin.subscriptionPlan || 'starter').replace(/^\w/, (c) => c.toUpperCase());
+    title = `${planLabel} Trial:`;
+    message = expired
+      ? 'Your trial period has ended. Choose a paid plan in Billing to keep your workspace active.'
+      : 'Your trial workspace is active. Activate a paid plan anytime before the trial ends to avoid interruption.';
+  }
 
   return (
     <div className="merchant-preview-banner" role="status">
       <span>
         {daysLeft !== null && (
-          <strong style={{ marginRight: '8px', color: daysLeft === 0 ? '#f87171' : '#34d399' }}>
+          <strong style={{ marginRight: '8px', color: daysLeft === 0 ? '#dc2626' : '#2f5420' }}>
             {daysLeft === 0 ? 'Trial ended ·' : `${daysLeft}d left ·`}
           </strong>
         )}
         <strong>{title}</strong> {message}
       </span>
-      <Link to="/dashboard/billing">Choose a plan</Link>
+      <Link to="/dashboard/billing">{expired ? 'Activate plan' : 'Choose a plan'}</Link>
+    </div>
+  );
+}
+
+function TrialStatusPopup({ admin }) {
+  const access = useEffectiveAccess();
+  const [dismissed, setDismissed] = useState(() => sessionStorage.getItem('kwickbot_trial_popup_dismissed') === '1');
+
+  if (!admin || admin.role === 'super_admin' || dismissed) return null;
+  const expired = Boolean(admin.subscriptionEndDate && new Date(admin.subscriptionEndDate) <= new Date());
+  const isTrialStatus = admin.subscriptionStatus === 'trial';
+  const isPreviewSandbox = admin.selfSignupTrial === true && (admin.subscriptionStatus !== 'active' || expired);
+  if (!isTrialStatus && !isPreviewSandbox) return null;
+
+  const policy = access?.trialPolicy || {};
+  const daysLeft = admin.subscriptionEndDate
+    ? Math.max(0, Math.ceil((new Date(admin.subscriptionEndDate).getTime() - Date.now()) / (24 * 60 * 60 * 1000)))
+    : (policy.trialDays ?? 14);
+  const planLabel = String(admin.subscriptionPlan || 'starter').replace(/^\w/, (c) => c.toUpperCase());
+  const endDateStr = admin.subscriptionEndDate
+    ? new Date(admin.subscriptionEndDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
+    : 'N/A';
+
+  const closePopup = () => {
+    sessionStorage.setItem('kwickbot_trial_popup_dismissed', '1');
+    setDismissed(true);
+  };
+
+  return (
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-label="Trial Status"
+      style={{
+        position: 'fixed',
+        inset: 0,
+        background: 'rgba(15, 23, 42, 0.55)',
+        backdropFilter: 'blur(3px)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        zIndex: 9999,
+        padding: '16px'
+      }}
+    >
+      <div
+        style={{
+          background: '#ffffff',
+          color: '#1d2a13',
+          border: '1px solid #c8dcb7',
+          borderRadius: '16px',
+          maxWidth: '460px',
+          width: '100%',
+          padding: '24px',
+          boxShadow: '0 20px 45px rgba(15, 23, 42, 0.2)'
+        }}
+      >
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+          <span
+            style={{
+              display: 'inline-block',
+              padding: '4px 10px',
+              borderRadius: '999px',
+              fontSize: '11.5px',
+              fontWeight: 700,
+              background: expired ? '#fee2e2' : '#eef5e4',
+              color: expired ? '#b91c1c' : '#2f5420'
+            }}
+          >
+            {expired ? 'TRIAL ENDED' : `${daysLeft} DAYS LEFT IN TRIAL`}
+          </span>
+          <button
+            type="button"
+            onClick={closePopup}
+            aria-label="Close trial notice"
+            style={{ background: 'none', border: 'none', fontSize: '18px', cursor: 'pointer', color: '#556447' }}
+          >
+            ✕
+          </button>
+        </div>
+
+        <h3 style={{ margin: '0 0 8px', fontSize: '20px', fontWeight: 700, color: '#1d2a13' }}>
+          {expired ? `Your ${planLabel} trial has ended` : `Welcome to your ${planLabel} Free Trial`}
+        </h3>
+        <p style={{ margin: '0 0 14px', fontSize: '13.5px', color: '#3a4a2e', lineHeight: 1.55 }}>
+          {isPreviewSandbox
+            ? `You are in Free Preview mode (up to ${policy.testBroadcastLimit ?? 2} test broadcasts for ${policy.testRecipientLimit ?? 5} contacts each). Trial ends ${endDateStr}.`
+            : `Your ${planLabel} trial runs until ${endDateStr}. Upgrade or activate your plan anytime in Billing to avoid service interruption.`}
+        </p>
+
+        <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', flexWrap: 'wrap' }}>
+          <button
+            type="button"
+            onClick={closePopup}
+            style={{
+              padding: '9px 14px',
+              borderRadius: '8px',
+              background: '#f5f8ef',
+              border: '1px solid #d4e3c5',
+              color: '#263b1d',
+              fontSize: '13px',
+              fontWeight: 600,
+              cursor: 'pointer'
+            }}
+          >
+            Continue Trial
+          </button>
+          <Link
+            to="/dashboard/billing"
+            onClick={closePopup}
+            style={{
+              padding: '9px 16px',
+              borderRadius: '8px',
+              background: '#2a3d18',
+              color: '#ffffff',
+              fontSize: '13px',
+              fontWeight: 600,
+              textDecoration: 'none'
+            }}
+          >
+            Activate Plan
+          </Link>
+        </div>
+      </div>
     </div>
   );
 }
@@ -531,6 +668,7 @@ function App() {
                   />
 
                   <PreviewBanner admin={admin} />
+                  <TrialStatusPopup admin={admin} />
 
                   {previewGateMessage && <div className="merchant-preview-action-gate" role="alert">
                     <span>{previewGateMessage}</span>

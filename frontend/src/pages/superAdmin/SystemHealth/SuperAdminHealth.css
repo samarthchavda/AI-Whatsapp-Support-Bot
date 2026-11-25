@@ -1,0 +1,303 @@
+/* System Health — Single-panel runtime overview + recent error log */
+
+.health-page {
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 8px 0 40px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.health-loading {
+  min-height: 70vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.health-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.health-breadcrumb {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-muted);
+  margin-bottom: 4px;
+}
+
+.health-title {
+  font-size: 24px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0 0 4px;
+  line-height: 1.25;
+}
+
+.health-subtitle {
+  font-size: 14px;
+  color: var(--text-secondary);
+  margin: 0;
+}
+
+.health-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.health-btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 36px;
+  padding: 0 14px;
+  border-radius: 8px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-default);
+  color: var(--text-primary);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.health-btn-secondary:hover:not(:disabled) {
+  background: var(--bg-hover);
+  border-color: var(--text-muted);
+}
+
+.health-btn-secondary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Unified Flat Panels */
+.health-panel {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-default);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.health-metrics-strip {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  border-bottom: 1px solid var(--border-default);
+  background: var(--bg-surface);
+}
+
+.health-metric {
+  padding: 16px 20px;
+  border-right: 1px solid var(--border-default);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.health-metric:last-child {
+  border-right: none;
+}
+
+.health-metric-label {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.health-metric-value {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.health-metric-sub {
+  font-size: 12px;
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+.health-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  background: var(--text-muted);
+}
+
+.health-dot.ok {
+  background: var(--success);
+}
+
+.health-dot.bad {
+  background: var(--danger);
+}
+
+/* Service Checklist Table inside the same panel */
+.health-panel-subhead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 20px;
+  border-bottom: 1px solid var(--border-default);
+}
+
+.health-section-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.health-link {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: color 0.15s ease;
+}
+
+.health-link:hover {
+  color: var(--text-primary);
+}
+
+.health-rows {
+  display: flex;
+  flex-direction: column;
+}
+
+.health-row {
+  display: grid;
+  grid-template-columns: 180px 1fr 140px 96px;
+  align-items: center;
+  gap: 16px;
+  padding: 12px 20px;
+  border-bottom: 1px solid var(--border-default);
+}
+
+.health-row:last-child {
+  border-bottom: none;
+}
+
+.health-row-name {
+  font-size: 13.5px;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.health-row-detail {
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.health-row-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.health-row-status.bad {
+  color: var(--danger);
+}
+
+.health-row-action {
+  text-align: right;
+}
+
+/* Recent Errors Table */
+.health-empty {
+  padding: 28px 20px;
+  text-align: center;
+  font-size: 13.5px;
+  color: var(--text-secondary);
+}
+
+.health-table-wrap {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.health-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.health-table th {
+  text-align: left;
+  padding: 10px 20px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-muted);
+  border-bottom: 1px solid var(--border-default);
+  background: var(--bg-surface);
+}
+
+.health-table td {
+  padding: 12px 20px;
+  border-bottom: 1px solid var(--border-default);
+  color: var(--text-primary);
+  vertical-align: top;
+}
+
+.health-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.health-err-text {
+  color: var(--danger);
+  max-width: 340px;
+  word-break: break-word;
+}
+
+.health-mono {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 12.5px;
+  color: var(--text-secondary);
+}
+
+.health-error-banner {
+  padding: 20px;
+  border-radius: 12px;
+  border: 1px solid rgba(239, 68, 68, 0.35);
+  background: var(--bg-elevated);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  color: var(--text-primary);
+}
+
+@media (max-width: 780px) {
+  .health-metrics-strip {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .health-metric {
+    border-bottom: 1px solid var(--border-default);
+  }
+  .health-row {
+    grid-template-columns: 1fr auto;
+    gap: 6px 12px;
+  }
+  .health-row-detail {
+    grid-column: 1 / -1;
+  }
+}

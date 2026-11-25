@@ -2811,16 +2811,44 @@ exports.getSystemHealthStatus = async (req, res) => {
     const cpuUsagePct = parseFloat(((loadAvg / cpuCoresCount) * 100).toFixed(1));
 
     // 2. Database & Service status checks
+    await runtimeConfig.refreshCache(false);
+    const snapshot = await runtimeConfig.getIntegrationsSnapshot();
+    const sources = snapshot.sources || {};
+
     const dbState = mongoose.connection.readyState;
     const dbStatus = dbState === 1 ? 'Operational' : 'Down';
 
-    // WhatsApp / Meta API state check based on merchant accounts
+    // WhatsApp / Meta App & merchant connection counts (avoid false DEGRADED when new merchants haven't onboarded yet)
     const merchants = await Admin.find({ role: 'admin' }).select('whatsappConnected');
-    const offlineMerchants = merchants.filter(m => m.whatsappConnected === false).length;
-    const whatsAppStatus = offlineMerchants > 0 ? 'Degraded' : 'Operational';
+    const merchantsTotal = merchants.length;
+    const merchantsConnected = merchants.filter(m => m.whatsappConnected === true).length;
+    const metaAppConfigured = Boolean(runtimeConfig.getSync('meta_app_id') && runtimeConfig.getSync('meta_client_secret'));
+    const whatsAppStatus = metaAppConfigured ? 'Operational' : 'Not Available';
 
-    // Gemini API configuration check (DB override or .env fallback)
-    const geminiStatus = runtimeConfig.getSync('gemini_api_key') ? 'Operational' : 'Not Available';
+    // Gemini, Email/SMTP, and Razorpay configuration status (DB override or .env fallback)
+    const geminiConfigured = Boolean(runtimeConfig.getSync('gemini_api_key'));
+    const geminiStatus = geminiConfigured ? 'Operational' : 'Not Available';
+
+    const smtpConfigured = Boolean(
+      runtimeConfig.getSync('resend_api_key') ||
+      (runtimeConfig.getSync('smtp_user') && runtimeConfig.getSync('smtp_pass'))
+    );
+    const emailSource =
+      sources.resend_api_key === 'db' || sources.smtp_pass === 'db'
+        ? 'db'
+        : sources.resend_api_key === 'env' || sources.smtp_pass === 'env'
+        ? 'env'
+        : 'unset';
+
+    const razorpayConfigured = Boolean(
+      runtimeConfig.getSync('razorpay_key_id') && runtimeConfig.getSync('razorpay_key_secret')
+    );
+    const razorpaySource =
+      sources.razorpay_key_id === 'db' && sources.razorpay_key_secret === 'db'
+        ? 'db'
+        : sources.razorpay_key_id === 'env' || sources.razorpay_key_secret === 'env'
+        ? 'env'
+        : 'unset';
 
     // Shopify & WooCommerce checking based on active integrations
     const integrations = await Integration.find({}).select('platform isActive');
@@ -2853,6 +2881,55 @@ exports.getSystemHealthStatus = async (req, res) => {
       createdAt: log.createdAt
     }));
 
+    const serviceDetails = [
+      {
+        key: 'mongodb',
+        name: 'MongoDB Database',
+        status: dbStatus === 'Operational' ? 'Connected' : 'Down',
+        healthy: dbStatus === 'Operational',
+        detail: dbStatus === 'Operational' ? 'Primary database reachable' : 'Database connection down',
+        source: 'env'
+      },
+      {
+        key: 'gemini',
+        name: 'AI / Gemini',
+        status: geminiConfigured ? 'Configured' : 'Not configured',
+        healthy: geminiConfigured,
+        detail: geminiConfigured ? `Model: ${runtimeConfig.getSync('gemini_model', 'gemini-2.5-flash')}` : 'Missing Gemini API key',
+        source: sources.gemini_api_key || 'unset',
+        settingsTab: 'ai'
+      },
+      {
+        key: 'email',
+        name: 'Email / SMTP',
+        status: smtpConfigured ? 'Configured' : 'Not configured',
+        healthy: smtpConfigured,
+        detail: smtpConfigured
+          ? (runtimeConfig.getSync('resend_api_key') ? 'Resend API configured' : `${runtimeConfig.getSync('smtp_host', 'smtp')}:${runtimeConfig.getSync('smtp_port', '587')}`)
+          : 'Missing SMTP or Resend credentials',
+        source: emailSource,
+        settingsTab: 'smtp'
+      },
+      {
+        key: 'meta',
+        name: 'Meta & WhatsApp',
+        status: metaAppConfigured ? 'App Ready' : 'Not configured',
+        healthy: metaAppConfigured,
+        detail: `${merchantsConnected} of ${merchantsTotal} merchants connected`,
+        source: sources.meta_client_secret || 'unset',
+        settingsTab: 'meta'
+      },
+      {
+        key: 'razorpay',
+        name: 'Razorpay Gateway',
+        status: razorpayConfigured ? 'Configured' : 'Not configured',
+        healthy: razorpayConfigured,
+        detail: razorpayConfigured ? 'Live checkout key pair active' : 'Missing Razorpay key ID or secret',
+        source: razorpaySource,
+        settingsTab: 'payments'
+      }
+    ];
+
     res.json({
       success: true,
       data: {
@@ -2870,9 +2947,16 @@ exports.getSystemHealthStatus = async (req, res) => {
           mongodb: dbStatus,
           whatsapp: whatsAppStatus,
           gemini: geminiStatus,
+          email: smtpConfigured ? 'Operational' : 'Not Available',
+          razorpay: razorpayConfigured ? 'Operational' : 'Not Available',
           shopify: shopifyStatus,
-          woocommerce: wooStatus
+          woocommerce: wooStatus,
+          merchantsConnected,
+          merchantsTotal,
+          shopifyCount: shopifyInts.length,
+          wooCount: wooInts.length
         },
+        serviceDetails,
         recentErrors
       }
     });

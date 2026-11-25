@@ -2461,17 +2461,24 @@ exports.getAIUsageStatus = async (req, res) => {
       ? parseFloat((limitedMerchants.reduce((sum, m) => sum + m.usagePct, 0) / limitedMerchants.length).toFixed(1))
       : 0;
 
+    const responseData = {
+      merchants: merchantRows,
+      summary: {
+        totalUsed,
+        totalLimit,
+        avgUsagePct,
+        nearLimitCount
+      }
+    };
+
+    if (req.query?.includeBudget === '1' || req.query?.includeBudget === 'true') {
+      const { getSuperAdminAiBudget } = require('../../services/aiCostAnalyticsService');
+      responseData.budget = await getSuperAdminAiBudget({ range: req.query?.range || 'this_month' });
+    }
+
     res.json({
       success: true,
-      data: {
-        merchants: merchantRows,
-        summary: {
-          totalUsed,
-          totalLimit,
-          avgUsagePct,
-          nearLimitCount
-        }
-      }
+      data: responseData
     });
   } catch (error) {
     console.error('Error fetching AI Usage data:', error);

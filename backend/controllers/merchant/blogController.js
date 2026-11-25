@@ -58,7 +58,7 @@ exports.getAllPostsAdmin = async (req, res) => {
 // Create a post
 exports.createPost = async (req, res) => {
   try {
-    const { title, slug, summary, content, coverImage, tags, status, author } = req.body;
+    const { title, slug, summary, content, coverImage, tags, seoTitle, keywords, status, author } = req.body;
     
     // Check if slug is unique
     const existing = await BlogPost.findOne({ slug });
@@ -75,6 +75,8 @@ exports.createPost = async (req, res) => {
       content: sanitizedContent,
       coverImage,
       tags: tags || [],
+      seoTitle: seoTitle ? String(seoTitle).trim() : '',
+      keywords: keywords ? String(keywords).trim() : '',
       status: status || 'draft',
       author: author || 'Kwickbot Team',
       createdBy: req.admin._id
@@ -90,7 +92,7 @@ exports.createPost = async (req, res) => {
 // Update a post
 exports.updatePost = async (req, res) => {
   try {
-    const { title, slug, summary, content, coverImage, tags, status, author } = req.body;
+    const { title, slug, summary, content, coverImage, tags, seoTitle, keywords, status, author } = req.body;
 
     // Check if slug is unique (excluding current post)
     if (slug) {
@@ -100,7 +102,16 @@ exports.updatePost = async (req, res) => {
       }
     }
 
-    const updatePayload = { title, slug, summary, coverImage, tags, status, author };
+    const updatePayload = {};
+    if (title !== undefined) updatePayload.title = title;
+    if (slug !== undefined) updatePayload.slug = slug;
+    if (summary !== undefined) updatePayload.summary = summary;
+    if (coverImage !== undefined) updatePayload.coverImage = coverImage;
+    if (tags !== undefined) updatePayload.tags = tags;
+    if (seoTitle !== undefined) updatePayload.seoTitle = String(seoTitle || '').trim();
+    if (keywords !== undefined) updatePayload.keywords = String(keywords || '').trim();
+    if (status !== undefined) updatePayload.status = status;
+    if (author !== undefined) updatePayload.author = author;
     if (content !== undefined) {
       updatePayload.content = sanitizeHtml(content || '');
     }

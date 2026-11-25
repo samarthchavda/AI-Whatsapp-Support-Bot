@@ -1,37 +1,32 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { 
-  FaBlog, 
-  FaPlus, 
-  FaEdit, 
-  FaTrash, 
-  FaEye, 
-  FaTimes, 
-  FaSave
-} from 'react-icons/fa';
+import { FaPlus, FaEdit, FaTrash, FaEye, FaTimes, FaSave } from 'react-icons/fa';
 import api from '../../../services/api';
-import '../Dashboard/SuperAdmin.css';
+import './SuperAdminBlog.css';
+
+const PUBLIC_SITE_URL = (process.env.REACT_APP_PUBLIC_SITE_URL || 'https://kwickbot.in').replace(/\/$/, '');
+
+const slugifyTitle = (value = '') =>
+  String(value)
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9\s-]/g, '')
+    .replace(/\s+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '');
 
 function SuperAdminBlog() {
   const navigate = useNavigate();
-  const storedAdmin = localStorage.getItem('admin');
-  const admin = storedAdmin ? JSON.parse(storedAdmin) : null;
-
-  // Protect route
-  useEffect(() => {
-    if (!admin || admin.role !== 'super_admin') {
-      navigate('/dashboard');
-    }
-  }, [admin?.role, navigate]);
-
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [errorMsg, setErrorMsg] = useState('');
-  const [successMsg, setSuccessMsg] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [statusMessage, setStatusMessage] = useState(null);
+  const [filterStatus, setFilterStatus] = useState('all');
+  const [searchQuery, setSearchQuery] = useState('');
 
-  // Form Modal states
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingPostId, setEditingPostId] = useState(null);
+  const [slugManuallyEdited, setSlugManuallyEdited] = useState(false);
   const [formData, setFormData] = useState({
     title: '',
     slug: '',
@@ -45,44 +40,52 @@ function SuperAdminBlog() {
     author: 'Kwickbot Team'
   });
 
-  const fetchPosts = async () => {
+  useEffect(() => {
+    const storedAdmin = localStorage.getItem('admin');
+    const admin = storedAdmin ? JSON.parse(storedAdmin) : null;
+    if (!admin || admin.role !== 'super_admin') {
+      navigate('/dashboard');
+    }
+  }, [navigate]);
+
+  const fetchPosts = useCallback(async () => {
     try {
       setLoading(true);
-      setErrorMsg('');
       const res = await api.get('/blog/admin/all');
-      if (res.data.success) {
-        setPosts(res.data.data);
+      if (res.data?.success) {
+        setPosts(res.data.data || []);
       }
     } catch (err) {
-      console.error('Error fetching admin blog posts:', err);
-      setErrorMsg(err.response?.data?.error || 'Failed to fetch blog posts.');
+      setStatusMessage({
+        type: 'error',
+        text: err.response?.data?.error || 'Failed to load blog posts.'
+      });
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     fetchPosts();
-  }, []);
+  }, [fetchPosts]);
 
   const handleTitleChange = (e) => {
     const titleVal = e.target.value;
-    // Auto-generate slug if not editing or manually changed
-    const generatedSlug = titleVal
-      .toLowerCase()
-      .trim()
-      .replace(/[^a-z0-9\s-]/g, '')
-      .replace(/\s+/g, '-');
-      
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
       title: titleVal,
-      slug: prev.slug === '' || generatedSlug.startsWith(prev.slug) ? generatedSlug : prev.slug
+      slug: !editingPostId && !slugManuallyEdited ? slugifyTitle(titleVal) : prev.slug
     }));
+  };
+
+  const handleSlugChange = (e) => {
+    setSlugManuallyEdited(true);
+    setFormData((prev) => ({ ...prev, slug: slugifyTitle(e.target.value) }));
   };
 
   const handleOpenCreate = () => {
     setEditingPostId(null);
+    setSlugManuallyEdited(false);
     setFormData({
       title: '',
       slug: '',
@@ -95,38 +98,37 @@ function SuperAdminBlog() {
       status: 'draft',
       author: 'Kwickbot Team'
     });
-    setErrorMsg('');
-    setSuccessMsg('');
+    setStatusMessage(null);
     setIsModalOpen(true);
   };
 
   const handleOpenEdit = (post) => {
     setEditingPostId(post._id);
+    setSlugManuallyEdited(true);
     setFormData({
       title: post.title || '',
       slug: post.slug || '',
       summary: post.summary || '',
       content: post.content || '',
       coverImage: post.coverImage || '',
-      tags: post.tags ? post.tags.join(', ') : '',
+      tags: Array.isArray(post.tags) ? post.tags.join(', ') : '',
       seoTitle: post.seoTitle || '',
       keywords: post.keywords || '',
       status: post.status || 'draft',
       author: post.author || 'Kwickbot Team'
     });
-    setErrorMsg('');
-    setSuccessMsg('');
+    setStatusMessage(null);
     setIsModalOpen(true);
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      setErrorMsg('');
-      setSuccessMsg('');
-      
+      setSaving(true);
+      setStatusMessage(null);
+
       const tagsArray = formData.tags
-        ? formData.tags.split(',').map(tag => tag.trim()).filter(tag => tag !== '')
+        ? formData.tags.split(',').map((t) => t.trim()).filter(Boolean)
         : [];
 
       const payload = {
@@ -134,284 +136,437 @@ function SuperAdminBlog() {
         tags: tagsArray
       };
 
-      let response;
-      if (editingPostId) {
-        response = await api.put(`/blog/${editingPostId}`, payload);
-      } else {
-        response = await api.post('/blog', payload);
-      }
+      const res = editingPostId
+        ? await api.put(`/blog/${editingPostId}`, payload)
+        : await api.post('/blog', payload);
 
-      if (response.data.success) {
-        setSuccessMsg(editingPostId ? 'Blog post updated successfully! 🎉' : 'Blog post created successfully! 🎉');
+      if (res.data?.success) {
+        setStatusMessage({
+          type: 'success',
+          text: editingPostId ? 'Article updated.' : 'Article created.'
+        });
         setIsModalOpen(false);
-        fetchPosts();
-        setTimeout(() => setSuccessMsg(''), 5000);
+        await fetchPosts();
       }
     } catch (err) {
-      console.error('Error saving blog post:', err);
-      setErrorMsg(err.response?.data?.error || 'Failed to save blog post.');
+      setStatusMessage({
+        type: 'error',
+        text: err.response?.data?.error || 'Failed to save article.'
+      });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleQuickToggleStatus = async (post) => {
+    const nextStatus = post.status === 'published' ? 'draft' : 'published';
+    try {
+      setStatusMessage(null);
+      const res = await api.put(`/blog/${post._id}`, { status: nextStatus });
+      if (res.data?.success) {
+        setStatusMessage({
+          type: 'success',
+          text: nextStatus === 'published' ? 'Article published.' : 'Article moved to draft.'
+        });
+        await fetchPosts();
+      }
+    } catch (err) {
+      setStatusMessage({
+        type: 'error',
+        text: err.response?.data?.error || 'Failed to update status.'
+      });
     }
   };
 
   const handleDelete = async (postId) => {
-    if (!window.confirm('Are you sure you want to delete this blog post? This action cannot be undone.')) {
+    if (!window.confirm('Delete this article? This action cannot be undone.')) {
       return;
     }
     try {
-      setErrorMsg('');
-      setSuccessMsg('');
+      setStatusMessage(null);
       const res = await api.delete(`/blog/${postId}`);
-      if (res.data.success) {
-        setSuccessMsg('Blog post deleted successfully! 🗑️');
-        fetchPosts();
-        setTimeout(() => setSuccessMsg(''), 5000);
+      if (res.data?.success) {
+        setStatusMessage({
+          type: 'success',
+          text: 'Article deleted.'
+        });
+        await fetchPosts();
       }
     } catch (err) {
-      console.error('Error deleting blog post:', err);
-      setErrorMsg(err.response?.data?.error || 'Failed to delete blog post.');
+      setStatusMessage({
+        type: 'error',
+        text: err.response?.data?.error || 'Failed to delete article.'
+      });
     }
   };
 
+  const counts = useMemo(() => {
+    const published = posts.filter((p) => p.status === 'published').length;
+    return {
+      all: posts.length,
+      published,
+      draft: posts.length - published
+    };
+  }, [posts]);
+
+  const filteredPosts = useMemo(() => {
+    const q = searchQuery.toLowerCase().trim();
+    return posts.filter((post) => {
+      if (filterStatus !== 'all' && post.status !== filterStatus) return false;
+      if (!q) return true;
+      return (
+        String(post.title || '').toLowerCase().includes(q) ||
+        String(post.slug || '').toLowerCase().includes(q) ||
+        String(post.author || '').toLowerCase().includes(q)
+      );
+    });
+  }, [posts, filterStatus, searchQuery]);
+
   if (loading && posts.length === 0) {
     return (
-      <div className="container" style={{ minHeight: '80vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div className="blogm-loading">
         <div className="spinner"></div>
       </div>
     );
   }
 
   return (
-    <div className="container" style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-      <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+    <div className="blogm-page">
+      <header className="blogm-header">
         <div>
-          <h1 className="page-title" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <FaBlog style={{ color: '#6366f1' }} /> Blog Manager
-          </h1>
-          <p className="page-subtitle">Draft, publish, and manage educational articles for your website's organic SEO.</p>
+          <div className="blogm-breadcrumb">Super Admin / Blog Manager</div>
+          <h1 className="blogm-title">Blog Manager</h1>
+          <p className="blogm-subtitle">
+            Draft, publish, and manage SEO articles for kwickbot.in.
+          </p>
         </div>
-        <button className="btn-primary" onClick={handleOpenCreate} style={{ padding: '10px 20px', borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '8px', border: 'none', background: '#6366f1', color: 'white', fontWeight: '700', cursor: 'pointer' }}>
-          <FaPlus /> Create Post
+
+        <button type="button" className="blogm-btn-primary" onClick={handleOpenCreate}>
+          <FaPlus />
+          Create post
         </button>
+      </header>
+
+      {statusMessage && !isModalOpen && (
+        <div
+          role="status"
+          className={`blogm-alert ${statusMessage.type === 'error' ? 'error' : 'success'}`}
+        >
+          {statusMessage.text}
+        </div>
+      )}
+
+      <div className="blogm-toolbar">
+        <div className="blogm-tabs" role="tablist" aria-label="Filter posts by status">
+          <button
+            type="button"
+            className={`blogm-tab${filterStatus === 'all' ? ' active' : ''}`}
+            onClick={() => setFilterStatus('all')}
+          >
+            All ({counts.all})
+          </button>
+          <button
+            type="button"
+            className={`blogm-tab${filterStatus === 'published' ? ' active' : ''}`}
+            onClick={() => setFilterStatus('published')}
+          >
+            Published ({counts.published})
+          </button>
+          <button
+            type="button"
+            className={`blogm-tab${filterStatus === 'draft' ? ' active' : ''}`}
+            onClick={() => setFilterStatus('draft')}
+          >
+            Drafts ({counts.draft})
+          </button>
+        </div>
+
+        <input
+          type="text"
+          className="blogm-search"
+          placeholder="Search articles..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+        />
       </div>
 
-      {successMsg && (
-        <div className="alert alert-success" style={{ padding: '12px 20px', background: 'rgba(16, 185, 129, 0.15)', border: '1px solid #10b981', color: '#fafafa', borderRadius: '8px' }}>
-          {successMsg}
-        </div>
-      )}
-
-      {errorMsg && (
-        <div className="alert alert-danger" style={{ padding: '12px 20px', background: 'rgba(239, 68, 68, 0.15)', border: '1px solid #ef4444', color: '#fafafa', borderRadius: '8px' }}>
-          {errorMsg}
-        </div>
-      )}
-
-      {/* Blog Posts Table */}
-      <div className="super-admin-card" style={{ padding: '24px', background: 'rgba(24, 24, 27, 0.6)', border: '1px solid rgba(63, 63, 70, 0.3)', borderRadius: '16px', overflowX: 'auto' }}>
-        {posts.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: '40px 20px', color: '#71717a' }}>
-            <FaBlog size={48} style={{ marginBottom: '16px', opacity: 0.5 }} />
-            <p>No blog posts found. Click "Create Post" to write your first article!</p>
+      <section className="blogm-panel">
+        {filteredPosts.length === 0 ? (
+          <div className="blogm-empty">
+            {posts.length === 0
+              ? 'No articles yet. Click Create post to write your first one.'
+              : 'No articles match your current filter.'}
           </div>
         ) : (
-          <table className="super-admin-table" style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
-            <thead>
-              <tr style={{ borderBottom: '1px solid #27272a' }}>
-                <th style={{ padding: '12px 8px', color: '#a1a1aa', fontWeight: '600' }}>Article Title</th>
-                <th style={{ padding: '12px 8px', color: '#a1a1aa', fontWeight: '600' }}>Slug</th>
-                <th style={{ padding: '12px 8px', color: '#a1a1aa', fontWeight: '600' }}>Author</th>
-                <th style={{ padding: '12px 8px', color: '#a1a1aa', fontWeight: '600' }}>Status</th>
-                <th style={{ padding: '12px 8px', color: '#a1a1aa', fontWeight: '600' }}>Created Date</th>
-                <th style={{ padding: '12px 8px', textAlign: 'right', color: '#a1a1aa', fontWeight: '600' }}>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {posts.map(post => (
-                <tr key={post._id} style={{ borderBottom: '1px solid #27272a' }}>
-                  <td style={{ padding: '16px 8px', color: '#fafafa', fontWeight: '500' }}>{post.title}</td>
-                  <td style={{ padding: '16px 8px', color: '#71717a', fontSize: '13px' }}>{post.slug}</td>
-                  <td style={{ padding: '16px 8px', color: '#a1a1aa' }}>{post.author}</td>
-                  <td style={{ padding: '16px 8px' }}>
-                    <span style={{ 
-                      padding: '4px 8px', 
-                      borderRadius: '12px', 
-                      fontSize: '12px', 
-                      fontWeight: '600',
-                      background: post.status === 'published' ? 'rgba(16, 185, 129, 0.1)' : 'rgba(245, 158, 11, 0.1)', 
-                      color: post.status === 'published' ? '#10b981' : '#f59e0b'
-                    }}>
-                      {post.status.toUpperCase()}
-                    </span>
-                  </td>
-                  <td style={{ padding: '16px 8px', color: '#71717a', fontSize: '13px' }}>
-                    {new Date(post.createdAt).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}
-                  </td>
-                  <td style={{ padding: '16px 8px', textAlign: 'right' }}>
-                    <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
-                      <a href={`/blog/${post.slug}`} target="_blank" rel="noopener noreferrer" className="btn-secondary" style={{ padding: '6px 12px', border: '1px solid #3f3f46', background: 'transparent', color: '#a1a1aa', borderRadius: '6px', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '13px' }}>
-                        <FaEye /> View
-                      </a>
-                      <button onClick={() => handleOpenEdit(post)} className="btn-secondary" style={{ padding: '6px 12px', border: '1px solid #3f3f46', background: 'transparent', color: '#fafafa', borderRadius: '6px', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '13px', cursor: 'pointer' }}>
-                        <FaEdit /> Edit
-                      </button>
-                      <button onClick={() => handleDelete(post._id)} className="btn-danger" style={{ padding: '6px 12px', border: 'none', background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', borderRadius: '6px', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '13px', cursor: 'pointer' }}>
-                        <FaTrash /> Delete
-                      </button>
-                    </div>
-                  </td>
+          <div className="blogm-table-wrap">
+            <table className="blogm-table">
+              <thead>
+                <tr>
+                  <th>Article</th>
+                  <th>Author</th>
+                  <th>Status</th>
+                  <th>Created</th>
+                  <th className="right">Actions</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {filteredPosts.map((post) => (
+                  <tr key={post._id}>
+                    <td>
+                      <div className="blogm-article-title">{post.title}</div>
+                      <div className="blogm-article-slug">/blog/{post.slug}</div>
+                    </td>
+                    <td className="blogm-author">{post.author || 'Kwickbot Team'}</td>
+                    <td>
+                      <button
+                        type="button"
+                        className="blogm-status-btn"
+                        onClick={() => handleQuickToggleStatus(post)}
+                        title={post.status === 'published' ? 'Click to unpublish to draft' : 'Click to publish'}
+                      >
+                        <span className={`blogm-dot ${post.status === 'published' ? 'published' : ''}`} />
+                        {post.status === 'published' ? 'Published' : 'Draft'}
+                      </button>
+                    </td>
+                    <td className="blogm-date">
+                      {new Date(post.createdAt).toLocaleDateString('en-IN', {
+                        year: 'numeric',
+                        month: 'short',
+                        day: 'numeric'
+                      })}
+                    </td>
+                    <td style={{ textAlign: 'right' }}>
+                      <div className="blogm-actions">
+                        <a
+                          href={`${PUBLIC_SITE_URL}/blog/${post.slug}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="blogm-action-btn"
+                          title={`Open ${PUBLIC_SITE_URL}/blog/${post.slug}`}
+                        >
+                          <FaEye />
+                          View
+                        </a>
+                        <button
+                          type="button"
+                          onClick={() => handleOpenEdit(post)}
+                          className="blogm-action-btn"
+                        >
+                          <FaEdit />
+                          Edit
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDelete(post._id)}
+                          className="blogm-action-btn danger"
+                          aria-label="Delete article"
+                          title="Delete"
+                        >
+                          <FaTrash />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
-      </div>
+      </section>
 
-      {/* Editor Modal */}
       {isModalOpen && (
-        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(9, 9, 11, 0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '20px' }}>
-          <div style={{ width: '100%', maxWidth: '800px', background: '#18181b', border: '1px solid #27272a', borderRadius: '16px', padding: '32px', display: 'flex', flexDirection: 'column', gap: '20px', maxHeight: '90vh', overflowY: 'auto' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #27272a', paddingBottom: '16px' }}>
-              <h3 style={{ fontSize: '20px', fontWeight: '700', color: '#fafafa', margin: 0 }}>
-                {editingPostId ? 'Edit Blog Post' : 'Create Blog Post'}
-              </h3>
-              <button onClick={() => setIsModalOpen(false)} style={{ background: 'none', border: 'none', color: '#a1a1aa', cursor: 'pointer', fontSize: '18px' }}>
+        <div className="blogm-modal-backdrop">
+          <div className="blogm-modal" role="dialog" aria-modal="true">
+            <div className="blogm-modal-head">
+              <h2 className="blogm-modal-title">
+                {editingPostId ? 'Edit article' : 'Create article'}
+              </h2>
+              <button
+                type="button"
+                className="blogm-modal-close"
+                onClick={() => setIsModalOpen(false)}
+                aria-label="Close modal"
+              >
                 <FaTimes />
               </button>
             </div>
 
-            <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                  <label style={{ fontSize: '13px', fontWeight: '600', color: '#a1a1aa' }}>Title</label>
+            <form onSubmit={handleSubmit} className="blogm-form" autoComplete="off">
+              {statusMessage && (
+                <div
+                  role="status"
+                  className={`blogm-alert ${statusMessage.type === 'error' ? 'error' : 'success'}`}
+                >
+                  {statusMessage.text}
+                </div>
+              )}
+
+              <div className="blogm-grid-2">
+                <div className="blogm-field">
+                  <label className="blogm-label" htmlFor="blog-title">
+                    Title
+                  </label>
                   <input
+                    id="blog-title"
                     type="text"
                     required
+                    className="blogm-input"
                     value={formData.title}
                     onChange={handleTitleChange}
                     placeholder="Enter article title"
-                    style={{ padding: '10px 14px', background: '#09090b', border: '1px solid #27272a', borderRadius: '8px', color: '#fafafa' }}
                   />
                 </div>
 
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                  <label style={{ fontSize: '13px', fontWeight: '600', color: '#a1a1aa' }}>Slug (URL Path)</label>
+                <div className="blogm-field">
+                  <label className="blogm-label" htmlFor="blog-slug">
+                    URL slug
+                  </label>
                   <input
+                    id="blog-slug"
                     type="text"
                     required
+                    className="blogm-input"
                     value={formData.slug}
-                    onChange={(e) => setFormData(prev => ({ ...prev, slug: e.target.value }))}
-                    placeholder="e.g. how-to-sync-whatsapp"
-                    style={{ padding: '10px 14px', background: '#09090b', border: '1px solid #27272a', borderRadius: '8px', color: '#fafafa' }}
+                    onChange={handleSlugChange}
+                    placeholder="how-to-sync-whatsapp"
                   />
                 </div>
               </div>
 
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                <label style={{ fontSize: '13px', fontWeight: '600', color: '#a1a1aa' }}>Summary (Brief SEO preview card text)</label>
+              <div className="blogm-field">
+                <label className="blogm-label" htmlFor="blog-summary">
+                  Summary (listing &amp; meta description)
+                </label>
                 <input
+                  id="blog-summary"
                   type="text"
                   required
+                  className="blogm-input"
                   value={formData.summary}
-                  onChange={(e) => setFormData(prev => ({ ...prev, summary: e.target.value }))}
-                  placeholder="Enter a 1-2 sentence description for listing previews..."
-                  style={{ padding: '10px 14px', background: '#09090b', border: '1px solid #27272a', borderRadius: '8px', color: '#fafafa', width: '100%' }}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, summary: e.target.value }))}
+                  placeholder="1-2 sentence overview shown on blog cards and search snippets"
                 />
               </div>
 
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                <label style={{ fontSize: '13px', fontWeight: '600', color: '#a1a1aa' }}>Body Content (Markdown or HTML supported)</label>
+              <div className="blogm-field">
+                <label className="blogm-label" htmlFor="blog-content">
+                  Body content (HTML or Markdown)
+                </label>
                 <textarea
+                  id="blog-content"
                   required
                   rows={10}
+                  className="blogm-textarea"
                   value={formData.content}
-                  onChange={(e) => setFormData(prev => ({ ...prev, content: e.target.value }))}
-                  placeholder="Write the full content of your article here. You can write details, features, steps, and use standard HTML tags like <p>, <h3>, <ul>, etc."
-                  style={{ padding: '14px', background: '#09090b', border: '1px solid #27272a', borderRadius: '8px', color: '#fafafa', fontFamily: 'monospace', resize: 'vertical' }}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, content: e.target.value }))}
+                  placeholder="Write article content here..."
                 />
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                  <label style={{ fontSize: '13px', fontWeight: '600', color: '#a1a1aa' }}>Cover Image URL</label>
+              <div className="blogm-grid-2">
+                <div className="blogm-field">
+                  <label className="blogm-label" htmlFor="blog-cover">
+                    Cover image URL
+                  </label>
                   <input
+                    id="blog-cover"
                     type="text"
+                    className="blogm-input"
                     value={formData.coverImage}
-                    onChange={(e) => setFormData(prev => ({ ...prev, coverImage: e.target.value }))}
-                    placeholder="https://images.unsplash.com/... or /uploads/blog/..."
-                    style={{ padding: '10px 14px', background: '#09090b', border: '1px solid #27272a', borderRadius: '8px', color: '#fafafa' }}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, coverImage: e.target.value }))}
+                    placeholder="https://... or /uploads/blog/..."
                   />
                 </div>
 
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                  <label style={{ fontSize: '13px', fontWeight: '600', color: '#a1a1aa' }}>Tags (Comma-separated)</label>
+                <div className="blogm-field">
+                  <label className="blogm-label" htmlFor="blog-tags">
+                    Tags (comma separated)
+                  </label>
                   <input
+                    id="blog-tags"
                     type="text"
+                    className="blogm-input"
                     value={formData.tags}
-                    onChange={(e) => setFormData(prev => ({ ...prev, tags: e.target.value }))}
-                    placeholder="e.g. WhatsApp, Odoo, AI, Customer Support"
-                    style={{ padding: '10px 14px', background: '#09090b', border: '1px solid #27272a', borderRadius: '8px', color: '#fafafa' }}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, tags: e.target.value }))}
+                    placeholder="WhatsApp, Shopify, Automation"
                   />
                 </div>
               </div>
 
-              {/* SEO Customization Section */}
-              <div style={{ borderTop: '1px solid #27272a', paddingTop: '16px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                <h4 style={{ margin: 0, fontSize: '14px', fontWeight: '700', color: '#6366f1' }}>🔍 SEO Meta Tag Customization</h4>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                    <label style={{ fontSize: '13px', fontWeight: '600', color: '#a1a1aa' }}>Custom SEO Title (Optional)</label>
+              <div className="blogm-seo-section">
+                <h3 className="blogm-seo-heading">SEO metadata</h3>
+                <div className="blogm-grid-2">
+                  <div className="blogm-field">
+                    <label className="blogm-label" htmlFor="blog-seo-title">
+                      Custom SEO title (optional)
+                    </label>
                     <input
+                      id="blog-seo-title"
                       type="text"
+                      className="blogm-input"
                       value={formData.seoTitle}
-                      onChange={(e) => setFormData(prev => ({ ...prev, seoTitle: e.target.value }))}
-                      placeholder="Leave blank to use main article title..."
-                      style={{ padding: '10px 14px', background: '#09090b', border: '1px solid #27272a', borderRadius: '8px', color: '#fafafa' }}
+                      onChange={(e) => setFormData((prev) => ({ ...prev, seoTitle: e.target.value }))}
+                      placeholder="Leave blank to use article title"
                     />
                   </div>
 
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                    <label style={{ fontSize: '13px', fontWeight: '600', color: '#a1a1aa' }}>SEO Meta Keywords (Comma-separated)</label>
+                  <div className="blogm-field">
+                    <label className="blogm-label" htmlFor="blog-seo-keywords">
+                      SEO meta keywords (comma separated)
+                    </label>
                     <input
+                      id="blog-seo-keywords"
                       type="text"
+                      className="blogm-input"
                       value={formData.keywords}
-                      onChange={(e) => setFormData(prev => ({ ...prev, keywords: e.target.value }))}
-                      placeholder="e.g. WhatsApp AI bot, CTWA ads, e-commerce automation..."
-                      style={{ padding: '10px 14px', background: '#09090b', border: '1px solid #27272a', borderRadius: '8px', color: '#fafafa' }}
+                      onChange={(e) => setFormData((prev) => ({ ...prev, keywords: e.target.value }))}
+                      placeholder="WhatsApp AI bot, ecommerce automation"
                     />
                   </div>
                 </div>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', alignItems: 'center' }}>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                  <label style={{ fontSize: '13px', fontWeight: '600', color: '#a1a1aa' }}>Status</label>
+              <div className="blogm-grid-2">
+                <div className="blogm-field">
+                  <label className="blogm-label" htmlFor="blog-status">
+                    Status
+                  </label>
                   <select
+                    id="blog-status"
+                    className="blogm-input"
                     value={formData.status}
-                    onChange={(e) => setFormData(prev => ({ ...prev, status: e.target.value }))}
-                    style={{ padding: '10px 14px', background: '#09090b', border: '1px solid #27272a', borderRadius: '8px', color: '#fafafa' }}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, status: e.target.value }))}
                   >
                     <option value="draft">Draft</option>
                     <option value="published">Published</option>
                   </select>
                 </div>
 
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                  <label style={{ fontSize: '13px', fontWeight: '600', color: '#a1a1aa' }}>Author</label>
+                <div className="blogm-field">
+                  <label className="blogm-label" htmlFor="blog-author">
+                    Author
+                  </label>
                   <input
+                    id="blog-author"
                     type="text"
+                    className="blogm-input"
                     value={formData.author}
-                    onChange={(e) => setFormData(prev => ({ ...prev, author: e.target.value }))}
-                    style={{ padding: '10px 14px', background: '#09090b', border: '1px solid #27272a', borderRadius: '8px', color: '#fafafa' }}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, author: e.target.value }))}
                   />
                 </div>
               </div>
 
-              <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', marginTop: '10px', borderTop: '1px solid #27272a', paddingTop: '16px' }}>
-                <button type="button" onClick={() => setIsModalOpen(false)} style={{ padding: '10px 20px', border: '1px solid #3f3f46', background: 'transparent', color: '#fafafa', borderRadius: '8px', cursor: 'pointer', fontWeight: '600' }}>
+              <div className="blogm-modal-foot">
+                <button
+                  type="button"
+                  className="blogm-btn-secondary"
+                  onClick={() => setIsModalOpen(false)}
+                >
                   Cancel
                 </button>
-                <button type="submit" style={{ padding: '10px 20px', border: 'none', background: '#6366f1', color: 'white', borderRadius: '8px', cursor: 'pointer', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <FaSave /> Save Post
+                <button type="submit" className="blogm-btn-primary" disabled={saving}>
+                  <FaSave />
+                  {saving ? 'Saving...' : 'Save post'}
                 </button>
               </div>
             </form>

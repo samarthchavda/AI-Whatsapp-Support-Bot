@@ -29,6 +29,16 @@ const blogPostSchema = new mongoose.Schema({
     type: String,
     trim: true
   }],
+  seoTitle: {
+    type: String,
+    trim: true,
+    default: ''
+  },
+  keywords: {
+    type: String,
+    trim: true,
+    default: ''
+  },
   status: {
     type: String,
     enum: ['draft', 'published'],

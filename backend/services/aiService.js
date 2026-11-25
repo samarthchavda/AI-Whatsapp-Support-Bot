@@ -113,8 +113,9 @@ class AIService {
     return message.toLowerCase().trim().replace(/\s+/g, ' ');
   }
 
-  getCacheKey(customerPhone, message) {
-    return `${customerPhone}::${this.normalizeMessage(message)}`;
+  getCacheKey(customerPhone, message, targetLanguage = 'English') {
+    const langKey = String(targetLanguage || 'English').toLowerCase().trim();
+    return `${customerPhone}::${langKey}::${this.normalizeMessage(message)}`;
   }
 
   cleanupExpiredCacheEntries() {
@@ -218,7 +219,7 @@ class AIService {
     }));
   }
 
-  buildContextualPrompt({ customerName, message, recentMessages, kbContext = null }) {
+  buildContextualPrompt({ customerName, message, recentMessages, kbContext = null, targetLanguage = 'English' }) {
     const contextLines = recentMessages.length > 0
       ? recentMessages.map((entry, index) => {
           return `${index + 1}. ${entry.role}: ${entry.content}`;
@@ -227,6 +228,7 @@ class AIService {
 
     const parts = [
       `Customer: ${customerName}`,
+      `Reply Language: ${targetLanguage}`,
       `Recent context:\n${contextLines}`
     ];
 
@@ -235,12 +237,12 @@ class AIService {
     }
 
     parts.push(`Current message: ${message}`);
-    parts.push('Reply in a concise, helpful WhatsApp-friendly style. Do not invent order or policy details.');
+    parts.push(`Reply completely in ${targetLanguage} in a concise, helpful WhatsApp-friendly style. Do not invent order or policy details.`);
 
     return parts.join('\n\n');
   }
 
-  buildSystemInstruction(customerName, storeInfo = {}) {
+  buildSystemInstruction(customerName, storeInfo = {}, targetLanguage = 'English') {
     const storeName = storeInfo.businessName || 'our store';
     const storeUrl = storeInfo.storeUrl || null;
     const supportEmail = storeInfo.supportEmail || null;
@@ -292,7 +294,8 @@ STRICT KNOWLEDGE BASE GROUNDING RULES:
 6. If a customer asks WHO ARE YOU or WHAT DO YOU DO: Reply with "I'm your AI shopping assistant for ${storeName}! I can help with order tracking, product info, store policies, and more. Just ask!"
 7. If a customer sends a media attachment or file: Politely explain that you are an automated assistant and cannot view images, documents, or listen to voice notes. Ask them to describe their question in text.
 8. Keep responses clear, polite, natural, and customer-focused, ensuring every store-specific statement is supported by the Knowledge Base.
-9. STRICT EMOJI RULE: Do NOT use any emojis in your responses under any circumstances. Keep all text plain, clean, professional, and completely emoji-free.`;
+9. STRICT EMOJI RULE: Do NOT use any emojis in your responses under any circumstances. Keep all text plain, clean, professional, and completely emoji-free.
+10. STRICT LANGUAGE RULE: You MUST write your ENTIRE reply in ${targetLanguage}. If the customer writes in Gujarati, Marathi, Hindi, Spanish, or any other language, reply in that same language. If they ask to switch languages (for example "please talk in english"), immediately obey and continue replying in ${targetLanguage}. Even when Knowledge Base facts or templates above are in English, translate and phrase your final reply (greetings, policies, fallback messages) naturally in ${targetLanguage}. Keep order numbers, URLs, emails, and "Kwickbot" accurate.`;
   }
 
   buildResponseParts(message) {
@@ -503,14 +506,25 @@ STRICT KNOWLEDGE BASE GROUNDING RULES:
         conversation.followUpSent = false;
       }
 
-      // Detect language and translate if foreign
-      let detectedLanguage = 'English';
+      // Detect language, explicit switch commands, and translate for KB RAG / intent matching
+      const previousLanguage = conversation.preferredLanguage || 'English';
+      let detectedLanguage = previousLanguage;
+      let activeLanguage = previousLanguage;
       let translation = null;
+      let isSwitchOnly = false;
+      const translationService = require('./translationService');
       try {
-        const translationService = require('./translationService');
-        const translationResult = await translationService.detectAndTranslate(message);
-        detectedLanguage = translationResult.detectedLanguage;
-        translation = translationResult.translation;
+        const translationResult = await translationService.detectAndTranslate(message, previousLanguage);
+        detectedLanguage = translationResult.detectedLanguage || previousLanguage;
+        translation = translationResult.translation || null;
+        isSwitchOnly = Boolean(translationResult.isSwitchOnly);
+
+        if (translationResult.requestedLanguage) {
+          activeLanguage = translationResult.requestedLanguage;
+        } else if (!translationResult.isLanguageNeutral && detectedLanguage) {
+          activeLanguage = detectedLanguage;
+        }
+        conversation.preferredLanguage = activeLanguage;
       } catch (err) {
         console.error('Failed to run translation service:', err);
       }
@@ -919,8 +933,15 @@ STRICT KNOWLEDGE BASE GROUNDING RULES:
         };
       }
 
-      // Detect intent
-      const intent = this.detectIntent(message);
+      // Detect intent (check original text first, then translated English query if still general_inquiry)
+      let intent = this.detectIntent(message);
+      const ragSearchQuery = translation || message;
+      if (intent === 'general_inquiry' && translation && translation !== message) {
+        const translatedIntent = this.detectIntent(translation);
+        if (translatedIntent && translatedIntent !== 'general_inquiry') {
+          intent = translatedIntent;
+        }
+      }
       
       const merchantPlan = (adminDoc && adminDoc.subscriptionPlan) ? adminDoc.subscriptionPlan.toLowerCase() : 'starter';
 
@@ -1010,7 +1031,13 @@ STRICT KNOWLEDGE BASE GROUNDING RULES:
       }
 
       // Process based on intent
-      if (merchantPlan === 'starter' &&
+      if (isSwitchOnly) {
+        const baseAck = `Sure ${customerName}! I will continue in ${activeLanguage} from now on. How can I help you today?`;
+        response = activeLanguage.toLowerCase() === 'english'
+          ? baseAck
+          : await translationService.translateText(baseAck, activeLanguage);
+        modelUsed = 'LanguageSwitch';
+      } else if (merchantPlan === 'starter' &&
           (currentProductInquiry || intent === 'faq_products' || intent === 'faq_products_all')) {
         response = 'For product details and availability, please contact our store team directly. I can still help with store policies and order status.';
       } else switch (intent) {
@@ -1026,7 +1053,7 @@ STRICT KNOWLEDGE BASE GROUNDING RULES:
         case 'faq_payments':
         case 'faq_offers':
           const categoryKey = intent.replace('faq_', '');
-          const faqCategoryResult = await this.handleFaqCategory(categoryKey, message, customerName, conversation, adminDoc);
+          const faqCategoryResult = await this.handleFaqCategory(categoryKey, ragSearchQuery, customerName, conversation, adminDoc, activeLanguage);
           response = faqCategoryResult.message;
           buttons = faqCategoryResult.buttons || [];
           usedAI = faqCategoryResult.usedAI || false;
@@ -1042,7 +1069,7 @@ STRICT KNOWLEDGE BASE GROUNDING RULES:
         case 'faq_products':
         case 'faq_products_all':
           if (intent === 'faq_products_all') {
-            const allProdResult = await this.handleFaqAllProducts(message, adminDoc, 1);
+            const allProdResult = await this.handleFaqAllProducts(ragSearchQuery, adminDoc, 1);
             response = allProdResult.message;
             buttons = allProdResult.buttons || [];
           } else {
@@ -1064,21 +1091,28 @@ STRICT KNOWLEDGE BASE GROUNDING RULES:
           break;
 
         case 'order_status':
-          const orderResult = await this.handleOrderStatusQuery(customerPhone, message, adminDoc ? adminDoc._id : null);
+          const orderResult = await this.handleOrderStatusQuery(customerPhone, ragSearchQuery, adminDoc ? adminDoc._id : null);
           response = orderResult.message;
           relatedOrderIds = orderResult.orderIds || [];
           break;
 
         case 'cancel_order':
-          const cancelResult = await this.handleCancelOrderRequest(customerPhone, message, adminDoc);
+          const cancelResult = await this.handleCancelOrderRequest(customerPhone, ragSearchQuery, adminDoc);
           response = cancelResult.message;
           relatedOrderIds = cancelResult.orderIds || [];
           break;
 
         case 'return_policy':
-          const policyText = await this.handleReturnPolicyQuery(message, adminDoc ? adminDoc._id : null);
+          const policyText = await this.handleReturnPolicyQuery(ragSearchQuery, adminDoc ? adminDoc._id : null);
           const recentMsgList = this.getRecentConversationMessages(conversation, this.maxRecentMessages);
-          const returnAiResult = await this.handleGeneralInquiry(message, customerName, recentMsgList, conversation.admin, policyText);
+          const returnAiResult = await this.handleGeneralInquiry(
+            message,
+            customerName,
+            recentMsgList,
+            conversation.admin,
+            policyText,
+            { targetLanguage: activeLanguage, ragQueryOverride: ragSearchQuery }
+          );
           response = returnAiResult.message;
           usedAI = returnAiResult.usedAI;
           aiModel = returnAiResult.model || null;
@@ -1094,7 +1128,7 @@ STRICT KNOWLEDGE BASE GROUNDING RULES:
           break;
 
         case 'refund_request':
-          const refundResult = await this.handleRefundRequest(customerPhone, customerName, message, adminDoc ? adminDoc._id : null);
+          const refundResult = await this.handleRefundRequest(customerPhone, customerName, ragSearchQuery, adminDoc ? adminDoc._id : null);
           response = refundResult.message;
           relatedOrderIds = refundResult.orderIds || [];
           if (merchantPlan !== 'starter') {
@@ -1118,7 +1152,7 @@ STRICT KNOWLEDGE BASE GROUNDING RULES:
             escalated = true;
             escalationReason = 'high_priority';
           } else {
-            const cacheKey = this.getCacheKey(customerPhone, message);
+            const cacheKey = this.getCacheKey(customerPhone, message, activeLanguage);
             const cachedResponse = this.getCachedResponse(cacheKey);
 
             if (cachedResponse) {
@@ -1133,7 +1167,14 @@ STRICT KNOWLEDGE BASE GROUNDING RULES:
               cacheRecord = cachedResponse;
             } else {
               const recentMessages = this.getRecentConversationMessages(conversation, this.maxRecentMessages);
-              const aiResult = await this.handleGeneralInquiry(message, customerName, recentMessages, conversation.admin);
+              const aiResult = await this.handleGeneralInquiry(
+                message,
+                customerName,
+                recentMessages,
+                conversation.admin,
+                null,
+                { targetLanguage: activeLanguage, ragQueryOverride: ragSearchQuery }
+              );
               response = aiResult.message;
               usedAI = aiResult.usedAI;
               aiModel = aiResult.model || null;
@@ -1181,6 +1222,15 @@ STRICT KNOWLEDGE BASE GROUNDING RULES:
       // Simulate streaming-like UX for WhatsApp by adding a short typing delay.
       if (!typingDelayMs) {
         typingDelayMs = this.getTypingDelayMs();
+      }
+
+      // Localize deterministic/template/KB-fallback replies into the customer's active language
+      if (!usedAI && !isSwitchOnly && activeLanguage && activeLanguage.toLowerCase() !== 'english' && response) {
+        try {
+          response = await translationService.translateText(response, activeLanguage);
+        } catch (transErr) {
+          console.error('Failed to localize template response:', transErr.message || transErr);
+        }
       }
 
       // Strip emojis from outgoing response to enforce no-emoji policy
@@ -2054,14 +2104,16 @@ Response format must be ONLY the product name or "NONE". Do not write any other 
     return response;
   }
 
-  async handleGeneralInquiry(message, customerName, recentMessages = [], adminId = null, kbContextOverride = null) {
+  async handleGeneralInquiry(message, customerName, recentMessages = [], adminId = null, kbContextOverride = null, options = {}) {
+    const targetLanguage = options?.targetLanguage || 'English';
+    const ragQueryOverride = options?.ragQueryOverride || null;
     const tokenUsageZero = {
       promptTokens: 0,
       completionTokens: 0,
       totalTokens: 0
     };
 
-    let queryText = message;
+    let queryText = ragQueryOverride || message;
     const lowerMsg = message.toLowerCase().trim();
     const isFollowUp = 
       lowerMsg.length < 25 && 
@@ -2154,9 +2206,9 @@ Response format must be ONLY the product name or "NONE". Do not write any other 
       }
     }
 
-    const systemInstruction = this.buildSystemInstruction(customerName, storeInfo);
+    const systemInstruction = this.buildSystemInstruction(customerName, storeInfo, targetLanguage);
     const systemPrompt = systemInstruction;
-    const userPrompt = this.buildContextualPrompt({ customerName, message, recentMessages, kbContext });
+    const userPrompt = this.buildContextualPrompt({ customerName, message, recentMessages, kbContext, targetLanguage });
 
     // 2) Gemini preferred model for low-cost AI answers.
     if (this.gemini) {
@@ -2651,7 +2703,7 @@ Response format must be ONLY the product name or "NONE". Do not write any other 
     };
   }
 
-  async handleFaqCategory(categoryKey, userMessage, customerName, conversation, adminDoc) {
+  async handleFaqCategory(categoryKey, userMessage, customerName, conversation, adminDoc, targetLanguage = 'English') {
     const categoryLabels = {
       shipping: 'Shipping & Delivery',
       returns: 'Returns & Refunds',
@@ -2691,7 +2743,8 @@ Response format must be ONLY the product name or "NONE". Do not write any other 
       customerName,
       recentMsgList,
       adminDoc ? adminDoc._id : null,
-      kbContext
+      kbContext,
+      { targetLanguage, ragQueryOverride: userMessage }
     );
 
     let finalMessage = aiResult.message;

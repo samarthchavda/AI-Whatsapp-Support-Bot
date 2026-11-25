@@ -96,6 +96,10 @@ const conversationSchema = new mongoose.Schema({
   },
   tags: [String],
   relatedOrderIds: [String],
+  preferredLanguage: {
+    type: String,
+    default: 'English'
+  },
   hasProductInquiry: {
     type: Boolean,
     default: false,

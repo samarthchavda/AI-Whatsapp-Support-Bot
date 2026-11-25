@@ -8,13 +8,21 @@ export default function Sidebar({ admin, onLogout, isOpen, onToggle, onOpen, onC
   const { canViewPage } = useEffectiveAccess();
   const isMerchant = Boolean(admin && admin.role !== 'super_admin');
   const isSuperAdminSettingsRoute = location.pathname.startsWith('/dashboard/super-admin/settings');
+  const isSuperAdminAuditRoute = location.pathname.startsWith('/dashboard/super-admin/audit-logs');
+  const activeAuditPanel = isSuperAdminAuditRoute
+    ? (new URLSearchParams(location.search).get('panel') || 'all')
+    : null;
   const [settingsMenuOpen, setSettingsMenuOpen] = useState(isSuperAdminSettingsRoute);
+  const [auditMenuOpen, setAuditMenuOpen] = useState(isSuperAdminAuditRoute);
 
   useEffect(() => {
     if (isSuperAdminSettingsRoute) {
       setSettingsMenuOpen(true);
     }
-  }, [isSuperAdminSettingsRoute]);
+    if (isSuperAdminAuditRoute) {
+      setAuditMenuOpen(true);
+    }
+  }, [isSuperAdminSettingsRoute, isSuperAdminAuditRoute]);
 
   const isActive = (path) => {
     if (path === '/dashboard/developer' && location.pathname.startsWith('/dashboard/developer/')) return 'active';
@@ -258,11 +266,73 @@ export default function Sidebar({ admin, onLogout, isOpen, onToggle, onOpen, onC
             <div className="nav-section">
               {isOpen && <div className="nav-section-title">Security</div>}
               <ul className="nav-links">
-                <li>
-                  <Link to="/dashboard/super-admin/audit-logs" className={isActive('/dashboard/super-admin/audit-logs')} title="Audit Logs">
+                <li className={`nav-submenu-group${auditMenuOpen ? ' open' : ''}`}>
+                  <button
+                    type="button"
+                    className={`nav-submenu-trigger${isSuperAdminAuditRoute ? ' active' : ''}`}
+                    onClick={() => {
+                      if (!isOpen) {
+                        (onOpen || onToggle)?.();
+                        setAuditMenuOpen(true);
+                        return;
+                      }
+                      setAuditMenuOpen((prev) => !prev);
+                    }}
+                    aria-expanded={auditMenuOpen}
+                    title="Audit Logs"
+                  >
                     <FaShieldAlt />
                     <span className="nav-label">Audit Logs</span>
-                  </Link>
+                    {isOpen && (
+                      <span className="nav-submenu-caret">
+                        {auditMenuOpen ? <FaChevronDown /> : <FaChevronRight />}
+                      </span>
+                    )}
+                  </button>
+                  {auditMenuOpen && isOpen && (
+                    <ul className="nav-submenu-list">
+                      <li>
+                        <Link
+                          to="/dashboard/super-admin/audit-logs"
+                          className={activeAuditPanel === 'all' ? 'active' : ''}
+                          title="All Audit Logs"
+                        >
+                          <FaFileAlt />
+                          <span className="nav-label">All Logs</span>
+                        </Link>
+                      </li>
+                      <li>
+                        <Link
+                          to="/dashboard/super-admin/audit-logs?panel=super_admin"
+                          className={activeAuditPanel === 'super_admin' ? 'active' : ''}
+                          title="Super Admin Panel Logs"
+                        >
+                          <FaCrown />
+                          <span className="nav-label">Super Admin Panel</span>
+                        </Link>
+                      </li>
+                      <li>
+                        <Link
+                          to="/dashboard/super-admin/audit-logs?panel=admin"
+                          className={activeAuditPanel === 'admin' ? 'active' : ''}
+                          title="Admin Panel Logs"
+                        >
+                          <FaUser />
+                          <span className="nav-label">Admin Panel</span>
+                        </Link>
+                      </li>
+                      <li>
+                        <Link
+                          to="/dashboard/super-admin/audit-logs?panel=system"
+                          className={activeAuditPanel === 'system' ? 'active' : ''}
+                          title="System & Security Logs"
+                        >
+                          <FaCog />
+                          <span className="nav-label">System &amp; Security</span>
+                        </Link>
+                      </li>
+                    </ul>
+                  )}
                 </li>
               </ul>
             </div>

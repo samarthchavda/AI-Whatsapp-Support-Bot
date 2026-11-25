@@ -2958,47 +2958,51 @@ exports.getBillingRevenueStatus = async (req, res) => {
 // Get Audit Logs platform security monitoring metrics
 exports.getAuditLogs = async (req, res) => {
   try {
-    // 1. Fetch all audit log records sorted by newest first
+    const requestedPanel = String(req.query?.panel || 'all').toLowerCase();
+
+    // 1. Fetch recent audit logs sorted newest first
     const logs = await AuditLog.find({})
       .populate({ path: 'actor', select: 'name email role' })
       .sort({ createdAt: -1 })
-      .limit(500);
+      .limit(500)
+      .lean();
 
-    // 2. Fetch all administrators to build a lookup mapping in case populated actor is missing
-    const admins = await Admin.find({}).select('name email role');
+    // 2. Fetch administrators to resolve legacy entries if actor ref was cleared
+    const admins = await Admin.find({}).select('name email role').lean();
     const adminMap = {};
-    admins.forEach(a => {
-      adminMap[a.email.toLowerCase()] = {
-        name: a.name,
-        role: a.role
-      };
+    admins.forEach((a) => {
+      if (a.email) {
+        adminMap[a.email.toLowerCase()] = {
+          name: a.name,
+          role: a.role
+        };
+      }
     });
 
-    // 3. Process logs list and filter details
-    const sanitizedLogs = logs.map(log => {
+    // 3. Process and sanitize details
+    const sanitizedLogs = logs.map((log) => {
       const email = log.actorEmail ? log.actorEmail.toLowerCase() : '';
       const fallbackActor = adminMap[email] || { name: 'System / Guest', role: 'guest' };
 
       const actorName = log.actor?.name || fallbackActor.name;
-      const actorRole = log.actor?.role || fallbackActor.role;
+      const actorRole = log.actorRole || log.actor?.role || fallbackActor.role;
+      const resolvedPanel = log.panel && ['super_admin', 'admin', 'system'].includes(log.panel)
+        ? log.panel
+        : (actorRole === 'super_admin' ? 'super_admin' : actorRole === 'admin' ? 'admin' : 'system');
 
-      // Filter out any sensitive information from details
       const cleanDetails = {};
       if (log.details && typeof log.details === 'object') {
         const sensitiveKeys = ['password', 'token', 'secret', 'key', 'apiKey', 'webhookSecret', 'credentials', 'auth'];
-        Object.keys(log.details).forEach(key => {
-          const isSensitive = sensitiveKeys.some(sk => key.toLowerCase().includes(sk));
-          if (!isSensitive) {
-            cleanDetails[key] = log.details[key];
-          } else {
-            cleanDetails[key] = '[REDACTED]';
-          }
+        Object.keys(log.details).forEach((key) => {
+          const isSensitive = sensitiveKeys.some((sk) => key.toLowerCase().includes(sk));
+          cleanDetails[key] = isSensitive ? '[REDACTED]' : log.details[key];
         });
       }
 
       return {
         _id: log._id,
         action: log.action,
+        panel: resolvedPanel,
         actorEmail: log.actorEmail,
         actorName,
         actorRole,
@@ -3010,28 +3014,31 @@ exports.getAuditLogs = async (req, res) => {
       };
     });
 
-    // 4. Summarize stats
+    // 4. Summarize global counts across panels
     const totalActivities = sanitizedLogs.length;
-    
-    // Admin actions are those made by super admins or guests/system logs acting on behalf of system
-    const adminActions = sanitizedLogs.filter(log => log.actorRole === 'super_admin').length;
-    
-    // Merchant actions are those made by admins
-    const merchantActions = sanitizedLogs.filter(log => log.actorRole === 'admin').length;
+    const superAdminActions = sanitizedLogs.filter((log) => log.panel === 'super_admin').length;
+    const adminPanelActions = sanitizedLogs.filter((log) => log.panel === 'admin').length;
+    const systemActions = sanitizedLogs.filter((log) => log.panel === 'system').length;
 
-    // Recent activities (last 24 hours)
     const oneDayAgo = new Date();
     oneDayAgo.setHours(oneDayAgo.getHours() - 24);
-    const recentActivities = sanitizedLogs.filter(log => new Date(log.createdAt) >= oneDayAgo).length;
+    const recentActivities = sanitizedLogs.filter((log) => new Date(log.createdAt) >= oneDayAgo).length;
+
+    const visibleLogs = requestedPanel !== 'all' && ['super_admin', 'admin', 'system'].includes(requestedPanel)
+      ? sanitizedLogs.filter((log) => log.panel === requestedPanel)
+      : sanitizedLogs;
 
     res.json({
       success: true,
       data: {
-        logs: sanitizedLogs,
+        logs: visibleLogs,
         summary: {
           totalActivities,
-          adminActions,
-          merchantActions,
+          superAdminActions,
+          adminPanelActions,
+          systemActions,
+          adminActions: superAdminActions,
+          merchantActions: adminPanelActions,
           recentActivities
         }
       }

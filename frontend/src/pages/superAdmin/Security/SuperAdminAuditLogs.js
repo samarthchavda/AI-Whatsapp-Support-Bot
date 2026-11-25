@@ -1,364 +1,337 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import api from '../../../services/api';
-import { 
-  FaShieldAlt, 
-  FaSearch, 
-  FaEye, 
-  FaTimesCircle,
-  FaCalendarAlt,
-  FaUserSecret,
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { useSearchParams } from 'react-router-dom';
+import {
+  FaShieldAlt,
+  FaSearch,
+  FaEye,
+  FaSync,
+  FaCrown,
+  FaUser,
+  FaCog,
   FaFileAlt,
-  FaServer
+  FaExclamationTriangle
 } from 'react-icons/fa';
-import '../Dashboard/SuperAdmin.css'; // Reuse SuperAdmin layout and tables CSS
+import api from '../../../services/api';
+import './SuperAdminAuditLogs.css';
+
+const PANEL_LABELS = {
+  all: 'All Panels',
+  super_admin: 'Super Admin Panel',
+  admin: 'Admin Panel',
+  system: 'System & Security'
+};
+
+const PANEL_PILL_LABELS = {
+  super_admin: 'Super Admin',
+  admin: 'Admin Panel',
+  system: 'System'
+};
 
 function SuperAdminAuditLogs() {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const initialPanel = searchParams.get('panel') || 'all';
+  const activePanel = ['all', 'super_admin', 'admin', 'system'].includes(initialPanel)
+    ? initialPanel
+    : 'all';
+
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [actionFilter, setActionFilter] = useState('');
   const [selectedLog, setSelectedLog] = useState(null);
 
-  useEffect(() => {
-    fetchAuditLogsData();
-  }, []);
-
-  const fetchAuditLogsData = async () => {
+  const fetchAuditLogsData = useCallback(async (isRefresh = false) => {
     try {
-      setLoading(true);
-      setError(null);
+      if (isRefresh) {
+        setRefreshing(true);
+      } else {
+        setLoading(true);
+      }
+      setError('');
       const response = await api.get('/super-admin/audit-logs');
-      setData(response.data.data);
+      setData(response.data?.data || null);
     } catch (err) {
       console.error('Error fetching Audit Logs data:', err);
-      setError(err.response?.data?.error || 'Failed to load Audit Logs data');
+      setError(err.response?.data?.error || 'Failed to load audit logs');
     } finally {
       setLoading(false);
+      setRefreshing(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchAuditLogsData(false);
+  }, [fetchAuditLogsData]);
+
+  const handleSelectPanel = (panelKey) => {
+    setActionFilter('');
+    if (panelKey === 'all') {
+      setSearchParams({});
+    } else {
+      setSearchParams({ panel: panelKey });
     }
   };
 
-  // Get dynamic action types list for filter dropdown
+  const allLogs = useMemo(() => data?.logs || [], [data]);
+  const summary = data?.summary || {};
+
+  const panelLogs = useMemo(() => {
+    if (activePanel === 'all') return allLogs;
+    return allLogs.filter((log) => log.panel === activePanel);
+  }, [allLogs, activePanel]);
+
   const actionTypes = useMemo(() => {
-    if (!data || !data.logs) return [];
     const set = new Set();
-    data.logs.forEach(log => {
+    panelLogs.forEach((log) => {
       if (log.action) set.add(log.action);
     });
     return Array.from(set).sort();
-  }, [data]);
+  }, [panelLogs]);
 
   const filteredLogs = useMemo(() => {
-    if (!data || !data.logs) return [];
-    
-    let result = data.logs;
-
-    // Apply Search
+    let result = panelLogs;
+    if (actionFilter) {
+      result = result.filter((log) => log.action === actionFilter);
+    }
     const q = searchQuery.toLowerCase().trim();
     if (q) {
       result = result.filter(
         (log) =>
-          (log.actorName && log.actorName.toLowerCase().includes(q)) ||
-          (log.actorEmail && log.actorEmail.toLowerCase().includes(q)) ||
-          (log.action && log.action.toLowerCase().includes(q)) ||
-          (log.target && log.target.toLowerCase().includes(q))
+          (log.actorName || '').toLowerCase().includes(q) ||
+          (log.actorEmail || '').toLowerCase().includes(q) ||
+          (log.action || '').toLowerCase().includes(q) ||
+          (log.target || '').toLowerCase().includes(q) ||
+          (log.ipAddress || '').toLowerCase().includes(q)
       );
     }
-
-    // Apply Action Filter
-    if (actionFilter) {
-      result = result.filter((log) => log.action === actionFilter);
-    }
-
     return result;
-  }, [data, searchQuery, actionFilter]);
+  }, [panelLogs, actionFilter, searchQuery]);
 
-  if (loading) {
+  if (loading && !data) {
     return (
-      <div className="container">
-        <div style={{ padding: '60px', textAlign: 'center', color: 'var(--text-secondary)' }}>
-          <div className="spinner" style={{ margin: '0 auto 16px' }}></div>
-          Loading Audit Logs metrics...
-        </div>
+      <div className="audit-loading">
+        <div className="spinner"></div>
       </div>
     );
   }
 
-  if (error) {
-    return (
-      <div className="container">
-        <div className="detail-card" style={{ padding: '30px', textAlign: 'center', border: '1px solid rgba(239, 68, 68, 0.2)' }}>
-          <FaTimesCircle style={{ fontSize: '40px', color: '#ef4444', marginBottom: '12px' }} />
-          <h3 style={{ margin: '0 0 8px 0', color: 'var(--text-primary)' }}>Error Loading Dashboard</h3>
-          <p style={{ margin: '0 0 20px 0', color: 'var(--text-secondary)', fontSize: '14px' }}>{error}</p>
-          <button onClick={fetchAuditLogsData} className="btn-primary">
+  return (
+    <div className="audit-page">
+      <div className="audit-header">
+        <div>
+          <div className="audit-breadcrumb">
+            Security / Audit Logs {activePanel !== 'all' ? `/ ${PANEL_LABELS[activePanel]}` : ''}
+          </div>
+          <h1 className="audit-title">Security Audit Logs</h1>
+          <p className="audit-subtitle">
+            Complete activity trail across Super Admin operations, Merchant Admin panel actions, and system security events.
+          </p>
+        </div>
+
+        <button
+          type="button"
+          className="audit-refresh-btn"
+          onClick={() => fetchAuditLogsData(true)}
+          disabled={refreshing}
+        >
+          <FaSync className={refreshing ? 'spin' : ''} />
+          {refreshing ? 'Refreshing...' : 'Refresh'}
+        </button>
+      </div>
+
+      {error && (
+        <div className="audit-error-box">
+          <span><FaExclamationTriangle style={{ marginRight: '8px' }} />{error}</span>
+          <button type="button" className="audit-refresh-btn" onClick={() => fetchAuditLogsData(false)}>
             Retry
           </button>
         </div>
-      </div>
-    );
-  }
+      )}
 
-  const { summary } = data || {
-    summary: { totalActivities: 0, adminActions: 0, merchantActions: 0, recentActivities: 0 }
-  };
+      {!error && (
+        <div className="audit-panel">
+          <div className="audit-summary-strip">
+            <div className="audit-metric">
+              <span className="audit-metric-label">Total logged events</span>
+              <span className="audit-metric-value">{(summary.totalActivities || 0).toLocaleString()}</span>
+              <span className="audit-metric-sub">Recent 500 activity records</span>
+            </div>
 
-  return (
-    <div className="container super-admin-page">
-      <div className="page-header super-admin-header">
-        <div>
-          <h1 className="page-title super-admin-title" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <FaShieldAlt className="audit-logs-title-icon" style={{ color: '#f87171' }} />
-            Security Audit Logs
-          </h1>
-          <p className="page-subtitle">Track platform security events, system backup updates, admin overrides, and merchant configurations</p>
-        </div>
-      </div>
+            <div className="audit-metric">
+              <span className="audit-metric-label">Super Admin panel</span>
+              <span className="audit-metric-value">{(summary.superAdminActions || 0).toLocaleString()}</span>
+              <span className="audit-metric-sub">Platform &amp; config updates</span>
+            </div>
 
-      {/* KPI Stats Cards */}
-      <div className="analytics-cards" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '20px', marginBottom: '24px' }}>
-        <div className="stat-card" style={{ background: 'var(--bg-card)', border: '1px solid var(--border-subtle)', borderRadius: '16px', padding: '20px', display: 'flex', alignItems: 'center', gap: '16px' }}>
-          <div className="stat-icon" style={{ background: 'rgba(248, 113, 113, 0.1)', color: '#f87171', padding: '16px', borderRadius: '12px', fontSize: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <FaShieldAlt />
-          </div>
-          <div className="stat-info">
-            <h3 style={{ margin: 0, fontSize: '13px', color: 'var(--text-secondary)' }}>Total Activities</h3>
-            <p className="stat-value" style={{ margin: '4px 0 0 0', fontSize: '26px', fontWeight: '700', color: 'var(--text-primary)' }}>{summary.totalActivities}</p>
-            <small style={{ color: 'var(--text-secondary)' }}>System security logs</small>
-          </div>
-        </div>
+            <div className="audit-metric">
+              <span className="audit-metric-label">Admin (Merchant) panel</span>
+              <span className="audit-metric-value">{(summary.adminPanelActions || 0).toLocaleString()}</span>
+              <span className="audit-metric-sub">Store &amp; merchant mutations</span>
+            </div>
 
-        <div className="stat-card" style={{ background: 'var(--bg-card)', border: '1px solid var(--border-subtle)', borderRadius: '16px', padding: '20px', display: 'flex', alignItems: 'center', gap: '16px' }}>
-          <div className="stat-icon" style={{ background: 'rgba(56, 189, 248, 0.1)', color: '#38bdf8', padding: '16px', borderRadius: '12px', fontSize: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <FaUserSecret />
+            <div className="audit-metric">
+              <span className="audit-metric-label">Last 24 hours</span>
+              <span className="audit-metric-value">{(summary.recentActivities || 0).toLocaleString()}</span>
+              <span className="audit-metric-sub">{summary.systemActions || 0} system/security events</span>
+            </div>
           </div>
-          <div className="stat-info">
-            <h3 style={{ margin: 0, fontSize: '13px', color: 'var(--text-secondary)' }}>Admin Actions</h3>
-            <p className="stat-value" style={{ margin: '4px 0 0 0', fontSize: '26px', fontWeight: '700', color: '#38bdf8' }}>{summary.adminActions}</p>
-            <small style={{ color: 'var(--text-secondary)' }}>Super admin operations</small>
-          </div>
-        </div>
 
-        <div className="stat-card" style={{ background: 'var(--bg-card)', border: '1px solid var(--border-subtle)', borderRadius: '16px', padding: '20px', display: 'flex', alignItems: 'center', gap: '16px' }}>
-          <div className="stat-icon" style={{ background: 'rgba(167, 139, 250, 0.1)', color: '#a78bfa', padding: '16px', borderRadius: '12px', fontSize: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <FaFileAlt />
+          <div className="audit-panel-tabs" role="tablist">
+            {[
+              { key: 'all', label: `All Logs (${summary.totalActivities || 0})`, icon: <FaFileAlt /> },
+              { key: 'super_admin', label: `Super Admin Panel (${summary.superAdminActions || 0})`, icon: <FaCrown /> },
+              { key: 'admin', label: `Admin Panel (${summary.adminPanelActions || 0})`, icon: <FaUser /> },
+              { key: 'system', label: `System & Security (${summary.systemActions || 0})`, icon: <FaCog /> }
+            ].map((tab) => (
+              <button
+                key={tab.key}
+                type="button"
+                className={`audit-panel-tab ${activePanel === tab.key ? 'active' : ''}`}
+                onClick={() => handleSelectPanel(tab.key)}
+              >
+                {tab.icon} {tab.label}
+              </button>
+            ))}
           </div>
-          <div className="stat-info">
-            <h3 style={{ margin: 0, fontSize: '13px', color: 'var(--text-secondary)' }}>Merchant Actions</h3>
-            <p className="stat-value" style={{ margin: '4px 0 0 0', fontSize: '26px', fontWeight: '700', color: '#a78bfa' }}>{summary.merchantActions}</p>
-            <small style={{ color: 'var(--text-secondary)' }}>Merchant admin changes</small>
-          </div>
-        </div>
 
-        <div className="stat-card" style={{ background: 'var(--bg-card)', border: '1px solid var(--border-subtle)', borderRadius: '16px', padding: '20px', display: 'flex', alignItems: 'center', gap: '16px' }}>
-          <div className="stat-icon" style={{ background: 'rgba(16, 185, 129, 0.1)', color: '#10b981', padding: '16px', borderRadius: '12px', fontSize: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <FaCalendarAlt />
-          </div>
-          <div className="stat-info">
-            <h3 style={{ margin: 0, fontSize: '13px', color: 'var(--text-secondary)' }}>Recent (24h)</h3>
-            <p className="stat-value" style={{ margin: '4px 0 0 0', fontSize: '26px', fontWeight: '700', color: '#10b981' }}>{summary.recentActivities}</p>
-            <small style={{ color: 'var(--text-secondary)' }}>Activities past 24 hours</small>
-          </div>
-        </div>
-      </div>
-
-      {/* Monitoring Table */}
-      <div className="table-container-premium super-admin-table">
-        <div className="table-header-premium super-admin-table-header" style={{ flexWrap: 'wrap', gap: '12px' }}>
-          <h2><FaShieldAlt /> System Activity Registry ({filteredLogs.length})</h2>
-          
-          <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', alignItems: 'center' }}>
-            {/* Action Filter */}
+          <div className="audit-toolbar">
             <select
+              className="audit-select"
               value={actionFilter}
               onChange={(e) => setActionFilter(e.target.value)}
-              style={{
-                background: 'var(--bg-card)',
-                color: 'var(--text-primary)',
-                border: '1px solid var(--border-subtle)',
-                padding: '8px 12px',
-                borderRadius: '8px',
-                fontSize: '14px',
-                outline: 'none'
-              }}
             >
-              <option value="">All Actions</option>
-              {actionTypes.map(t => (
+              <option value="">All Actions ({actionTypes.length})</option>
+              {actionTypes.map((t) => (
                 <option key={t} value={t}>{t}</option>
               ))}
             </select>
 
-            {/* Search */}
-            <div className="super-admin-search">
+            <div className="audit-search">
               <FaSearch />
               <input
                 type="text"
-                placeholder="Search actor, action, target..."
+                placeholder="Search actor, action, target, IP..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
             </div>
           </div>
-        </div>
 
-        <div className="table-wrapper">
-          <table className="premium-table">
-            <thead>
-              <tr>
-                <th>Actor</th>
-                <th>Action</th>
-                <th>Target</th>
-                <th>Timestamp</th>
-                <th>IP Address</th>
-                <th>Action</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredLogs.length === 0 ? (
+          <div className="audit-table-wrap">
+            <table className="audit-table">
+              <thead>
                 <tr>
-                  <td colSpan="6" className="super-admin-empty">
-                    No activity logs found matching current filters
-                  </td>
+                  <th>Actor</th>
+                  <th>Panel</th>
+                  <th>Action</th>
+                  <th>Target</th>
+                  <th>Timestamp</th>
+                  <th>IP Address</th>
+                  <th>Details</th>
                 </tr>
-              ) : (
-                filteredLogs.map((log) => (
-                  <tr key={log._id}>
-                    <td>
-                      <div className="user-info-cell">
-                        <span className="user-info-name">{log.actorName}</span>
-                        <span className="user-info-email">{log.actorEmail}</span>
-                      </div>
-                    </td>
-                    <td>
-                      <span className="role-badge-pill" style={{ fontStyle: 'normal', color: 'var(--text-primary)', textTransform: 'none' }}>
-                        {log.action}
-                      </span>
-                    </td>
-                    <td>
-                      <span style={{ fontFamily: 'monospace', fontSize: '13px' }}>
-                        {log.target}
-                      </span>
-                    </td>
-                    <td>
-                      {new Date(log.createdAt).toLocaleString()}
-                    </td>
-                    <td>
-                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '13px', color: 'var(--text-secondary)' }}>
-                        <FaServer style={{ fontSize: '12px' }} />
-                        {log.ipAddress}
-                      </span>
-                    </td>
-                    <td>
-                      <button
-                        onClick={() => setSelectedLog(log)}
-                        className="btn-primary"
-                        style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '6px 12px', fontSize: '12px' }}
-                      >
-                        <FaEye /> View
-                      </button>
+              </thead>
+              <tbody>
+                {filteredLogs.length === 0 ? (
+                  <tr>
+                    <td colSpan="7" style={{ textAlign: 'center', padding: '32px', color: 'var(--text-secondary)' }}>
+                      No audit logs found matching the current filters.
                     </td>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+                ) : (
+                  filteredLogs.map((log) => (
+                    <tr key={log._id}>
+                      <td>
+                        <div className="audit-actor-name">{log.actorName}</div>
+                        <div className="audit-actor-email">{log.actorEmail}</div>
+                      </td>
+                      <td>
+                        <span className={`audit-panel-pill ${log.panel || 'system'}`}>
+                          {PANEL_PILL_LABELS[log.panel] || 'System'}
+                        </span>
+                      </td>
+                      <td>
+                        <span className="audit-action-code">{log.action}</span>
+                      </td>
+                      <td>
+                        <span className="audit-target" title={log.target}>{log.target}</span>
+                      </td>
+                      <td style={{ whiteSpace: 'nowrap' }}>
+                        {new Date(log.createdAt).toLocaleString('en-IN')}
+                      </td>
+                      <td style={{ color: 'var(--text-secondary)', fontSize: '12.5px' }}>
+                        {log.ipAddress}
+                      </td>
+                      <td>
+                        <button
+                          type="button"
+                          className="audit-view-btn"
+                          onClick={() => setSelectedLog(log)}
+                        >
+                          <FaEye /> View
+                        </button>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
-      </div>
+      )}
 
-      {/* Log Details Modal */}
       {selectedLog && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          background: 'rgba(0, 0, 0, 0.65)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 9999,
-          backdropFilter: 'blur(4px)'
-        }}>
-          <div className="detail-card" style={{
-            width: '90%',
-            maxWidth: '600px',
-            maxHeight: '85vh',
-            overflowY: 'auto',
-            padding: '24px',
-            borderRadius: '16px',
-            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.3)',
-            border: '1px solid var(--border-subtle)',
-            position: 'relative'
-          }}>
-            <button 
-              onClick={() => setSelectedLog(null)}
-              style={{
-                position: 'absolute',
-                top: '16px',
-                right: '16px',
-                background: 'none',
-                border: 'none',
-                color: 'var(--text-secondary)',
-                fontSize: '20px',
-                cursor: 'pointer'
-              }}
-            >
-              ×
-            </button>
-
-            <h3 style={{ margin: '0 0 16px 0', display: 'flex', alignItems: 'center', gap: '10px', color: 'var(--text-primary)' }}>
-              <FaShieldAlt style={{ color: '#f87171' }} />
-              Activity Details
-            </h3>
-
-            <div style={{ display: 'grid', gridTemplateColumns: '120px 1fr', gap: '12px 16px', fontSize: '14px', marginBottom: '20px' }}>
-              <div style={{ color: 'var(--text-secondary)', fontWeight: '600' }}>Action:</div>
-              <div style={{ color: 'var(--text-primary)', fontWeight: '600' }}>{selectedLog.action}</div>
-
-              <div style={{ color: 'var(--text-secondary)', fontWeight: '600' }}>Actor Name:</div>
-              <div style={{ color: 'var(--text-primary)' }}>{selectedLog.actorName}</div>
-
-              <div style={{ color: 'var(--text-secondary)', fontWeight: '600' }}>Actor Email:</div>
-              <div style={{ color: 'var(--text-primary)', wordBreak: 'break-all' }}>{selectedLog.actorEmail}</div>
-
-              <div style={{ color: 'var(--text-secondary)', fontWeight: '600' }}>Actor Role:</div>
-              <div style={{ textTransform: 'capitalize', color: 'var(--text-primary)' }}>{selectedLog.actorRole}</div>
-
-              <div style={{ color: 'var(--text-secondary)', fontWeight: '600' }}>Target:</div>
-              <div style={{ fontFamily: 'monospace', color: 'var(--text-primary)' }}>{selectedLog.target}</div>
-
-              <div style={{ color: 'var(--text-secondary)', fontWeight: '600' }}>Timestamp:</div>
-              <div style={{ color: 'var(--text-primary)' }}>{new Date(selectedLog.createdAt).toLocaleString()}</div>
-
-              <div style={{ color: 'var(--text-secondary)', fontWeight: '600' }}>IP Address:</div>
-              <div style={{ color: 'var(--text-primary)' }}>{selectedLog.ipAddress}</div>
-
-              <div style={{ color: 'var(--text-secondary)', fontWeight: '600' }}>User Agent:</div>
-              <div style={{ color: 'var(--text-primary)', fontSize: '13px', wordBreak: 'break-word' }}>{selectedLog.userAgent}</div>
-            </div>
-
-            <div style={{ borderTop: '1px solid var(--border-subtle)', paddingTop: '16px' }}>
-              <h4 style={{ margin: '0 0 10px 0', color: 'var(--text-primary)', fontSize: '14px' }}>Metadata Payload:</h4>
-              <pre style={{
-                background: 'var(--bg-body)',
-                color: 'var(--text-primary)',
-                padding: '16px',
-                borderRadius: '8px',
-                overflowX: 'auto',
-                fontSize: '12px',
-                fontFamily: 'monospace',
-                maxHeight: '200px',
-                border: '1px solid var(--border-subtle)'
-              }}>
-                {JSON.stringify(selectedLog.details, null, 2)}
-              </pre>
-            </div>
-
-            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '20px' }}>
-              <button onClick={() => setSelectedLog(null)} className="btn-primary" style={{ padding: '8px 20px' }}>
-                Close
+        <div className="audit-modal-backdrop">
+          <div className="audit-modal">
+            <div className="audit-modal-head">
+              <h3><FaShieldAlt style={{ marginRight: '8px', color: '#60a5fa' }} /> Audit Log Details</h3>
+              <button type="button" className="audit-modal-close" onClick={() => setSelectedLog(null)}>
+                ✕
               </button>
+            </div>
+
+            <div className="audit-modal-grid">
+              <div className="audit-meta-item">
+                <span>Actor</span>
+                <strong>{selectedLog.actorName} ({selectedLog.actorEmail})</strong>
+              </div>
+              <div className="audit-meta-item">
+                <span>Panel &amp; Role</span>
+                <strong>{PANEL_PILL_LABELS[selectedLog.panel] || 'System'} · {selectedLog.actorRole || 'N/A'}</strong>
+              </div>
+              <div className="audit-meta-item">
+                <span>Action</span>
+                <strong className="audit-action-code">{selectedLog.action}</strong>
+              </div>
+              <div className="audit-meta-item">
+                <span>Target</span>
+                <strong>{selectedLog.target}</strong>
+              </div>
+              <div className="audit-meta-item">
+                <span>Timestamp</span>
+                <strong>{new Date(selectedLog.createdAt).toLocaleString('en-IN')}</strong>
+              </div>
+              <div className="audit-meta-item">
+                <span>IP Address</span>
+                <strong>{selectedLog.ipAddress}</strong>
+              </div>
+            </div>
+
+            <div className="audit-meta-item" style={{ marginBottom: '12px' }}>
+              <span>User Agent</span>
+              <strong style={{ fontSize: '12px', fontWeight: 400, color: 'var(--text-secondary)' }}>
+                {selectedLog.userAgent}
+              </strong>
+            </div>
+
+            <div>
+              <span style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.04em', color: 'var(--text-muted)' }}>
+                Sanitized Event Payload
+              </span>
+              <pre className="audit-json-pre">
+                <code>{JSON.stringify(selectedLog.details || {}, null, 2)}</code>
+              </pre>
             </div>
           </div>
         </div>

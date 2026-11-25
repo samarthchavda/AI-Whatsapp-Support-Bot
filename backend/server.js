@@ -302,6 +302,9 @@ app.get('/blog', require('./controllers/public/blogSeoController').renderBlogPag
 app.get('/blog/:slug', require('./controllers/public/blogSeoController').renderBlogPageWithSeo);
 
 // API Routes
+const { createAuditMiddleware } = require('./services/auditLogService');
+app.use('/api', createAuditMiddleware());
+
 app.get('/api/sitemap.xml', require('./controllers/public/sitemapController').generateSitemap);
 
 app.use('/api/auth', authRoutes);

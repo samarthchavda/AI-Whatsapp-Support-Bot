@@ -6,6 +6,12 @@ const auditLogSchema = new mongoose.Schema({
     required: true,
     index: true
   },
+  panel: {
+    type: String,
+    enum: ['super_admin', 'admin', 'system'],
+    default: 'system',
+    index: true
+  },
   actor: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Admin',
@@ -15,6 +21,11 @@ const auditLogSchema = new mongoose.Schema({
   actorEmail: {
     type: String,
     required: true
+  },
+  actorRole: {
+    type: String,
+    default: null,
+    index: true
   },
   target: {
     type: String,
@@ -35,5 +46,7 @@ const auditLogSchema = new mongoose.Schema({
 }, {
   timestamps: true
 });
+
+auditLogSchema.index({ panel: 1, createdAt: -1 });
 
 module.exports = mongoose.model('AuditLog', auditLogSchema);

@@ -1,6 +1,15 @@
 /* Super Admin Dynamic Permission Profiles CSS - Dark & Light Theme Aware */
 
 .permission-profiles-container {
+  /* Colours this page uses that the dashboard theme doesn't define. Without
+     them the light fallbacks (#f8fafc, white) showed white boxes and buttons
+     with the theme's white text on top, so the values looked empty. */
+  --bg-subtle: var(--bg-input, #1A1D24);
+  --text-tertiary: var(--text-secondary, #A1A1AA);
+  --border-hover: #3A3E47;
+  --accent-hover: var(--accent-secondary, #0284C7);
+  --shadow-xl: 0 20px 48px rgba(0, 0, 0, 0.5);
+
   padding: 24px;
   max-width: 1440px;
   margin: 0 auto;
@@ -107,12 +116,13 @@
 }
 
 .prof-btn-primary {
-  background: var(--accent, #1677ff);
+  /* The darker brand blue: white text on the light accent was hard to read */
+  background: #0369A1;
   color: #ffffff;
 }
 
 .prof-btn-primary:hover:not(:disabled) {
-  background: var(--accent-hover, #0958d9);
+  background: #075985;
 }
 
 .prof-btn-secondary {

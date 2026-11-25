@@ -367,6 +367,8 @@ export default function CustomerOnboardWizard() {
                       <input
                         type="text"
                         required
+                        name="merchant-full-name"
+                        autoComplete="off"
                         placeholder="e.g., Rajesh Kumar"
                         value={formData.name}
                         onChange={(e) => setFormData({ ...formData, name: e.target.value })}
@@ -381,6 +383,8 @@ export default function CustomerOnboardWizard() {
                       <input
                         type="email"
                         required
+                        name="merchant-email"
+                        autoComplete="off"
                         placeholder="merchant@company.com"
                         value={formData.email}
                         onChange={(e) => setFormData({ ...formData, email: e.target.value })}
@@ -395,6 +399,8 @@ export default function CustomerOnboardWizard() {
                       <input
                         type="password"
                         required
+                        name="merchant-initial-password"
+                        autoComplete="new-password"
                         placeholder="Min 6 characters"
                         value={formData.password}
                         onChange={(e) => setFormData({ ...formData, password: e.target.value })}
@@ -408,6 +414,8 @@ export default function CustomerOnboardWizard() {
                       <FaBuilding className="onboard-input-icon" />
                       <input
                         type="text"
+                        name="merchant-business-name"
+                        autoComplete="off"
                         placeholder="e.g., Nexus Retailers Pvt Ltd"
                         value={formData.businessName}
                         onChange={(e) => setFormData({ ...formData, businessName: e.target.value })}
@@ -420,7 +428,9 @@ export default function CustomerOnboardWizard() {
                     <div className="onboard-input-wrap">
                       <FaPhone className="onboard-input-icon" />
                       <input
-                        type="text"
+                        type="tel"
+                        name="merchant-phone"
+                        autoComplete="off"
                         placeholder="+91 98765 43210"
                         value={formData.phoneNumber}
                         onChange={(e) => setFormData({ ...formData, phoneNumber: e.target.value })}
@@ -673,7 +683,7 @@ export default function CustomerOnboardWizard() {
 
                   <div className="onboard-review-card">
                     <h4>Integrations</h4>
-                    <p><strong>WhatsApp:</strong> {formData.whatsappPhoneNumber ? 'Configured' : 'Pending'}</p>
+                    <p><strong>WhatsApp:</strong> {formData.phoneNumberId ? 'Number details saved; the merchant connects it (access token) after logging in' : 'Not set; the merchant connects WhatsApp after logging in'}</p>
                   </div>
                 </div>
               </div>

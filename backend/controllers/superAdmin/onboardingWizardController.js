@@ -29,7 +29,11 @@ exports.onboardCustomer = async (req, res) => {
       geminiTokensLimit,
       isDraft,
       subscriptionStatus,
-      sendWelcomeEmail
+      sendWelcomeEmail,
+      // Step 5 (WhatsApp Setup): saved so the merchant only adds the access token later
+      whatsappPhoneNumber,
+      wabaId,
+      phoneNumberId
     } = req.body;
 
     // 1. Validation
@@ -48,6 +52,25 @@ exports.onboardCustomer = async (req, res) => {
       });
     }
 
+    // A WhatsApp number can belong to one merchant only (incoming messages are routed by it)
+    const cleanPhoneNumberId = phoneNumberId ? String(phoneNumberId).trim() : '';
+    if (cleanPhoneNumberId) {
+      const { encrypt } = require('../../services/whatsappCredentialService');
+      const taken = await Admin.findOne({
+        $or: [
+          { whatsappPhoneNumberId: encrypt(cleanPhoneNumberId, true) },
+          { whatsappPhoneNumberId: cleanPhoneNumberId },
+          { 'whatsappConnections.phoneNumberId': cleanPhoneNumberId }
+        ]
+      }).select('_id');
+      if (taken) {
+        return res.status(400).json({
+          success: false,
+          error: 'This WhatsApp Phone Number ID is already connected to another merchant.'
+        });
+      }
+    }
+
     // 2. Resolve Plan
     let resolvedPlan = null;
     if (pricingPlanId) {
@@ -64,14 +87,20 @@ exports.onboardCustomer = async (req, res) => {
     const finalTokensLimit = geminiTokensLimit !== undefined ? Number(geminiTokensLimit) : (resolvedPlan?.usageLimits?.geminiTokensPerMonth || 50000);
 
     // 3. Determine Account State
+    // Saved statuses must be one the account allows: active, trial, inactive, cancelled.
+    // A draft (and a suspended account) is saved as inactive: it can't log in until activated.
     let status = 'active';
     let isActive = true;
     if (isDraft) {
-      status = 'draft';
+      status = 'inactive';
       isActive = false;
     } else if (subscriptionStatus) {
-      status = subscriptionStatus;
-      isActive = subscriptionStatus !== 'inactive' && subscriptionStatus !== 'suspended';
+      const requested = String(subscriptionStatus).toLowerCase();
+      status = requested === 'suspended' ? 'inactive' : requested;
+      if (!['active', 'trial', 'inactive', 'cancelled'].includes(status)) {
+        return res.status(400).json({ success: false, error: `Unknown subscription status "${subscriptionStatus}".` });
+      }
+      isActive = status !== 'inactive' && status !== 'cancelled';
     }
 
     const startDate = new Date();
@@ -89,7 +118,8 @@ exports.onboardCustomer = async (req, res) => {
       password, // Pre-save hook hashes password
       role: 'admin',
       businessName: businessName ? businessName.trim() : undefined,
-      phoneNumber: phoneNumber ? phoneNumber.trim() : undefined,
+      // The account stores the contact number as businessPhone
+      businessPhone: phoneNumber ? String(phoneNumber).trim() : undefined,
       subscriptionPlan: finalPlanName,
       pricingPlanId: resolvedPlan?._id || undefined,
       billingCycle: finalCycle,
@@ -106,22 +136,30 @@ exports.onboardCustomer = async (req, res) => {
       deniedPages: Array.isArray(deniedPages) && deniedPages.length > 0 ? deniedPages : undefined,
       deniedPermissions: Array.isArray(deniedPermissions) && deniedPermissions.length > 0 ? deniedPermissions : undefined,
       isActive,
+      // WhatsApp details from step 5. Not connected yet: the merchant adds the access
+      // token from WhatsApp Connection (or Embedded Signup) after logging in.
+      whatsappPhoneNumberId: cleanPhoneNumberId || undefined,
+      whatsappBusinessAccountId: wabaId ? String(wabaId).trim() : undefined,
+      whatsappDisplayPhoneNumber: whatsappPhoneNumber ? String(whatsappPhoneNumber).trim() : undefined,
       whatsappConnected: false
     });
 
     await newMerchant.save();
 
     // 5. Audit Trail Logging
-    await auditLogService.logAction(
-      req.admin?.email || 'super_admin',
-      'customer_onboarded',
-      {
+    await auditLogService.logAction({
+      action: 'customer_onboarded',
+      actor: req.admin,
+      target: newMerchant.email,
+      details: {
         merchantId: newMerchant._id,
-        email: newMerchant.email,
         plan: finalPlanName,
-        status
-      }
-    );
+        status,
+        draft: Boolean(isDraft),
+        whatsappDetailsSaved: Boolean(cleanPhoneNumberId)
+      },
+      req
+    });
 
     // 6. Optional Welcome / Setup Email Notification
     if (sendWelcomeEmail && emailService && typeof emailService.sendEmail === 'function') {
@@ -148,7 +186,9 @@ exports.onboardCustomer = async (req, res) => {
 
     res.status(201).json({
       success: true,
-      message: isDraft ? 'Customer draft saved successfully' : 'Customer onboarded and activated successfully',
+      message: isDraft
+        ? 'Saved as a draft: the account is inactive until you activate it from the merchant page'
+        : 'Customer onboarded and activated successfully',
       data: {
         merchant: {
           _id: newMerchant._id,

@@ -1,233 +1,242 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { FaSyncAlt, FaEye } from 'react-icons/fa';
 import api from '../../../services/api';
-import { 
-  FaPlug, 
-  FaSearch, 
-  FaEye, 
-  FaTimesCircle,
-  FaCheckCircle,
-  FaExclamationTriangle,
-  FaShoppingBag
-} from 'react-icons/fa';
-import '../Dashboard/SuperAdmin.css'; // Reuse SuperAdmin layout and tables CSS
+import './SuperAdminIntegrationHealth.css';
+
+function ChannelStatus({ label, state }) {
+  const dotClass =
+    state === 'ok' ? 'ok' : state === 'bad' ? 'bad' : '';
+  return (
+    <span className={`inth-status-cell${state === 'off' ? ' muted' : ''}`}>
+      <span className={`inth-dot ${dotClass}`} />
+      {label}
+    </span>
+  );
+}
 
 function SuperAdminIntegrationHealth() {
   const navigate = useNavigate();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
 
-  useEffect(() => {
-    fetchIntegrationHealthData();
-  }, []);
-
-  const fetchIntegrationHealthData = async () => {
+  const fetchIntegrationHealthData = useCallback(async (isRefresh = false) => {
     try {
-      setLoading(true);
+      if (isRefresh) setRefreshing(true);
+      else setLoading(true);
       setError(null);
       const response = await api.get('/super-admin/integration-health');
-      setData(response.data.data);
+      setData(response.data?.data || null);
     } catch (err) {
-      console.error('Error fetching Integration Health data:', err);
-      setError(err.response?.data?.error || 'Failed to load Integration Health data');
+      setError(err.response?.data?.error || 'Failed to load integration health data');
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    fetchIntegrationHealthData(false);
+  }, [fetchIntegrationHealthData]);
 
   const filteredMerchants = useMemo(() => {
-    if (!data || !data.merchants) return [];
+    const list = data?.merchants || [];
     const q = searchQuery.toLowerCase().trim();
-    if (!q) return data.merchants;
-    return data.merchants.filter(
+    if (!q) return list;
+    return list.filter(
       (m) =>
-        m.name.toLowerCase().includes(q) ||
-        m.email.toLowerCase().includes(q)
+        String(m.name || '').toLowerCase().includes(q) ||
+        String(m.email || '').toLowerCase().includes(q) ||
+        String(m.whatsappPhone || '').toLowerCase().includes(q) ||
+        String(m.whatsappWabaId || '').toLowerCase().includes(q)
     );
   }, [data, searchQuery]);
 
-  if (loading) {
+  if (loading && !data) {
     return (
-      <div className="container">
-        <div style={{ padding: '60px', textAlign: 'center', color: 'var(--text-secondary)' }}>
-          <div className="spinner" style={{ margin: '0 auto 16px' }}></div>
-          Loading Integration Health metrics...
-        </div>
+      <div className="inth-loading">
+        <div className="spinner"></div>
       </div>
     );
   }
 
-  if (error) {
-    return (
-      <div className="container">
-        <div className="detail-card" style={{ padding: '30px', textAlign: 'center', border: '1px solid rgba(239, 68, 68, 0.2)' }}>
-          <FaTimesCircle style={{ fontSize: '40px', color: '#ef4444', marginBottom: '12px' }} />
-          <h3 style={{ margin: '0 0 8px 0', color: 'var(--text-primary)' }}>Error Loading Dashboard</h3>
-          <p style={{ margin: '0 0 20px 0', color: 'var(--text-secondary)', fontSize: '14px' }}>{error}</p>
-          <button onClick={fetchIntegrationHealthData} className="btn-primary">
-            Retry
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  const { summary } = data || {
-    summary: { totalShopify: 0, totalWoo: 0, activeIntegrations: 0, failedIntegrations: 0 }
+  const summary = data?.summary || {
+    totalShopify: 0,
+    totalWoo: 0,
+    activeIntegrations: 0,
+    failedIntegrations: 0,
+    whatsappConnectedAccounts: 0,
+    whatsappTotalAccounts: filteredMerchants.length,
+    totalMessagesAll: 0
   };
 
   return (
-    <div className="container super-admin-page">
-      <div className="page-header super-admin-header">
+    <div className="inth-page">
+      <header className="inth-header">
         <div>
-          <h1 className="page-title super-admin-title" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <FaPlug className="integration-health-icon" style={{ color: '#38bdf8' }} />
-            Integration Health
-          </h1>
-          <p className="page-subtitle">Platform-wide overview of e-commerce store sync connections, active webhooks, and channel statuses</p>
-        </div>
-      </div>
-
-      {/* KPI Stats Cards */}
-      <div className="analytics-cards" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '20px', marginBottom: '24px' }}>
-        <div className="stat-card" style={{ background: 'var(--bg-card)', border: '1px solid var(--border-subtle)', borderRadius: '16px', padding: '20px', display: 'flex', alignItems: 'center', gap: '16px' }}>
-          <div className="stat-icon" style={{ background: 'rgba(56, 189, 248, 0.1)', color: '#38bdf8', padding: '16px', borderRadius: '12px', fontSize: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <FaShoppingBag />
-          </div>
-          <div className="stat-info">
-            <h3 style={{ margin: 0, fontSize: '13px', color: 'var(--text-secondary)' }}>Shopify Connections</h3>
-            <p className="stat-value" style={{ margin: '4px 0 0 0', fontSize: '26px', fontWeight: '700', color: 'var(--text-primary)' }}>{summary.totalShopify}</p>
-            <small style={{ color: 'var(--text-secondary)' }}>Shopify shops</small>
-          </div>
+          <div className="inth-breadcrumb">Operations / Integration Health</div>
+          <h1 className="inth-title">Integration Health</h1>
+          <p className="inth-subtitle">
+            Live WhatsApp, Shopify, WooCommerce connections and conversation activity per merchant.
+          </p>
         </div>
 
-        <div className="stat-card" style={{ background: 'var(--bg-card)', border: '1px solid var(--border-subtle)', borderRadius: '16px', padding: '20px', display: 'flex', alignItems: 'center', gap: '16px' }}>
-          <div className="stat-icon" style={{ background: 'rgba(99, 102, 241, 0.1)', color: '#6366f1', padding: '16px', borderRadius: '12px', fontSize: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <FaPlug />
-          </div>
-          <div className="stat-info">
-            <h3 style={{ margin: 0, fontSize: '13px', color: 'var(--text-secondary)' }}>WooCommerce Connections</h3>
-            <p className="stat-value" style={{ margin: '4px 0 0 0', fontSize: '26px', fontWeight: '700', color: 'var(--text-primary)' }}>{summary.totalWoo}</p>
-            <small style={{ color: 'var(--text-secondary)' }}>WooCommerce shops</small>
-          </div>
-        </div>
+        <button
+          type="button"
+          className="inth-refresh-btn"
+          onClick={() => fetchIntegrationHealthData(true)}
+          disabled={refreshing}
+        >
+          <FaSyncAlt />
+          {refreshing ? 'Refreshing...' : 'Refresh'}
+        </button>
+      </header>
 
-        <div className="stat-card" style={{ background: 'var(--bg-card)', border: '1px solid var(--border-subtle)', borderRadius: '16px', padding: '20px', display: 'flex', alignItems: 'center', gap: '16px' }}>
-          <div className="stat-icon" style={{ background: 'rgba(16, 185, 129, 0.1)', color: '#10b981', padding: '16px', borderRadius: '12px', fontSize: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <FaCheckCircle />
-          </div>
-          <div className="stat-info">
-            <h3 style={{ margin: 0, fontSize: '13px', color: 'var(--text-secondary)' }}>Connected (Active)</h3>
-            <p className="stat-value" style={{ margin: '4px 0 0 0', fontSize: '26px', fontWeight: '700', color: '#10b981' }}>{summary.activeIntegrations}</p>
-            <small style={{ color: 'var(--text-secondary)' }}>Healthy syncing channels</small>
-          </div>
+      {error && (
+        <div className="inth-error-banner">
+          <span>{error}</span>
+          <button
+            type="button"
+            className="inth-refresh-btn"
+            onClick={() => fetchIntegrationHealthData(true)}
+          >
+            Retry
+          </button>
         </div>
+      )}
 
-        <div className="stat-card" style={{ background: 'var(--bg-card)', border: '1px solid var(--border-subtle)', borderRadius: '16px', padding: '20px', display: 'flex', alignItems: 'center', gap: '16px' }}>
-          <div className="stat-icon" style={{ background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', padding: '16px', borderRadius: '12px', fontSize: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <FaExclamationTriangle />
+      <section className="inth-panel">
+        <div className="inth-summary-strip">
+          <div className="inth-metric">
+            <span className="inth-metric-label">WhatsApp connected</span>
+            <span className="inth-metric-value">
+              {summary.whatsappConnectedAccounts ?? 0} / {summary.whatsappTotalAccounts ?? filteredMerchants.length}
+            </span>
+            <span className="inth-metric-sub">Merchants online</span>
           </div>
-          <div className="stat-info">
-            <h3 style={{ margin: 0, fontSize: '13px', color: 'var(--text-secondary)' }}>Failed/Disconnected</h3>
-            <p className="stat-value" style={{ margin: '4px 0 0 0', fontSize: '26px', fontWeight: '700', color: '#ef4444' }}>{summary.failedIntegrations}</p>
-            <small style={{ color: 'var(--text-secondary)' }}>Attention required</small>
-          </div>
-        </div>
-      </div>
 
-      {/* Monitoring Table */}
-      <div className="table-container-premium super-admin-table">
-        <div className="table-header-premium super-admin-table-header">
-          <h2><FaPlug /> Store Integrations Health ({filteredMerchants.length})</h2>
-          <div className="super-admin-search">
-            <FaSearch />
-            <input
-              type="text"
-              placeholder="Search merchants..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
+          <div className="inth-metric">
+            <span className="inth-metric-label">Shopify stores</span>
+            <span className="inth-metric-value">{summary.totalShopify ?? 0}</span>
+            <span className="inth-metric-sub">{summary.activeIntegrations ?? 0} active syncs total</span>
+          </div>
+
+          <div className="inth-metric">
+            <span className="inth-metric-label">WooCommerce stores</span>
+            <span className="inth-metric-value">{summary.totalWoo ?? 0}</span>
+            <span className="inth-metric-sub">{summary.failedIntegrations ?? 0} inactive</span>
+          </div>
+
+          <div className="inth-metric">
+            <span className="inth-metric-label">Stored messages</span>
+            <span className="inth-metric-value">
+              {(summary.totalMessagesAll ?? 0).toLocaleString()}
+            </span>
+            <span className="inth-metric-sub">Across all conversations</span>
           </div>
         </div>
 
-        <div className="table-wrapper">
-          <table className="premium-table">
-            <thead>
-              <tr>
-                <th>Merchant</th>
-                <th>Shopify Status</th>
-                <th>WooCommerce Status</th>
-                <th>Last Sync</th>
-                <th>Status</th>
-                <th>Action</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredMerchants.length === 0 ? (
+        <div className="inth-toolbar">
+          <h2 className="inth-toolbar-title">
+            Merchants ({filteredMerchants.length})
+          </h2>
+          <input
+            type="text"
+            className="inth-search"
+            placeholder="Search name, email, or phone..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+        </div>
+
+        {filteredMerchants.length === 0 ? (
+          <div className="inth-empty">
+            {searchQuery ? `No merchants found matching "${searchQuery}".` : 'No merchants found.'}
+          </div>
+        ) : (
+          <div className="inth-table-wrap">
+            <table className="inth-table">
+              <thead>
                 <tr>
-                  <td colSpan="4" className="super-admin-empty">
-                    No merchants found matching &quot;{searchQuery}&quot;
-                  </td>
+                  <th>Merchant</th>
+                  <th>WhatsApp</th>
+                  <th>Shopify</th>
+                  <th>WooCommerce</th>
+                  <th className="num">Messages</th>
+                  <th>Last Activity</th>
+                  <th className="right">Details</th>
                 </tr>
-              ) : (
-                filteredMerchants.map((merchant) => (
+              </thead>
+              <tbody>
+                {filteredMerchants.map((merchant) => (
                   <tr key={merchant._id}>
                     <td>
-                      <div className="user-info-cell">
-                        <span className="user-info-name">{merchant.name}</span>
-                        <span className="user-info-email">{merchant.email}</span>
-                      </div>
+                      <div className="inth-merchant-name">{merchant.name}</div>
+                      <div className="inth-merchant-email">{merchant.email}</div>
                     </td>
                     <td>
-                      <span 
-                        className="badge" 
-                        style={{ 
-                          background: merchant.shopifyStatus === 'Active' ? 'rgba(16, 185, 129, 0.15)' : merchant.shopifyStatus === 'Inactive' ? 'rgba(239, 68, 68, 0.15)' : 'var(--border-subtle)', 
-                          color: merchant.shopifyStatus === 'Active' ? '#10b981' : merchant.shopifyStatus === 'Inactive' ? '#ef4444' : 'var(--text-secondary)' 
-                        }}
-                      >
-                        {merchant.shopifyStatus}
-                      </span>
+                      <ChannelStatus
+                        label={
+                          merchant.whatsappConnected
+                            ? `Connected${merchant.whatsappNumbersCount > 1 ? ` (${merchant.whatsappNumbersCount})` : ''}`
+                            : 'Not connected'
+                        }
+                        state={merchant.whatsappConnected ? 'ok' : 'off'}
+                      />
+                      {merchant.whatsappPhone && (
+                        <div className="inth-subline">{merchant.whatsappPhone}</div>
+                      )}
                     </td>
                     <td>
-                      <span 
-                        className="badge" 
-                        style={{ 
-                          background: merchant.wooStatus === 'Active' ? 'rgba(16, 185, 129, 0.15)' : merchant.wooStatus === 'Inactive' ? 'rgba(239, 68, 68, 0.15)' : 'var(--border-subtle)', 
-                          color: merchant.wooStatus === 'Active' ? '#10b981' : merchant.wooStatus === 'Inactive' ? '#ef4444' : 'var(--text-secondary)' 
-                        }}
-                      >
-                        {merchant.wooStatus}
-                      </span>
+                      <ChannelStatus
+                        label={merchant.shopifyStatus}
+                        state={
+                          merchant.shopifyStatus === 'Active'
+                            ? 'ok'
+                            : merchant.shopifyStatus === 'Inactive'
+                            ? 'bad'
+                            : 'off'
+                        }
+                      />
                     </td>
                     <td>
-                      {merchant.lastSync 
-                        ? new Date(merchant.lastSync).toLocaleString() 
-                        : 'Not available'}
+                      <ChannelStatus
+                        label={merchant.wooStatus}
+                        state={
+                          merchant.wooStatus === 'Active'
+                            ? 'ok'
+                            : merchant.wooStatus === 'Inactive'
+                            ? 'bad'
+                            : 'off'
+                        }
+                      />
                     </td>
-                    <td>
-                      <span className={merchant.status === 'Healthy' ? 'status-connected' : merchant.status === 'Issues' ? 'status-disconnected' : 'status-disabled'} style={{ padding: '4px 10px', borderRadius: '12px', fontSize: '12px', fontWeight: '600' }}>
-                        {merchant.status}
-                      </span>
+                    <td className="num">
+                      {(merchant.totalMessages || 0).toLocaleString()}
                     </td>
-                    <td>
+                    <td className="inth-date">
+                      {merchant.lastSync ? new Date(merchant.lastSync).toLocaleString() : '—'}
+                    </td>
+                    <td className="right">
                       <button
-                        onClick={() => navigate(`/dashboard/super-admin/user/${merchant._id}?tab=integrations`)}
-                        className="btn-primary"
-                        style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '6px 12px', fontSize: '12px' }}
+                        type="button"
+                        onClick={() => navigate(`/dashboard/super-admin/merchants/${merchant._id}`)}
+                        className="inth-view-btn"
                       >
-                        <FaEye /> View
+                        <FaEye />
+                        View
                       </button>
                     </td>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
     </div>
   );
 }

@@ -19,7 +19,6 @@ import SuperAdmin from './pages/superAdmin/Dashboard/SuperAdmin';
 import SuperAdminHealth from './pages/superAdmin/SystemHealth/SuperAdminHealth';
 import SuperAdminAnnouncements from './pages/superAdmin/Announcements/SuperAdminAnnouncements';
 import SuperAdminUserDetail from './pages/superAdmin/Merchants/SuperAdminUserDetail';
-import SuperAdminWhatsAppOps from './pages/superAdmin/Operations/SuperAdminWhatsAppOps';
 import SuperAdminLiveOps from './pages/superAdmin/Operations/SuperAdminLiveOps';
 import SuperAdminIntegrationHealth from './pages/superAdmin/Operations/SuperAdminIntegrationHealth';
 import SuperAdminAIUsage from './pages/superAdmin/AI/SuperAdminAIUsage';
@@ -663,7 +662,7 @@ function App() {
                         <Route path="/super-admin" element={<SaMerchants />} />
                         <Route path="/super-admin/classic" element={<SuperAdmin />} />
                         <Route path="/super-admin/system-health" element={<SuperAdminHealth />} />
-                        <Route path="/super-admin/whatsapp-ops" element={<SuperAdminWhatsAppOps />} />
+                        <Route path="/super-admin/whatsapp-ops" element={<Navigate to="/dashboard/super-admin/integration-health" replace />} />
                         <Route path="/super-admin/live-ops" element={<SuperAdminLiveOps />} />
                         <Route path="/super-admin/integration-health" element={<SuperAdminIntegrationHealth />} />
                         <Route path="/super-admin/ai-usage" element={<SuperAdminAIUsage />} />

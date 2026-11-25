@@ -217,12 +217,6 @@ export default function Sidebar({ admin, onLogout, isOpen, onToggle, onOpen, onC
               {isOpen && <div className="nav-section-title">Operations</div>}
               <ul className="nav-links">
                 <li>
-                  <Link to="/dashboard/super-admin/whatsapp-ops" className={isActive('/dashboard/super-admin/whatsapp-ops')} title="WhatsApp Operations">
-                    <FaWhatsapp />
-                    <span className="nav-label">WhatsApp Operations</span>
-                  </Link>
-                </li>
-                <li>
                   <Link to="/dashboard/super-admin/live-ops" className={isActive('/dashboard/super-admin/live-ops')} title="Live Operations">
                     <FaComments />
                     <span className="nav-label">Live Operations</span>

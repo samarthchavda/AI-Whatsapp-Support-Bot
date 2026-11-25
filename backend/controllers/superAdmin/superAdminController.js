@@ -522,13 +522,19 @@ exports.getGlobalAnalytics = async (req, res) => {
       return sum + (invoice.totalAmount || 0);
     }, 0);
 
-    // Count active bots (users with WhatsApp connected)
-    const totalActiveBots = allUsers.filter(user => user.whatsappConnected).length;
+    // Count active bots (users with WhatsApp connected or active connection entries)
+    const totalActiveBots = allUsers.filter(
+      user => Boolean(user.whatsappConnected || (Array.isArray(user.whatsappConnections) && user.whatsappConnections.some(c => c.isActive !== false)))
+    ).length;
 
-    // Count total messages processed
-    const totalMessagesProcessed = allUsers.reduce((sum, user) => {
-      return sum + (user.totalMessagesProcessed || 0);
-    }, 0);
+    // Real messages from Conversation records (fallback-safe against counter resets)
+    const convTotals = await Conversation.aggregate([
+      { $match: { admin: { $in: adminIds } } },
+      { $group: { _id: null, total: { $sum: { $size: { $ifNull: ['$messages', []] } } } } }
+    ]);
+    const counterMessagesSum = allUsers.reduce((sum, user) => sum + (user.totalMessagesProcessed || 0), 0);
+    const actualConversationMessages = convTotals[0]?.total || 0;
+    const totalMessagesProcessed = Math.max(counterMessagesSum, actualConversationMessages);
 
     // Count users by plan
     const usersByPlan = {
@@ -2422,14 +2428,35 @@ exports.getLiveOperationsStatus = async (req, res) => {
   }
 };
 
-// Get Integration Health monitoring metrics
+// Get Integration Health monitoring metrics (WhatsApp + Shopify + WooCommerce + real Conversation counts)
 exports.getIntegrationHealthStatus = async (req, res) => {
   try {
-    // 1. Get all merchants
-    const merchants = await Admin.find({ role: 'admin' }).select('name email shopifyEnabled woocommerceEnabled updatedAt');
+    // 1. Get all merchants with WhatsApp & e-commerce fields
+    const merchants = await Admin.find({ role: 'admin' }).select(
+      'name businessName email whatsappConnected whatsappConnectedAt whatsappBusinessAccountId whatsappDisplayPhoneNumber whatsappConnections shopifyEnabled woocommerceEnabled updatedAt'
+    );
+    const merchantIds = merchants.map(m => m._id);
 
-    // 2. Get all integrations
-    const integrations = await Integration.find({}).select('adminId platform isActive lastSyncedAt storeUrl');
+    // 2. Get all store integrations & real conversation counts in parallel
+    const [integrations, convStats] = await Promise.all([
+      Integration.find({}).select('adminId platform isActive lastSyncedAt storeUrl'),
+      Conversation.aggregate([
+        { $match: { admin: { $in: merchantIds } } },
+        {
+          $group: {
+            _id: '$admin',
+            totalMessages: { $sum: { $size: { $ifNull: ['$messages', []] } } },
+            totalConversations: { $sum: 1 },
+            lastMessageAt: { $max: '$updatedAt' }
+          }
+        }
+      ])
+    ]);
+
+    const convMap = {};
+    convStats.forEach(c => {
+      if (c && c._id) convMap[c._id.toString()] = c;
+    });
 
     // Group integrations by merchant adminId
     const integrationsMap = {};
@@ -2441,10 +2468,22 @@ exports.getIntegrationHealthStatus = async (req, res) => {
       integrationsMap[adminIdStr].push(integration);
     });
 
-    // 3. Assemble merchant rows
+    // 3. Assemble merchant rows with verified DB data only
     const merchantRows = merchants.map(m => {
-      const merchantIntegrations = integrationsMap[m._id.toString()] || [];
-      
+      const idStr = m._id.toString();
+      const merchantIntegrations = integrationsMap[idStr] || [];
+      const conv = convMap[idStr] || { totalMessages: 0, totalConversations: 0, lastMessageAt: null };
+
+      const activeConnections = Array.isArray(m.whatsappConnections)
+        ? m.whatsappConnections.filter(c => c.isActive !== false)
+        : [];
+      const whatsappConnected = Boolean(m.whatsappConnected || activeConnections.length > 0);
+      const primaryConnection = activeConnections[0] || null;
+      const whatsappPhone = whatsappConnected
+        ? (primaryConnection?.displayPhoneNumber || m.whatsappDisplayPhoneNumber || '')
+        : '';
+      const whatsappNumbersCount = activeConnections.length || (whatsappConnected ? 1 : 0);
+
       const shopifyInt = merchantIntegrations.find(i => i.platform === 'shopify');
       const wooInt = merchantIntegrations.find(i => i.platform === 'woocommerce');
 
@@ -2458,41 +2497,46 @@ exports.getIntegrationHealthStatus = async (req, res) => {
         wooStatus = wooInt.isActive ? 'Active' : 'Inactive';
       }
 
-      // Calculate last sync
-      const syncTimes = [shopifyInt?.lastSyncedAt, wooInt?.lastSyncedAt].filter(Boolean);
+      const syncTimes = [
+        shopifyInt?.lastSyncedAt,
+        wooInt?.lastSyncedAt,
+        whatsappConnected ? m.whatsappConnectedAt : null,
+        conv.lastMessageAt
+      ].filter(Boolean);
       const lastSync = syncTimes.length > 0 ? new Date(Math.max(...syncTimes.map(t => new Date(t)))) : null;
 
-      // Determine merchant status
       let overallStatus = 'No Integrations';
-      const hasIntegrations = shopifyInt || wooInt;
-      if (hasIntegrations) {
-        const hasActive = (shopifyInt?.isActive) || (wooInt?.isActive);
-        const hasInactive = (shopifyInt && !shopifyInt.isActive) || (wooInt && !wooInt.isActive);
-        
-        if (hasActive && !hasInactive) {
-          overallStatus = 'Healthy';
-        } else if (hasInactive) {
-          overallStatus = 'Issues';
-        }
+      const hasStoreIntegrations = Boolean(shopifyInt || wooInt);
+      if (hasStoreIntegrations || whatsappConnected) {
+        const hasInactiveStore = (shopifyInt && !shopifyInt.isActive) || (wooInt && !wooInt.isActive);
+        overallStatus = hasInactiveStore ? 'Issues' : 'Healthy';
       }
 
       return {
         _id: m._id,
-        name: m.name,
+        name: m.businessName || m.name,
         email: m.email,
+        whatsappConnected,
+        whatsappPhone,
+        whatsappNumbersCount,
+        whatsappWabaId: whatsappConnected ? (primaryConnection?.wabaId || m.whatsappBusinessAccountId || '') : '',
         shopifyStatus,
         wooStatus,
+        totalMessages: conv.totalMessages || 0,
+        totalConversations: conv.totalConversations || 0,
         lastSync,
         status: overallStatus
       };
     });
 
-    // 4. Summarize global stats (only count integrations for existing valid merchants)
+    // 4. Summarize global stats
     const validIntegrations = integrations.filter(i => integrationsMap[i.adminId.toString()]);
     const totalShopify = validIntegrations.filter(i => i.platform === 'shopify').length;
     const totalWoo = validIntegrations.filter(i => i.platform === 'woocommerce').length;
     const activeIntegrations = validIntegrations.filter(i => i.isActive).length;
     const failedIntegrations = validIntegrations.length - activeIntegrations;
+    const whatsappConnectedAccounts = merchantRows.filter(r => r.whatsappConnected).length;
+    const totalMessagesAll = merchantRows.reduce((sum, r) => sum + (r.totalMessages || 0), 0);
 
     res.json({
       success: true,
@@ -2502,7 +2546,10 @@ exports.getIntegrationHealthStatus = async (req, res) => {
           totalShopify,
           totalWoo,
           activeIntegrations,
-          failedIntegrations
+          failedIntegrations,
+          whatsappConnectedAccounts,
+          whatsappTotalAccounts: merchantRows.length,
+          totalMessagesAll
         }
       }
     });

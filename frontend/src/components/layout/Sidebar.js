@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { FaHome, FaComments, FaBox, FaExclamationTriangle, FaPlug, FaSignOutAlt, FaUser, FaBrain, FaCommentDots, FaBroadcastTower, FaChartLine, FaCog, FaCrown, FaFileAlt, FaShoppingCart, FaCoins, FaUserSecret, FaHeartbeat, FaBullhorn, FaBlog, FaWhatsapp, FaShieldAlt, FaToggleOn, FaTimes, FaTags, FaUserTag, FaCode, FaUserPlus, FaShopify, FaWordpress, FaHeadset } from 'react-icons/fa';
+import { FaHome, FaComments, FaBox, FaExclamationTriangle, FaPlug, FaSignOutAlt, FaUser, FaBrain, FaCommentDots, FaBroadcastTower, FaChartLine, FaCog, FaCrown, FaFileAlt, FaShoppingCart, FaCoins, FaHeartbeat, FaBullhorn, FaBlog, FaWhatsapp, FaShieldAlt, FaToggleOn, FaTimes, FaTags, FaUserTag, FaCode, FaUserPlus, FaShopify, FaWordpress, FaHeadset } from 'react-icons/fa';
 import { useEffectiveAccess } from '../../context/EffectiveAccessContext';
 
 export default function Sidebar({ admin, onLogout, isOpen, onToggle, onOpen, onClose }) {
@@ -105,12 +105,6 @@ export default function Sidebar({ admin, onLogout, isOpen, onToggle, onOpen, onC
                   <Link to="/dashboard/super-admin" className={isActive('/dashboard/super-admin')} title="Merchant Management">
                     <FaCrown />
                     <span className="nav-label">Merchants</span>
-                  </Link>
-                </li>
-                <li>
-                  <Link to="/dashboard/super-admin/leads" className={isActive('/dashboard/super-admin/leads')} title="Leads CRM">
-                    <FaUserSecret />
-                    <span className="nav-label">Leads CRM</span>
                   </Link>
                 </li>
                 <li>

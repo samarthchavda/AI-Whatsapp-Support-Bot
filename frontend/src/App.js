@@ -16,7 +16,6 @@ import Analytics from './pages/merchant/Analytics/Analytics';
 import Integrations from './pages/merchant/Integrations/Integrations';
 import DeveloperApi from './pages/merchant/DeveloperApi/DeveloperApi';
 import SuperAdmin from './pages/superAdmin/Dashboard/SuperAdmin';
-import LeadsCRM from './pages/superAdmin/LeadsCRM/LeadsCRM';
 import SuperAdminHealth from './pages/superAdmin/SystemHealth/SuperAdminHealth';
 import SuperAdminAnnouncements from './pages/superAdmin/Announcements/SuperAdminAnnouncements';
 import SuperAdminUserDetail from './pages/superAdmin/Merchants/SuperAdminUserDetail';
@@ -650,7 +649,6 @@ function App() {
                         {/* New design (super-admin-ui). The old pages stay under /classic */}
                         <Route path="/super-admin" element={<SaMerchants />} />
                         <Route path="/super-admin/classic" element={<SuperAdmin />} />
-                        <Route path="/super-admin/leads" element={<LeadsCRM />} />
                         <Route path="/super-admin/system-health" element={<SuperAdminHealth />} />
                         <Route path="/super-admin/whatsapp-ops" element={<SuperAdminWhatsAppOps />} />
                         <Route path="/super-admin/live-ops" element={<SuperAdminLiveOps />} />

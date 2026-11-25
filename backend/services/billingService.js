@@ -215,16 +215,32 @@ function validateBuyerBillingDetails(input = {}, { strict = false } = {}) {
 /**
  * Create the invoice for a verified Razorpay payment.
  */
-async function createInvoiceForPayment({ admin, plan, cycle, listPrice, order, payment }) {
+async function createInvoiceForPayment({ admin, plan, cycle, listPrice, setupFee = 0, order, payment }) {
   const now = new Date();
   const seller = await getBusinessProfile();
   const buyer = buyerSnapshot(admin);
   const paid = round2(Number(payment.amount || order.amount) / 100);
   const list = round2(Number(listPrice) || paid);
-  const discount = list > paid ? round2(list - paid) : 0;
+  const fee = round2(Math.max(0, Number(setupFee) || 0));
+  const subtotal = round2(list + fee);
+  const discount = subtotal > paid ? round2(subtotal - paid) : 0;
   const tax = computeTax(paid, seller, buyer.state);
   const couponCode = (order.notes && order.notes.couponCode) || '';
   const planName = plan.displayName || plan.name;
+  const items = [{
+    description: `Kwickbot ${planName} plan · ${cycle === 'yearly' ? 'Yearly' : 'Monthly'} subscription`,
+    quantity: 1,
+    unitPrice: list,
+    amount: list
+  }];
+  if (fee > 0) {
+    items.push({
+      description: 'One-time setup & onboarding fee',
+      quantity: 1,
+      unitPrice: fee,
+      amount: fee
+    });
+  }
 
   const invoice = new Invoice({
     invoiceNumber: await nextInvoiceNumber(now, seller.invoicePrefix),
@@ -232,13 +248,8 @@ async function createInvoiceForPayment({ admin, plan, cycle, listPrice, order, p
     customerPhone: buyer.phone || 'not provided',
     customerName: buyer.name,
     customerEmail: buyer.email,
-    items: [{
-      description: `Kwickbot ${planName} plan · ${cycle === 'yearly' ? 'Yearly' : 'Monthly'} subscription`,
-      quantity: 1,
-      unitPrice: list,
-      amount: list
-    }],
-    subtotal: list,
+    items,
+    subtotal,
     taxAmount: round2(tax.cgst + tax.sgst + tax.igst),
     totalAmount: paid,
     amountPaid: paid,

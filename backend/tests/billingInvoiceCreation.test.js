@@ -43,4 +43,19 @@ describe('createInvoiceForPayment', () => {
     expect(inv.razorpayPaymentId).toBe('pay_1');
     expect(inv.status).toBe('paid');
   });
+
+  test('itemizes setupFee alongside subscription price and reconciles totalAmount', async () => {
+    const inv = await createInvoiceForPayment({
+      admin, plan: { name: 'starter', displayName: 'Starter Plan' }, cycle: 'monthly',
+      listPrice: 1499, setupFee: 400,
+      order: { id: 'order_2', amount: 189900, currency: 'INR', notes: {} },
+      payment: { id: 'pay_2', amount: 189900, method: 'upi' }
+    });
+
+    expect(inv.items).toHaveLength(2);
+    expect(inv.items[1]).toEqual(expect.objectContaining({ unitPrice: 400, amount: 400 }));
+    expect(inv.subtotal).toBe(1899);
+    expect(inv.totalAmount).toBe(1899);
+    expect(inv.discountAmount).toBe(0);
+  });
 });

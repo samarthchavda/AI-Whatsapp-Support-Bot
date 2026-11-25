@@ -1215,15 +1215,12 @@ exports.createRazorpayOrder = async (req, res) => {
     }
 
     // Server-side calculated base price (Never trust frontend price)
-    let basePrice = (cycle === 'yearly' && planDetails.yearlyPrice)
+    const planPrice = (cycle === 'yearly' && planDetails.yearlyPrice)
       ? planDetails.yearlyPrice
       : planDetails.monthlyPrice;
+    const setupFee = (planDetails.setupFee && planDetails.setupFee > 0) ? Number(planDetails.setupFee) : 0;
 
-    if (planDetails.setupFee && planDetails.setupFee > 0) {
-      basePrice += planDetails.setupFee;
-    }
-
-    let finalPrice = basePrice;
+    let finalPrice = planPrice + setupFee;
     let discountAmount = 0;
 
     if (couponCode) {
@@ -1239,8 +1236,8 @@ exports.createRazorpayOrder = async (req, res) => {
         return res.status(400).json({ success: false, error: 'This coupon has expired' });
       }
 
-      discountAmount = (basePrice * coupon.discountPercent) / 100;
-      finalPrice = basePrice - discountAmount;
+      discountAmount = (planPrice * coupon.discountPercent) / 100;
+      finalPrice = (planPrice + setupFee) - discountAmount;
     }
 
     // Super admin pricing service: coupons, offers and personal discounts.
@@ -1286,6 +1283,7 @@ exports.createRazorpayOrder = async (req, res) => {
         planId: planDetails._id.toString(),
         planName: planDetails.name,
         billingCycle: cycle,
+        setupFee: String(setupFee),
         couponCode: couponCode || ''
       }
     };
@@ -1420,11 +1418,13 @@ exports.verifyRazorpayPayment = async (req, res) => {
 
     // Create the branded invoice from what Razorpay actually charged (coupon-aware, GST split)
     const { createInvoiceForPayment } = require('../../services/billingService');
+    const orderSetupFee = Number(orderNotes.setupFee) || 0;
     const invoice = await createInvoiceForPayment({
       admin,
       plan: planDetails,
       cycle,
       listPrice: originalPrice,
+      setupFee: orderSetupFee,
       order: rzpOrder,
       payment: rzpPayment
     });

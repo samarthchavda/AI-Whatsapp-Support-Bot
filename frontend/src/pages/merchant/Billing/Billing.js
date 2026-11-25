@@ -351,8 +351,9 @@ function Billing() {
       return;
     }
 
+    const setupFee = Number(plan.setupFee || 0);
     const discountAmount = activeCoupon ? (basePrice * Number(activeCoupon.discountPercent || 0)) / 100 : 0;
-    const totalPayable = Math.max(0, Math.round((basePrice - discountAmount) * 100) / 100);
+    const totalPayable = Math.max(0, Math.round((basePrice + setupFee - discountAmount) * 100) / 100);
     if (totalPayable < 1) {
       showAlert('error', 'This discount reduces the payable amount below ₹1. Contact Kwickbot support to activate manually.');
       return;
@@ -362,6 +363,7 @@ function Billing() {
       plan,
       cycle: selectedCycle,
       basePrice,
+      setupFee,
       discountAmount,
       totalPayable
     };
@@ -813,9 +815,19 @@ function Billing() {
             const cyclePrice = selectedCycle === 'yearly' && plan.yearlyPrice
               ? Number(plan.yearlyPrice)
               : Number(plan.monthlyPrice || 0);
-            const discountedPrice = activeCoupon
-              ? Math.max(0, cyclePrice - (cyclePrice * activeCoupon.discountPercent) / 100)
-              : cyclePrice;
+            const planSetupFee = Number(plan.setupFee || 0);
+            const limits = plan.usageLimits || {};
+            const discountValue = activeCoupon ? (cyclePrice * Number(activeCoupon.discountPercent || 0)) / 100 : 0;
+            const discountedPrice = Math.max(0, cyclePrice - discountValue);
+
+            const convLimit = limits.monthlyConversations ?? (cardSlug === 'starter' ? 500 : -1);
+            const msgLimit = limits.monthlyMessages ?? (cardSlug === 'starter' ? 2000 : -1);
+            const waLimit = limits.maxWhatsAppConnections ?? (cardSlug === 'growth' ? 3 : cardSlug === 'scale' ? 5 : 1);
+            const kbLimit = limits.maxKbUploads ?? (cardSlug === 'growth' ? 3 : cardSlug === 'scale' ? -1 : 1);
+            const kbPages = limits.maxKbPdfPages ?? (cardSlug === 'starter' ? 4 : 0);
+            const storeLimit = limits.maxIntegrations ?? (cardSlug === 'growth' ? 2 : 1);
+            const bcastCamp = limits.maxBroadcastCampaigns ?? (cardSlug === 'starter' ? 5 : -1);
+            const bcastMsgs = limits.maxBroadcastMessages ?? (cardSlug === 'starter' ? 5000 : -1);
 
             const actionLabel = isPaidCurrent
               ? 'Current Active Plan'
@@ -848,6 +860,12 @@ function Billing() {
                   <span className="period">/{selectedCycle === 'yearly' && plan.yearlyPrice ? 'year' : 'month'}</span>
                 </div>
 
+                {planSetupFee > 0 && (
+                  <p className="billing-meta-plan-note" style={{ fontWeight: 600, marginBottom: 6 }}>
+                    + ₹{planSetupFee.toLocaleString('en-IN')} one-time setup fee
+                  </p>
+                )}
+
                 {['starter', 'growth', 'professional'].includes(cardSlug) && (
                   <p className="billing-meta-plan-note">
                     AI support is included within this plan&apos;s usage limits. Meta charges separately for WhatsApp message delivery.
@@ -855,45 +873,44 @@ function Billing() {
                 )}
 
                 <ul className="upgrade-features-list">
-                  {cardSlug === 'starter' && (
-                    <li><FaCheck style={{ color: '#1677FF' }} /> Up to 500 WhatsApp Conversations/mo</li>
-                  )}
-                  {cardSlug === 'growth' && (
-                    <li><FaCheck style={{ color: '#1677FF' }} /> Unlimited AI WhatsApp conversations/mo</li>
-                  )}
-                  {cardSlug === 'scale' && (
-                    <li><FaCheck style={{ color: '#1677FF' }} /> Unlimited WhatsApp Conversations/mo</li>
-                  )}
-
-                  {cardSlug === 'starter' && (
-                    <li><FaCheck style={{ color: '#1677FF' }} /> Up to 2,000 incoming &amp; outgoing messages/mo</li>
-                  )}
-                  {(cardSlug === 'growth' || cardSlug === 'scale') && (
-                    <li><FaCheck style={{ color: '#1677FF' }} /> Unlimited incoming &amp; outgoing WhatsApp messages/mo</li>
-                  )}
-
                   <li>
                     <FaCheck style={{ color: '#1677FF' }} />{' '}
-                    {cardSlug === 'starter' ? '1 Active WhatsApp Number' : cardSlug === 'growth' ? 'Up to 3 WhatsApp Numbers' : 'Up to 5 WhatsApp Numbers'}
+                    {convLimit === -1 ? 'Unlimited AI WhatsApp conversations/mo' : `Up to ${convLimit.toLocaleString('en-IN')} WhatsApp Conversations/mo`}
                   </li>
                   <li>
                     <FaCheck style={{ color: '#1677FF' }} />{' '}
-                    {cardSlug === 'starter' ? '1 KB PDF Upload' : cardSlug === 'growth' ? 'Up to 3 KB PDF Uploads' : 'Unlimited KB PDF Uploads'}
+                    {msgLimit === -1 ? 'Unlimited incoming & outgoing messages/mo' : `Up to ${msgLimit.toLocaleString('en-IN')} messages/mo`}
                   </li>
-                  <li><FaCheck style={{ color: '#1677FF' }} /> Instant AI Answers &amp; Live Chat Console</li>
-
+                  <li>
+                    <FaCheck style={{ color: '#1677FF' }} />{' '}
+                    {waLimit === -1 ? 'Unlimited WhatsApp Numbers' : waLimit === 1 ? '1 Active WhatsApp Number' : `Up to ${waLimit} WhatsApp Numbers`}
+                  </li>
+                  <li>
+                    <FaCheck style={{ color: '#1677FF' }} />{' '}
+                    {storeLimit === -1 ? 'Unlimited Shopify / WooCommerce Stores' : `${storeLimit} ${storeLimit === 1 ? 'Store' : 'Stores'} (Shopify / WooCommerce)`}
+                  </li>
+                  <li>
+                    <FaCheck style={{ color: '#1677FF' }} />{' '}
+                    {kbLimit === -1 ? 'Unlimited KB PDF Uploads' : kbLimit === 1 ? `1 KB PDF Upload${kbPages > 0 ? ` (max ${kbPages} pages)` : ''}` : `Up to ${kbLimit} KB PDF Uploads`}
+                  </li>
+                  <li>
+                    <FaCheck style={{ color: '#1677FF' }} />{' '}
+                    {bcastCamp === -1 && bcastMsgs === -1
+                      ? 'Unlimited Broadcast Campaigns & Scheduled Sends'
+                      : `Broadcasts: ${bcastMsgs.toLocaleString('en-IN')} msgs & ${bcastCamp} campaigns/mo`}
+                  </li>
+                  <li style={{ opacity: features.abandonedCartRecovery ? 1 : 0.5 }}>
+                    {features.abandonedCartRecovery ? (
+                      <><FaCheck style={{ color: '#1677FF' }} /> Abandoned Cart Recovery &amp; Catalog Sync</>
+                    ) : (
+                      <><FaTimes style={{ color: '#ef4444' }} /> <span style={{ textDecoration: 'line-through' }}>Abandoned Cart Recovery &amp; Catalog Sync</span></>
+                    )}
+                  </li>
                   <li style={{ opacity: features.advancedAnalytics ? 1 : 0.5 }}>
                     {features.advancedAnalytics ? (
                       <><FaCheck style={{ color: '#1677FF' }} /> Advanced Analytics Dashboard</>
                     ) : (
                       <><FaTimes style={{ color: '#ef4444' }} /> <span style={{ textDecoration: 'line-through' }}>Advanced Analytics Dashboard</span></>
-                    )}
-                  </li>
-                  <li style={{ opacity: features.customBranding ? 1 : 0.5 }}>
-                    {features.customBranding ? (
-                      <><FaCheck style={{ color: '#1677FF' }} /> White-Label Custom Branding</>
-                    ) : (
-                      <><FaTimes style={{ color: '#ef4444' }} /> <span style={{ textDecoration: 'line-through' }}>White-Label Custom Branding</span></>
                     )}
                   </li>
                   <li style={{ opacity: features.developerApi || features.apiAccess ? 1 : 0.5 }}>
@@ -1208,6 +1225,12 @@ function Billing() {
                 <span>List Price (incl. GST)</span>
                 <span>{formatINR(checkoutPlan.basePrice)}</span>
               </div>
+              {checkoutPlan.setupFee > 0 && (
+                <div className="billing-checkout-row">
+                  <span>One-time Setup Fee</span>
+                  <span>+{formatINR(checkoutPlan.setupFee)}</span>
+                </div>
+              )}
               {checkoutPlan.discountAmount > 0 && (
                 <div className="billing-checkout-row" style={{ color: '#047857' }}>
                   <span>Promo ({activeCoupon?.code})</span>

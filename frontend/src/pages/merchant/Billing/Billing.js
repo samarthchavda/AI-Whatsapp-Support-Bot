@@ -499,30 +499,23 @@ function Billing() {
     );
   }
 
-  const tokenUsagePercentage = profile && profile.geminiTokensLimit > 0
-    ? Math.min(100, Math.round((profile.geminiTokensUsed / profile.geminiTokensLimit) * 100))
-    : 0;
-
-  const isUsageWarning = tokenUsagePercentage >= 80;
-  const isUsageDanger = tokenUsagePercentage >= 95;
-  let progressColor = '#22c55e';
-  if (isUsageDanger) progressColor = '#ef4444';
-  else if (isUsageWarning) progressColor = '#f59e0b';
-
   const normalizedProfilePlan = normalizePlanSlug(profile?.subscriptionPlan);
   const currentPlanDetails = plans.find((p) => normalizePlanSlug(p.name) === normalizedProfilePlan);
   const fallbackFeatures = normalizedProfilePlan === 'custom' ? {
     maxConversations: -1,
     maxMessages: -1,
-    geminiTokensPerMonth: profile?.geminiTokensLimit ?? -1,
+    maxAiRepliesPerMonth: -1,
+    aiTopupAvailable: true,
     maxWhatsAppConnections: 5
   } : {
     maxConversations: (normalizedProfilePlan === 'growth' || normalizedProfilePlan === 'scale') ? -1 : 500,
     maxMessages: (normalizedProfilePlan === 'growth' || normalizedProfilePlan === 'scale') ? -1 : 2000,
-    geminiTokensPerMonth: profile?.geminiTokensLimit ?? ((normalizedProfilePlan === 'growth' || normalizedProfilePlan === 'scale') ? -1 : 50000),
+    maxAiRepliesPerMonth: normalizedProfilePlan === 'growth' ? 5000 : normalizedProfilePlan === 'scale' ? -1 : 2000,
+    aiTopupAvailable: normalizedProfilePlan === 'growth' || normalizedProfilePlan === 'scale',
     maxWhatsAppConnections: normalizedProfilePlan === 'growth' ? 3 : normalizedProfilePlan === 'scale' ? 5 : 1
   };
   const currentLimits = currentPlanDetails?.usageLimits || {};
+  const currentPlanFlags = currentPlanDetails?.features || {};
 
   const PAYMENT_METHOD_LABELS = {
     card: 'Card',
@@ -544,11 +537,24 @@ function Billing() {
     ...fallbackFeatures,
     maxConversations: currentLimits.monthlyConversations ?? fallbackFeatures.maxConversations,
     maxMessages: currentLimits.monthlyMessages ?? fallbackFeatures.maxMessages,
-    geminiTokensPerMonth: currentLimits.geminiTokensPerMonth ?? fallbackFeatures.geminiTokensPerMonth,
+    maxAiRepliesPerMonth: currentLimits.maxAiRepliesPerMonth ?? fallbackFeatures.maxAiRepliesPerMonth,
+    aiTopupAvailable: currentPlanFlags.aiTopupAvailable ?? fallbackFeatures.aiTopupAvailable,
     maxWhatsAppConnections: currentLimits.maxWhatsAppConnections ?? fallbackFeatures.maxWhatsAppConnections,
     maxBroadcastMessages: currentLimits.maxBroadcastMessages ?? 0,
     maxBroadcastCampaigns: currentLimits.maxBroadcastCampaigns ?? 0
   };
+
+  const aiRepliesUsed = profile?.totalMessagesProcessed || 0;
+  const aiRepliesLimit = currentFeatures.maxAiRepliesPerMonth;
+  const aiRepliesPercentage = aiRepliesLimit > 0
+    ? Math.min(100, Math.round((aiRepliesUsed / aiRepliesLimit) * 100))
+    : 0;
+
+  const isUsageWarning = aiRepliesLimit > 0 && aiRepliesPercentage >= 80;
+  const isUsageDanger = aiRepliesLimit > 0 && aiRepliesPercentage >= 95;
+  let progressColor = '#22c55e';
+  if (isUsageDanger) progressColor = '#ef4444';
+  else if (isUsageWarning) progressColor = '#f59e0b';
 
   const isTrialStatus = profile?.subscriptionStatus === 'trial';
   const isExpired = Boolean(profile?.subscriptionEndDate && new Date(profile.subscriptionEndDate) <= new Date());
@@ -680,52 +686,64 @@ function Billing() {
                 WhatsApp Connections: <strong>{currentFeatures.maxWhatsAppConnections === -1 ? 'Unlimited' : `${currentFeatures.maxWhatsAppConnections || 1} max`}</strong>
               </div>
               <div>
-                AI Processing Tokens: <strong>
-                  {(profile?.geminiTokensUsed || 0).toLocaleString()} / {profile?.geminiTokensLimit === -1 || currentFeatures.geminiTokensPerMonth === -1
-                    ? 'Unlimited'
-                    : (profile?.geminiTokensLimit || currentFeatures.geminiTokensPerMonth || 50000).toLocaleString()}
+                AI Replies / Month: <strong>
+                  {aiRepliesUsed.toLocaleString()} / {aiRepliesLimit === -1 ? 'Unlimited' : Number(aiRepliesLimit).toLocaleString()}
                 </strong>
+                {currentFeatures.aiTopupAvailable && aiRepliesLimit !== -1 && (
+                  <span style={{ display: 'block', fontSize: 11.5, color: 'var(--text-secondary)', fontWeight: 500 }}>
+                    Top-up available after limit
+                  </span>
+                )}
               </div>
             </div>
           </div>
         </div>
 
-        {/* Token Usage Card */}
+        {/* AI Replies Usage Card */}
         <div className="billing-card token-usage-card">
-          <h3>AI Chatbot Processing Usage</h3>
-          <p className="usage-subtitle">Your monthly AI usage limits reset every 30 days.</p>
+          <h3>AI Replies Usage</h3>
+          <p className="usage-subtitle">
+            Your monthly AI replies reset every 30 days.
+            {currentFeatures.aiTopupAvailable && aiRepliesLimit !== -1 && ' Need more? Top-up is available after your monthly limit.'}
+          </p>
 
           <div className="usage-numeric-row">
             <div>
-              <span className="used-amount">{profile?.geminiTokensUsed?.toLocaleString() || 0}</span>
+              <span className="used-amount">{aiRepliesUsed.toLocaleString()}</span>
               <span className="divider"> / </span>
               <span className="limit-amount">
-                {profile?.geminiTokensLimit === -1 || profile?.geminiTokensLimit === Infinity
+                {aiRepliesLimit === -1 || aiRepliesLimit === Infinity
                   ? 'Unlimited'
-                  : (profile?.geminiTokensLimit?.toLocaleString() || '50,000')}
+                  : Number(aiRepliesLimit).toLocaleString()}
               </span>
-              <span className="unit"> units</span>
+              <span className="unit"> replies</span>
             </div>
-            {profile?.geminiTokensLimit !== -1 && profile?.geminiTokensLimit !== Infinity && (
-              <div className="percentage-display">{tokenUsagePercentage}%</div>
+            {aiRepliesLimit !== -1 && aiRepliesLimit !== Infinity && (
+              <div className="percentage-display">{aiRepliesPercentage}%</div>
             )}
           </div>
 
           <div className="progress-bar-container">
             <div
               className="progress-bar-fill"
-              style={{ width: `${tokenUsagePercentage}%`, backgroundColor: progressColor }}
+              style={{ width: `${aiRepliesPercentage}%`, backgroundColor: progressColor }}
             />
           </div>
 
           {isUsageDanger && (
             <div className="usage-alertdanger">
-              <FaInfoCircle /> You have reached your AI chat limit! Suspending bot auto-replies until upgrade or monthly reset.
+              <FaInfoCircle />{' '}
+              {currentFeatures.aiTopupAvailable
+                ? 'You have reached your monthly AI reply limit. Contact support for an instant top-up or wait for monthly reset.'
+                : 'You have reached your monthly AI reply limit! Upgrade your plan or wait for monthly reset.'}
             </div>
           )}
           {!isUsageDanger && isUsageWarning && (
             <div className="usage-alertwarning">
-              <FaInfoCircle /> Warning: You are running low on monthly AI chat credits. Upgrade your plan to avoid interruption.
+              <FaInfoCircle />{' '}
+              {currentFeatures.aiTopupAvailable
+                ? 'Warning: You are nearing your monthly AI reply limit. Top-up is available anytime after the limit.'
+                : 'Warning: You are running low on monthly AI replies. Upgrade your plan to avoid interruption.'}
             </div>
           )}
         </div>
@@ -822,6 +840,7 @@ function Billing() {
 
             const convLimit = limits.monthlyConversations ?? (cardSlug === 'starter' ? 500 : -1);
             const msgLimit = limits.monthlyMessages ?? (cardSlug === 'starter' ? 2000 : -1);
+            const aiRepliesLimitCard = limits.maxAiRepliesPerMonth ?? (cardSlug === 'growth' ? 5000 : cardSlug === 'starter' ? 2000 : -1);
             const waLimit = limits.maxWhatsAppConnections ?? (cardSlug === 'growth' ? 3 : cardSlug === 'scale' ? 5 : 1);
             const kbLimit = limits.maxKbUploads ?? (cardSlug === 'growth' ? 3 : cardSlug === 'scale' ? -1 : 1);
             const kbPages = limits.maxKbPdfPages ?? (cardSlug === 'starter' ? 4 : 0);
@@ -876,6 +895,12 @@ function Billing() {
                   <li>
                     <FaCheck style={{ color: '#1677FF' }} />{' '}
                     {convLimit === -1 ? 'Unlimited AI WhatsApp conversations/mo' : `Up to ${convLimit.toLocaleString('en-IN')} WhatsApp Conversations/mo`}
+                  </li>
+                  <li>
+                    <FaCheck style={{ color: '#1677FF' }} />{' '}
+                    {aiRepliesLimitCard === -1
+                      ? 'Unlimited AI replies / month'
+                      : `${Number(aiRepliesLimitCard).toLocaleString('en-IN')} AI replies / month${features.aiTopupAvailable ? ' (+ Top-up available)' : ''}`}
                   </li>
                   <li>
                     <FaCheck style={{ color: '#1677FF' }} />{' '}

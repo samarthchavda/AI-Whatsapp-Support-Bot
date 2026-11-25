@@ -15,6 +15,8 @@ const PLAN_DEFINITIONS = {
     features: {
       maxConversations: 500,
       maxMessages: 2000,
+      maxAiRepliesPerMonth: 2000,
+      aiTopupAvailable: false,
       geminiTokensPerMonth: 50000,
       maxWhatsAppConnections: 1,
       maxKbUploads: 1,
@@ -48,6 +50,8 @@ const PLAN_DEFINITIONS = {
     features: {
       maxConversations: -1,
       maxMessages: -1,
+      maxAiRepliesPerMonth: 5000,
+      aiTopupAvailable: true,
       geminiTokensPerMonth: -1,
       maxWhatsAppConnections: 3,
       maxKbUploads: 3,
@@ -80,6 +84,8 @@ const PLAN_DEFINITIONS = {
     features: {
       maxConversations: -1, // -1 or Infinity indicates unlimited
       maxMessages: -1,
+      maxAiRepliesPerMonth: -1,
+      aiTopupAvailable: true,
       geminiTokensPerMonth: -1,
       maxWhatsAppConnections: 5,
       maxKbUploads: -1,
@@ -112,6 +118,8 @@ const PLAN_DEFINITIONS = {
     features: {
       maxConversations: -1,
       maxMessages: -1,
+      maxAiRepliesPerMonth: 5000,
+      aiTopupAvailable: true,
       geminiTokensPerMonth: -1,
       maxWhatsAppConnections: 10,
       maxKbUploads: -1,

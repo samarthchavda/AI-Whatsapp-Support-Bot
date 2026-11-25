@@ -13,14 +13,14 @@ const STANDARD_PLANS = new Set([
 const CATEGORIES = ['kwickbot_crm', 'crm_integration', 'whatsapp_api', 'enterprise_custom'];
 const FEATURE_KEYS = [
   'dashboardAccess', 'conversations', 'internalOrders', 'internalInvoices', 'internalLeads', 'whatsappConnection',
-  'customWebhooks', 'developerApi', 'apiKeys', 'failedEventReplay', 'aiAutomation', 'knowledgeBase',
+  'customWebhooks', 'developerApi', 'apiKeys', 'failedEventReplay', 'aiAutomation', 'aiTopupAvailable', 'knowledgeBase',
   'abandonedCartRecovery', 'productCatalogSync', 'productCatalogAi', 'broadcasts', 'broadcastingAccess',
   'scheduledBroadcasts', 'audienceSegmentation', 'advancedAnalytics', 'humanHandoff', 'customBranding',
   'prioritySupport', 'dedicatedSupport', 'customSla'
 ];
 // [key, default] — defaults match the main backend's PricingPlan model
 const LIMIT_DEFAULTS = {
-  monthlyConversations: 500, monthlyMessages: 2000, monthlyApiRequests: 10000, monthlyWebhookDeliveries: 5000,
+  monthlyConversations: 500, monthlyMessages: 2000, maxAiRepliesPerMonth: 2000, monthlyApiRequests: 10000, monthlyWebhookDeliveries: 5000,
   monthlyAutomationExecutions: 1000, maxWhatsAppConnections: 1, maxKbUploads: 1, maxKbPdfPages: 0,
   maxIntegrations: 1, maxActiveAutomations: 0, maxApiKeys: 0, maxTeamMembers: 1, maxBroadcastCampaigns: 0,
   maxBroadcastMessages: 0, logRetentionDays: 30, geminiTokensPerMonth: 50000

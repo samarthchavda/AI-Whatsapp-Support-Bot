@@ -158,7 +158,12 @@ function Dashboard() {
         <section className="merchant-dashboard-panel">
           <div className="merchant-dashboard-panel-header"><div><span className="merchant-dashboard-kicker">USAGE</span><h2>Plan limits</h2></div><span className="merchant-dashboard-period">Rolling 30-day cycle</span></div>
           <UsageMeter label="WhatsApp conversations" value={usage.conversations || 0} limit={limits.conversations} detail="Started during the current usage cycle" />
-          <UsageMeter label="AI message quota" value={usage.aiRepliesProcessed || 0} limit={limits.messages} detail="Replies processed by the AI assistant" />
+          <UsageMeter
+            label="AI replies quota"
+            value={usage.aiRepliesProcessed || 0}
+            limit={limits.aiReplies ?? limits.messages}
+            detail={limits.aiTopupAvailable ? 'Replies processed by the AI assistant (Top-up available after limit)' : 'Replies processed by the AI assistant'}
+          />
           {preview.active ? <UsageMeter label="One-time test broadcasts" value={preview.testBroadcastsUsed || 0} limit={preview.testBroadcastsLimit} detail="Available after connecting WhatsApp and choosing an approved template" /> : <>
             {typeof limits.broadcastCampaigns === 'number' && limits.broadcastCampaigns !== 0 && <UsageMeter label="Broadcast campaigns" value={usage.broadcastCampaignsCreated || 0} limit={limits.broadcastCampaigns} detail="Campaigns created this cycle" />}
             {typeof limits.broadcastMessages === 'number' && limits.broadcastMessages !== 0 && <UsageMeter label="Broadcast messages" value={usage.broadcastMessagesSent || 0} limit={limits.broadcastMessages} detail="Successfully sent broadcast messages" />}

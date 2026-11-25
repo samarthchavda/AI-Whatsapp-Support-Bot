@@ -44,6 +44,7 @@ const FEATURE_KEYS = [
   { key: 'developerApi', label: 'Developer REST API Access' },
   { key: 'apiKeys', label: 'API Keys Management' },
   { key: 'aiAutomation', label: 'AI Knowledge Base Support' },
+  { key: 'aiTopupAvailable', label: 'AI Reply Top-Up Available After Limit' },
   { key: 'knowledgeBase', label: 'Knowledge Base Uploads' },
   { key: 'broadcasts', label: 'WhatsApp Broadcast Campaigns' },
   { key: 'advancedAnalytics', label: 'Advanced Analytics Dashboard' },
@@ -57,6 +58,7 @@ const FEATURE_KEYS = [
 const USAGE_LIMIT_KEYS = [
   { key: 'monthlyConversations', label: 'Monthly Conversations (-1 for unlimited)' },
   { key: 'monthlyMessages', label: 'Monthly Messages (-1 for unlimited)' },
+  { key: 'maxAiRepliesPerMonth', label: 'AI Replies / Month (-1 for unlimited)' },
   { key: 'monthlyApiRequests', label: 'Monthly API Requests (-1 for unlimited)' },
   { key: 'monthlyWebhookDeliveries', label: 'Monthly Webhook Deliveries (-1 for unlimited)' },
   { key: 'monthlyAutomationExecutions', label: 'Monthly Automation Executions (-1 for unlimited)' },
@@ -96,6 +98,7 @@ const DEFAULT_FORM_DATA = {
   usageLimits: {
     monthlyConversations: 500,
     monthlyMessages: 2000,
+    maxAiRepliesPerMonth: 2000,
     monthlyApiRequests: 10000,
     monthlyWebhookDeliveries: 5000,
     monthlyAutomationExecutions: 1000,
@@ -1547,7 +1550,8 @@ function PlanManager() {
                 <div>Webhooks / mo: <strong>{previewPlan.usageLimits?.monthlyWebhookDeliveries ?? 'N/A'}</strong></div>
                 <div>WhatsApp Connections: <strong>{previewPlan.usageLimits?.maxWhatsAppConnections ?? 1}</strong></div>
                 <div>Active Automations: <strong>{previewPlan.usageLimits?.maxActiveAutomations ?? 0}</strong></div>
-                <div>Gemini AI Tokens: <strong>{(previewPlan.usageLimits?.geminiTokensPerMonth || 0).toLocaleString()}</strong></div>
+                <div>AI Replies / mo: <strong>{previewPlan.usageLimits?.maxAiRepliesPerMonth === -1 ? 'Unlimited' : (previewPlan.usageLimits?.maxAiRepliesPerMonth ?? previewPlan.usageLimits?.monthlyMessages ?? 2000).toLocaleString()}</strong></div>
+                <div>Gemini AI Tokens: <strong>{previewPlan.usageLimits?.geminiTokensPerMonth === -1 ? 'Unlimited' : (previewPlan.usageLimits?.geminiTokensPerMonth || 0).toLocaleString()}</strong></div>
               </div>
             </div>
             <div className="plan-modal-footer" style={{ justifyContent: 'flex-end' }}>

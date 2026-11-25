@@ -158,12 +158,16 @@ async function checkLimitExceededDynamic(admin) {
     }
   }
 
-  const planDef = PLAN_DEFINITIONS[normalizePlanName(admin.subscriptionPlan)];
-  const limits = plan?.usageLimits || {
+  const normalizedPlan = normalizePlanName(admin.subscriptionPlan);
+  const cachedPlan = require('./planCache').getCachedPlan(normalizedPlan);
+  const planDef = PLAN_DEFINITIONS[normalizedPlan];
+  const limits = plan?.usageLimits || cachedPlan?.limits || {
     geminiTokensPerMonth: (planDef?.features?.geminiTokensPerMonth !== undefined) ? planDef.features.geminiTokensPerMonth : 50000,
+    maxAiRepliesPerMonth: (planDef?.features?.maxAiRepliesPerMonth !== undefined) ? planDef.features.maxAiRepliesPerMonth : -1,
     monthlyConversations: (planDef?.features?.maxConversations !== undefined) ? planDef.features.maxConversations : 500,
     monthlyMessages: (planDef?.features?.maxMessages !== undefined) ? planDef.features.maxMessages : 2000
   };
+  const topupEnabled = Boolean(plan?.features?.aiTopupAvailable ?? cachedPlan?.flags?.aiTopupAvailable ?? planDef?.features?.aiTopupAvailable);
 
   // Token limit check
   const tokenLimit = (admin.geminiTokensLimit !== undefined && admin.geminiTokensLimit !== null)
@@ -171,19 +175,26 @@ async function checkLimitExceededDynamic(admin) {
     : limits.geminiTokensPerMonth;
   const tokensUsed = admin.geminiTokensUsed || 0;
   if (tokenLimit !== -1 && tokenLimit !== Infinity && tokensUsed >= tokenLimit) {
-    return { exceeded: true, reason: `AI token budget reached (${tokensUsed.toLocaleString()}/${tokenLimit.toLocaleString()})` };
+    return { exceeded: true, reason: `AI usage limit reached (${tokensUsed.toLocaleString()}/${tokenLimit.toLocaleString()})` };
+  }
+
+  // AI reply quota check (editable per plan in Super Admin Plan Manager)
+  const messagesProcessed = admin.totalMessagesProcessed || 0;
+  const aiReplyLimit = limits.maxAiRepliesPerMonth;
+  if (aiReplyLimit !== undefined && aiReplyLimit !== null && aiReplyLimit !== -1 && aiReplyLimit !== Infinity && messagesProcessed >= aiReplyLimit) {
+    const topupHint = topupEnabled ? ' — Top-up available in Billing' : '';
+    return { exceeded: true, reason: `Monthly AI reply limit reached (${messagesProcessed.toLocaleString()}/${aiReplyLimit.toLocaleString()} replies)${topupHint}` };
   }
 
   // Conversation limit check
-  const conversationLimit = limits.monthlyConversations;
+  const conversationLimit = limits.monthlyConversations ?? limits.maxConversations;
   const conversationsUsed = admin.monthlyConversationsCount || 0;
   if (conversationLimit !== -1 && conversationLimit !== Infinity && conversationsUsed >= conversationLimit) {
     return { exceeded: true, reason: `Monthly WhatsApp conversation limit reached (${conversationsUsed.toLocaleString()}/${conversationLimit.toLocaleString()})` };
   }
 
   // Message limit check
-  const messageLimit = limits.monthlyMessages;
-  const messagesProcessed = admin.totalMessagesProcessed || 0;
+  const messageLimit = limits.monthlyMessages ?? limits.maxMessages;
   if (messageLimit !== -1 && messageLimit !== Infinity && messagesProcessed >= messageLimit) {
     return { exceeded: true, reason: `Monthly WhatsApp message quota reached (${messagesProcessed.toLocaleString()}/${messageLimit.toLocaleString()})` };
   }

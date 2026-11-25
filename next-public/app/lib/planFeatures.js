@@ -111,7 +111,19 @@ function limitLines(plan) {
   }
 
   if (f.aiAutomation && cat !== 'whatsapp_api') {
-    lines.push(unlimited(l.geminiTokensPerMonth) ? 'Unlimited AI auto-replies (Gemini)' : `AI auto-replies (Gemini), ${fmt(l.geminiTokensPerMonth)} AI tokens / month`);
+    const repliesLimit = l.maxAiRepliesPerMonth !== undefined
+      ? l.maxAiRepliesPerMonth
+      : (cat === 'kwickbot_crm' && l.monthlyMessages !== undefined ? l.monthlyMessages : null);
+    if (repliesLimit !== null) {
+      if (unlimited(repliesLimit)) {
+        lines.push('Unlimited AI replies / month');
+      } else {
+        const topupSuffix = f.aiTopupAvailable ? ' (+ Top-up available after limit)' : '';
+        lines.push(`${fmt(repliesLimit)} AI replies / month${topupSuffix}`);
+      }
+    } else {
+      lines.push('AI auto-replies enabled');
+    }
   }
 
   if (cat !== 'enterprise_custom' && f.knowledgeBase && l.maxKbUploads !== undefined && l.maxKbUploads !== 0) {

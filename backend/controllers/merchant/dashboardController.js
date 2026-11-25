@@ -134,6 +134,8 @@ exports.getDashboardStats = async (req, res) => {
         limits: {
           conversations: pricingPlan?.usageLimits?.monthlyConversations ?? null,
           messages: pricingPlan?.usageLimits?.monthlyMessages ?? null,
+          aiReplies: pricingPlan?.usageLimits?.maxAiRepliesPerMonth ?? pricingPlan?.usageLimits?.monthlyMessages ?? null,
+          aiTopupAvailable: Boolean(pricingPlan?.features?.aiTopupAvailable),
           broadcastMessages: pricingPlan?.usageLimits?.maxBroadcastMessages ?? null,
           broadcastCampaigns: pricingPlan?.usageLimits?.maxBroadcastCampaigns ?? null
         },

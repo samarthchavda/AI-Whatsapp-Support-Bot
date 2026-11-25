@@ -43,7 +43,8 @@ describe('plan input', () => {
     const { fields, error } = await buildPlanFields({ displayName: 'Growth Plus', monthlyPrice: '1999', yearlyPrice: '19990' });
     expect(error).toBeUndefined();
     expect(fields).toMatchObject({ name: 'growth_plus', slug: 'growth-plus', monthlyPrice: 1999, yearlyPrice: 19990, isPublished: false });
-    expect(Object.keys(fields.features)).toHaveLength(25);
+    expect(Object.keys(fields.features)).toHaveLength(26);
+    expect(fields.usageLimits.maxAiRepliesPerMonth).toBe(2000);
     expect(fields.usageLimits.geminiTokensPerMonth).toBe(50000);
   });
 

@@ -118,6 +118,7 @@ const pricingPlanSchema = new mongoose.Schema({
     apiKeys: { type: Boolean, default: false },
     failedEventReplay: { type: Boolean, default: false },
     aiAutomation: { type: Boolean, default: true },
+    aiTopupAvailable: { type: Boolean, default: false },
     knowledgeBase: { type: Boolean, default: true },
     abandonedCartRecovery: { type: Boolean, default: false },
     productCatalogSync: { type: Boolean, default: false },
@@ -149,6 +150,7 @@ const pricingPlanSchema = new mongoose.Schema({
     maxBroadcastCampaigns: { type: Number, default: 0 },
     maxBroadcastMessages: { type: Number, default: 0 },
     logRetentionDays: { type: Number, default: 30 },
+    maxAiRepliesPerMonth: { type: Number, default: -1 },
     geminiTokensPerMonth: { type: Number, default: 50000 }
   },
   supportLevel: {

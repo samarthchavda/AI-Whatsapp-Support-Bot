@@ -16,6 +16,7 @@ export const FEATURE_GROUPS = [
     items: [
       ['conversations', 'Conversations inbox'],
       ['aiAutomation', 'AI auto-replies'],
+      ['aiTopupAvailable', 'AI reply top-up available after limit'],
       ['knowledgeBase', 'Knowledge base'],
       ['humanHandoff', 'Hand-off to a person'],
       ['whatsappConnection', 'WhatsApp connection'],
@@ -69,7 +70,8 @@ export const LIMIT_GROUPS = [
     items: [
       ['monthlyConversations', 'Conversations / month'],
       ['monthlyMessages', 'Messages / month'],
-      ['geminiTokensPerMonth', 'AI tokens / month'],
+      ['maxAiRepliesPerMonth', 'AI replies / month', '-1 for unlimited'],
+      ['geminiTokensPerMonth', 'Internal AI safety cap', 'Tokens (-1 unlimited)'],
       ['maxWhatsAppConnections', 'WhatsApp numbers']
     ]
   },
@@ -150,6 +152,7 @@ export function emptyPlan() {
       maxBroadcastCampaigns: 0,
       maxBroadcastMessages: 0,
       logRetentionDays: 30,
+      maxAiRepliesPerMonth: 2000,
       geminiTokensPerMonth: 50000
     },
     supportLevel: 'Standard Email Support',

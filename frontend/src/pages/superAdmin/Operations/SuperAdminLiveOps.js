@@ -1,235 +1,234 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { FaSyncAlt, FaEye } from 'react-icons/fa';
 import api from '../../../services/api';
-import { 
-  FaComments, 
-  FaSearch, 
-  FaEye, 
-  FaEnvelopeOpen,
-  FaSignal,
-  FaExclamationTriangle,
-  FaTimesCircle
-} from 'react-icons/fa';
-import '../Dashboard/SuperAdmin.css'; // Reuse SuperAdmin layout and tables CSS
+import './SuperAdminLiveOps.css';
 
 function SuperAdminLiveOps() {
   const navigate = useNavigate();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
 
-  useEffect(() => {
-    fetchLiveOpsData();
-  }, []);
-
-  const fetchLiveOpsData = async () => {
+  const fetchLiveOpsData = useCallback(async (isRefresh = false) => {
     try {
-      setLoading(true);
+      if (isRefresh) setRefreshing(true);
+      else setLoading(true);
       setError(null);
       const response = await api.get('/super-admin/live-operations');
-      setData(response.data.data);
+      setData(response.data?.data || null);
     } catch (err) {
-      console.error('Error fetching Live Operations data:', err);
       setError(err.response?.data?.error || 'Failed to load Live Operations data');
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    fetchLiveOpsData(false);
+  }, [fetchLiveOpsData]);
 
   const filteredMerchants = useMemo(() => {
-    if (!data || !data.merchants) return [];
+    const list = data?.merchants || [];
     const q = searchQuery.toLowerCase().trim();
-    if (!q) return data.merchants;
-    return data.merchants.filter(
+    if (!q) return list;
+    return list.filter(
       (m) =>
-        m.name.toLowerCase().includes(q) ||
-        m.email.toLowerCase().includes(q)
+        String(m.name || '').toLowerCase().includes(q) ||
+        String(m.email || '').toLowerCase().includes(q)
     );
   }, [data, searchQuery]);
 
-  if (loading) {
+  if (loading && !data) {
     return (
-      <div className="container">
-        <div style={{ padding: '60px', textAlign: 'center', color: 'var(--text-secondary)' }}>
-          <div className="spinner" style={{ margin: '0 auto 16px' }}></div>
-          Loading Live Operations metrics...
-        </div>
+      <div className="liveops-loading">
+        <div className="spinner"></div>
       </div>
     );
   }
 
-  if (error) {
-    return (
-      <div className="container">
-        <div className="detail-card" style={{ padding: '30px', textAlign: 'center', border: '1px solid rgba(239, 68, 68, 0.2)' }}>
-          <FaTimesCircle style={{ fontSize: '40px', color: '#ef4444', marginBottom: '12px' }} />
-          <h3 style={{ margin: '0 0 8px 0', color: 'var(--text-primary)' }}>Error Loading Dashboard</h3>
-          <p style={{ margin: '0 0 20px 0', color: 'var(--text-secondary)', fontSize: '14px' }}>{error}</p>
-          <button onClick={fetchLiveOpsData} className="btn-primary">
-            Retry
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  const { summary } = data || {
-    summary: { totalConversations: 0, totalMessages: 0, activeConversations: 0, escalatedConversations: 0 }
+  const summary = data?.summary || {
+    totalConversations: 0,
+    totalMessages: 0,
+    totalAiReplies: 0,
+    activeConversations: 0,
+    escalatedConversations: 0,
+    totalEscalations: 0
   };
 
   return (
-    <div className="container super-admin-page">
-      <div className="page-header super-admin-header">
+    <div className="liveops-page">
+      <header className="liveops-header">
         <div>
-          <h1 className="page-title super-admin-title" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <FaComments className="live-ops-icon" style={{ color: 'var(--accent)' }} />
-            Live Operations
-          </h1>
-          <p className="page-subtitle">Platform-wide overview of conversation sessions, message throughput, and customer escalations</p>
-        </div>
-      </div>
-
-      {/* KPI Stats Cards */}
-      <div className="analytics-cards" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '20px', marginBottom: '24px' }}>
-        <div className="stat-card" style={{ background: 'var(--bg-card)', border: '1px solid var(--border-subtle)', borderRadius: '16px', padding: '20px', display: 'flex', alignItems: 'center', gap: '16px' }}>
-          <div className="stat-icon" style={{ background: 'rgba(99, 102, 241, 0.1)', color: '#6366f1', padding: '16px', borderRadius: '12px', fontSize: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <FaComments />
-          </div>
-          <div className="stat-info">
-            <h3 style={{ margin: 0, fontSize: '13px', color: 'var(--text-secondary)' }}>Total Conversations</h3>
-            <p className="stat-value" style={{ margin: '4px 0 0 0', fontSize: '26px', fontWeight: '700', color: 'var(--text-primary)' }}>{summary.totalConversations.toLocaleString()}</p>
-            <small style={{ color: 'var(--text-secondary)' }}>All-time sessions</small>
-          </div>
+          <div className="liveops-breadcrumb">Operations / Live Operations</div>
+          <h1 className="liveops-title">Live Operations</h1>
+          <p className="liveops-subtitle">
+            Recent chat sessions (24h retention), logged AI replies, and customer escalations.
+          </p>
         </div>
 
-        <div className="stat-card" style={{ background: 'var(--bg-card)', border: '1px solid var(--border-subtle)', borderRadius: '16px', padding: '20px', display: 'flex', alignItems: 'center', gap: '16px' }}>
-          <div className="stat-icon" style={{ background: 'rgba(16, 185, 129, 0.1)', color: '#10b981', padding: '16px', borderRadius: '12px', fontSize: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <FaEnvelopeOpen />
+        <button
+          type="button"
+          className="liveops-refresh-btn"
+          onClick={() => fetchLiveOpsData(true)}
+          disabled={refreshing}
+        >
+          <FaSyncAlt />
+          {refreshing ? 'Refreshing...' : 'Refresh'}
+        </button>
+      </header>
+
+      {error && (
+        <div className="liveops-error-banner">
+          <span>{error}</span>
+          <button
+            type="button"
+            className="liveops-refresh-btn"
+            onClick={() => fetchLiveOpsData(true)}
+          >
+            Retry
+          </button>
+        </div>
+      )}
+
+      <section className="liveops-panel">
+        <div className="liveops-summary-strip">
+          <div className="liveops-metric">
+            <span className="liveops-metric-label">Active chats (24h)</span>
+            <span className="liveops-metric-value">
+              {(summary.activeConversations ?? 0).toLocaleString()}
+            </span>
+            <span className="liveops-metric-sub">
+              {(summary.totalConversations ?? 0).toLocaleString()} recent sessions
+            </span>
           </div>
-          <div className="stat-info">
-            <h3 style={{ margin: 0, fontSize: '13px', color: 'var(--text-secondary)' }}>Total Messages</h3>
-            <p className="stat-value" style={{ margin: '4px 0 0 0', fontSize: '26px', fontWeight: '700', color: 'var(--text-primary)' }}>{summary.totalMessages.toLocaleString()}</p>
-            <small style={{ color: 'var(--text-secondary)' }}>Exchanged messages</small>
+
+          <div className="liveops-metric">
+            <span className="liveops-metric-label">Open escalations</span>
+            <span className="liveops-metric-value">
+              {(summary.escalatedConversations ?? 0).toLocaleString()}
+            </span>
+            <span className="liveops-metric-sub">
+              {(summary.totalEscalations ?? 0).toLocaleString()} total logged
+            </span>
+          </div>
+
+          <div className="liveops-metric">
+            <span className="liveops-metric-label">AI replies logged</span>
+            <span className="liveops-metric-value">
+              {(summary.totalAiReplies ?? 0).toLocaleString()}
+            </span>
+            <span className="liveops-metric-sub">Historical AILog entries</span>
+          </div>
+
+          <div className="liveops-metric">
+            <span className="liveops-metric-label">24h chat messages</span>
+            <span className="liveops-metric-value">
+              {(summary.totalMessages ?? 0).toLocaleString()}
+            </span>
+            <span className="liveops-metric-sub">Active session messages</span>
           </div>
         </div>
 
-        <div className="stat-card" style={{ background: 'var(--bg-card)', border: '1px solid var(--border-subtle)', borderRadius: '16px', padding: '20px', display: 'flex', alignItems: 'center', gap: '16px' }}>
-          <div className="stat-icon" style={{ background: 'rgba(59, 130, 246, 0.1)', color: '#3b82f6', padding: '16px', borderRadius: '12px', fontSize: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <FaSignal />
-          </div>
-          <div className="stat-info">
-            <h3 style={{ margin: 0, fontSize: '13px', color: 'var(--text-secondary)' }}>Active Sessions</h3>
-            <p className="stat-value" style={{ margin: '4px 0 0 0', fontSize: '26px', fontWeight: '700', color: '#3b82f6' }}>{summary.activeConversations.toLocaleString()}</p>
-            <small style={{ color: 'var(--text-secondary)' }}>Ongoing chatbots</small>
-          </div>
+        <div className="liveops-toolbar">
+          <h2 className="liveops-toolbar-title">
+            Merchants ({filteredMerchants.length})
+          </h2>
+          <input
+            type="text"
+            className="liveops-search"
+            placeholder="Search merchants..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
         </div>
 
-        <div className="stat-card" style={{ background: 'var(--bg-card)', border: '1px solid var(--border-subtle)', borderRadius: '16px', padding: '20px', display: 'flex', alignItems: 'center', gap: '16px' }}>
-          <div className="stat-icon" style={{ background: 'rgba(245, 158, 11, 0.1)', color: '#f59e0b', padding: '16px', borderRadius: '12px', fontSize: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <FaExclamationTriangle />
+        {filteredMerchants.length === 0 ? (
+          <div className="liveops-empty">
+            {searchQuery ? `No merchants found matching "${searchQuery}".` : 'No merchants found.'}
           </div>
-          <div className="stat-info">
-            <h3 style={{ margin: 0, fontSize: '13px', color: 'var(--text-secondary)' }}>Escalated</h3>
-            <p className="stat-value" style={{ margin: '4px 0 0 0', fontSize: '26px', fontWeight: '700', color: '#f59e0b' }}>{summary.escalatedConversations.toLocaleString()}</p>
-            <small style={{ color: 'var(--text-secondary)' }}>Human handoffs</small>
-          </div>
-        </div>
-      </div>
-
-      {/* Monitoring Table */}
-      <div className="table-container-premium super-admin-table">
-        <div className="table-header-premium super-admin-table-header">
-          <h2><FaComments /> Merchant Live Operations ({filteredMerchants.length})</h2>
-          <div className="super-admin-search">
-            <FaSearch />
-            <input
-              type="text"
-              placeholder="Search merchants..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-          </div>
-        </div>
-
-        <div className="table-wrapper">
-          <table className="premium-table">
-            <thead>
-              <tr>
-                <th>Merchant</th>
-                <th>Conversations</th>
-                <th>Messages</th>
-                <th>Active Conversations</th>
-                <th>Escalations</th>
-                <th>Last Activity</th>
-                <th>Action</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredMerchants.length === 0 ? (
+        ) : (
+          <div className="liveops-table-wrap">
+            <table className="liveops-table">
+              <thead>
                 <tr>
-                  <td colSpan="7" className="super-admin-empty">
-                    No merchants found matching &quot;{searchQuery}&quot;
-                  </td>
+                  <th>Merchant</th>
+                  <th>Active Chats (24h)</th>
+                  <th className="num">AI Replies</th>
+                  <th>Open Escalations</th>
+                  <th>Last Chat / AI Activity</th>
+                  <th className="right">Details</th>
                 </tr>
-              ) : (
-                filteredMerchants.map((merchant) => (
+              </thead>
+              <tbody>
+                {filteredMerchants.map((merchant) => (
                   <tr key={merchant._id}>
                     <td>
-                      <div className="user-info-cell">
-                        <span className="user-info-name">{merchant.name}</span>
-                        <span className="user-info-email">{merchant.email}</span>
+                      <div className="liveops-merchant-name">{merchant.name}</div>
+                      <div className="liveops-merchant-email">{merchant.email}</div>
+                    </td>
+                    <td>
+                      <span
+                        className={`liveops-status-cell${
+                          merchant.activeConversationsCount > 0 ? '' : ' muted'
+                        }`}
+                      >
+                        <span
+                          className={`liveops-dot ${
+                            merchant.activeConversationsCount > 0 ? 'active' : ''
+                          }`}
+                        />
+                        {merchant.activeConversationsCount || 0} active
+                      </span>
+                      <div className="liveops-sub">
+                        {merchant.conversationsCount || 0} sessions · {merchant.messagesCount || 0} msgs
                       </div>
                     </td>
-                    <td>
-                      <strong>{(merchant.conversationsCount || 0).toLocaleString()}</strong>
+                    <td className="num">
+                      {(merchant.aiRepliesCount || 0).toLocaleString()}
                     </td>
                     <td>
-                      <strong>{(merchant.messagesCount || 0).toLocaleString()}</strong>
-                    </td>
-                    <td>
-                      <span 
-                        className="badge" 
-                        style={{ 
-                          background: merchant.activeConversationsCount > 0 ? 'rgba(59, 130, 246, 0.15)' : 'var(--border-subtle)', 
-                          color: merchant.activeConversationsCount > 0 ? '#3b82f6' : 'var(--text-secondary)' 
-                        }}
+                      <span
+                        className={`liveops-status-cell${
+                          merchant.escalatedConversationsCount > 0 ? '' : ' muted'
+                        }`}
                       >
-                        {merchant.activeConversationsCount} active
+                        <span
+                          className={`liveops-dot ${
+                            merchant.escalatedConversationsCount > 0 ? 'warn' : ''
+                          }`}
+                        />
+                        {merchant.escalatedConversationsCount || 0} open
                       </span>
+                      <div className="liveops-sub">
+                        {merchant.totalEscalationsCount || 0} total
+                      </div>
                     </td>
-                    <td>
-                      <span 
-                        className="badge" 
-                        style={{ 
-                          background: merchant.escalatedConversationsCount > 0 ? 'rgba(245, 158, 11, 0.15)' : 'var(--border-subtle)', 
-                          color: merchant.escalatedConversationsCount > 0 ? '#f59e0b' : 'var(--text-secondary)' 
-                        }}
-                      >
-                        {merchant.escalatedConversationsCount} escalated
-                      </span>
+                    <td className="liveops-date">
+                      {merchant.lastActivity
+                        ? new Date(merchant.lastActivity).toLocaleString()
+                        : '—'}
                     </td>
-                    <td>
-                      {merchant.lastActivity 
-                        ? new Date(merchant.lastActivity).toLocaleString() 
-                        : 'Not available'}
-                    </td>
-                    <td>
+                    <td className="right">
                       <button
-                        onClick={() => navigate(`/dashboard/super-admin/user/${merchant._id}`)}
-                        className="btn-primary"
-                        style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '6px 12px', fontSize: '12px' }}
+                        type="button"
+                        onClick={() => navigate(`/dashboard/super-admin/merchants/${merchant._id}`)}
+                        className="liveops-view-btn"
                       >
-                        <FaEye /> View
+                        <FaEye />
+                        View
                       </button>
                     </td>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
     </div>
   );
 }

@@ -2336,76 +2336,134 @@ exports.getWhatsAppMonitoringStatus = async (req, res) => {
   }
 };
 
-// Get Live Operations monitoring metrics
+// Get Live Operations monitoring metrics (real Conversation + Escalation + AILog counts)
 exports.getLiveOperationsStatus = async (req, res) => {
   try {
-    // 1. Get all merchants
-    const merchants = await Admin.find({ role: 'admin' }).select('name email updatedAt');
+    const Escalation = require('../../models/Escalation');
+    const AILog = require('../../models/AILog');
 
-    // 2. Aggregate conversation stats
-    const conversationStats = await Conversation.aggregate([
-      {
-        $group: {
-          _id: '$admin',
-          totalConversations: { $sum: 1 },
-          activeConversations: {
-            $sum: { $cond: [{ $eq: ['$status', 'active'] }, 1, 0] }
-          },
-          escalatedConversations: {
-            $sum: {
-              $cond: [
-                {
-                  $or: [
-                    { $eq: ['$status', 'escalated'] },
-                    { $eq: ['$escalated', true] }
-                  ]
-                },
-                1,
-                0
-              ]
-            }
-          },
-          totalMessages: { $sum: { $size: '$messages' } },
-          lastActivity: { $max: '$updatedAt' }
+    // 1. Get all merchants
+    const merchants = await Admin.find({ role: 'admin' }).select('name businessName email');
+
+    // 2. Aggregate real Conversation, Escalation, and AILog stats in parallel
+    const [conversationStats, escalationStats, aiLogStats] = await Promise.all([
+      Conversation.aggregate([
+        {
+          $group: {
+            _id: '$admin',
+            totalConversations: { $sum: 1 },
+            activeConversations: {
+              $sum: { $cond: [{ $eq: ['$status', 'active'] }, 1, 0] }
+            },
+            escalatedConversations: {
+              $sum: {
+                $cond: [
+                  {
+                    $or: [
+                      { $eq: ['$status', 'escalated'] },
+                      { $eq: ['$escalated', true] }
+                    ]
+                  },
+                  1,
+                  0
+                ]
+              }
+            },
+            totalMessages: { $sum: { $size: { $ifNull: ['$messages', []] } } },
+            lastActivity: { $max: '$updatedAt' }
+          }
         }
-      }
+      ]),
+      Escalation.aggregate([
+        {
+          $group: {
+            _id: '$admin',
+            totalEscalations: { $sum: 1 },
+            openEscalations: {
+              $sum: {
+                $cond: [{ $in: ['$status', ['pending', 'in_progress']] }, 1, 0]
+              }
+            },
+            lastEscalatedAt: { $max: '$createdAt' }
+          }
+        }
+      ]),
+      AILog.aggregate([
+        {
+          $group: {
+            _id: '$admin',
+            aiReplies: { $sum: 1 },
+            lastAiAt: { $max: '$createdAt' }
+          }
+        }
+      ])
     ]);
 
-    // Create a map for easy lookup
-    const statsMap = {};
+    const convMap = {};
     conversationStats.forEach(stat => {
-      if (stat._id) {
-        statsMap[stat._id.toString()] = stat;
-      }
+      if (stat._id) convMap[stat._id.toString()] = stat;
     });
 
-    // 3. Assemble merchant data
+    const escMap = {};
+    let globalOpenEscalations = 0;
+    let globalTotalEscalations = 0;
+    escalationStats.forEach(stat => {
+      globalOpenEscalations += stat.openEscalations || 0;
+      globalTotalEscalations += stat.totalEscalations || 0;
+      if (stat._id) escMap[stat._id.toString()] = stat;
+    });
+
+    const aiMap = {};
+    let globalAiReplies = 0;
+    aiLogStats.forEach(stat => {
+      globalAiReplies += stat.aiReplies || 0;
+      if (stat._id) aiMap[stat._id.toString()] = stat;
+    });
+
+    // 3. Assemble merchant rows using ONLY genuine activity timestamps & counts
     const merchantRows = merchants.map(m => {
-      const stats = statsMap[m._id.toString()] || {
+      const idStr = m._id.toString();
+      const conv = convMap[idStr] || {
         totalConversations: 0,
         activeConversations: 0,
         escalatedConversations: 0,
         totalMessages: 0,
         lastActivity: null
       };
+      const esc = escMap[idStr] || {
+        totalEscalations: 0,
+        openEscalations: 0,
+        lastEscalatedAt: null
+      };
+      const ai = aiMap[idStr] || {
+        aiReplies: 0,
+        lastAiAt: null
+      };
+
+      const activityDates = [conv.lastActivity, esc.lastEscalatedAt, ai.lastAiAt]
+        .filter(Boolean)
+        .map(d => new Date(d).getTime())
+        .filter(t => Number.isFinite(t));
+      const lastActivity = activityDates.length > 0 ? new Date(Math.max(...activityDates)) : null;
 
       return {
         _id: m._id,
-        name: m.name,
+        name: m.businessName || m.name,
         email: m.email,
-        conversationsCount: stats.totalConversations,
-        activeConversationsCount: stats.activeConversations,
-        escalatedConversationsCount: stats.escalatedConversations,
-        messagesCount: stats.totalMessages,
-        lastActivity: stats.lastActivity || m.updatedAt
+        conversationsCount: conv.totalConversations || 0,
+        activeConversationsCount: conv.activeConversations || 0,
+        escalatedConversationsCount: esc.openEscalations || conv.escalatedConversations || 0,
+        totalEscalationsCount: esc.totalEscalations || 0,
+        messagesCount: conv.totalMessages || 0,
+        aiRepliesCount: ai.aiReplies || 0,
+        lastActivity
       };
     });
 
     // 4. Summarize global stats
     const totalConversations = merchantRows.reduce((sum, m) => sum + m.conversationsCount, 0);
-    const totalMessages = merchantRows.reduce((sum, m) => sum + m.messagesCount, 0);
+    const totalConvMessages = merchantRows.reduce((sum, m) => sum + m.messagesCount, 0);
     const activeConversations = merchantRows.reduce((sum, m) => sum + m.activeConversationsCount, 0);
-    const escalatedConversations = merchantRows.reduce((sum, m) => sum + m.escalatedConversationsCount, 0);
 
     res.json({
       success: true,
@@ -2413,9 +2471,11 @@ exports.getLiveOperationsStatus = async (req, res) => {
         merchants: merchantRows,
         summary: {
           totalConversations,
-          totalMessages,
+          totalMessages: totalConvMessages,
+          totalAiReplies: globalAiReplies,
           activeConversations,
-          escalatedConversations
+          escalatedConversations: globalOpenEscalations,
+          totalEscalations: globalTotalEscalations
         }
       }
     });

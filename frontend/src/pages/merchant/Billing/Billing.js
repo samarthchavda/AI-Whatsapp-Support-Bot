@@ -369,9 +369,9 @@ function Billing() {
     };
 
     if (requireBillingOnPurchase) {
-      const missingErr = validateBillingDetailsClient(savedBillingDetails || billingDetails, true);
+      const missingErr = validateBillingDetailsClient(savedBillingDetails, true);
       if (missingErr) {
-        setModalBillingError(missingErr);
+        setModalBillingError('');
         setPendingCheckoutPlan(payload);
         return;
       }
@@ -531,7 +531,9 @@ function Billing() {
   const paymentMethodText = latestPaidInvoice
     ? `${PAYMENT_METHOD_LABELS[latestPaidInvoice.paymentMethod] || 'Online payment'} (${new Date(latestPaidInvoice.paidDate || latestPaidInvoice.issuedDate).toLocaleDateString('en-IN')})`
     : 'No payments yet';
-  const planDisplayName = currentPlanDetails?.displayName || (profile?.subscriptionPlan ? profile.subscriptionPlan.charAt(0).toUpperCase() + profile.subscriptionPlan.slice(1) : 'Starter');
+  const rawPlanDisplayName = currentPlanDetails?.displayName || (profile?.subscriptionPlan ? profile.subscriptionPlan.charAt(0).toUpperCase() + profile.subscriptionPlan.slice(1) : 'Starter');
+  const planBaseTitle = String(rawPlanDisplayName).replace(/\s+plan$/i, '').trim() || 'Starter';
+  const planDisplayName = `${planBaseTitle} Plan`;
   const planMonthlyPrice = profile?.monthlyPrice || currentPlanDetails?.monthlyPrice;
   const currentFeatures = {
     ...fallbackFeatures,
@@ -603,7 +605,7 @@ function Billing() {
               <h3>
                 {isExpired
                   ? `Your ${planDisplayName} Trial has expired`
-                  : `${planDisplayName} Plan Trial Active`}
+                  : `${planDisplayName} Trial Active`}
               </h3>
               <p>
                 {profile?.selfSignupTrial === true
@@ -635,7 +637,7 @@ function Billing() {
       <div className="billing-overview-grid">
         <div className="billing-card active-plan-card">
           <div className="card-badge">{isTrialStatus ? 'Trial Plan' : 'Current Plan'}</div>
-          <h2 className="plan-name-display">{planDisplayName} Plan</h2>
+          <h2 className="plan-name-display">{planDisplayName}</h2>
 
           <div className="plan-status-row">
             <span className={`status-badge-saas status-${profile?.subscriptionStatus || 'trial'}`}>
@@ -853,7 +855,7 @@ function Billing() {
               : upgradingPlanName === plan.name
                 ? 'Processing...'
                 : isSamePlanName && isTrialStatus
-                  ? `Activate ${plan.displayName || plan.name} Plan`
+                  ? `Activate ${plan.displayName || `${cardSlug} Plan`}`
                   : 'Select & Pay';
 
             return (
@@ -1123,11 +1125,11 @@ function Billing() {
       {/* Mandatory Billing Details Modal before Checkout */}
       {pendingCheckoutPlan && (
         <div className="billing-checkout-backdrop">
-          <div className="billing-checkout-modal billing-checkout-modal-wide">
+          <div className="billing-checkout-modal billing-checkout-modal-wide" role="dialog" aria-modal="true" aria-label="Complete Billing Details to Continue">
             <h3>Complete Billing Details to Continue</h3>
             <p className="billing-muted" style={{ marginTop: 0 }}>
-              Please fill in your complete billing details before purchasing the{' '}
-              <strong>{pendingCheckoutPlan.plan.displayName || pendingCheckoutPlan.plan.name}</strong> plan.
+              Please fill in your complete billing details before purchasing{' '}
+              <strong>{pendingCheckoutPlan.plan.displayName || pendingCheckoutPlan.plan.name}</strong>.
             </p>
             <form className="billing-details-form billing-modal-form" onSubmit={saveModalBillingAndContinue}>
               <div className="bd-field bd-wide">
@@ -1236,7 +1238,7 @@ function Billing() {
       {/* Checkout Confirmation Modal */}
       {checkoutPlan && (
         <div className="billing-checkout-backdrop">
-          <div className="billing-checkout-modal">
+          <div className="billing-checkout-modal" role="dialog" aria-modal="true" aria-label="Confirm Subscription Activation">
             <h3>Confirm Subscription Activation</h3>
             <p className="billing-muted" style={{ marginTop: 0 }}>
               Review your plan and pricing before proceeding to Razorpay Checkout.
@@ -1287,7 +1289,7 @@ function Billing() {
       {/* Trial Details Modal (when user clicks "View Trial Info") */}
       {showTrialDetailsModal && (
         <div className="billing-checkout-backdrop">
-          <div className="billing-checkout-modal">
+          <div className="billing-checkout-modal" role="dialog" aria-modal="true" aria-label={`${planDisplayName} Trial Details`}>
             <h3>{planDisplayName} Trial Details</h3>
             <p className="billing-muted" style={{ marginTop: 0 }}>
               Summary of your current trial window and what unlocks upon plan activation.

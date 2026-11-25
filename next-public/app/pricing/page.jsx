@@ -155,7 +155,7 @@ export default function PricingPage() {
               <span>Kwickbot AI support is included within each plan&apos;s stated limits. Meta bills WhatsApp message delivery separately at its current category and destination rates.</span>
             </div>
 
-            <div className="plan-grid" data-stagger key={`ecommerce-${loading}`} aria-busy={loading}>
+            <div className="plan-grid" aria-busy={loading}>
               {loading ? (
                 [0, 1, 2].map((index) => (
                   <div key={`pricing-skeleton-${index}`} className="plan-card" aria-hidden="true" style={{ minHeight: 430 }}>

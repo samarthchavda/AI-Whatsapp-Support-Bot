@@ -47,7 +47,7 @@ function KnowledgeBase() {
         alert(nextState ? '🤖 AI Auto-Reply Assistant ENABLED! The bot will now answer incoming WhatsApp messages using your Knowledge Base.' : '⏸️ AI Auto-Reply Assistant STOPPED! Incoming WhatsApp messages will NOT receive AI replies, allowing manual agent responses in Live Chat.');
       }
     } catch (err) {
-      alert('Failed to update AI Bot status');
+      alert(err.response?.data?.error || 'Failed to update AI Bot status');
     } finally {
       setTogglingAi(false);
     }

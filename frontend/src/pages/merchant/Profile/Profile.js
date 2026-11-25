@@ -364,21 +364,7 @@ function Profile({ admin, onUpdateAdmin }) {
 
                 <div className="stat-usage-section" style={{ marginTop: '16px', borderTop: '1px solid var(--border-subtle)', paddingTop: '16px', width: '100%' }}>
                   <div className="stat-row" style={{ marginBottom: '6px' }}>
-                    <span>Gemini Token Usage:</span>
-                    <strong>{tokensUsed.toLocaleString()} / {tokenLimit === Infinity ? 'Unlimited' : tokenLimit.toLocaleString()}</strong>
-                  </div>
-                  <div className="usage-progress-bar-container" style={{ marginBottom: '14px' }}>
-                    <div
-                      className="usage-progress-bar-fill"
-                      style={{
-                        width: `${tokenLimit === Infinity ? 0 : Math.min(100, (tokensUsed / tokenLimit) * 100)}%`,
-                        background: tokenLimit !== Infinity && tokensUsed / tokenLimit >= 0.9 ? 'var(--danger)' : undefined
-                      }}
-                    ></div>
-                  </div>
-
-                  <div className="stat-row" style={{ marginBottom: '6px' }}>
-                    <span>Messages Processed:</span>
+                    <span>AI Replies Used:</span>
                     <strong>{messagesProcessed.toLocaleString()} / {messageLimit === Infinity ? 'Unlimited' : messageLimit.toLocaleString()}</strong>
                   </div>
                   <div className="usage-progress-bar-container" style={{ marginBottom: '14px' }}>

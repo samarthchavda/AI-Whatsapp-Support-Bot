@@ -460,9 +460,6 @@ function Integrations({ admin, onUpdateAdmin }) {
                   </div>
                 ) : (
                   <div className="integration-disconnected">
-                    <p style={{ fontSize: '13.5px', color: 'var(--text-secondary)', marginBottom: '16px', flexGrow: 1 }}>
-                      {platform.description}
-                    </p>
                     {!isProfileComplete ? (
                       <button
                         className="btn btn-primary"

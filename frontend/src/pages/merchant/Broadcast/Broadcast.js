@@ -730,6 +730,7 @@ function Broadcast() {
             <p style={{ fontSize: '14px', marginBottom: '20px' }}>Create your first WhatsApp campaign to engage your customers.</p>
             <button 
               className="btn btn-primary"
+              disabled={isPreview && (testsLeft === 0 || !previewAccess.whatsappConnected)}
               onClick={() => setShowCreateForm(true)}
             >
               Create Broadcast

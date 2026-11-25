@@ -42,12 +42,18 @@ export default function MotionProvider() {
           io.unobserve(entry.target);
         }
       });
-    }, { threshold: 0.15, rootMargin: '0px 0px -8% 0px' });
+    }, { threshold: 0.01, rootMargin: '0px 0px 0px 0px' });
 
     const watch = (scope) => {
       indexStaggers(scope);
       scope.querySelectorAll(SELECTOR).forEach((el) => {
-        if (!el.classList.contains('is-visible') && !el.dataset.watched) {
+        if (el.classList.contains('is-visible')) return;
+        const rect = el.getBoundingClientRect();
+        if (rect.top < window.innerHeight && rect.bottom > 0) {
+          el.classList.add('is-visible');
+          return;
+        }
+        if (!el.dataset.watched) {
           el.dataset.watched = '1';
           io.observe(el);
         }

@@ -1,15 +1,18 @@
 /**
- * Billing helpers: seller business profile, invoice numbering, GST split and
- * invoice creation for a verified Razorpay payment.
+ * Billing helpers: seller business profile, invoice numbering, GST split,
+ * theme configuration, and invoice creation (Razorpay + Super Admin manual).
  *
  * Plan prices are treated as GST-inclusive. Tax is calculated out of the amount
- * Razorpay actually charged, so the invoice total always equals what was paid.
+ * actually charged/billed, so the invoice total always matches the payment.
  */
 const GlobalSettings = require('../models/GlobalSettings');
 const Counter = require('../models/Counter');
 const Invoice = require('../models/Invoice');
 
 const PROFILE_KEY = 'invoice_business_profile';
+
+const TEMPLATE_STYLES = ['pista', 'midnight', 'indigo', 'minimal'];
+const HEADER_LAYOUTS = ['banner', 'clean'];
 
 const DEFAULT_PROFILE = {
   legalName: 'Kwickbot',
@@ -26,7 +29,13 @@ const DEFAULT_PROFILE = {
   website: 'kwickbot.in',
   sacCode: '',
   gstRate: 18,
-  footerNote: 'Thank you for choosing Kwickbot.'
+  footerNote: 'Thank you for choosing Kwickbot.',
+  templateStyle: 'pista',
+  headerLayout: 'banner',
+  brandTagline: 'AI WhatsApp support for e-commerce',
+  invoicePrefix: 'KB',
+  showPaymentRef: true,
+  showTaxNote: true
 };
 
 const GSTIN_RE = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z]$/;
@@ -47,12 +56,26 @@ const round2 = (n) => Math.round((Number(n) + Number.EPSILON) * 100) / 100;
 
 function sanitizeProfile(input = {}) {
   const p = { ...DEFAULT_PROFILE };
-  for (const k of ['legalName', 'tradeName', 'city', 'state', 'pincode', 'country', 'email', 'phone', 'website', 'sacCode', 'pan']) {
+  for (const k of ['legalName', 'tradeName', 'city', 'state', 'pincode', 'country', 'email', 'phone', 'website', 'sacCode', 'pan', 'brandTagline']) {
     if (input[k] !== undefined) p[k] = clean(input[k], 120);
   }
   if (input.addressLine !== undefined) p.addressLine = clean(input.addressLine, 300);
   if (input.footerNote !== undefined) p.footerNote = clean(input.footerNote, 300);
   if (input.gstin !== undefined) p.gstin = clean(input.gstin, 15).toUpperCase();
+
+  if (input.templateStyle !== undefined && TEMPLATE_STYLES.includes(String(input.templateStyle))) {
+    p.templateStyle = String(input.templateStyle);
+  }
+  if (input.headerLayout !== undefined && HEADER_LAYOUTS.includes(String(input.headerLayout))) {
+    p.headerLayout = String(input.headerLayout);
+  }
+  if (input.invoicePrefix !== undefined) {
+    const cleanedPrefix = clean(input.invoicePrefix, 6).replace(/[^A-Za-z0-9]/g, '').toUpperCase();
+    if (cleanedPrefix.length >= 2) p.invoicePrefix = cleanedPrefix;
+  }
+  if (input.showPaymentRef !== undefined) p.showPaymentRef = Boolean(input.showPaymentRef);
+  if (input.showTaxNote !== undefined) p.showTaxNote = Boolean(input.showTaxNote);
+
   const rate = Number(input.gstRate);
   if (!Number.isNaN(rate) && rate >= 0 && rate <= 28) p.gstRate = rate;
   return p;
@@ -82,20 +105,21 @@ function financialYear(date = new Date()) {
 }
 
 /** Sequential per financial year, e.g. KB/26-27/0001 (GST allows max 16 chars) */
-async function nextInvoiceNumber(date = new Date()) {
+async function nextInvoiceNumber(date = new Date(), prefix = DEFAULT_PROFILE.invoicePrefix) {
   const fy = financialYear(date);
+  const safePrefix = clean(String(prefix || 'KB'), 6).replace(/[^A-Za-z0-9]/g, '').toUpperCase() || 'KB';
   const counter = await Counter.findOneAndUpdate(
     { _id: `invoice-${fy}` },
     { $inc: { seq: 1 } },
     { new: true, upsert: true }
   );
-  return `KB/${fy}/${String(counter.seq).padStart(4, '0')}`;
+  return `${safePrefix}/${fy}/${String(counter.seq).padStart(4, '0')}`;
 }
 
 /**
  * Split a GST-inclusive total into taxable value and tax.
- * Intra-state (same state as seller) → CGST + SGST; otherwise IGST.
- * Returns null tax when the seller has no GSTIN (non-GST invoice).
+ * Intra-state (same state as seller) -> CGST + SGST; otherwise IGST.
+ * Returns unregistered summary when the seller has no GSTIN.
  */
 function computeTax(total, seller, buyerState) {
   if (!seller.gstin || !seller.gstRate) {
@@ -137,13 +161,6 @@ function buyerSnapshot(admin) {
 
 /**
  * Create the invoice for a verified Razorpay payment.
- * @param {object} p
- * @param {object} p.admin        Admin document (after the plan upgrade)
- * @param {object} p.plan         PricingPlan document
- * @param {'monthly'|'yearly'} p.cycle
- * @param {number} p.listPrice    Plan price before any coupon
- * @param {object} p.order        Razorpay order (amount in paise)
- * @param {object} p.payment      Razorpay payment
  */
 async function createInvoiceForPayment({ admin, plan, cycle, listPrice, order, payment }) {
   const now = new Date();
@@ -157,7 +174,7 @@ async function createInvoiceForPayment({ admin, plan, cycle, listPrice, order, p
   const planName = plan.displayName || plan.name;
 
   const invoice = new Invoice({
-    invoiceNumber: await nextInvoiceNumber(now),
+    invoiceNumber: await nextInvoiceNumber(now, seller.invoicePrefix),
     customerId: admin._id,
     customerPhone: buyer.phone || 'not provided',
     customerName: buyer.name,
@@ -196,9 +213,77 @@ async function createInvoiceForPayment({ admin, plan, cycle, listPrice, order, p
   return invoice;
 }
 
+/**
+ * Create a manual subscription or service invoice from Super Admin Billing & Revenue.
+ */
+async function createManualInvoice({
+  admin,
+  description,
+  amount,
+  cycle = 'monthly',
+  dueDate,
+  status = 'issued',
+  paymentMethod = '',
+  notes = '',
+  periodStart = null,
+  periodEnd = null
+}) {
+  const now = new Date();
+  const seller = await getBusinessProfile();
+  const buyer = buyerSnapshot(admin);
+  const total = round2(amount);
+  const tax = computeTax(total, seller, buyer.state);
+  const isPaid = status === 'paid';
+  const planName = admin.subscriptionPlan || 'starter';
+  const resolvedPeriodStart = periodStart ? new Date(periodStart) : admin.subscriptionStartDate || now;
+  const resolvedPeriodEnd = periodEnd
+    ? new Date(periodEnd)
+    : admin.subscriptionEndDate || new Date(resolvedPeriodStart.getTime() + (cycle === 'yearly' ? 365 : 30) * 24 * 60 * 60 * 1000);
+
+  const invoice = new Invoice({
+    invoiceNumber: await nextInvoiceNumber(now, seller.invoicePrefix),
+    customerId: admin._id,
+    customerPhone: buyer.phone || 'not provided',
+    customerName: buyer.name,
+    customerEmail: buyer.email,
+    items: [{
+      description: clean(description, 240) || `Kwickbot ${planName} plan · ${cycle === 'yearly' ? 'Yearly' : 'Monthly'} subscription`,
+      quantity: 1,
+      unitPrice: total,
+      amount: total
+    }],
+    subtotal: total,
+    taxAmount: round2(tax.cgst + tax.sgst + tax.igst),
+    totalAmount: total,
+    amountPaid: isPaid ? total : 0,
+    status: isPaid ? 'paid' : 'issued',
+    paymentStatus: isPaid ? 'completed' : 'pending',
+    paymentTerms: isPaid ? 'Due on Receipt' : 'Net 15',
+    issuedDate: now,
+    dueDate: dueDate ? new Date(dueDate) : now,
+    paidDate: isPaid ? now : undefined,
+    paymentMethod: clean(paymentMethod, 60),
+    notes: clean(notes, 400),
+    currency: 'INR',
+    planName,
+    billingCycle: cycle,
+    periodStart: resolvedPeriodStart,
+    periodEnd: resolvedPeriodEnd,
+    discountAmount: 0,
+    tax,
+    seller,
+    buyer
+  });
+
+  await invoice.save();
+  return invoice;
+}
+
 module.exports = {
   PROFILE_KEY,
   DEFAULT_PROFILE,
+  TEMPLATE_STYLES,
+  HEADER_LAYOUTS,
   INDIAN_STATES,
   STATE_CODES,
   GSTIN_RE,
@@ -210,5 +295,6 @@ module.exports = {
   computeTax,
   buyerSnapshot,
   createInvoiceForPayment,
+  createManualInvoice,
   round2
 };

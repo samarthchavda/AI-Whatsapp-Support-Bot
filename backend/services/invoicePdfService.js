@@ -1,14 +1,80 @@
 /**
- * Kwickbot invoice PDF (A4), Pista brand.
+ * Kwickbot invoice PDF (A4), supporting configurable billing styles & layouts.
  * Rendered on demand from the invoice record, so nothing is stored on disk and
- * every download uses the same snapshot that was frozen at payment time.
+ * every download uses the frozen snapshot captured at invoice creation time.
  */
 const PDFDocument = require('pdfkit');
 const { getBusinessProfile } = require('./billingService');
 
-const C = {
-  deep: '#2A3D18', olive: '#3D5A22', pista: '#B9DB97', pistaSoft: '#E4F0D5', pistaTint: '#EEF5E4',
-  leaf: '#8DBF64', mist: '#F5F8EF', ink: '#1D2A13', ink2: '#3A4A2E', muted: '#556447', border: '#E1E9D3', white: '#FFFFFF'
+const PALETTES = {
+  pista: {
+    deep: '#2A3D18',
+    accent: '#3D5A22',
+    soft: '#B9DB97',
+    tint: '#EEF5E4',
+    leaf: '#8DBF64',
+    mist: '#F5F8EF',
+    ink: '#1D2A13',
+    ink2: '#3A4A2E',
+    muted: '#556447',
+    border: '#E1E9D3',
+    white: '#FFFFFF',
+    headerText: '#F5F8EF',
+    headerSub: '#B9DB97',
+    paidBg: '#B9DB97',
+    paidText: '#2A3D18'
+  },
+  midnight: {
+    deep: '#0F172A',
+    accent: '#1E293B',
+    soft: '#38BDF8',
+    tint: '#F1F5F9',
+    leaf: '#0EA5E9',
+    mist: '#F8FAFC',
+    ink: '#0F172A',
+    ink2: '#334155',
+    muted: '#64748B',
+    border: '#CBD5E1',
+    white: '#FFFFFF',
+    headerText: '#F8FAFC',
+    headerSub: '#7DD3FC',
+    paidBg: '#10B981',
+    paidText: '#FFFFFF'
+  },
+  indigo: {
+    deep: '#1E1B4B',
+    accent: '#4338CA',
+    soft: '#A5B4FC',
+    tint: '#EEF2FF',
+    leaf: '#6366F1',
+    mist: '#F5F7FF',
+    ink: '#1E1B4B',
+    ink2: '#3730A3',
+    muted: '#6366F1',
+    border: '#C7D2FE',
+    white: '#FFFFFF',
+    headerText: '#FFFFFF',
+    headerSub: '#C7D2FE',
+    paidBg: '#A5B4FC',
+    paidText: '#1E1B4B'
+  },
+  minimal: {
+    deep: '#18181B',
+    accent: '#27272A',
+    soft: '#E4E4E7',
+    tint: '#FAFAFA',
+    leaf: '#52525B',
+    mist: '#F4F4F5',
+    ink: '#18181B',
+    ink2: '#3F3F46',
+    muted: '#71717A',
+    border: '#E4E4E7',
+    white: '#FFFFFF',
+    headerText: '#FFFFFF',
+    headerSub: '#D4D4D8',
+    paidBg: '#DCFCE7',
+    paidText: '#166534'
+  }
 };
 
 // "₹" outline (Plus Jakarta Sans, SIL Open Font License), 1000 units/em, y-up.
@@ -18,7 +84,17 @@ const RUPEE_ADVANCE = 681;
 const PAGE = { w: 595.28, h: 841.89, m: 48 };
 
 const fmtNum = (n) => Number(n || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-const METHOD_LABELS = { upi: 'UPI', card: 'Card', netbanking: 'Net banking', wallet: 'Wallet', emi: 'EMI', paylater: 'Pay later' };
+const METHOD_LABELS = {
+  upi: 'UPI',
+  card: 'Card',
+  netbanking: 'Net banking',
+  wallet: 'Wallet',
+  emi: 'EMI',
+  paylater: 'Pay later',
+  bank_transfer: 'Bank Transfer',
+  cash: 'Cash',
+  razorpay: 'Razorpay'
+};
 const fmtMethod = (m) => (m ? (METHOD_LABELS[String(m).toLowerCase()] || m) : '');
 const fmtDate = (d) => (d ? new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '—');
 
@@ -27,7 +103,8 @@ const ONES = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight'
 const TENS = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
 function twoDigits(n) { return n < 20 ? ONES[n] : `${TENS[Math.floor(n / 10)]}${n % 10 ? ' ' + ONES[n % 10] : ''}`; }
 function threeDigits(n) {
-  const h = Math.floor(n / 100); const r = n % 100;
+  const h = Math.floor(n / 100);
+  const r = n % 100;
   return [h ? `${ONES[h]} Hundred` : '', r ? twoDigits(r) : ''].filter(Boolean).join(' ');
 }
 function inWordsInteger(n) {
@@ -50,7 +127,7 @@ function amountInWords(amount, currency = 'INR') {
 }
 
 /* ---------- Drawing helpers ---------- */
-function drawMark(doc, x, y, size, { stem = C.mist, ai = C.pista, low = C.mist } = {}) {
+function drawMark(doc, x, y, size, { stem, ai, low }) {
   const s = size / 64;
   doc.save().translate(x, y).scale(s);
   doc.roundedRect(8, 7, 13, 50, 6.5).fill(stem);
@@ -62,8 +139,7 @@ function drawMark(doc, x, y, size, { stem = C.mist, ai = C.pista, low = C.mist }
 
 function rupeeWidth(size) { return (RUPEE_ADVANCE * size * 0.9) / 1000 + size * 0.06; }
 
-/** Draw "₹1,234.00" right-aligned so it ends at xRight; returns nothing. */
-function money(doc, value, xRight, y, { size = 10, bold = false, color = C.ink, currency = 'INR' } = {}) {
+function money(doc, value, xRight, y, { size = 10, bold = false, color = '#1D2A13', currency = 'INR' } = {}) {
   const font = bold ? 'Helvetica-Bold' : 'Helvetica';
   const text = fmtNum(value);
   doc.font(font).fontSize(size);
@@ -81,7 +157,7 @@ function money(doc, value, xRight, y, { size = 10, bold = false, color = C.ink, 
 }
 
 function label(doc, text, x, y, opts = {}) {
-  doc.font('Helvetica-Bold').fontSize(7.5).fillColor(opts.color || C.muted)
+  doc.font('Helvetica-Bold').fontSize(7.5).fillColor(opts.color || '#64748B')
     .text(text.toUpperCase(), x, y, { characterSpacing: 0.8, width: opts.width, lineBreak: false });
 }
 
@@ -101,6 +177,12 @@ function partyLines(p = {}) {
 /* ---------- Main renderer ---------- */
 async function renderInvoicePdf(invoice) {
   const seller = invoice.seller || await getBusinessProfile();
+  const C = PALETTES[seller.templateStyle] || PALETTES.pista;
+  const isCleanHeader = seller.headerLayout === 'clean';
+  const tagline = seller.brandTagline || 'AI WhatsApp support for e-commerce';
+  const showPaymentRef = seller.showPaymentRef !== false;
+  const showTaxNote = seller.showTaxNote !== false;
+
   const buyer = invoice.buyer || {
     name: invoice.customerName, email: invoice.customerEmail, phone: invoice.customerPhone
   };
@@ -123,49 +205,69 @@ async function renderInvoicePdf(invoice) {
     const { w, m } = PAGE;
     const right = w - m;
     const contentW = w - m * 2;
+    const brandDisplay = seller.tradeName || seller.legalName || 'kwickbot';
 
-    /* Header band */
-    doc.rect(0, 0, w, 150).fill(C.deep);
-    drawMark(doc, m - 6, 40, 52);
-    doc.font('Helvetica-Bold').fontSize(26).fillColor(C.mist).text('kwickbot', m + 50, 50, { lineBreak: false });
-    doc.font('Helvetica').fontSize(9.5).fillColor(C.pista).text('AI WhatsApp support for e-commerce', m + 51, 82, { lineBreak: false });
+    if (isCleanHeader) {
+      doc.rect(0, 0, w, 6).fill(C.deep);
+      drawMark(doc, m - 4, 34, 44, { stem: C.deep, ai: C.leaf, low: C.deep });
+      doc.font('Helvetica-Bold').fontSize(22).fillColor(C.ink).text(brandDisplay.toLowerCase() === 'kwickbot' ? 'kwickbot' : brandDisplay, m + 46, 40, { lineBreak: false });
+      doc.font('Helvetica').fontSize(9.5).fillColor(C.muted).text(tagline, m + 47, 67, { lineBreak: false });
 
-    doc.font('Helvetica-Bold').fontSize(22).fillColor(C.white);
-    doc.text(title, right - doc.widthOfString(title), 44, { lineBreak: false, characterSpacing: 1 });
-    doc.font('Helvetica-Bold').fontSize(12).fillColor(C.pista);
-    doc.text(invoice.invoiceNumber, right - doc.widthOfString(invoice.invoiceNumber), 74, { lineBreak: false });
+      doc.font('Helvetica-Bold').fontSize(20).fillColor(C.deep);
+      doc.text(title, right - doc.widthOfString(title), 38, { lineBreak: false, characterSpacing: 1 });
+      doc.font('Helvetica-Bold').fontSize(11.5).fillColor(C.accent);
+      doc.text(invoice.invoiceNumber, right - doc.widthOfString(invoice.invoiceNumber), 65, { lineBreak: false });
 
-    const badge = isPaid ? 'PAID' : 'PAYMENT DUE';
-    doc.font('Helvetica-Bold').fontSize(9);
-    const bw = doc.widthOfString(badge, { characterSpacing: 1 }) + 22;
-    doc.roundedRect(right - bw, 98, bw, 22, 11).fill(isPaid ? C.pista : '#FCEFD9');
-    doc.fillColor(isPaid ? C.deep : '#7A4B05').text(badge, right - bw + 11, 104.5, { lineBreak: false, characterSpacing: 1 });
+      const badge = isPaid ? 'PAID' : 'PAYMENT DUE';
+      doc.font('Helvetica-Bold').fontSize(8.5);
+      const bw = doc.widthOfString(badge, { characterSpacing: 1 }) + 20;
+      doc.roundedRect(right - bw, 88, bw, 20, 10).fill(isPaid ? C.paidBg : '#FCEFD9');
+      doc.fillColor(isPaid ? C.paidText : '#7A4B05').text(badge, right - bw + 10, 94, { lineBreak: false, characterSpacing: 1 });
+
+      doc.moveTo(m, 134).lineTo(right, 134).lineWidth(1).stroke(C.border);
+    } else {
+      doc.rect(0, 0, w, 150).fill(C.deep);
+      drawMark(doc, m - 6, 40, 52, { stem: C.mist, ai: C.soft, low: C.mist });
+      doc.font('Helvetica-Bold').fontSize(26).fillColor(C.headerText).text(brandDisplay.toLowerCase() === 'kwickbot' ? 'kwickbot' : brandDisplay, m + 50, 50, { lineBreak: false });
+      doc.font('Helvetica').fontSize(9.5).fillColor(C.headerSub).text(tagline, m + 51, 82, { lineBreak: false });
+
+      doc.font('Helvetica-Bold').fontSize(22).fillColor(C.white);
+      doc.text(title, right - doc.widthOfString(title), 44, { lineBreak: false, characterSpacing: 1 });
+      doc.font('Helvetica-Bold').fontSize(12).fillColor(C.headerSub);
+      doc.text(invoice.invoiceNumber, right - doc.widthOfString(invoice.invoiceNumber), 74, { lineBreak: false });
+
+      const badge = isPaid ? 'PAID' : 'PAYMENT DUE';
+      doc.font('Helvetica-Bold').fontSize(9);
+      const bw = doc.widthOfString(badge, { characterSpacing: 1 }) + 22;
+      doc.roundedRect(right - bw, 98, bw, 22, 11).fill(isPaid ? C.paidBg : '#FCEFD9');
+      doc.fillColor(isPaid ? C.paidText : '#7A4B05').text(badge, right - bw + 11, 104.5, { lineBreak: false, characterSpacing: 1 });
+    }
 
     /* Meta row */
-    let y = 176;
+    let y = isCleanHeader ? 156 : 176;
     const metaCols = [
       ['Invoice date', fmtDate(invoice.issuedDate || invoice.createdAt)],
       ['Billing period', invoice.periodStart ? `${fmtDate(invoice.periodStart)} – ${fmtDate(invoice.periodEnd)}` : '—'],
-      ['Payment reference', invoice.razorpayPaymentId || '—'],
+      [showPaymentRef ? 'Payment reference' : 'Invoice status', showPaymentRef ? (invoice.razorpayPaymentId || fmtMethod(invoice.paymentMethod) || '—') : (isPaid ? 'Settled' : 'Due')],
       [tax.registered ? 'Place of supply' : 'Payment terms', tax.registered ? (tax.placeOfSupply || '—') : (invoice.paymentTerms || 'Due on receipt')]
     ];
     const colW = contentW / 4;
     metaCols.forEach(([k, v], i) => {
       const x = m + i * colW;
-      label(doc, k, x, y, { width: colW - 10 });
+      label(doc, k, x, y, { width: colW - 10, color: C.muted });
       doc.font('Helvetica-Bold').fontSize(9.5).fillColor(C.ink).text(v, x, y + 13, { width: colW - 12 });
     });
 
     /* Parties */
-    y = 228;
+    y = isCleanHeader ? 208 : 228;
     const cardW = (contentW - 16) / 2;
     const sellerLines = partyLines(seller);
     const buyerLines = partyLines(buyer);
     const cardH = 54 + Math.max(sellerLines.length, buyerLines.length, 2) * 13;
     [[`Billed by`, seller.legalName || 'Kwickbot', sellerLines, m, C.mist],
-     [`Billed to`, buyer.name || 'Customer', buyerLines, m + cardW + 16, C.pistaTint]].forEach(([k, name, lines, x, bg]) => {
+     [`Billed to`, buyer.name || 'Customer', buyerLines, m + cardW + 16, C.tint]].forEach(([k, name, lines, x, bg]) => {
       doc.roundedRect(x, y, cardW, cardH, 12).fill(bg);
-      label(doc, k, x + 16, y + 16);
+      label(doc, k, x + 16, y + 16, { color: C.muted });
       doc.font('Helvetica-Bold').fontSize(11.5).fillColor(C.ink).text(name, x + 16, y + 30, { width: cardW - 32 });
       let ly = y + 48;
       doc.font('Helvetica').fontSize(9).fillColor(C.ink2);
@@ -176,7 +278,7 @@ async function renderInvoicePdf(invoice) {
     y = y + cardH + 28;
     const cols = { desc: m + 14, sac: m + contentW * 0.56, qty: m + contentW * 0.68, rate: m + contentW * 0.86, amt: right - 14 };
     doc.roundedRect(m, y, contentW, 28, 8).fill(C.deep);
-    doc.font('Helvetica-Bold').fontSize(8).fillColor(C.mist);
+    doc.font('Helvetica-Bold').fontSize(8).fillColor(C.headerText);
     doc.text('DESCRIPTION', cols.desc, y + 10, { characterSpacing: 0.8, lineBreak: false });
     if (tax.registered && seller.sacCode) doc.text('SAC', cols.sac, y + 10, { characterSpacing: 0.8, lineBreak: false });
     doc.text('QTY', cols.qty, y + 10, { characterSpacing: 0.8, lineBreak: false });
@@ -194,7 +296,7 @@ async function renderInvoicePdf(invoice) {
       if (tax.registered && seller.sacCode) doc.font('Helvetica').fontSize(9.5).fillColor(C.ink2).text(seller.sacCode, cols.sac, y, { lineBreak: false });
       doc.font('Helvetica').fontSize(9.5).fillColor(C.ink2).text(String(item.quantity || 1), cols.qty, y, { lineBreak: false });
       money(doc, item.unitPrice, cols.rate, y, { size: 9.5, color: C.ink2, currency });
-      money(doc, item.amount, cols.amt, y, { size: 10, bold: true, currency });
+      money(doc, item.amount, cols.amt, y, { size: 10, bold: true, color: C.ink, currency });
       y = Math.max(sub, y + 18) + 12;
       doc.moveTo(m, y).lineTo(right, y).lineWidth(0.8).stroke(C.border);
       y += 14;
@@ -215,7 +317,7 @@ async function renderInvoicePdf(invoice) {
     };
     const totalsTop = y;
     row('Subtotal', invoice.subtotal);
-    if (invoice.discountAmount > 0) row(`Discount${invoice.couponCode ? ` (${invoice.couponCode})` : ''}`, invoice.discountAmount, { minus: true, color: C.olive });
+    if (invoice.discountAmount > 0) row(`Discount${invoice.couponCode ? ` (${invoice.couponCode})` : ''}`, invoice.discountAmount, { minus: true, color: C.accent });
     if (tax.registered) {
       row('Taxable value', tax.taxable);
       if (tax.intra) {
@@ -227,7 +329,7 @@ async function renderInvoicePdf(invoice) {
     }
     y += 4;
     doc.roundedRect(totX - 12, y, totW + 12, 40, 10).fill(C.deep);
-    doc.font('Helvetica-Bold').fontSize(11).fillColor(C.mist).text(tax.registered ? 'Total (incl. GST)' : 'Total', totX, y + 14, { lineBreak: false });
+    doc.font('Helvetica-Bold').fontSize(11).fillColor(C.headerText).text(tax.registered ? 'Total (incl. GST)' : 'Total', totX, y + 14, { lineBreak: false });
     money(doc, invoice.totalAmount, right - 12, y + 12, { size: 15, bold: true, color: C.white, currency });
     y += 52;
     row('Amount paid', isPaid ? (invoice.amountPaid || invoice.totalAmount) : (invoice.amountPaid || 0));
@@ -236,25 +338,27 @@ async function renderInvoicePdf(invoice) {
     /* Left column beside totals: amount in words + payment */
     let ly = totalsTop;
     const lw = totX - m - 32;
-    label(doc, 'Amount in words', m, ly);
+    label(doc, 'Amount in words', m, ly, { color: C.muted });
     doc.font('Helvetica-Bold').fontSize(9.5).fillColor(C.ink).text(amountInWords(invoice.totalAmount, currency), m, ly + 13, { width: lw });
     ly = doc.y + 18;
-    label(doc, 'Payment', m, ly);
+    label(doc, 'Payment', m, ly, { color: C.muted });
     const payLine = isPaid
-      ? `Paid online via Razorpay${invoice.paymentMethod ? ` (${fmtMethod(invoice.paymentMethod)})` : ''} on ${fmtDate(invoice.paidDate || invoice.issuedDate || invoice.createdAt)}`
+      ? `Paid${invoice.paymentMethod ? ` via ${fmtMethod(invoice.paymentMethod)}` : ''} on ${fmtDate(invoice.paidDate || invoice.issuedDate || invoice.createdAt)}`
       : `Due on ${fmtDate(invoice.dueDate)}`;
     doc.font('Helvetica').fontSize(9.5).fillColor(C.ink2).text(payLine, m, ly + 13, { width: lw });
-    if (invoice.razorpayOrderId) doc.font('Helvetica').fontSize(8.5).fillColor(C.muted).text(`Order ${invoice.razorpayOrderId}`, m, doc.y + 3, { width: lw });
-    if (tax.registered) {
+    if (showPaymentRef && invoice.razorpayOrderId) {
+      doc.font('Helvetica').fontSize(8.5).fillColor(C.muted).text(`Order ${invoice.razorpayOrderId}`, m, doc.y + 3, { width: lw });
+    }
+    if (showTaxNote && tax.registered) {
       ly = doc.y + 16;
-      label(doc, 'Tax note', m, ly);
+      label(doc, 'Tax note', m, ly, { color: C.muted });
       doc.font('Helvetica').fontSize(8.5).fillColor(C.muted).text(`Prices are inclusive of GST @ ${tax.rate}%. Tax is not payable on reverse charge basis.`, m, ly + 13, { width: lw });
     }
 
     /* Footer */
     const fy = 760;
     doc.moveTo(m, fy).lineTo(right, fy).lineWidth(0.8).stroke(C.border);
-    drawMark(doc, m - 4, fy + 14, 26, { stem: C.olive, ai: C.leaf, low: C.olive });
+    drawMark(doc, m - 4, fy + 14, 26, { stem: C.accent, ai: C.leaf, low: C.accent });
     doc.font('Helvetica-Bold').fontSize(9.5).fillColor(C.ink).text(seller.footerNote || 'Thank you for choosing Kwickbot.', m + 26, fy + 16, { width: contentW - 30, lineBreak: false });
     doc.font('Helvetica').fontSize(8).fillColor(C.muted).text('This is a computer-generated invoice and does not require a signature.', m + 26, fy + 30, { width: contentW - 30, lineBreak: false });
     const contact = [seller.email, seller.website, seller.phone].filter(Boolean).join('  ·  ');
@@ -267,4 +371,4 @@ async function renderInvoicePdf(invoice) {
 // Backwards-compatible name used elsewhere; returns the PDF as a Buffer.
 const generateInvoicePDF = (invoice) => renderInvoicePdf(invoice);
 
-module.exports = { renderInvoicePdf, generateInvoicePDF, amountInWords };
+module.exports = { PALETTES, renderInvoicePdf, generateInvoicePDF, amountInWords };

@@ -97,7 +97,7 @@ exports.getInvoiceByPhone = async (req, res) => {
   }
 };
 
-// Create new invoice
+// Create new invoice (supports manual Super Admin invoice creation or explicit payload)
 exports.createInvoice = async (req, res) => {
   try {
     const {
@@ -110,16 +110,52 @@ exports.createInvoice = async (req, res) => {
       subtotal,
       taxAmount = 0,
       totalAmount,
+      amount,
+      description,
+      cycle = 'monthly',
+      status = 'issued',
+      paymentMethod = '',
       dueDate,
       paymentTerms = 'Net 30',
       billingAddress,
-      notes
+      notes,
+      periodStart,
+      periodEnd
     } = req.body;
 
-    // Validate required fields
+    // Simplified Super Admin subscription/service invoice flow
+    if (customerId && !invoiceNumber && (amount !== undefined || totalAmount !== undefined)) {
+      const targetAdmin = await Admin.findById(customerId).lean();
+      if (!targetAdmin) {
+        return res.status(404).json({ error: 'Merchant account not found' });
+      }
+      const resolvedAmount = Number(amount !== undefined ? amount : totalAmount);
+      if (!Number.isFinite(resolvedAmount) || resolvedAmount <= 0) {
+        return res.status(400).json({ error: 'Amount must be greater than zero' });
+      }
+      const created = await billing.createManualInvoice({
+        admin: targetAdmin,
+        description,
+        amount: resolvedAmount,
+        cycle,
+        dueDate,
+        status: status === 'paid' ? 'paid' : 'issued',
+        paymentMethod,
+        notes,
+        periodStart,
+        periodEnd
+      });
+      return res.status(201).json({
+        success: true,
+        message: 'Invoice created successfully',
+        invoice: created
+      });
+    }
+
+    // Legacy explicit payload path
     if (!invoiceNumber || !customerId || !items || !totalAmount || !dueDate) {
       return res.status(400).json({ 
-        error: 'Missing required fields: invoiceNumber, customerId, items, totalAmount, dueDate' 
+        error: 'Missing required fields: customerId and amount (or invoiceNumber, customerId, items, totalAmount, dueDate)' 
       });
     }
 
@@ -142,6 +178,7 @@ exports.createInvoice = async (req, res) => {
     await newInvoice.save();
     
     res.status(201).json({
+      success: true,
       message: 'Invoice created successfully',
       invoice: newInvoice
     });
@@ -154,11 +191,18 @@ exports.createInvoice = async (req, res) => {
 exports.updateInvoice = async (req, res) => {
   try {
     const { id } = req.params;
-    const updates = req.body;
+    const allowedFields = ['status', 'paymentStatus', 'dueDate', 'notes', 'paymentTerms', 'paymentMethod'];
+    const updates = {};
+    for (const key of allowedFields) {
+      if (req.body[key] !== undefined) updates[key] = req.body[key];
+    }
+    if (updates.status === 'cancelled') {
+      updates.paymentStatus = 'failed';
+    }
 
     const invoice = await Invoice.findOneAndUpdate(
-      { invoiceNumber: id },
-      updates,
+      byIdOrNumber(id),
+      { $set: updates },
       { new: true }
     );
 
@@ -167,6 +211,7 @@ exports.updateInvoice = async (req, res) => {
     }
 
     res.json({
+      success: true,
       message: 'Invoice updated successfully',
       invoice
     });
@@ -181,20 +226,23 @@ exports.recordPayment = async (req, res) => {
     const { id } = req.params;
     const { amountPaid, paymentMethod } = req.body;
 
-    if (!amountPaid || amountPaid <= 0) {
-      return res.status(400).json({ error: 'Invalid amount' });
-    }
-
-    const invoice = await Invoice.findOne({ invoiceNumber: id });
+    const invoice = await Invoice.findOne(byIdOrNumber(id));
 
     if (!invoice) {
       return res.status(404).json({ error: 'Invoice not found' });
     }
 
-    invoice.amountPaid = (invoice.amountPaid || 0) + amountPaid;
-    invoice.remainingAmount = invoice.totalAmount - invoice.amountPaid;
+    const paymentAmount = amountPaid !== undefined ? Number(amountPaid) : Math.max(0, invoice.totalAmount - (invoice.amountPaid || 0));
+    if (!Number.isFinite(paymentAmount) || paymentAmount <= 0) {
+      return res.status(400).json({ error: 'Invalid payment amount' });
+    }
 
-    // Update status based on payment
+    invoice.amountPaid = billing.round2((invoice.amountPaid || 0) + paymentAmount);
+    invoice.remainingAmount = Math.max(0, billing.round2(invoice.totalAmount - invoice.amountPaid));
+    if (paymentMethod) {
+      invoice.paymentMethod = String(paymentMethod).trim().slice(0, 60);
+    }
+
     if (invoice.amountPaid >= invoice.totalAmount) {
       invoice.status = 'paid';
       invoice.paymentStatus = 'completed';
@@ -207,6 +255,7 @@ exports.recordPayment = async (req, res) => {
     await invoice.save();
 
     res.json({
+      success: true,
       message: 'Payment recorded successfully',
       invoice
     });
@@ -267,16 +316,25 @@ exports.downloadSignedInvoicePdf = async (req, res) => {
   }
 };
 
-// Super admin: preview the invoice design with the current business profile
+// Super admin: preview the invoice design with current or previewed billing style
 exports.previewSampleInvoice = async (req, res) => {
   try {
-    const seller = await billing.getBusinessProfile();
+    const savedSeller = await billing.getBusinessProfile();
+    const q = req.query || {};
+    const seller = billing.sanitizeProfile({
+      ...savedSeller,
+      ...(q.templateStyle ? { templateStyle: q.templateStyle } : {}),
+      ...(q.headerLayout ? { headerLayout: q.headerLayout } : {}),
+      ...(q.brandTagline !== undefined ? { brandTagline: q.brandTagline } : {}),
+      ...(q.invoicePrefix ? { invoicePrefix: q.invoicePrefix } : {}),
+      ...(q.footerNote !== undefined ? { footerNote: q.footerNote } : {})
+    });
     const now = new Date();
     const end = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
     const buyerState = seller.state && seller.state !== 'Maharashtra' ? 'Maharashtra' : 'Karnataka';
     const total = 2999;
     const sample = {
-      invoiceNumber: `KB/${billing.financialYear(now)}/SAMPLE`,
+      invoiceNumber: `${seller.invoicePrefix || 'KB'}/${billing.financialYear(now)}/SAMPLE`,
       items: [{ description: 'Kwickbot Growth plan · Monthly subscription', quantity: 1, unitPrice: total, amount: total }],
       subtotal: total, totalAmount: total, amountPaid: total, discountAmount: 0,
       status: 'paid', paymentStatus: 'completed', issuedDate: now, paidDate: now, periodStart: now, periodEnd: end,

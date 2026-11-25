@@ -2828,37 +2828,64 @@ exports.getAIUsageStatus = async (req, res) => {
   }
 };
 
-// Get Billing & Revenue platform-wide monitoring metrics
+// Get Billing & Revenue platform-wide monitoring, invoice ledger & style profile
 exports.getBillingRevenueStatus = async (req, res) => {
   try {
     const Invoice = require('../../models/Invoice');
-    
-    // 1. Fetch all merchants
-    const merchants = await Admin.find({ role: 'admin' })
-      .select('name email subscriptionPlan subscriptionStatus monthlyPrice customDiscount trialStartedAt subscriptionEndDate createdAt');
+    const billing = require('../../services/billingService');
 
-    // 2. Fetch completed invoices for revenue
-    const merchantIds = merchants.map(m => m._id);
-    const paidInvoices = await Invoice.find({
-      customerId: { $in: merchantIds },
-      $or: [
-        { paymentStatus: 'completed' },
-        { status: 'paid' }
-      ]
+    const [merchants, allInvoices, businessProfile] = await Promise.all([
+      Admin.find({ role: 'admin' })
+        .select('name email businessName subscriptionPlan subscriptionStatus monthlyPrice customDiscount trialStartedAt subscriptionEndDate createdAt')
+        .sort({ createdAt: -1 })
+        .lean(),
+      Invoice.find({})
+        .sort({ issuedDate: -1, createdAt: -1 })
+        .limit(300)
+        .lean(),
+      billing.getBusinessProfile()
+    ]);
+
+    const isPaidInvoice = (inv) => inv.paymentStatus === 'completed' || inv.status === 'paid';
+    const isPendingInvoice = (inv) => !isPaidInvoice(inv) && inv.status !== 'cancelled';
+
+    const paidInvoices = allInvoices.filter(isPaidInvoice);
+    const totalRevenue = billing.round2(paidInvoices.reduce((sum, inv) => sum + (inv.totalAmount || 0), 0));
+
+    const pendingInvoices = allInvoices.filter(isPendingInvoice);
+    const pendingAmount = billing.round2(
+      pendingInvoices.reduce((sum, inv) => sum + Math.max(0, (inv.totalAmount || 0) - (inv.amountPaid || 0)), 0)
+    );
+
+    const paidByMerchant = new Map();
+    const countByMerchant = new Map();
+    const lastDateByMerchant = new Map();
+
+    allInvoices.forEach((inv) => {
+      const custId = inv.customerId ? String(inv.customerId) : null;
+      if (!custId) return;
+      countByMerchant.set(custId, (countByMerchant.get(custId) || 0) + 1);
+      if (!lastDateByMerchant.has(custId)) {
+        lastDateByMerchant.set(custId, inv.issuedDate || inv.createdAt);
+      }
+      if (isPaidInvoice(inv)) {
+        paidByMerchant.set(custId, billing.round2((paidByMerchant.get(custId) || 0) + (inv.totalAmount || 0)));
+      }
     });
 
-    const totalRevenue = paidInvoices.reduce((sum, invoice) => sum + (invoice.totalAmount || 0), 0);
+    let estimatedMrr = 0;
 
-    // 3. Assemble merchant rows
-    const merchantRows = merchants.map(m => {
+    const merchantRows = merchants.map((m) => {
       const discount = m.customDiscount || 0;
       const basePrice = m.monthlyPrice || 0;
       const finalPrice = parseFloat((basePrice - (basePrice * discount / 100)).toFixed(2));
 
-      // Calculate trial / expiry context
+      if (m.subscriptionStatus === 'active') {
+        estimatedMrr = billing.round2(estimatedMrr + finalPrice);
+      }
+
       let expiryDate = null;
       if (m.subscriptionStatus === 'trial') {
-        // trial period typically lasts 14 days from trialStartedAt or createdAt
         const start = m.trialStartedAt || m.createdAt;
         const end = new Date(start);
         end.setDate(end.getDate() + 14);
@@ -2867,7 +2894,6 @@ exports.getBillingRevenueStatus = async (req, res) => {
         expiryDate = m.subscriptionEndDate;
       }
 
-      // Determine billing status
       let billingStatus = 'Inactive';
       if (m.subscriptionStatus === 'active') {
         billingStatus = 'Active';
@@ -2879,29 +2905,41 @@ exports.getBillingRevenueStatus = async (req, res) => {
         billingStatus = 'Expired';
       }
 
+      const idStr = String(m._id);
       return {
         _id: m._id,
         name: m.name,
+        businessName: m.businessName || '',
         email: m.email,
         plan: m.subscriptionPlan || 'free',
         subscriptionStatus: m.subscriptionStatus || 'inactive',
         monthlyAmount: finalPrice,
         expiryDate,
-        billingStatus
+        billingStatus,
+        totalPaid: paidByMerchant.get(idStr) || 0,
+        invoiceCount: countByMerchant.get(idStr) || 0,
+        lastInvoiceDate: lastDateByMerchant.get(idStr) || null
       };
     });
 
-    // 4. Summarize global stats
-    const activeSubs = merchants.filter(m => m.subscriptionStatus === 'active').length;
-    const trialMerchants = merchants.filter(m => m.subscriptionStatus === 'trial').length;
-    const expiredInactive = merchants.filter(m => m.subscriptionStatus === 'inactive' || m.subscriptionStatus === 'cancelled').length;
+    const activeSubs = merchants.filter((m) => m.subscriptionStatus === 'active').length;
+    const trialMerchants = merchants.filter((m) => m.subscriptionStatus === 'trial').length;
+    const expiredInactive = merchants.filter((m) => m.subscriptionStatus === 'inactive' || m.subscriptionStatus === 'cancelled').length;
 
     res.json({
       success: true,
       data: {
         merchants: merchantRows,
+        invoices: allInvoices,
+        businessProfile,
+        states: billing.INDIAN_STATES,
         summary: {
           totalRevenue,
+          estimatedMrr,
+          pendingAmount,
+          pendingCount: pendingInvoices.length,
+          paidInvoicesCount: paidInvoices.length,
+          totalInvoicesCount: allInvoices.length,
           activeSubs,
           trialMerchants,
           expiredInactive

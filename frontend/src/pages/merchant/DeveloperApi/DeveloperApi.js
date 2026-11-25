@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  FaCode, 
-  FaKey, 
-  FaCopy, 
-  FaCheck, 
-  FaExternalLinkAlt, 
-  FaBookOpen, 
-  FaTerminal, 
+import {
+  FaCode,
+  FaKey,
+  FaCopy,
+  FaCheck,
+  FaExternalLinkAlt,
+  FaBookOpen,
+  FaTerminal,
   FaServer,
   FaSearch,
   FaSync,
@@ -15,7 +15,8 @@ import {
   FaCheckCircle,
   FaExclamationCircle,
   FaWhatsapp,
-  FaBolt
+  FaBolt,
+  FaSave
 } from 'react-icons/fa';
 import api from '../../../services/api';
 import './DeveloperApi.css';
@@ -28,26 +29,25 @@ const getApiList = (apiKey) => [
     method: 'POST',
     path: '/api/v1/messages/send',
     fullUrl: 'https://kwickbot.in/api/v1/messages/send',
-    purpose: 'Universal API for third-party CRMs (Zoho, HubSpot, Salesforce, Custom PHP/Node.js) to send approved WhatsApp templates, direct text messages, or media.',
-    gujaratiDescription: 'CRM કે વેબસાઈટમાંથી WhatsApp Template મેસેજ (Variables સાથે) અથવા સામાન્ય Text મેસેજ ડાયરેક્ટ ગ્રાહકને મોકલવા માટે.',
+    purpose: 'Universal API for third-party CRMs (Zoho, HubSpot, Salesforce, Custom PHP/Node.js) to send approved WhatsApp templates (with variables), direct text messages, or media directly to customers.',
     authRequired: true,
     headers: {
       'X-KWICKBOT-API-KEY': apiKey || '<YOUR_KWICKBOT_API_KEY>',
       'Content-Type': 'application/json'
     },
     requestBody: {
-      to: "919876543210",
-      type: "template",
-      templateName: "order_confirmation_v1",
-      language: "en",
-      bodyVariables: ["Samarth Chavda", "ORD-88492", "₹1,499"]
+      to: '919876543210',
+      type: 'template',
+      templateName: 'order_confirmation_v1',
+      language: 'en',
+      bodyVariables: ['Samarth Chavda', 'ORD-88492', '₹1,499']
     },
     responseExample: {
       success: true,
-      messageId: "wamid.HBgMOTE5ODc2NTQzMjEwFQIAERgSQTIzOTQ4NzM5NDg3MzkwOAA=",
-      status: "sent",
-      recipientPhone: "919876543210",
-      type: "template"
+      messageId: 'wamid.HBgMOTE5ODc2NTQzMjEwFQIAERgSQTIzOTQ4NzM5NDg3MzkwOAA=',
+      status: 'sent',
+      recipientPhone: '919876543210',
+      type: 'template'
     },
     codeSnippets: {
       curl: `curl -X POST https://kwickbot.in/api/v1/messages/send \\
@@ -123,8 +123,7 @@ echo $response;`
     method: 'GET',
     path: '/api/v1/whatsapp/templates',
     fullUrl: 'https://kwickbot.in/api/v1/whatsapp/templates',
-    purpose: 'Retrieve all approved WhatsApp Message Templates directly from Meta Graph API with variable placeholders, category, and button types.',
-    gujaratiDescription: 'તમારા Meta WhatsApp એકાઉન્ટમાંથી બધા મંજૂર થયેલા Templates (Order Alert, OTP, Discount) ના નામ અને Variables ની લિસ્ટ મેળવવા માટે.',
+    purpose: 'Retrieve all approved WhatsApp Message Templates directly from Meta Graph API, including variable placeholders, categories, and button types.',
     authRequired: true,
     headers: {
       'X-KWICKBOT-API-KEY': apiKey || '<YOUR_KWICKBOT_API_KEY>'
@@ -135,12 +134,12 @@ echo $response;`
       total: 2,
       templates: [
         {
-          id: "123456789012345",
-          name: "order_confirmation_v1",
-          status: "APPROVED",
-          category: "UTILITY",
-          language: "en",
-          bodyText: "Hello {{1}}, your order {{2}} for amount {{3}} is confirmed!",
+          id: '123456789012345',
+          name: 'order_confirmation_v1',
+          status: 'APPROVED',
+          category: 'UTILITY',
+          language: 'en',
+          bodyText: 'Hello {{1}}, your order {{2}} for amount {{3}} is confirmed!',
           bodyVariablesCount: 3,
           buttons: []
         }
@@ -182,8 +181,7 @@ echo $response;`
     method: 'GET',
     path: '/api/v1/whatsapp/account',
     fullUrl: 'https://kwickbot.in/api/v1/whatsapp/account',
-    purpose: 'Retrieve the verified display name, quality rating, and status of the connected WhatsApp Business Phone Number.',
-    gujaratiDescription: 'કનેક્ટેડ WhatsApp બિઝનેસ નંબરનું વેરિફાઇડ નામ, Quality Rating અને WABA ID ચેક કરવા માટે.',
+    purpose: 'Retrieve the verified display name, quality rating, WABA ID, and connection status of the linked WhatsApp Business Phone Number.',
     authRequired: true,
     headers: {
       'X-KWICKBOT-API-KEY': apiKey || '<YOUR_KWICKBOT_API_KEY>'
@@ -192,13 +190,13 @@ echo $response;`
     responseExample: {
       success: true,
       account: {
-        phoneNumberId: "109283746592019",
-        businessAccountId: "987654321098765",
-        displayPhoneNumber: "+91 98765 43210",
-        verifiedName: "Kwickbot Store",
-        qualityRating: "GREEN",
-        codeVerificationStatus: "VERIFIED",
-        status: "CONNECTED"
+        phoneNumberId: '109283746592019',
+        businessAccountId: '987654321098765',
+        displayPhoneNumber: '+91 98765 43210',
+        verifiedName: 'Kwickbot Store',
+        qualityRating: 'GREEN',
+        codeVerificationStatus: 'VERIFIED',
+        status: 'CONNECTED'
       }
     },
     codeSnippets: {
@@ -232,8 +230,7 @@ curl_close($curl);`
     method: 'POST',
     path: 'https://your-crm.com/api/kwickbot-webhook',
     fullUrl: 'Outbound HTTP POST to Client Webhook Callback URL',
-    purpose: 'Kwickbot pushes real-time delivery status updates (delivered, read, failed) and incoming customer replies back to your server with HMAC-SHA256 signature.',
-    gujaratiDescription: 'જ્યારે ગ્રાહક WhatsApp પર Reply આપે અથવા મેસેજ Delivered/Read (Blue Tick) થાય ત્યારે Kwickbot તમારા સર્વર પર Instant Alert મોકલે છે.',
+    purpose: 'Kwickbot pushes real-time delivery status updates (delivered, read, failed) and incoming customer replies back to your server signed with HMAC-SHA256.',
     authRequired: false,
     headers: {
       'Content-Type': 'application/json',
@@ -241,13 +238,13 @@ curl_close($curl);`
       'X-Kwickbot-Event': 'messages.received'
     },
     requestBody: {
-      event: "messages.received",
+      event: 'messages.received',
       timestamp: 1728825600,
-      messageId: "wamid.HBgMOTE5ODc2NTQzMjEw...",
-      senderPhone: "919876543210",
-      senderName: "Rahul Sharma",
-      type: "text",
-      text: "Hello! Where is my order?"
+      messageId: 'wamid.HBgMOTE5ODc2NTQzMjEw...',
+      senderPhone: '919876543210',
+      senderName: 'Rahul Sharma',
+      type: 'text',
+      text: 'Hello! Where is my order?'
     },
     responseExample: {
       status: 200,
@@ -268,14 +265,14 @@ const crypto = require('crypto');
 
 app.post('/api/kwickbot-webhook', (req, res) => {
   const signature = req.headers['x-kwickbot-signature'];
-  const { event, senderPhone, text, status } = req.body;
-  
+  const { event, senderPhone, text } = req.body;
+
   if (event === 'messages.received') {
-    console.log(\`📩 Inbound WhatsApp message from \${senderPhone}: \${text}\`);
+    console.log(\`Inbound WhatsApp message from \${senderPhone}: \${text}\`);
   } else if (event === 'messages.delivered') {
-    console.log(\`✅ Message delivered to \${req.body.recipientPhone}\`);
+    console.log(\`Message delivered to \${req.body.recipientPhone}\`);
   }
-  
+
   res.status(200).json({ received: true });
 });`,
       python: `# Flask receiver in your CRM:
@@ -309,13 +306,14 @@ function DeveloperApi() {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedLanguage, setSelectedLanguage] = useState({});
   const [copiedId, setCopiedId] = useState(null);
-  
+
   // API Key State
   const [apiKey, setApiKey] = useState('Loading...');
   const [showApiKey, setShowApiKey] = useState(false);
   const [showKeyModal, setShowKeyModal] = useState(false);
   const [customKeyInput, setCustomKeyInput] = useState('');
   const [keyLoading, setKeyLoading] = useState(false);
+  const [keyNotice, setKeyNotice] = useState(null);
 
   // Webhook Configuration State
   const [webhookUrl, setWebhookUrl] = useState('');
@@ -331,12 +329,17 @@ function DeveloperApi() {
   const [webhookSaving, setWebhookSaving] = useState(false);
   const [webhookTesting, setWebhookTesting] = useState(false);
   const [testResult, setTestResult] = useState(null);
-  const [saveSuccessMsg, setSaveSuccessMsg] = useState('');
+  const [webhookNotice, setWebhookNotice] = useState(null);
 
   useEffect(() => {
     fetchApiKey();
     fetchWebhookConfig();
   }, []);
+
+  const showTemporaryNotice = (setter, type, text) => {
+    setter({ type, text });
+    setTimeout(() => setter(null), 4000);
+  };
 
   const fetchApiKey = async () => {
     try {
@@ -346,6 +349,7 @@ function DeveloperApi() {
       }
     } catch (err) {
       console.error('Error fetching API key:', err);
+      setApiKey('');
     }
   };
 
@@ -374,12 +378,12 @@ function DeveloperApi() {
       const res = await api.post('/auth/api-key/regenerate', payload);
       if (res.data.success && res.data.apiKey) {
         setApiKey(res.data.apiKey);
-        alert(res.data.message || 'API Key updated successfully!');
+        showTemporaryNotice(setKeyNotice, 'success', res.data.message || 'API key updated successfully.');
         setShowKeyModal(false);
         setCustomKeyInput('');
       }
     } catch (err) {
-      alert(err.response?.data?.error || 'Failed to update API Key');
+      showTemporaryNotice(setKeyNotice, 'error', err.response?.data?.error || 'Failed to update API key.');
     } finally {
       setKeyLoading(false);
     }
@@ -388,7 +392,7 @@ function DeveloperApi() {
   const handleSaveWebhookConfig = async () => {
     try {
       setWebhookSaving(true);
-      setSaveSuccessMsg('');
+      setWebhookNotice(null);
       const res = await api.post('/v1/developer/webhook-config', {
         webhookUrl,
         events: subscribedEvents,
@@ -396,21 +400,20 @@ function DeveloperApi() {
       });
 
       if (res.data.success) {
-        setSaveSuccessMsg('Webhook settings saved successfully!');
+        showTemporaryNotice(setWebhookNotice, 'success', 'Webhook settings saved.');
         if (res.data.webhookSecret) {
           setWebhookSecret(res.data.webhookSecret);
         }
-        setTimeout(() => setSaveSuccessMsg(''), 4000);
       }
     } catch (err) {
-      alert(err.response?.data?.error || 'Failed to save webhook settings');
+      showTemporaryNotice(setWebhookNotice, 'error', err.response?.data?.error || 'Failed to save webhook settings.');
     } finally {
       setWebhookSaving(false);
     }
   };
 
   const handleRotateSecret = async () => {
-    if (!window.confirm('Are you sure you want to rotate your Webhook Secret? Any external signature verification will need the new secret.')) {
+    if (!window.confirm('Rotate your Webhook Signing Secret? Any external signature verification will need the new secret.')) {
       return;
     }
 
@@ -418,16 +421,16 @@ function DeveloperApi() {
       const res = await api.post('/v1/developer/rotate-secret');
       if (res.data.success && res.data.webhookSecret) {
         setWebhookSecret(res.data.webhookSecret);
-        alert('Webhook Secret rotated successfully!');
+        showTemporaryNotice(setWebhookNotice, 'success', 'Webhook signing secret rotated.');
       }
     } catch (err) {
-      alert(err.response?.data?.error || 'Failed to rotate secret');
+      showTemporaryNotice(setWebhookNotice, 'error', err.response?.data?.error || 'Failed to rotate secret.');
     }
   };
 
   const handleTestWebhookPing = async () => {
     if (!webhookUrl.trim()) {
-      alert('Please enter a Webhook URL before testing');
+      showTemporaryNotice(setWebhookNotice, 'error', 'Enter a Destination Webhook URL before sending a test.');
       return;
     }
 
@@ -437,7 +440,6 @@ function DeveloperApi() {
       const res = await api.post('/v1/developer/test-webhook', {
         webhookUrl: webhookUrl.trim()
       });
-
       setTestResult(res.data);
     } catch (err) {
       setTestResult({
@@ -451,25 +453,28 @@ function DeveloperApi() {
 
   const handleToggleEvent = (eventName) => {
     if (subscribedEvents.includes(eventName)) {
-      setSubscribedEvents(subscribedEvents.filter(e => e !== eventName));
+      setSubscribedEvents(subscribedEvents.filter((e) => e !== eventName));
     } else {
       setSubscribedEvents([...subscribedEvents, eventName]);
     }
   };
 
   const handleCopy = (text, id) => {
+    if (!text) return;
     navigator.clipboard.writeText(text);
     setCopiedId(id);
     setTimeout(() => setCopiedId(null), 2000);
   };
 
-  const apiList = getApiList(apiKey === 'Loading...' ? '' : apiKey);
-  const filteredApis = apiList.filter(apiItem => {
+  const effectiveKey = apiKey === 'Loading...' ? '' : apiKey;
+  const apiList = getApiList(effectiveKey);
+  const filteredApis = apiList.filter((apiItem) => {
+    const query = searchTerm.toLowerCase();
     const matchesTab = activeTab === 'all' || apiItem.category === activeTab;
-    const matchesSearch = apiItem.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          apiItem.path.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          apiItem.purpose.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          apiItem.gujaratiDescription.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesSearch =
+      apiItem.title.toLowerCase().includes(query) ||
+      apiItem.path.toLowerCase().includes(query) ||
+      apiItem.purpose.toLowerCase().includes(query);
     return matchesTab && matchesSearch;
   });
 
@@ -477,118 +482,133 @@ function DeveloperApi() {
     <div className="developer-api-container">
       {/* Header Banner */}
       <div className="dev-header">
-        <div className="dev-header-content">
-          <div className="dev-badge">
-            <FaCode /> Developer API & Webhooks Hub
-          </div>
-          <h1>Developer REST API & Webhook Integration Platform</h1>
-          <p>
-            Seamlessly trigger approved WhatsApp Templates, fetch contact templates, send direct messages, and receive real-time webhook delivery updates into your CRM or custom software.
-          </p>
-
-          {/* Quick Info & Action Bar */}
-          <div className="dev-actions-row">
-            <div className="api-key-box">
-              <span className="key-label"><FaKey /> Your API Secret Key:</span>
-              <code className="key-value">
-                {showApiKey ? apiKey : (apiKey === 'Loading...' ? 'Loading...' : '••••••••••••••••••••••••••••••••••••••••••••')}
-              </code>
-              <button 
-                className="btn-toggle-key"
-                onClick={() => setShowApiKey(!showApiKey)}
-              >
-                {showApiKey ? 'Hide' : 'Reveal'}
-              </button>
-              <button 
-                className="btn-copy-key"
-                onClick={() => handleCopy(apiKey, 'main_api_key')}
-              >
-                {copiedId === 'main_api_key' ? <FaCheck style={{ color: '#10b981' }} /> : <FaCopy />}
-                {copiedId === 'main_api_key' ? 'Copied!' : 'Copy Key'}
-              </button>
-              <button 
-                className="btn-toggle-key"
-                style={{ background: '#0284c7' }}
-                onClick={() => setShowKeyModal(true)}
-              >
-                <FaEdit /> Change / Regenerate Key
-              </button>
+        <div className="dev-header-top">
+          <div>
+            <div className="dev-badge">
+              <FaCode /> Developer API & Webhooks Hub
             </div>
+            <h1>Developer REST API & Webhook Integration</h1>
+            <p>
+              Trigger approved WhatsApp templates, fetch templates and account details, send direct messages, and receive real-time webhook delivery updates in your CRM or custom backend.
+            </p>
+          </div>
+          <a
+            href="https://kwickbot.in/api/docs"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="btn-swagger"
+          >
+            <FaBookOpen /> OpenAPI Docs <FaExternalLinkAlt style={{ fontSize: '11px' }} />
+          </a>
+        </div>
 
-            <a 
-              href="https://kwickbot.in/api/docs" 
-              target="_blank" 
-              rel="noopener noreferrer" 
-              className="btn-swagger"
+        {/* API Key Action Bar */}
+        <div className="dev-actions-row">
+          <div className="api-key-box">
+            <span className="key-label"><FaKey /> API Secret Key</span>
+            <code className="key-value">
+              {showApiKey
+                ? (apiKey || 'Not generated')
+                : (apiKey === 'Loading...' ? 'Loading...' : '••••••••••••••••••••••••••••••••••••')}
+            </code>
+          </div>
+          <div className="api-key-controls">
+            <button
+              type="button"
+              className="btn-dev-action"
+              onClick={() => setShowApiKey(!showApiKey)}
             >
-              <FaBookOpen /> Open Swagger OpenAPI Docs <FaExternalLinkAlt style={{ fontSize: '12px' }} />
-            </a>
+              {showApiKey ? 'Hide' : 'Reveal'}
+            </button>
+            <button
+              type="button"
+              className="btn-dev-action"
+              onClick={() => handleCopy(effectiveKey, 'main_api_key')}
+              disabled={!effectiveKey}
+            >
+              {copiedId === 'main_api_key' ? <FaCheck className="icon-success" /> : <FaCopy />}
+              {copiedId === 'main_api_key' ? 'Copied' : 'Copy Key'}
+            </button>
+            <button
+              type="button"
+              className="btn-dev-action btn-dev-primary"
+              onClick={() => setShowKeyModal(true)}
+            >
+              <FaEdit /> Change / Regenerate
+            </button>
           </div>
         </div>
+
+        {keyNotice && (
+          <div className={`dev-inline-notice ${keyNotice.type}`}>
+            {keyNotice.type === 'success' ? <FaCheckCircle /> : <FaExclamationCircle />}
+            <span>{keyNotice.text}</span>
+          </div>
+        )}
       </div>
 
-      {/* OUTBOUND WEBHOOK CONFIGURATION CARD */}
+      {/* Outbound Webhook Configuration Card */}
       <div className="webhook-settings-card">
         <div className="webhook-card-header">
           <div className="webhook-header-title">
-            <FaBolt style={{ color: '#f59e0b', fontSize: '20px' }} />
+            <span className="webhook-icon-wrap">
+              <FaBolt />
+            </span>
             <div>
-              <h3>Outbound Webhook Relay Configuration</h3>
-              <p>Configure where Kwickbot should send real-time delivery statuses and incoming customer WhatsApp replies.</p>
+              <h3>Outbound Webhook Relay</h3>
+              <p>Configure where Kwickbot delivers real-time message status updates and incoming customer replies.</p>
             </div>
           </div>
           <div className="webhook-status-toggle">
             <label className="toggle-switch">
-              <input 
-                type="checkbox" 
-                checked={webhookActive} 
-                onChange={(e) => setWebhookActive(e.target.checked)} 
+              <input
+                type="checkbox"
+                checked={webhookActive}
+                onChange={(e) => setWebhookActive(e.target.checked)}
               />
               <span className="toggle-slider"></span>
             </label>
-            <span style={{ fontSize: '13px', fontWeight: '600', color: webhookActive ? '#10b981' : '#94a3b8' }}>
+            <span className={`webhook-status-text ${webhookActive ? 'active' : ''}`}>
               {webhookActive ? 'Webhook Active' : 'Webhook Paused'}
             </span>
           </div>
         </div>
 
         <div className="webhook-form-grid">
-          {/* Webhook URL Input */}
-          <div className="form-group url-group">
+          <div className="form-group">
             <label>Destination Webhook URL (HTTPS recommended)</label>
-            <div className="input-with-button">
-              <input 
-                type="url" 
-                placeholder="https://your-crm.com/api/whatsapp-webhook" 
-                value={webhookUrl}
-                onChange={(e) => setWebhookUrl(e.target.value)}
-              />
-            </div>
+            <input
+              type="url"
+              placeholder="https://your-crm.com/api/whatsapp-webhook"
+              value={webhookUrl}
+              onChange={(e) => setWebhookUrl(e.target.value)}
+            />
           </div>
 
-          {/* Webhook Secret Key */}
-          <div className="form-group secret-group">
+          <div className="form-group">
             <label>Webhook Signing Secret (HMAC-SHA256)</label>
             <div className="secret-display-box">
               <code>
                 {showSecret ? (webhookSecret || 'whsec_••••••••••••••••••••••••') : '••••••••••••••••••••••••••••••••'}
               </code>
-              <button 
-                type="button" 
+              <button
+                type="button"
                 className="btn-sm-action"
                 onClick={() => setShowSecret(!showSecret)}
               >
                 {showSecret ? 'Hide' : 'Reveal'}
               </button>
-              <button 
-                type="button" 
+              <button
+                type="button"
                 className="btn-sm-action"
                 onClick={() => handleCopy(webhookSecret, 'webhook_secret')}
+                disabled={!webhookSecret}
+                title="Copy Secret"
               >
-                {copiedId === 'webhook_secret' ? <FaCheck style={{ color: '#10b981' }} /> : <FaCopy />}
+                {copiedId === 'webhook_secret' ? <FaCheck className="icon-success" /> : <FaCopy />}
               </button>
-              <button 
-                type="button" 
+              <button
+                type="button"
                 className="btn-sm-action btn-rotate"
                 onClick={handleRotateSecret}
                 title="Rotate Secret"
@@ -599,19 +619,18 @@ function DeveloperApi() {
           </div>
         </div>
 
-        {/* Subscribed Events Checkboxes */}
         <div className="events-selection-row">
-          <label className="events-label">Subscribe to Real-Time Events:</label>
+          <label className="events-label">Subscribe to Real-Time Events</label>
           <div className="event-pills">
             {[
               { id: 'messages.received', label: 'Incoming Messages (Replies)' },
               { id: 'messages.delivered', label: 'Message Delivered' },
               { id: 'messages.read', label: 'Message Read (Blue Tick)' },
               { id: 'messages.failed', label: 'Message Failed' }
-            ].map(ev => (
+            ].map((ev) => (
               <label key={ev.id} className={`event-checkbox-pill ${subscribedEvents.includes(ev.id) ? 'checked' : ''}`}>
-                <input 
-                  type="checkbox" 
+                <input
+                  type="checkbox"
                   checked={subscribedEvents.includes(ev.id)}
                   onChange={() => handleToggleEvent(ev.id)}
                 />
@@ -621,26 +640,28 @@ function DeveloperApi() {
           </div>
         </div>
 
-        {/* Actions & Test Status */}
         <div className="webhook-card-footer">
           <div className="footer-left">
-            <button 
+            <button
+              type="button"
               className="btn-save-webhook"
               onClick={handleSaveWebhookConfig}
               disabled={webhookSaving}
             >
-              {webhookSaving ? 'Saving...' : '💾 Save Webhook Settings'}
+              <FaSave /> {webhookSaving ? 'Saving...' : 'Save Webhook Settings'}
             </button>
-            <button 
+            <button
+              type="button"
               className="btn-test-webhook"
               onClick={handleTestWebhookPing}
               disabled={webhookTesting || !webhookUrl.trim()}
             >
               <FaPaperPlane /> {webhookTesting ? 'Sending Ping...' : 'Send Test Webhook'}
             </button>
-            {saveSuccessMsg && (
-              <span className="save-success-tag">
-                <FaCheckCircle /> {saveSuccessMsg}
+            {webhookNotice && (
+              <span className={`save-notice-tag ${webhookNotice.type}`}>
+                {webhookNotice.type === 'success' ? <FaCheckCircle /> : <FaExclamationCircle />}
+                {webhookNotice.text}
               </span>
             )}
           </div>
@@ -649,10 +670,9 @@ function DeveloperApi() {
             <div className={`ping-result-badge ${testResult.success ? 'ping-success' : 'ping-failed'}`}>
               {testResult.success ? <FaCheckCircle /> : <FaExclamationCircle />}
               <span>
-                {testResult.success 
-                  ? `Ping Succeeded! (Status ${testResult.statusCode} in ${testResult.latencyMs}ms)`
-                  : `Ping Failed: ${testResult.error || 'Server responded with error'}`
-                }
+                {testResult.success
+                  ? `Ping succeeded (HTTP ${testResult.statusCode} in ${testResult.latencyMs}ms)`
+                  : `Ping failed: ${testResult.error || 'Server responded with error'}`}
               </span>
             </div>
           )}
@@ -663,28 +683,31 @@ function DeveloperApi() {
       <div className="dev-controls">
         <div className="dev-search-box">
           <FaSearch className="search-icon" />
-          <input 
-            type="text" 
-            placeholder="Search APIs by endpoint name, description, or Gujarati use case..." 
+          <input
+            type="text"
+            placeholder="Search APIs by endpoint, path, or description..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
         </div>
 
         <div className="dev-tabs">
-          <button 
+          <button
+            type="button"
             className={`tab-item ${activeTab === 'all' ? 'active' : ''}`}
             onClick={() => setActiveTab('all')}
           >
             All APIs ({apiList.length})
           </button>
-          <button 
+          <button
+            type="button"
             className={`tab-item ${activeTab === 'whatsapp' ? 'active' : ''}`}
             onClick={() => setActiveTab('whatsapp')}
           >
             <FaWhatsapp style={{ color: '#25D366' }} /> WhatsApp Messaging & Templates
           </button>
-          <button 
+          <button
+            type="button"
             className={`tab-item ${activeTab === 'webhooks' ? 'active' : ''}`}
             onClick={() => setActiveTab('webhooks')}
           >
@@ -693,20 +716,19 @@ function DeveloperApi() {
         </div>
       </div>
 
-      {/* API Cards Grid */}
+      {/* API Cards */}
       <div className="api-cards-grid">
         {filteredApis.length === 0 ? (
           <div className="no-apis-card">
-            <FaServer style={{ fontSize: '40px', color: '#64748b' }} />
+            <FaServer style={{ fontSize: '36px', color: 'var(--text-muted)' }} />
             <h3>No APIs match your search</h3>
-            <p>Try searching with another keyword like "send", "template", or "webhook".</p>
+            <p>Try searching for keywords like "send", "template", "account", or "webhook".</p>
           </div>
         ) : (
           filteredApis.map((item) => {
             const currentLang = selectedLanguage[item.id] || 'curl';
             return (
               <div key={item.id} className="api-card">
-                {/* Card Top Banner */}
                 <div className="api-card-header">
                   <div className="endpoint-title-row">
                     <span className={`method-badge ${item.method.toLowerCase()}`}>
@@ -717,14 +739,10 @@ function DeveloperApi() {
                   <h3 className="api-title">{item.title}</h3>
                 </div>
 
-                {/* Card Description */}
                 <div className="api-card-body">
                   <div className="description-box">
                     <p className="english-desc">
                       <strong>Use Case:</strong> {item.purpose}
-                    </p>
-                    <p className="gujarati-desc">
-                      💡 <strong>ગુજરાતી માં ઉપયોગ:</strong> {item.gujaratiDescription}
                     </p>
                   </div>
 
@@ -741,22 +759,23 @@ function DeveloperApi() {
                     </div>
                   </div>
 
-                  {/* Request Body JSON */}
-                  {item.requestBody && (
+                  {/* Payload & Response Grid */}
+                  <div className={item.requestBody ? 'payload-grid' : 'payload-single'}>
+                    {item.requestBody && (
+                      <div className="payload-section">
+                        <h4>Request Payload (JSON)</h4>
+                        <pre className="code-block json-view">
+                          <code>{JSON.stringify(item.requestBody, null, 2)}</code>
+                        </pre>
+                      </div>
+                    )}
+
                     <div className="payload-section">
-                      <h4>Request Payload (JSON)</h4>
-                      <pre className="code-block json-view">
-                        <code>{JSON.stringify(item.requestBody, null, 2)}</code>
+                      <h4>Success Response (HTTP 200 OK)</h4>
+                      <pre className="code-block json-view response-view">
+                        <code>{JSON.stringify(item.responseExample, null, 2)}</code>
                       </pre>
                     </div>
-                  )}
-
-                  {/* Response Example */}
-                  <div className="payload-section">
-                    <h4>Success Response (HTTP 200 OK)</h4>
-                    <pre className="code-block json-view response-view">
-                      <code>{JSON.stringify(item.responseExample, null, 2)}</code>
-                    </pre>
                   </div>
 
                   {/* Code Snippets Section */}
@@ -767,8 +786,9 @@ function DeveloperApi() {
                         {['curl', 'javascript', 'python', 'php'].map((lang) => (
                           <button
                             key={lang}
+                            type="button"
                             className={`lang-tab ${currentLang === lang ? 'active' : ''}`}
-                            onClick={() => setSelectedLanguage(prev => ({ ...prev, [item.id]: lang }))}
+                            onClick={() => setSelectedLanguage((prev) => ({ ...prev, [item.id]: lang }))}
                           >
                             {lang.toUpperCase()}
                           </button>
@@ -777,16 +797,17 @@ function DeveloperApi() {
                     </div>
 
                     <div className="code-container">
-                      <pre className="code-block">
-                        <code>{item.codeSnippets[currentLang]}</code>
-                      </pre>
-                      <button 
+                      <button
+                        type="button"
                         className="btn-copy-code"
                         onClick={() => handleCopy(item.codeSnippets[currentLang], `${item.id}_${currentLang}`)}
                       >
-                        {copiedId === `${item.id}_${currentLang}` ? <FaCheck style={{ color: '#10b981' }} /> : <FaCopy />}
+                        {copiedId === `${item.id}_${currentLang}` ? <FaCheck className="icon-success" /> : <FaCopy />}
                         {copiedId === `${item.id}_${currentLang}` ? 'Copied' : 'Copy'}
                       </button>
+                      <pre className="code-block snippet-block">
+                        <code>{item.codeSnippets[currentLang]}</code>
+                      </pre>
                     </div>
                   </div>
                 </div>
@@ -798,92 +819,43 @@ function DeveloperApi() {
 
       {/* Modal for Setting / Changing Custom API Key */}
       {showKeyModal && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          background: 'rgba(0, 0, 0, 0.75)',
-          backdropFilter: 'blur(4px)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 9999
-        }}>
-          <div style={{
-            background: '#0f172a',
-            border: '1px solid #334155',
-            borderRadius: '16px',
-            padding: '24px',
-            maxWidth: '480px',
-            width: '90%',
-            color: '#f8fafc'
-          }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-              <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '700' }}><FaKey style={{ color: '#0284c7' }} /> Update Secret API Key</h3>
-              <button onClick={() => setShowKeyModal(false)} style={{ background: 'none', border: 'none', color: '#94a3b8', fontSize: '18px', cursor: 'pointer' }}>✕</button>
+        <div className="dev-modal-backdrop">
+          <div className="dev-modal">
+            <div className="dev-modal-header">
+              <h3><FaKey style={{ color: '#38bdf8' }} /> Update Secret API Key</h3>
+              <button type="button" className="dev-modal-close" onClick={() => setShowKeyModal(false)}>
+                ✕
+              </button>
             </div>
 
-            <p style={{ color: '#94a3b8', fontSize: '13.5px', marginBottom: '20px' }}>
-              તમારો કસ્ટમ <strong>API Key</strong> ટાઈપ કરો અથવા આપમેળે નવો સિક્રેટ કી (Random Secret Key) જનરેટ કરો:
+            <p className="dev-modal-desc">
+              Enter a custom API Key below or auto-generate a new random secret key:
             </p>
 
-            <div style={{ marginBottom: '20px' }}>
-              <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: '#cbd5e1', marginBottom: '6px' }}>Custom API Key Value (Optional)</label>
-              <input 
-                type="text" 
-                placeholder="e.g. kw_live_my_custom_secret_key_123" 
+            <div className="dev-modal-field">
+              <label>Custom API Key Value (Optional)</label>
+              <input
+                type="text"
+                placeholder="e.g. kw_live_my_custom_secret_key_123"
                 value={customKeyInput}
                 onChange={(e) => setCustomKeyInput(e.target.value)}
-                style={{
-                  width: '100%',
-                  padding: '10px 14px',
-                  background: '#020617',
-                  border: '1px solid #334155',
-                  borderRadius: '8px',
-                  color: '#10b981',
-                  fontFamily: 'monospace',
-                  fontSize: '13px',
-                  outline: 'none'
-                }}
               />
             </div>
 
-            <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
-              <button 
+            <div className="dev-modal-actions">
+              <button
+                type="button"
+                className="btn-dev-action"
                 disabled={keyLoading}
                 onClick={() => handleUpdateApiKey()}
-                style={{
-                  background: '#334155',
-                  color: '#ffffff',
-                  border: 'none',
-                  padding: '10px 16px',
-                  borderRadius: '8px',
-                  fontWeight: '600',
-                  fontSize: '13px',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px'
-                }}
               >
                 <FaSync /> Auto-Generate Random Key
               </button>
-
-              <button 
+              <button
+                type="button"
+                className="btn-save-webhook"
                 disabled={keyLoading || !customKeyInput.trim()}
                 onClick={() => handleUpdateApiKey(customKeyInput)}
-                style={{
-                  background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
-                  color: '#ffffff',
-                  border: 'none',
-                  padding: '10px 18px',
-                  borderRadius: '8px',
-                  fontWeight: '600',
-                  fontSize: '13px',
-                  cursor: 'pointer'
-                }}
               >
                 Save Custom Key
               </button>

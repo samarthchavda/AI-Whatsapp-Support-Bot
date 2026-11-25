@@ -1,29 +1,18 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  FaPlug,
   FaSave,
   FaEye,
   FaEyeSlash,
-  FaInfoCircle,
   FaTrash,
   FaCopy,
   FaWhatsapp,
-  FaUserCheck,
-  FaFileInvoice,
-  FaRobot,
-  FaEnvelope,
-  FaCreditCard,
-  FaShieldAlt,
   FaBolt,
   FaUndo,
   FaPaperPlane,
-  FaLock,
-  FaCheckCircle,
-  FaExclamationTriangle
+  FaChevronRight
 } from 'react-icons/fa';
 import api from '../../../services/api';
-import '../Dashboard/SuperAdmin.css';
 import './SuperAdminSettings.css';
 
 const BASE_URL =
@@ -31,10 +20,10 @@ const BASE_URL =
   (window.location.hostname === 'localhost' ? 'http://localhost:5001' : window.location.origin);
 
 const TABS = [
-  { id: 'ai', label: 'AI Engine', icon: FaRobot },
-  { id: 'smtp', label: 'Email & SMTP', icon: FaEnvelope },
-  { id: 'meta', label: 'Meta & Webhooks', icon: FaWhatsapp },
-  { id: 'payments', label: 'Payments & GST', icon: FaCreditCard }
+  { id: 'ai', label: 'AI Engine' },
+  { id: 'smtp', label: 'Email & SMTP' },
+  { id: 'meta', label: 'Meta & Webhooks' },
+  { id: 'payments', label: 'Payments & GST' }
 ];
 
 const GEMINI_MODEL_OPTIONS = [
@@ -116,17 +105,27 @@ const DEFAULT_BOOTSTRAP_KEYS = [
   'SUPER_ADMIN_API_KEY'
 ];
 
-function SourceBadge({ source }) {
+function StatusTag({ source }) {
   if (source === 'db') {
-    return <span className="source-pill source-db">● Saved in DB</span>;
+    return (
+      <span className="cfg-source cfg-source-db">
+        <span className="cfg-dot" />
+        Saved in DB
+      </span>
+    );
   }
   if (source === 'env') {
-    return <span className="source-pill source-env">● Active via .env</span>;
+    return (
+      <span className="cfg-source cfg-source-env">
+        <span className="cfg-dot" />
+        Via .env
+      </span>
+    );
   }
   if (source === 'default') {
-    return <span className="source-pill source-default">Default</span>;
+    return <span className="cfg-source">Default</span>;
   }
-  return <span className="source-pill source-unset">Not set</span>;
+  return <span className="cfg-source">Not set</span>;
 }
 
 function getInitialTab() {
@@ -139,25 +138,25 @@ function SuperAdminSettings() {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState(getInitialTab);
 
-  // Razorpay state (preserved cleanly)
+  // Razorpay credentials state
   const [formData, setFormData] = useState({
     razorpay_key_id: '',
     razorpay_key_secret: ''
   });
   const [hasRazorpayKeys, setHasRazorpayKeys] = useState(false);
 
-  // Dynamic integration fields
+  // Dynamic integrations state
   const [integrations, setIntegrations] = useState({});
   const [sources, setSources] = useState({});
   const [envDefaults, setEnvDefaults] = useState({});
   const [bootstrapEnvKeys, setBootstrapEnvKeys] = useState(DEFAULT_BOOTSTRAP_KEYS);
 
-  // Visibility toggles for secret inputs
+  // Secret field visibility toggles
   const [revealed, setRevealed] = useState({});
   const [showRazorpayKey, setShowRazorpayKey] = useState(false);
   const [showRazorpaySecret, setShowRazorpaySecret] = useState(false);
 
-  // Super Admin WhatsApp Connected state
+  // Super Admin WhatsApp connection
   const [superAdminWhatsApp, setSuperAdminWhatsApp] = useState({
     connected: false,
     phoneNumber: null,
@@ -166,14 +165,14 @@ function SuperAdminSettings() {
     connectedAt: null
   });
 
-  // Invoice Business Profile state (preserved cleanly)
+  // Invoice business profile
   const [invoiceProfile, setInvoiceProfile] = useState(null);
   const [invoiceStates, setInvoiceStates] = useState([]);
   const [savingInvoiceProfile, setSavingInvoiceProfile] = useState(false);
   const [invoiceProfileMsg, setInvoiceProfileMsg] = useState(null);
   const [previewingInvoice, setPreviewingInvoice] = useState(false);
 
-  // UI & action state
+  // UI feedback
   const [copied, setCopied] = useState(false);
   const [loading, setLoading] = useState(true);
   const [embeddedLoading, setEmbeddedLoading] = useState(false);
@@ -181,11 +180,8 @@ function SuperAdminSettings() {
   const [savingRazorpay, setSavingRazorpay] = useState(false);
   const [testingAction, setTestingAction] = useState('');
   const [testEmailAddress, setTestEmailAddress] = useState('');
-  const [testResult, setTestResult] = useState(null);
-  const [successMsg, setSuccessMsg] = useState('');
-  const [errorMsg, setErrorMsg] = useState('');
+  const [statusMessage, setStatusMessage] = useState(null);
 
-  // Protect route
   useEffect(() => {
     const storedAdmin = localStorage.getItem('admin');
     const admin = storedAdmin ? JSON.parse(storedAdmin) : null;
@@ -197,7 +193,6 @@ function SuperAdminSettings() {
   const fetchSettings = useCallback(async (silent = false) => {
     try {
       if (!silent) setLoading(true);
-      if (!silent) setErrorMsg('');
       const response = await api.get('/super-admin/settings?includeIntegrations=1');
       if (response.data?.success) {
         const settings = response.data.data || {};
@@ -235,20 +230,20 @@ function SuperAdminSettings() {
 
         if (settings.invoice_business_profile) setInvoiceProfile(settings.invoice_business_profile);
         if (Array.isArray(settings.invoice_states)) setInvoiceStates(settings.invoice_states);
-        if (settings.superAdminWhatsApp) {
-          setSuperAdminWhatsApp(settings.superAdminWhatsApp);
-        }
-        if (!testEmailAddress && (mergedFields.admin_email || mergedFields.smtp_user)) {
-          setTestEmailAddress(mergedFields.admin_email || mergedFields.smtp_user);
-        }
+        if (settings.superAdminWhatsApp) setSuperAdminWhatsApp(settings.superAdminWhatsApp);
+        setTestEmailAddress((prev) => prev || mergedFields.admin_email || mergedFields.smtp_user || '');
       }
     } catch (err) {
-      console.error('Error fetching settings:', err);
-      if (!silent) setErrorMsg('Failed to load system settings. Please try again.');
+      if (!silent) {
+        setStatusMessage({
+          type: 'error',
+          text: 'Could not load settings. Reload the page or check backend connectivity.'
+        });
+      }
     } finally {
       if (!silent) setLoading(false);
     }
-  }, [testEmailAddress]);
+  }, []);
 
   useEffect(() => {
     fetchSettings();
@@ -256,13 +251,10 @@ function SuperAdminSettings() {
 
   const selectTab = (tabId) => {
     setActiveTab(tabId);
-    setTestResult(null);
-    setErrorMsg('');
-    setSuccessMsg('');
+    setStatusMessage(null);
     window.history.replaceState(null, '', `${window.location.pathname}#${tabId}`);
   };
 
-  // Exchange Meta OAuth auth code for Super Admin Embedded Signup
   const exchangeAuthCode = useCallback(async (code) => {
     try {
       setEmbeddedLoading(true);
@@ -294,21 +286,27 @@ function SuperAdminSettings() {
 
       const data = await res.json();
       if (data.success) {
-        setSuccessMsg('Super Admin WhatsApp Business connected successfully via Meta Embedded Signup!');
+        setStatusMessage({
+          type: 'success',
+          text: 'Super Admin WhatsApp Business connected via Meta Embedded Signup.'
+        });
         await fetchSettings(true);
-        setTimeout(() => setSuccessMsg(''), 6000);
       } else {
-        setErrorMsg(data.error || 'Failed to connect Super Admin WhatsApp');
+        setStatusMessage({
+          type: 'error',
+          text: data.error || 'Failed to connect Super Admin WhatsApp'
+        });
       }
     } catch (err) {
-      console.error('Super Admin exchange error:', err);
-      setErrorMsg(err.message || 'Failed to exchange credentials with backend');
+      setStatusMessage({
+        type: 'error',
+        text: err.message || 'Failed to exchange credentials with backend'
+      });
     } finally {
       setEmbeddedLoading(false);
     }
   }, [fetchSettings]);
 
-  // Handle URL query parameters (?code=xxx) if redirected back from Meta OAuth
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     const codeParam = urlParams.get('code');
@@ -320,7 +318,6 @@ function SuperAdminSettings() {
     }
   }, [exchangeAuthCode]);
 
-  // Initialize Meta SDK dynamically
   useEffect(() => {
     const activeMetaAppId =
       integrations.meta_app_id || envDefaults.meta_app_id || process.env.REACT_APP_META_APP_ID || '2242808243238982';
@@ -349,14 +346,12 @@ function SuperAdminSettings() {
       if (event.origin.includes('facebook.com') || event.origin.includes('meta.com')) {
         try {
           const data = typeof event.data === 'string' ? JSON.parse(event.data) : event.data;
-          if (data && data.type === 'WA_EMBEDDED_SIGNUP') {
-            if (data.event === 'FINISH' && data.data) {
-              if (data.data.waba_id) window.__metaWabaId = data.data.waba_id;
-              if (data.data.phone_number_id) window.__metaPhoneNumberId = data.data.phone_number_id;
-            }
+          if (data && data.type === 'WA_EMBEDDED_SIGNUP' && data.event === 'FINISH' && data.data) {
+            if (data.data.waba_id) window.__metaWabaId = data.data.waba_id;
+            if (data.data.phone_number_id) window.__metaPhoneNumberId = data.data.phone_number_id;
           }
         } catch (err) {
-          // ignore non-JSON postMessage frames
+          // ignore cross-origin non-JSON payloads
         }
       }
     };
@@ -385,7 +380,7 @@ function SuperAdminSettings() {
 
   const handleLaunchEmbeddedSignup = () => {
     setEmbeddedLoading(true);
-    setErrorMsg('');
+    setStatusMessage(null);
 
     const appId =
       integrations.meta_app_id ||
@@ -433,7 +428,10 @@ function SuperAdminSettings() {
         `width=${width},height=${height},left=${left},top=${top},scrollbars=yes,status=yes`
       );
       if (!popup || popup.closed || typeof popup.closed === 'undefined') {
-        setErrorMsg('Pop-up window was blocked by your browser. Please allow pop-ups and try again.');
+        setStatusMessage({
+          type: 'error',
+          text: 'Pop-up window blocked by browser. Allow pop-ups and try again.'
+        });
         setEmbeddedLoading(false);
       } else {
         const checkPopupInterval = setInterval(() => {
@@ -459,17 +457,19 @@ function SuperAdminSettings() {
   };
 
   const handleDisconnectSuperAdmin = async () => {
-    if (!window.confirm('Are you sure you want to disconnect the Super Admin WhatsApp account?')) {
+    if (!window.confirm('Disconnect the Super Admin WhatsApp account?')) {
       return;
     }
     try {
       setLoading(true);
       await api.post('/webhook/disconnect');
-      setSuccessMsg('Super Admin WhatsApp account disconnected successfully.');
+      setStatusMessage({ type: 'success', text: 'Super Admin WhatsApp account disconnected.' });
       await fetchSettings(true);
-      setTimeout(() => setSuccessMsg(''), 5000);
     } catch (err) {
-      setErrorMsg(err.response?.data?.error || 'Failed to disconnect WhatsApp account');
+      setStatusMessage({
+        type: 'error',
+        text: err.response?.data?.error || 'Failed to disconnect WhatsApp account'
+      });
     } finally {
       setLoading(false);
     }
@@ -491,7 +491,6 @@ function SuperAdminSettings() {
     for (const key of keys) {
       const val = integrations[key];
       if (SECRET_KEYS.has(key)) {
-        // Leave existing encrypted DB secret or .env fallback untouched unless user entered a replacement
         if (val && val !== '******' && String(val).trim() !== '') {
           payload[key] = String(val).trim();
         }
@@ -502,18 +501,21 @@ function SuperAdminSettings() {
 
     try {
       setSavingTab(tabId);
-      setErrorMsg('');
-      setSuccessMsg('');
-      setTestResult(null);
+      setStatusMessage(null);
       const res = await api.post('/super-admin/settings', { settings: payload });
       if (res.data?.success) {
-        const label = TABS.find((t) => t.id === tabId)?.label || 'Integration';
-        setSuccessMsg(`${label} settings saved & encrypted in database. Taking effect immediately across services.`);
+        const label = TABS.find((t) => t.id === tabId)?.label || 'Settings';
+        setStatusMessage({
+          type: 'success',
+          text: `${label} saved to database. Active immediately across services.`
+        });
         await fetchSettings(true);
-        setTimeout(() => setSuccessMsg(''), 6000);
       }
     } catch (err) {
-      setErrorMsg(err.response?.data?.error || 'Failed to save settings.');
+      setStatusMessage({
+        type: 'error',
+        text: err.response?.data?.error || 'Failed to save settings.'
+      });
     } finally {
       setSavingTab('');
     }
@@ -521,11 +523,7 @@ function SuperAdminSettings() {
 
   const handleResetTabToEnv = async (tabId) => {
     const label = TABS.find((t) => t.id === tabId)?.label || 'this section';
-    if (
-      !window.confirm(
-        `Reset ${label} database overrides? Any keys present in your server .env file will immediately take over.`
-      )
-    ) {
+    if (!window.confirm(`Clear ${label} overrides from DB and revert to server .env?`)) {
       return;
     }
 
@@ -537,17 +535,20 @@ function SuperAdminSettings() {
 
     try {
       setSavingTab(tabId);
-      setErrorMsg('');
-      setSuccessMsg('');
-      setTestResult(null);
+      setStatusMessage(null);
       const res = await api.post('/super-admin/settings', { settings: payload });
       if (res.data?.success) {
-        setSuccessMsg(`${label} database overrides cleared — reverted to server .env fallback.`);
+        setStatusMessage({
+          type: 'success',
+          text: `${label} cleared from database. Reverted to server .env fallback.`
+        });
         await fetchSettings(true);
-        setTimeout(() => setSuccessMsg(''), 6000);
       }
     } catch (err) {
-      setErrorMsg(err.response?.data?.error || 'Failed to reset overrides.');
+      setStatusMessage({
+        type: 'error',
+        text: err.response?.data?.error || 'Failed to reset overrides.'
+      });
     } finally {
       setSavingTab('');
     }
@@ -556,20 +557,20 @@ function SuperAdminSettings() {
   const handleTestGemini = async () => {
     try {
       setTestingAction('gemini');
-      setTestResult(null);
+      setStatusMessage(null);
       const res = await api.post('/super-admin/settings', {
         testAction: 'gemini',
         apiKey: integrations.gemini_api_key,
         model: integrations.gemini_model
       });
-      setTestResult({
+      setStatusMessage({
         type: 'success',
-        text: res.data?.message || 'Gemini connection verified!'
+        text: res.data?.message || 'Gemini connection verified.'
       });
     } catch (err) {
-      setTestResult({
+      setStatusMessage({
         type: 'error',
-        text: err.response?.data?.error || 'Gemini test failed. Check API key or model.'
+        text: err.response?.data?.error || 'Gemini connection failed.'
       });
     } finally {
       setTestingAction('');
@@ -579,19 +580,19 @@ function SuperAdminSettings() {
   const handleTestSmtp = async () => {
     try {
       setTestingAction('smtp');
-      setTestResult(null);
+      setStatusMessage(null);
       const res = await api.post('/super-admin/settings', {
         testAction: 'smtp',
         testEmail: testEmailAddress
       });
-      setTestResult({
+      setStatusMessage({
         type: 'success',
-        text: res.data?.message || 'Test email dispatched successfully!'
+        text: res.data?.message || 'Test email sent.'
       });
     } catch (err) {
-      setTestResult({
+      setStatusMessage({
         type: 'error',
-        text: err.response?.data?.error || 'Test email failed. Save valid SMTP/Resend settings first.'
+        text: err.response?.data?.error || 'Test email failed.'
       });
     } finally {
       setTestingAction('');
@@ -624,7 +625,7 @@ function SuperAdminSettings() {
       });
       setInvoiceProfileMsg({
         type: 'success',
-        text: 'Invoice business details saved. New invoices will use them.'
+        text: 'Invoice business details saved.'
       });
       await fetchSettings(true);
     } catch (err) {
@@ -647,7 +648,7 @@ function SuperAdminSettings() {
     } catch (err) {
       setInvoiceProfileMsg({
         type: 'error',
-        text: 'Could not generate the sample invoice. Save your details and try again.'
+        text: 'Could not generate sample invoice.'
       });
     } finally {
       setPreviewingInvoice(false);
@@ -658,8 +659,7 @@ function SuperAdminSettings() {
     e.preventDefault();
     try {
       setSavingRazorpay(true);
-      setErrorMsg('');
-      setSuccessMsg('');
+      setStatusMessage(null);
       const response = await api.post('/super-admin/settings', {
         settings: {
           razorpay_key_id: formData.razorpay_key_id,
@@ -667,33 +667,29 @@ function SuperAdminSettings() {
         }
       });
       if (response.data?.success) {
-        setSuccessMsg(
-          hasRazorpayKeys
-            ? 'Razorpay Gateway credentials updated in DB!'
-            : 'Razorpay Gateway credentials saved & encrypted in DB!'
-        );
+        setStatusMessage({
+          type: 'success',
+          text: 'Razorpay credentials saved to database.'
+        });
         await fetchSettings(true);
-        setTimeout(() => setSuccessMsg(''), 5000);
       }
     } catch (err) {
-      setErrorMsg(err.response?.data?.error || 'Failed to save Razorpay credentials.');
+      setStatusMessage({
+        type: 'error',
+        text: err.response?.data?.error || 'Failed to save Razorpay credentials.'
+      });
     } finally {
       setSavingRazorpay(false);
     }
   };
 
   const handleDeleteRazorpay = async () => {
-    if (
-      !window.confirm(
-        'Clear Razorpay credentials from the database? If set in server .env, Razorpay will revert to .env.'
-      )
-    ) {
+    if (!window.confirm('Clear Razorpay credentials from the database and revert to .env?')) {
       return;
     }
     try {
       setSavingRazorpay(true);
-      setErrorMsg('');
-      setSuccessMsg('');
+      setStatusMessage(null);
       const response = await api.post('/super-admin/settings', {
         settings: {
           razorpay_key_id: '',
@@ -701,12 +697,17 @@ function SuperAdminSettings() {
         }
       });
       if (response.data?.success) {
-        setSuccessMsg('Razorpay DB overrides cleared.');
+        setStatusMessage({
+          type: 'success',
+          text: 'Razorpay overrides cleared.'
+        });
         await fetchSettings(true);
-        setTimeout(() => setSuccessMsg(''), 5000);
       }
     } catch (err) {
-      setErrorMsg(err.response?.data?.error || 'Failed to delete Razorpay credentials.');
+      setStatusMessage({
+        type: 'error',
+        text: err.response?.data?.error || 'Failed to delete Razorpay credentials.'
+      });
     } finally {
       setSavingRazorpay(false);
     }
@@ -717,38 +718,39 @@ function SuperAdminSettings() {
     const isVisible = Boolean(revealed[keyName]);
     const effectivePlaceholder =
       src === 'env'
-        ? 'Currently active via .env — enter a new value only to override in DB'
+        ? 'Active via .env — enter a value only to override'
         : placeholder;
 
     return (
-      <div className="settings-field" key={keyName}>
-        <div className="field-label-row">
-          <label className="settings-label" htmlFor={`cfg-${keyName}`}>
+      <div className="cfg-field" key={keyName}>
+        <div className="cfg-label-row">
+          <label className="cfg-label" htmlFor={`cfg-${keyName}`}>
             {label}
           </label>
-          <SourceBadge source={src} />
+          <StatusTag source={src} />
         </div>
-        <div className="input-relative">
+        <div className="cfg-input-wrap">
           <input
             id={`cfg-${keyName}`}
             type={isVisible ? 'text' : 'password'}
             value={integrations[keyName] || ''}
             onChange={(e) => handleFieldChange(keyName, e.target.value)}
             placeholder={effectivePlaceholder}
-            className="premium-input"
-            style={{ paddingRight: '46px' }}
-            autoComplete="off"
+            className="cfg-input cfg-input-secret"
+            autoComplete="new-password"
+            data-lpignore="true"
+            spellCheck={false}
           />
           <button
             type="button"
             onClick={() => toggleReveal(keyName)}
-            className="eye-btn"
+            className="cfg-eye-btn"
             aria-label={isVisible ? `Hide ${label}` : `Show ${label}`}
           >
             {isVisible ? <FaEyeSlash /> : <FaEye />}
           </button>
         </div>
-        {hint && <span className="field-desc">{hint}</span>}
+        {hint && <span className="cfg-hint">{hint}</span>}
       </div>
     );
   };
@@ -756,12 +758,12 @@ function SuperAdminSettings() {
   const renderTextInput = ({ keyName, label, placeholder, hint, type = 'text' }) => {
     const src = sources[keyName] || 'unset';
     return (
-      <div className="settings-field" key={keyName}>
-        <div className="field-label-row">
-          <label className="settings-label" htmlFor={`cfg-${keyName}`}>
+      <div className="cfg-field" key={keyName}>
+        <div className="cfg-label-row">
+          <label className="cfg-label" htmlFor={`cfg-${keyName}`}>
             {label}
           </label>
-          <SourceBadge source={src} />
+          <StatusTag source={src} />
         </div>
         <input
           id={`cfg-${keyName}`}
@@ -769,195 +771,129 @@ function SuperAdminSettings() {
           value={integrations[keyName] || ''}
           onChange={(e) => handleFieldChange(keyName, e.target.value)}
           placeholder={placeholder}
-          className="premium-input"
+          className="cfg-input"
+          autoComplete="off"
         />
-        {hint && <span className="field-desc">{hint}</span>}
+        {hint && <span className="cfg-hint">{hint}</span>}
       </div>
     );
   };
 
-  const aiSource = sources.gemini_api_key || 'unset';
-  const smtpSource =
-    sources.resend_api_key === 'db' || sources.smtp_pass === 'db'
-      ? 'db'
-      : sources.resend_api_key === 'env' || sources.smtp_pass === 'env'
-      ? 'env'
-      : 'unset';
-  const metaSource =
-    sources.meta_client_secret === 'db' || sources.whatsapp_access_token === 'db'
-      ? 'db'
-      : sources.meta_client_secret === 'env' || sources.whatsapp_access_token === 'env'
-      ? 'env'
-      : 'unset';
-  const paymentSource =
-    sources.razorpay_key_id === 'db' && sources.razorpay_key_secret === 'db'
-      ? 'db'
-      : sources.razorpay_key_id === 'env' || sources.razorpay_key_secret === 'env'
-      ? 'env'
-      : 'unset';
+  const tabSources = {
+    ai: sources.gemini_api_key || 'unset',
+    smtp:
+      sources.resend_api_key === 'db' || sources.smtp_pass === 'db'
+        ? 'db'
+        : sources.resend_api_key === 'env' || sources.smtp_pass === 'env'
+        ? 'env'
+        : 'unset',
+    meta:
+      sources.meta_client_secret === 'db' || sources.whatsapp_access_token === 'db'
+        ? 'db'
+        : sources.meta_client_secret === 'env' || sources.whatsapp_access_token === 'env'
+        ? 'env'
+        : 'unset',
+    payments:
+      sources.razorpay_key_id === 'db' && sources.razorpay_key_secret === 'db'
+        ? 'db'
+        : sources.razorpay_key_id === 'env' || sources.razorpay_key_secret === 'env'
+        ? 'env'
+        : 'unset'
+  };
 
   if (loading) {
     return (
-      <div className="container" style={{ minHeight: '80vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div className="cfg-loading">
         <div className="spinner"></div>
       </div>
     );
   }
 
   return (
-    <div className="super-admin-settings-container integrations-hub">
-      <div className="page-header integrations-header">
-        <div>
-          <div className="breadcrumb-chip">Settings &rsaquo; Integrations</div>
-          <h1 className="page-title">
-            <FaPlug style={{ color: '#1677FF' }} /> Platform Integrations
-          </h1>
-          <p className="page-subtitle">
-            Manage AI Engine, Email/SMTP, Meta &amp; Webhooks, and Payments from Super Admin. Saved values are encrypted with AES-256 in MongoDB and override <code>.env</code> with zero downtime; untouched fields continue using your server <code>.env</code>.
-          </p>
-        </div>
-      </div>
+    <div className="cfg-page">
+      <header className="cfg-header">
+        <div className="cfg-breadcrumb">Settings / Integrations</div>
+        <h1 className="cfg-title">Integrations</h1>
+        <p className="cfg-subtitle">
+          Values saved here are encrypted in MongoDB and override <code>.env</code> without restarting. Untouched fields keep using <code>.env</code>.
+        </p>
+      </header>
 
-      {/* 4-Card Live Status Strip */}
-      <div className="integration-status-strip">
-        <button
-          type="button"
-          className={`status-summary-card${activeTab === 'ai' ? ' is-selected' : ''}`}
-          onClick={() => selectTab('ai')}
-        >
-          <div className="status-card-top">
-            <span className="status-icon-box ai"><FaRobot /></span>
-            <SourceBadge source={aiSource} />
-          </div>
-          <div className="status-card-title">AI Engine</div>
-          <div className="status-card-meta">
-            Model: {integrations.gemini_model || 'gemini-2.5-flash'}
-          </div>
-        </button>
-
-        <button
-          type="button"
-          className={`status-summary-card${activeTab === 'smtp' ? ' is-selected' : ''}`}
-          onClick={() => selectTab('smtp')}
-        >
-          <div className="status-card-top">
-            <span className="status-icon-box smtp"><FaEnvelope /></span>
-            <SourceBadge source={smtpSource} />
-          </div>
-          <div className="status-card-title">Email &amp; SMTP</div>
-          <div className="status-card-meta">
-            {integrations.smtp_host ? `${integrations.smtp_host}:${integrations.smtp_port || '587'}` : 'Not configured'}
-          </div>
-        </button>
-
-        <button
-          type="button"
-          className={`status-summary-card${activeTab === 'meta' ? ' is-selected' : ''}`}
-          onClick={() => selectTab('meta')}
-        >
-          <div className="status-card-top">
-            <span className="status-icon-box meta"><FaWhatsapp /></span>
-            <SourceBadge source={metaSource} />
-          </div>
-          <div className="status-card-title">Meta &amp; Webhooks</div>
-          <div className="status-card-meta">
-            {superAdminWhatsApp.connected
-              ? `Connected: ${superAdminWhatsApp.phoneNumber || 'WABA Active'}`
-              : `Mode: ${(integrations.meta_webhook_signature_mode || 'monitor').toUpperCase()}`}
-          </div>
-        </button>
-
-        <button
-          type="button"
-          className={`status-summary-card${activeTab === 'payments' ? ' is-selected' : ''}`}
-          onClick={() => selectTab('payments')}
-        >
-          <div className="status-card-top">
-            <span className="status-icon-box pay"><FaCreditCard /></span>
-            <SourceBadge source={paymentSource} />
-          </div>
-          <div className="status-card-title">Payments &amp; GST</div>
-          <div className="status-card-meta">
-            {invoiceProfile?.gstin ? `GSTIN: ${invoiceProfile.gstin}` : 'Razorpay & Invoice Profile'}
-          </div>
-        </button>
-      </div>
-
-      {/* 4-Tab Bar */}
-      <div className="integration-tabs" role="tablist" aria-label="Integration categories">
+      {/* Single Tab Switcher (no duplicate summary cards) */}
+      <nav className="cfg-tabs" role="tablist" aria-label="Integration sections">
         {TABS.map((tab) => {
-          const Icon = tab.icon;
           const isActive = activeTab === tab.id;
+          const src = tabSources[tab.id];
           return (
             <button
               key={tab.id}
               type="button"
               role="tab"
               aria-selected={isActive}
-              className={`integration-tab-btn${isActive ? ' active' : ''}`}
+              className={`cfg-tab${isActive ? ' active' : ''}`}
               onClick={() => selectTab(tab.id)}
             >
-              <Icon />
+              <span
+                className={`cfg-tab-dot${
+                  src === 'db' ? ' is-db' : src === 'env' ? ' is-env' : ''
+                }`}
+              />
               <span>{tab.label}</span>
             </button>
           );
         })}
-      </div>
+      </nav>
 
-      {successMsg && <div className="premium-alert premium-alert-success">{successMsg}</div>}
-      {errorMsg && <div className="premium-alert premium-alert-danger">{errorMsg}</div>}
-      {testResult && (
+      {statusMessage && (
         <div
-          className={`premium-alert ${
-            testResult.type === 'error' ? 'premium-alert-danger' : 'premium-alert-success'
+          role="status"
+          className={`cfg-alert ${
+            statusMessage.type === 'error' ? 'cfg-alert-error' : 'cfg-alert-success'
           }`}
         >
-          {testResult.type === 'error' ? <FaExclamationTriangle /> : <FaCheckCircle />}
-          <span>{testResult.text}</span>
+          {statusMessage.text}
         </div>
       )}
 
       {/* TAB 1: AI ENGINE */}
       {activeTab === 'ai' && (
-        <form onSubmit={(e) => handleSaveTab('ai', e)} className="integrations-stack">
-          <div className="glass-card">
-            <div className="card-header-row">
+        <form onSubmit={(e) => handleSaveTab('ai', e)} className="cfg-stack">
+          <section className="cfg-panel">
+            <div className="cfg-panel-head">
               <div>
-                <h3 className="section-title" style={{ marginBottom: 4 }}>
-                  <FaRobot style={{ color: '#1677FF' }} /> Gemini &amp; OpenAI Credentials
-                </h3>
-                <p className="field-desc" style={{ margin: 0 }}>
-                  Primary LLM for customer replies, translation, and Super Admin WhatsApp operations assistant.
+                <h2 className="cfg-panel-title">Model providers</h2>
+                <p className="cfg-panel-desc">
+                  Primary Gemini credentials with optional OpenAI fallback.
                 </p>
               </div>
               <button
                 type="button"
-                className="btn-test-outline"
+                className="cfg-btn-secondary"
                 onClick={handleTestGemini}
                 disabled={testingAction === 'gemini'}
               >
-                <FaBolt /> {testingAction === 'gemini' ? 'Testing Gemini...' : 'Test Gemini Connection'}
+                <FaBolt />
+                {testingAction === 'gemini' ? 'Testing...' : 'Test Gemini'}
               </button>
             </div>
 
-            <div className="form-grid-2" style={{ marginTop: 22 }}>
+            <div className="cfg-grid-2">
               {renderSecretInput({
                 keyName: 'gemini_api_key',
-                label: 'Gemini API Key (GEMINI_API_KEY)',
-                placeholder: 'Enter Google Gemini API Key',
-                hint: 'Stored encrypted with AES-256. Takes effect immediately without restarting PM2.'
+                label: 'Gemini API key',
+                placeholder: 'Enter Gemini API key'
               })}
 
-              <div className="settings-field">
-                <div className="field-label-row">
-                  <label className="settings-label" htmlFor="cfg-gemini_model">
-                    Gemini Model (GEMINI_MODEL)
+              <div className="cfg-field">
+                <div className="cfg-label-row">
+                  <label className="cfg-label" htmlFor="cfg-gemini_model">
+                    Gemini model
                   </label>
-                  <SourceBadge source={sources.gemini_model || 'default'} />
+                  <StatusTag source={sources.gemini_model || 'default'} />
                 </div>
                 <select
                   id="cfg-gemini_model"
-                  className="premium-input"
+                  className="cfg-input"
                   value={integrations.gemini_model || 'gemini-2.5-flash'}
                   onChange={(e) => handleFieldChange('gemini_model', e.target.value)}
                 >
@@ -967,26 +903,24 @@ function SuperAdminSettings() {
                     </option>
                   ))}
                 </select>
-                <span className="field-desc">Used across AI Bot replies, translation, and cost analytics.</span>
               </div>
 
               {renderSecretInput({
                 keyName: 'openai_api_key',
-                label: 'OpenAI Fallback Key (OPENAI_API_KEY)',
-                placeholder: 'Optional backup sk-... key',
-                hint: 'Used automatically only when Gemini is unavailable or errors out.'
+                label: 'OpenAI fallback key',
+                placeholder: 'Optional sk-... backup key'
               })}
 
-              <div className="settings-field">
-                <div className="field-label-row">
-                  <label className="settings-label" htmlFor="cfg-openai_model">
-                    OpenAI Fallback Model (OPENAI_MODEL)
+              <div className="cfg-field">
+                <div className="cfg-label-row">
+                  <label className="cfg-label" htmlFor="cfg-openai_model">
+                    OpenAI fallback model
                   </label>
-                  <SourceBadge source={sources.openai_model || 'default'} />
+                  <StatusTag source={sources.openai_model || 'default'} />
                 </div>
                 <select
                   id="cfg-openai_model"
-                  className="premium-input"
+                  className="cfg-input"
                   value={integrations.openai_model || 'gpt-3.5-turbo'}
                   onChange={(e) => handleFieldChange('openai_model', e.target.value)}
                 >
@@ -998,254 +932,251 @@ function SuperAdminSettings() {
                 </select>
               </div>
             </div>
-          </div>
+          </section>
 
-          <div className="glass-card">
-            <h3 className="section-title" style={{ marginBottom: 18 }}>
-              <FaShieldAlt style={{ color: '#6366f1' }} /> AI Guardrails, Escalation &amp; Billing Rate
-            </h3>
-            <div className="form-grid-3">
+          <section className="cfg-panel">
+            <div className="cfg-panel-head">
+              <div>
+                <h2 className="cfg-panel-title">Limits and escalation rules</h2>
+                <p className="cfg-panel-desc">
+                  Runtime token limits, per-customer throttling, and keyword triggers.
+                </p>
+              </div>
+            </div>
+
+            <div className="cfg-grid-3">
               {renderTextInput({
                 keyName: 'ai_max_output_tokens',
-                label: 'Max Output Tokens',
+                label: 'Max output tokens',
                 type: 'number',
-                placeholder: '1000',
-                hint: 'Maps to AI_MAX_OUTPUT_TOKENS'
+                placeholder: '1000'
               })}
               {renderTextInput({
                 keyName: 'ai_max_messages_per_minute',
-                label: 'Customer Rate Limit / Min',
+                label: 'Rate limit (msgs/min)',
                 type: 'number',
-                placeholder: '10',
-                hint: 'Maps to AI_MAX_MESSAGES_PER_MINUTE'
+                placeholder: '10'
               })}
               {renderTextInput({
                 keyName: 'usd_to_inr_rate',
-                label: 'USD to INR Exchange Rate',
+                label: 'USD to INR rate',
                 type: 'number',
-                placeholder: '85',
-                hint: 'Used for INR cost estimates in AI Budget.'
-              })}
-            </div>
-            <div style={{ marginTop: 18 }}>
-              {renderTextInput({
-                keyName: 'high_priority_keywords',
-                label: 'High-Priority Escalation Keywords (comma separated)',
-                placeholder: 'urgent,critical,emergency,refund,complaint,angry,frustrated',
-                hint: 'Messages containing these words auto-escalate to human support.'
+                placeholder: '85'
               })}
             </div>
 
-            <div className="btn-group" style={{ marginTop: 22 }}>
+            <div style={{ marginTop: 16 }}>
+              {renderTextInput({
+                keyName: 'high_priority_keywords',
+                label: 'Escalation trigger keywords',
+                placeholder: 'urgent,critical,emergency,refund,complaint,angry,frustrated',
+                hint: 'Comma separated keywords that escalate chats to human support.'
+              })}
+            </div>
+
+            <div className="cfg-actions">
               <button
                 type="submit"
-                className="btn-premium-primary"
+                className="cfg-btn-primary"
                 disabled={savingTab === 'ai'}
               >
-                <FaSave /> {savingTab === 'ai' ? 'Saving AI Settings...' : 'Save AI Engine Settings'}
+                <FaSave />
+                {savingTab === 'ai' ? 'Saving...' : 'Save AI settings'}
               </button>
               <button
                 type="button"
-                className="btn-reset-env"
+                className="cfg-btn-ghost"
                 onClick={() => handleResetTabToEnv('ai')}
                 disabled={savingTab === 'ai'}
               >
-                <FaUndo /> Reset to .env
+                <FaUndo />
+                Reset to .env
               </button>
             </div>
-          </div>
+          </section>
         </form>
       )}
 
       {/* TAB 2: EMAIL & SMTP */}
       {activeTab === 'smtp' && (
-        <form onSubmit={(e) => handleSaveTab('smtp', e)} className="integrations-stack">
-          <div className="glass-card">
-            <div className="card-header-row">
+        <form onSubmit={(e) => handleSaveTab('smtp', e)} className="cfg-stack">
+          <section className="cfg-panel">
+            <div className="cfg-panel-head">
               <div>
-                <h3 className="section-title" style={{ marginBottom: 4 }}>
-                  <FaEnvelope style={{ color: '#1677FF' }} /> Outbound SMTP Server
-                </h3>
-                <p className="field-desc" style={{ margin: 0 }}>
-                  Used for onboarding welcome emails, password resets, escalation alerts, and invoice receipts.
+                <h2 className="cfg-panel-title">SMTP transport</h2>
+                <p className="cfg-panel-desc">
+                  Used for onboarding credentials, escalation notices, and password resets.
                 </p>
               </div>
             </div>
 
-            <div className="form-grid-3" style={{ marginTop: 22 }}>
+            <div className="cfg-grid-3">
               {renderTextInput({
                 keyName: 'smtp_host',
-                label: 'SMTP Host (SMTP_HOST)',
+                label: 'SMTP host',
                 placeholder: 'smtp.hostinger.com'
               })}
               {renderTextInput({
                 keyName: 'smtp_port',
-                label: 'SMTP Port (SMTP_PORT)',
+                label: 'SMTP port',
                 type: 'number',
                 placeholder: '465'
               })}
-              <div className="settings-field">
-                <div className="field-label-row">
-                  <label className="settings-label" htmlFor="cfg-smtp_secure">
-                    TLS / SSL Mode (SMTP_SECURE)
+              <div className="cfg-field">
+                <div className="cfg-label-row">
+                  <label className="cfg-label" htmlFor="cfg-smtp_secure">
+                    Security mode
                   </label>
-                  <SourceBadge source={sources.smtp_secure || 'default'} />
+                  <StatusTag source={sources.smtp_secure || 'default'} />
                 </div>
                 <select
                   id="cfg-smtp_secure"
-                  className="premium-input"
+                  className="cfg-input"
                   value={integrations.smtp_secure || 'false'}
                   onChange={(e) => handleFieldChange('smtp_secure', e.target.value)}
                 >
-                  <option value="true">SSL / TLS (Port 465)</option>
-                  <option value="false">STARTTLS / Auto (Port 587)</option>
+                  <option value="true">SSL / TLS (465)</option>
+                  <option value="false">STARTTLS / Auto (587)</option>
                 </select>
               </div>
             </div>
 
-            <div className="form-grid-2" style={{ marginTop: 18 }}>
+            <div className="cfg-grid-2" style={{ marginTop: 16 }}>
               {renderTextInput({
                 keyName: 'smtp_user',
-                label: 'SMTP Username (SMTP_USER)',
+                label: 'SMTP username',
                 placeholder: 'hello@kwickbot.in'
               })}
               {renderSecretInput({
                 keyName: 'smtp_pass',
-                label: 'SMTP Password (SMTP_PASS)',
-                placeholder: 'Enter SMTP mailbox password'
+                label: 'SMTP password',
+                placeholder: 'Enter SMTP password'
               })}
             </div>
-          </div>
+          </section>
 
-          <div className="glass-card">
-            <h3 className="section-title" style={{ marginBottom: 18 }}>
-              <FaPaperPlane style={{ color: '#10b981' }} /> Resend Provider (Optional) &amp; Routing Addresses
-            </h3>
-            <div className="form-grid-2">
+          <section className="cfg-panel">
+            <div className="cfg-panel-head">
+              <div>
+                <h2 className="cfg-panel-title">Resend API and routing addresses</h2>
+                <p className="cfg-panel-desc">
+                  Resend overrides SMTP when present. Leave blank to keep using SMTP.
+                </p>
+              </div>
+            </div>
+
+            <div className="cfg-grid-2">
               {renderSecretInput({
                 keyName: 'resend_api_key',
-                label: 'Resend API Key (RESEND_API_KEY)',
-                placeholder: 'Optional re_... key (takes priority over SMTP when set)',
-                hint: 'Leave empty to send exclusively through your configured SMTP server.'
+                label: 'Resend API key',
+                placeholder: 'Optional re_... key'
               })}
               {renderTextInput({
                 keyName: 'from_email',
-                label: 'From Email Header (FROM_EMAIL)',
+                label: 'From email header',
                 placeholder: 'Kwickbot <hello@kwickbot.in>'
               })}
               {renderTextInput({
                 keyName: 'admin_email',
-                label: 'Admin Notification Email (ADMIN_EMAIL)',
+                label: 'Admin notification email',
                 placeholder: 'hello@kwickbot.in'
               })}
               {renderTextInput({
                 keyName: 'escalation_email',
-                label: 'Fallback Escalation Email (ESCALATION_EMAIL)',
+                label: 'Escalation alert email',
                 placeholder: 'hello@kwickbot.in'
               })}
             </div>
 
-            <div className="test-email-bar">
-              <div style={{ flex: 1 }}>
-                <label className="settings-label" htmlFor="test-email-recipient" style={{ display: 'block', marginBottom: 6 }}>
-                  Send Test Email (tests saved DB / .env credentials)
+            <div className="cfg-inline-test">
+              <div className="cfg-field" style={{ flex: 1 }}>
+                <label className="cfg-label" htmlFor="test-email-recipient">
+                  Test recipient
                 </label>
                 <input
                   id="test-email-recipient"
                   type="email"
-                  className="premium-input"
-                  placeholder="Enter recipient email address"
+                  className="cfg-input"
+                  placeholder="Enter email to test saved delivery"
                   value={testEmailAddress}
                   onChange={(e) => setTestEmailAddress(e.target.value)}
                 />
               </div>
               <button
                 type="button"
-                className="btn-test-outline"
-                style={{ alignSelf: 'flex-end', height: 46 }}
+                className="cfg-btn-secondary"
                 onClick={handleTestSmtp}
                 disabled={testingAction === 'smtp'}
               >
-                <FaPaperPlane /> {testingAction === 'smtp' ? 'Sending...' : 'Send Test Email'}
+                <FaPaperPlane />
+                {testingAction === 'smtp' ? 'Sending...' : 'Send test email'}
               </button>
             </div>
 
-            <div className="btn-group" style={{ marginTop: 22 }}>
+            <div className="cfg-actions">
               <button
                 type="submit"
-                className="btn-premium-primary"
+                className="cfg-btn-primary"
                 disabled={savingTab === 'smtp'}
               >
-                <FaSave /> {savingTab === 'smtp' ? 'Saving Email Settings...' : 'Save Email & SMTP Settings'}
+                <FaSave />
+                {savingTab === 'smtp' ? 'Saving...' : 'Save email settings'}
               </button>
               <button
                 type="button"
-                className="btn-reset-env"
+                className="cfg-btn-ghost"
                 onClick={() => handleResetTabToEnv('smtp')}
                 disabled={savingTab === 'smtp'}
               >
-                <FaUndo /> Reset to .env
+                <FaUndo />
+                Reset to .env
               </button>
             </div>
-          </div>
+          </section>
         </form>
       )}
 
       {/* TAB 3: META & WEBHOOKS */}
       {activeTab === 'meta' && (
-        <div className="integrations-stack">
-          {/* Existing Super Admin Embedded Signup Card */}
-          <div className="glass-card">
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '12px' }}>
-              <h3 className="section-title" style={{ margin: 0 }}>
-                <FaWhatsapp style={{ color: '#25d366', fontSize: '24px' }} />
-                Super Admin WhatsApp Connection
-              </h3>
-              <span
-                className={`status-badge-saas ${superAdminWhatsApp.connected ? 'status-active' : 'status-trial'}`}
-                style={{ padding: '6px 14px', fontSize: '13px', fontWeight: '600' }}
-              >
-                {superAdminWhatsApp.connected ? '● Connected' : '● Disconnected'}
-              </span>
+        <div className="cfg-stack">
+          <section className="cfg-panel">
+            <div className="cfg-panel-head">
+              <div>
+                <h2 className="cfg-panel-title">Super Admin WhatsApp number</h2>
+                <p className="cfg-panel-desc">
+                  Connected via Meta Embedded Signup for the operations assistant on <code>+91 8128420287</code>.
+                </p>
+              </div>
+              <StatusTag source={superAdminWhatsApp.connected ? 'db' : 'unset'} />
             </div>
 
-            <p className="field-desc" style={{ marginBottom: '20px' }}>
-              Super Admin uses Meta Embedded Signup for secure 1-click WhatsApp Cloud API onboarding (restricted to <strong>1 active Super Admin connection</strong>).
-            </p>
-
-            <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border-subtle)', borderRadius: '12px', padding: '20px', marginBottom: '20px' }}>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
-                <div>
-                  <span style={{ fontSize: '12px', color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>Phone Number</span>
-                  <strong style={{ fontSize: '16px', color: 'var(--text-primary)' }}>
-                    {superAdminWhatsApp.phoneNumber || 'Not connected'}
-                  </strong>
-                </div>
-                <div>
-                  <span style={{ fontSize: '12px', color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>WABA Account ID</span>
-                  <code style={{ fontSize: '14px', color: 'var(--text-primary)' }}>
-                    {superAdminWhatsApp.wabaId || 'Not connected'}
-                  </code>
-                </div>
-                <div>
-                  <span style={{ fontSize: '12px', color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>Connection State</span>
-                  <span style={{ fontSize: '14px', fontWeight: '600', color: superAdminWhatsApp.connected ? '#10b981' : '#ef4444' }}>
-                    {superAdminWhatsApp.connected ? 'Active & Ready' : 'Disconnected'}
-                  </span>
-                </div>
+            <div className="cfg-kv-row">
+              <div className="cfg-kv-item">
+                <span className="cfg-kv-label">Phone number</span>
+                <span className="cfg-kv-value">{superAdminWhatsApp.phoneNumber || 'Not connected'}</span>
+              </div>
+              <div className="cfg-kv-item">
+                <span className="cfg-kv-label">WABA ID</span>
+                <code className="cfg-kv-code">{superAdminWhatsApp.wabaId || 'Not connected'}</code>
+              </div>
+              <div className="cfg-kv-item">
+                <span className="cfg-kv-label">State</span>
+                <span className="cfg-kv-value">
+                  {superAdminWhatsApp.connected ? 'Connected' : 'Disconnected'}
+                </span>
               </div>
             </div>
 
-            <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+            <div className="cfg-actions">
               <button
                 type="button"
                 onClick={handleLaunchEmbeddedSignup}
                 disabled={embeddedLoading}
-                className="btn-premium-primary"
+                className="cfg-btn-primary"
               >
-                <FaWhatsapp style={{ fontSize: '18px' }} />
+                <FaWhatsapp />
                 {embeddedLoading
-                  ? 'Launching Meta Signup...'
+                  ? 'Connecting...'
                   : superAdminWhatsApp.connected
                   ? 'Reconnect WhatsApp'
                   : 'Connect WhatsApp'}
@@ -1255,302 +1186,298 @@ function SuperAdminSettings() {
                   type="button"
                   onClick={handleDisconnectSuperAdmin}
                   disabled={loading}
-                  className="btn-premium-danger"
+                  className="cfg-btn-danger"
                 >
-                  <FaTrash /> Disconnect
+                  <FaTrash />
+                  Disconnect
                 </button>
               )}
             </div>
-          </div>
+          </section>
 
-          {/* Authorized Assistant Card */}
-          <div className="glass-card">
-            <h3 className="section-title" style={{ marginBottom: 16 }}>
-              <FaUserCheck style={{ color: '#6366f1' }} /> Super Admin AI Operations Assistant
-            </h3>
-            <div style={{ background: 'rgba(99, 102, 241, 0.1)', border: '1px solid rgba(99, 102, 241, 0.2)', borderRadius: '12px', padding: '16px 20px', marginBottom: '12px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
+          <form onSubmit={(e) => handleSaveTab('meta', e)} className="cfg-stack">
+            <section className="cfg-panel">
+              <div className="cfg-panel-head">
                 <div>
-                  <div style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '2px' }}>Authorized Super Admin Phone Number</div>
-                  <div style={{ fontSize: '18px', fontWeight: '700', color: 'var(--text-primary)' }}>+91 8128420287</div>
+                  <h2 className="cfg-panel-title">Meta app and webhook security</h2>
+                  <p className="cfg-panel-desc">
+                    Embedded Signup credentials and X-Hub-Signature-256 verification.
+                  </p>
                 </div>
-                <span style={{ background: 'rgba(16, 185, 129, 0.15)', color: '#10b981', padding: '6px 12px', borderRadius: '8px', fontSize: '13px', fontWeight: '600' }}>
-                  ● Authorized &amp; Active
-                </span>
               </div>
-            </div>
-            <p className="field-desc" style={{ margin: 0 }}>
-              Only messages from <strong>+91 8128420287</strong> trigger the Super Admin Operations Assistant. Secrets and tokens are strictly refused.
-            </p>
-          </div>
 
-          {/* Meta App, Webhook Security & Fallback Cloud API Form */}
-          <form onSubmit={(e) => handleSaveTab('meta', e)} className="integrations-stack">
-            <div className="glass-card">
-              <h3 className="section-title" style={{ marginBottom: 18 }}>
-                Meta App Credentials &amp; Webhook Security
-              </h3>
-
-              <div className="settings-field" style={{ marginBottom: 18 }}>
-                <label className="settings-label">WhatsApp Webhook Callback URL</label>
-                <div style={{ display: 'flex', gap: '10px' }}>
-                  <input type="text" readOnly value={getWebhookUrl()} className="premium-input" />
-                  <button type="button" onClick={handleCopyWebhook} className="copy-btn">
-                    <FaCopy /> {copied ? 'Copied!' : 'Copy URL'}
+              <div className="cfg-field" style={{ marginBottom: 16 }}>
+                <label className="cfg-label">Webhook callback URL</label>
+                <div className="cfg-copy-row">
+                  <input type="text" readOnly value={getWebhookUrl()} className="cfg-input" />
+                  <button type="button" onClick={handleCopyWebhook} className="cfg-btn-secondary">
+                    <FaCopy />
+                    {copied ? 'Copied' : 'Copy URL'}
                   </button>
                 </div>
               </div>
 
-              <div className="form-grid-2">
+              <div className="cfg-grid-2">
                 {renderTextInput({
                   keyName: 'meta_app_id',
-                  label: 'Meta App ID (META_APP_ID)',
+                  label: 'Meta App ID',
                   placeholder: '2242808243238982'
                 })}
                 {renderTextInput({
                   keyName: 'meta_config_id',
-                  label: 'Embedded Signup Config ID (META_CONFIG_ID)',
+                  label: 'Embedded Signup Config ID',
                   placeholder: '1066111046278122'
                 })}
                 {renderSecretInput({
                   keyName: 'meta_client_secret',
-                  label: 'Meta Client Secret (META_CLIENT_SECRET)',
-                  placeholder: 'Enter Meta App / Client Secret'
+                  label: 'Meta Client Secret',
+                  placeholder: 'Enter Meta Client Secret'
                 })}
                 {renderSecretInput({
                   keyName: 'whatsapp_webhook_verify_token',
-                  label: 'Webhook Verify Token (WEBHOOK_VERIFY_TOKEN)',
+                  label: 'Webhook verify token',
                   placeholder: 'wh_vt_...'
                 })}
-                <div className="settings-field">
-                  <div className="field-label-row">
-                    <label className="settings-label" htmlFor="cfg-meta_webhook_signature_mode">
-                      Webhook Signature Mode (META_WEBHOOK_SIGNATURE_MODE)
+                <div className="cfg-field">
+                  <div className="cfg-label-row">
+                    <label className="cfg-label" htmlFor="cfg-meta_webhook_signature_mode">
+                      Signature verification
                     </label>
-                    <SourceBadge source={sources.meta_webhook_signature_mode || 'default'} />
+                    <StatusTag source={sources.meta_webhook_signature_mode || 'default'} />
                   </div>
                   <select
                     id="cfg-meta_webhook_signature_mode"
-                    className="premium-input"
+                    className="cfg-input"
                     value={integrations.meta_webhook_signature_mode || 'monitor'}
                     onChange={(e) => handleFieldChange('meta_webhook_signature_mode', e.target.value)}
                   >
                     <option value="monitor">monitor (log mismatches, allow traffic)</option>
-                    <option value="enforce">enforce (reject unsigned/invalid POSTs)</option>
-                    <option value="off">off (skip X-Hub-Signature-256 check)</option>
+                    <option value="enforce">enforce (reject invalid signatures)</option>
+                    <option value="off">off (disabled)</option>
                   </select>
                 </div>
                 {renderSecretInput({
                   keyName: 'meta_webhook_extra_app_secrets',
-                  label: 'Extra Meta App Secrets (comma separated)',
-                  placeholder: 'Optional additional app secrets'
+                  label: 'Extra Meta app secrets',
+                  placeholder: 'Comma separated secrets'
                 })}
               </div>
-            </div>
+            </section>
 
-            <div className="glass-card">
-              <h3 className="section-title" style={{ marginBottom: 18 }}>
-                Platform Fallback Cloud API &amp; Store Webhook Secrets
-              </h3>
-              <div className="form-grid-2">
+            <section className="cfg-panel">
+              <div className="cfg-panel-head">
+                <div>
+                  <h2 className="cfg-panel-title">System Cloud API fallback and store webhooks</h2>
+                  <p className="cfg-panel-desc">
+                    Platform fallback token and HMAC secrets for Shopify and WooCommerce.
+                  </p>
+                </div>
+              </div>
+
+              <div className="cfg-grid-2">
                 {renderSecretInput({
                   keyName: 'whatsapp_access_token',
-                  label: 'Fallback System Access Token (WHATSAPP_ACCESS_TOKEN)',
+                  label: 'System WhatsApp access token',
                   placeholder: 'EAA...'
                 })}
                 {renderTextInput({
                   keyName: 'whatsapp_phone_number_id',
-                  label: 'System Phone Number ID (WHATSAPP_PHONE_NUMBER_ID)',
+                  label: 'System phone number ID',
                   placeholder: '1140434719159859'
                 })}
                 {renderTextInput({
                   keyName: 'whatsapp_business_account_id',
-                  label: 'System WABA ID (WHATSAPP_BUSINESS_ACCOUNT_ID)',
+                  label: 'System WABA ID',
                   placeholder: '856186027099439'
                 })}
                 {renderSecretInput({
                   keyName: 'webhook_secret_token',
-                  label: 'Internal Webhook Token (WEBHOOK_SECRET_TOKEN)',
-                  placeholder: 'Optional x-webhook-secret token'
+                  label: 'Internal webhook secret',
+                  placeholder: 'Optional x-webhook-secret'
                 })}
                 {renderSecretInput({
                   keyName: 'shopify_webhook_secret',
-                  label: 'Shopify Webhook Secret (SHOPIFY_WEBHOOK_SECRET)',
+                  label: 'Shopify webhook secret',
                   placeholder: 'Shopify HMAC secret'
                 })}
                 {renderSecretInput({
                   keyName: 'woocommerce_webhook_secret',
-                  label: 'WooCommerce Webhook Secret (WOOCOMMERCE_WEBHOOK_SECRET)',
+                  label: 'WooCommerce webhook secret',
                   placeholder: 'WooCommerce HMAC secret'
                 })}
               </div>
 
-              <div className="btn-group" style={{ marginTop: 22 }}>
+              <div className="cfg-actions">
                 <button
                   type="submit"
-                  className="btn-premium-primary"
+                  className="cfg-btn-primary"
                   disabled={savingTab === 'meta'}
                 >
-                  <FaSave /> {savingTab === 'meta' ? 'Saving Meta & Webhook Settings...' : 'Save Meta & Webhook Settings'}
+                  <FaSave />
+                  {savingTab === 'meta' ? 'Saving...' : 'Save Meta settings'}
                 </button>
                 <button
                   type="button"
-                  className="btn-reset-env"
+                  className="cfg-btn-ghost"
                   onClick={() => handleResetTabToEnv('meta')}
                   disabled={savingTab === 'meta'}
                 >
-                  <FaUndo /> Reset to .env
+                  <FaUndo />
+                  Reset to .env
                 </button>
               </div>
-            </div>
+            </section>
           </form>
         </div>
       )}
 
       {/* TAB 4: PAYMENTS & GST */}
       {activeTab === 'payments' && (
-        <div className="integrations-stack">
-          <div className="glass-card razorpay-card">
-            <div className="card-header-row" style={{ marginBottom: 18 }}>
-              <h3 className="section-title" style={{ margin: 0 }}>
-                <FaCreditCard style={{ color: '#1677FF' }} /> Razorpay Payment Gateway Credentials
-              </h3>
-              <SourceBadge source={paymentSource} />
+        <div className="cfg-stack">
+          <section className="cfg-panel">
+            <div className="cfg-panel-head">
+              <div>
+                <h2 className="cfg-panel-title">Razorpay gateway</h2>
+                <p className="cfg-panel-desc">
+                  Used for plan checkouts and renewals. Encrypted at rest in MongoDB.
+                </p>
+              </div>
+              <StatusTag source={tabSources.payments} />
             </div>
 
-            <form onSubmit={handleSaveRazorpay} className="settings-form">
-              <div className="settings-field">
-                <div className="field-label-row">
-                  <label className="settings-label">Razorpay Key ID</label>
-                  <SourceBadge source={sources.razorpay_key_id || 'unset'} />
-                </div>
-                <div className="input-relative">
-                  <input
-                    type={showRazorpayKey ? 'text' : 'password'}
-                    name="razorpay_key_id"
-                    value={formData.razorpay_key_id}
-                    onChange={handleChange}
-                    placeholder={
-                      sources.razorpay_key_id === 'env'
-                        ? 'Active via .env — enter key ID to save in DB'
-                        : 'e.g. rzp_live_xxxxxxxxxxxxxx'
-                    }
-                    className="premium-input"
-                    style={{ paddingRight: '50px' }}
-                    required
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowRazorpayKey(!showRazorpayKey)}
-                    className="eye-btn"
-                  >
-                    {showRazorpayKey ? <FaEyeSlash /> : <FaEye />}
-                  </button>
-                </div>
-                <span className="field-desc">Public Key ID from Razorpay Dashboard Settings.</span>
-              </div>
-
-              <div className="settings-field">
-                <div className="field-label-row">
-                  <label className="settings-label">Razorpay Key Secret</label>
-                  <SourceBadge source={sources.razorpay_key_secret || 'unset'} />
-                </div>
-                <div className="input-relative">
-                  <input
-                    type={showRazorpaySecret ? 'text' : 'password'}
-                    name="razorpay_key_secret"
-                    value={formData.razorpay_key_secret}
-                    onChange={handleChange}
-                    placeholder={
-                      sources.razorpay_key_secret === 'env'
-                        ? 'Active via .env — enter key secret to store encrypted in DB'
-                        : 'Enter your Razorpay Key Secret'
-                    }
-                    className="premium-input"
-                    style={{ paddingRight: '50px' }}
-                    required
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowRazorpaySecret(!showRazorpaySecret)}
-                    className="eye-btn"
-                  >
-                    {showRazorpaySecret ? <FaEyeSlash /> : <FaEye />}
-                  </button>
-                </div>
-                <span className="field-desc">Encrypted at rest with AES-256 and never exposed to client code.</span>
-              </div>
-
-              <div className="info-box rzp-info">
-                <FaInfoCircle style={{ color: '#10b981', flexShrink: 0 }} />
-                <span className="info-text">
-                  Saving Razorpay credentials overrides <code>.env</code> dynamically. Deleting DB credentials reverts to <code>.env</code> if set.
-                </span>
-              </div>
-
-              <div className="btn-group">
-                {hasRazorpayKeys ? (
-                  <>
-                    <button type="submit" disabled={savingRazorpay} className="btn-premium-primary">
-                      <FaSave /> {savingRazorpay ? 'Updating Razorpay...' : 'Update Razorpay Settings'}
-                    </button>
+            <form onSubmit={handleSaveRazorpay}>
+              <div className="cfg-grid-2">
+                <div className="cfg-field">
+                  <div className="cfg-label-row">
+                    <label className="cfg-label" htmlFor="rzp-key-id">
+                      Razorpay Key ID
+                    </label>
+                    <StatusTag source={sources.razorpay_key_id || 'unset'} />
+                  </div>
+                  <div className="cfg-input-wrap">
+                    <input
+                      id="rzp-key-id"
+                      type={showRazorpayKey ? 'text' : 'password'}
+                      name="razorpay_key_id"
+                      value={formData.razorpay_key_id}
+                      onChange={handleChange}
+                      placeholder={
+                        sources.razorpay_key_id === 'env'
+                          ? 'Active via .env — enter Key ID to override'
+                          : 'rzp_live_...'
+                      }
+                      className="cfg-input cfg-input-secret"
+                      autoComplete="new-password"
+                      data-lpignore="true"
+                      required
+                    />
                     <button
                       type="button"
-                      onClick={handleDeleteRazorpay}
-                      disabled={savingRazorpay}
-                      className="btn-premium-danger"
+                      onClick={() => setShowRazorpayKey(!showRazorpayKey)}
+                      className="cfg-eye-btn"
+                      aria-label={showRazorpayKey ? 'Hide Key ID' : 'Show Key ID'}
                     >
-                      <FaTrash /> Delete Credentials
+                      {showRazorpayKey ? <FaEyeSlash /> : <FaEye />}
                     </button>
-                  </>
-                ) : (
+                  </div>
+                </div>
+
+                <div className="cfg-field">
+                  <div className="cfg-label-row">
+                    <label className="cfg-label" htmlFor="rzp-key-secret">
+                      Razorpay Key Secret
+                    </label>
+                    <StatusTag source={sources.razorpay_key_secret || 'unset'} />
+                  </div>
+                  <div className="cfg-input-wrap">
+                    <input
+                      id="rzp-key-secret"
+                      type={showRazorpaySecret ? 'text' : 'password'}
+                      name="razorpay_key_secret"
+                      value={formData.razorpay_key_secret}
+                      onChange={handleChange}
+                      placeholder={
+                        sources.razorpay_key_secret === 'env'
+                          ? 'Active via .env — enter Key Secret to override'
+                          : 'Enter Key Secret'
+                      }
+                      className="cfg-input cfg-input-secret"
+                      autoComplete="new-password"
+                      data-lpignore="true"
+                      required
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowRazorpaySecret(!showRazorpaySecret)}
+                      className="cfg-eye-btn"
+                      aria-label={showRazorpaySecret ? 'Hide Key Secret' : 'Show Key Secret'}
+                    >
+                      {showRazorpaySecret ? <FaEyeSlash /> : <FaEye />}
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <div className="cfg-actions">
+                <button type="submit" disabled={savingRazorpay} className="cfg-btn-primary">
+                  <FaSave />
+                  {savingRazorpay
+                    ? 'Saving...'
+                    : hasRazorpayKeys
+                    ? 'Update Razorpay'
+                    : 'Save Razorpay'}
+                </button>
+                {hasRazorpayKeys && (
                   <button
-                    type="submit"
+                    type="button"
+                    onClick={handleDeleteRazorpay}
                     disabled={savingRazorpay}
-                    className="btn-premium-primary"
-                    style={{ width: '100%' }}
+                    className="cfg-btn-danger"
                   >
-                    <FaSave /> {savingRazorpay ? 'Saving Razorpay Settings...' : 'Save Razorpay Settings'}
+                    <FaTrash />
+                    Clear overrides
                   </button>
                 )}
               </div>
             </form>
-          </div>
+          </section>
 
-          {/* Invoice Business Details (GST) */}
-          <div className="glass-card">
-            <h3 className="section-title">
-              <FaFileInvoice style={{ marginRight: 10 }} /> Invoice business details
-            </h3>
-            <p className="field-desc" style={{ marginTop: -12, marginBottom: 18 }}>
-              Printed in the “Billed by” section of every Kwickbot invoice. Add your GSTIN to issue GST tax invoices: plan prices are treated as GST-inclusive and tax is split as CGST + SGST or IGST automatically.
-            </p>
+          <section className="cfg-panel">
+            <div className="cfg-panel-head">
+              <div>
+                <h2 className="cfg-panel-title">Invoice business profile</h2>
+                <p className="cfg-panel-desc">
+                  Printed on generated PDF invoices. Existing invoices retain their issued details.
+                </p>
+              </div>
+            </div>
+
             {invoiceProfile ? (
-              <form onSubmit={handleSaveInvoiceProfile} className="settings-form invoice-profile-grid">
+              <form onSubmit={handleSaveInvoiceProfile} className="cfg-grid-2">
                 {[
-                  ['legalName', 'Legal business name *', 'As registered (e.g. company or proprietor name)', 200],
+                  ['legalName', 'Legal business name', 'Registered business name', 200],
                   ['tradeName', 'Trade name', 'Kwickbot', 120],
                   ['gstin', 'GSTIN', '24ABCDE1234F1Z5', 15],
-                  ['pan', 'PAN (shown if no GSTIN)', 'ABCDE1234F', 10],
+                  ['pan', 'PAN (used when no GSTIN)', 'ABCDE1234F', 10],
                   ['addressLine', 'Registered address', 'Building, street, area', 300],
                   ['city', 'City', '', 120],
                   ['pincode', 'PIN code', '', 6],
                   ['email', 'Billing email', 'hello@kwickbot.in', 120],
-                  ['phone', 'Billing phone', '+91 …', 30],
+                  ['phone', 'Billing phone', '+91 ...', 30],
                   ['website', 'Website', 'kwickbot.in', 120],
-                  ['sacCode', 'SAC code', 'Service accounting code for your service', 10],
+                  ['sacCode', 'SAC code', '998314', 10],
                   ['footerNote', 'Footer note', 'Thank you for choosing Kwickbot.', 300]
                 ].map(([name, label, placeholder, max]) => (
                   <div
-                    className={`settings-field ${name === 'addressLine' || name === 'footerNote' ? 'span-2' : ''}`}
+                    className={`cfg-field${name === 'addressLine' || name === 'footerNote' ? ' cfg-span-2' : ''}`}
                     key={name}
                   >
-                    <label className="settings-label" htmlFor={`inv-${name}`}>
+                    <label className="cfg-label" htmlFor={`inv-${name}`}>
                       {label}
                     </label>
                     <input
                       id={`inv-${name}`}
-                      className="premium-input"
+                      className="cfg-input"
                       name={name}
                       value={invoiceProfile[name] ?? ''}
                       onChange={handleInvoiceProfileChange}
@@ -1559,13 +1486,14 @@ function SuperAdminSettings() {
                     />
                   </div>
                 ))}
-                <div className="settings-field">
-                  <label className="settings-label" htmlFor="inv-state">
+
+                <div className="cfg-field">
+                  <label className="cfg-label" htmlFor="inv-state">
                     State (place of supply)
                   </label>
                   <select
                     id="inv-state"
-                    className="premium-input"
+                    className="cfg-input"
                     name="state"
                     value={invoiceProfile.state || ''}
                     onChange={handleInvoiceProfileChange}
@@ -1578,13 +1506,14 @@ function SuperAdminSettings() {
                     ))}
                   </select>
                 </div>
-                <div className="settings-field">
-                  <label className="settings-label" htmlFor="inv-gstRate">
+
+                <div className="cfg-field">
+                  <label className="cfg-label" htmlFor="inv-gstRate">
                     GST rate (%)
                   </label>
                   <input
                     id="inv-gstRate"
-                    className="premium-input"
+                    className="cfg-input"
                     type="number"
                     min="0"
                     max="28"
@@ -1594,59 +1523,61 @@ function SuperAdminSettings() {
                     onChange={handleInvoiceProfileChange}
                   />
                 </div>
-                <div className="btn-group span-2">
-                  <button type="submit" className="btn-premium-primary" disabled={savingInvoiceProfile}>
-                    <FaSave /> {savingInvoiceProfile ? 'Saving…' : 'Save invoice details'}
+
+                <div className="cfg-actions cfg-span-2">
+                  <button type="submit" className="cfg-btn-primary" disabled={savingInvoiceProfile}>
+                    <FaSave />
+                    {savingInvoiceProfile ? 'Saving...' : 'Save invoice details'}
                   </button>
                   <button
                     type="button"
-                    className="btn-reset-env"
+                    className="cfg-btn-secondary"
                     onClick={handlePreviewInvoice}
                     disabled={previewingInvoice}
                   >
-                    <FaEye /> {previewingInvoice ? 'Generating…' : 'Preview sample invoice'}
+                    <FaEye />
+                    {previewingInvoice ? 'Generating...' : 'Preview sample PDF'}
                   </button>
                 </div>
+
                 {invoiceProfileMsg && (
                   <div
-                    className="span-2"
                     role="status"
-                    style={{
-                      fontSize: 13,
-                      fontWeight: 600,
-                      color: invoiceProfileMsg.type === 'error' ? 'var(--danger)' : 'var(--success)'
-                    }}
+                    className={`cfg-span-2 cfg-alert ${
+                      invoiceProfileMsg.type === 'error' ? 'cfg-alert-error' : 'cfg-alert-success'
+                    }`}
                   >
                     {invoiceProfileMsg.text}
                   </div>
                 )}
               </form>
             ) : (
-              <p className="field-desc">Loading…</p>
+              <p className="cfg-panel-desc">Loading...</p>
             )}
-          </div>
+          </section>
         </div>
       )}
 
-      {/* Server Bootstrap Reference Box */}
-      <div className="glass-card bootstrap-note-card">
-        <div className="bootstrap-note-header">
-          <FaLock style={{ color: '#f59e0b' }} />
-          <div>
-            <strong>Server Bootstrap Keys (Keep in server <code>.env</code>)</strong>
-            <div className="field-desc">
-              These core infrastructure keys are needed before MongoDB connects or to decrypt stored credentials, so keep them in your server <code>backend/.env</code> file.
-            </div>
+      {/* Quiet collapsible bootstrap reference */}
+      <details className="cfg-bootstrap-details">
+        <summary className="cfg-bootstrap-summary">
+          <FaChevronRight className="cfg-bootstrap-caret" />
+          <span>Bootstrap keys kept in server <code>.env</code></span>
+          <span className="cfg-bootstrap-count">{bootstrapEnvKeys.length} keys</span>
+        </summary>
+        <div className="cfg-bootstrap-body">
+          <p className="cfg-panel-desc" style={{ marginBottom: 12 }}>
+            These keys are required before MongoDB connects or to decrypt stored credentials, so keep them in your server <code>backend/.env</code> file.
+          </p>
+          <div className="cfg-bootstrap-keys">
+            {bootstrapEnvKeys.map((k) => (
+              <code key={k} className="cfg-keychip">
+                {k}
+              </code>
+            ))}
           </div>
         </div>
-        <div className="bootstrap-key-list">
-          {bootstrapEnvKeys.map((k) => (
-            <code key={k} className="bootstrap-key-chip">
-              {k}
-            </code>
-          ))}
-        </div>
-      </div>
+      </details>
     </div>
   );
 }

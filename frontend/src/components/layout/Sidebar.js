@@ -140,9 +140,9 @@ export default function Sidebar({ admin, onLogout, isOpen, onToggle, onOpen, onC
                   </Link>
                 </li>
                 <li>
-                  <Link to="/dashboard/super-admin/budget" className={isActive('/dashboard/super-admin/budget')} title="Gemini Budget">
+                  <Link to="/dashboard/super-admin/budget" className={isActive('/dashboard/super-admin/budget')} title="AI Budget & Usage">
                     <FaCoins />
-                    <span className="nav-label">AI Budget</span>
+                    <span className="nav-label">AI Budget & Usage</span>
                   </Link>
                 </li>
                 <li>
@@ -232,21 +232,6 @@ export default function Sidebar({ admin, onLogout, isOpen, onToggle, onOpen, onC
                   <Link to="/dashboard/super-admin/developer-api" className={isActive('/dashboard/super-admin/developer-api')} title="Developer API Hub">
                     <FaCode />
                     <span className="nav-label">Developer API</span>
-                  </Link>
-                </li>
-              </ul>
-            </div>
-          )}
-
-          {/* AI Section */}
-          {admin && admin.role === 'super_admin' && (
-            <div className="nav-section">
-              {isOpen && <div className="nav-section-title">AI</div>}
-              <ul className="nav-links">
-                <li>
-                  <Link to="/dashboard/super-admin/ai-usage" className={isActive('/dashboard/super-admin/ai-usage')} title="AI Usage">
-                    <FaBrain />
-                    <span className="nav-label">AI Usage</span>
                   </Link>
                 </li>
               </ul>

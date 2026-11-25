@@ -21,7 +21,6 @@ import SuperAdminAnnouncements from './pages/superAdmin/Announcements/SuperAdmin
 import SuperAdminUserDetail from './pages/superAdmin/Merchants/SuperAdminUserDetail';
 import SuperAdminLiveOps from './pages/superAdmin/Operations/SuperAdminLiveOps';
 import SuperAdminIntegrationHealth from './pages/superAdmin/Operations/SuperAdminIntegrationHealth';
-import SuperAdminAIUsage from './pages/superAdmin/AI/SuperAdminAIUsage';
 import SuperAdminBillingRevenue from './pages/superAdmin/Finance/SuperAdminBillingRevenue';
 import SuperAdminAuditLogs from './pages/superAdmin/Security/SuperAdminAuditLogs';
 import SuperAdminFeatureFlags from './pages/superAdmin/Platform/SuperAdminFeatureFlags';
@@ -665,7 +664,7 @@ function App() {
                         <Route path="/super-admin/whatsapp-ops" element={<Navigate to="/dashboard/super-admin/integration-health" replace />} />
                         <Route path="/super-admin/live-ops" element={<SuperAdminLiveOps />} />
                         <Route path="/super-admin/integration-health" element={<SuperAdminIntegrationHealth />} />
-                        <Route path="/super-admin/ai-usage" element={<SuperAdminAIUsage />} />
+                        <Route path="/super-admin/ai-usage" element={<Navigate to="/dashboard/super-admin/budget" replace />} />
                         <Route path="/super-admin/billing-revenue" element={<SuperAdminBillingRevenue />} />
                         <Route path="/super-admin/audit-logs" element={<SuperAdminAuditLogs />} />
                         <Route path="/super-admin/feature-flags" element={<SuperAdminFeatureFlags />} />

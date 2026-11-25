@@ -105,10 +105,11 @@ const resolvePlanAssignment = async (input = {}) => {
     throw error;
   }
 
+  const requestedTrialDays = toFiniteNumber(input.trialDays, plan?.trialDays || 0);
   const { startDate, endDate } = calculateSubscriptionWindow({
     status: requestedStatus,
     billingCycle: requestedCycle,
-    trialDays: plan?.trialDays || 0
+    trialDays: requestedTrialDays
   });
 
   return {

@@ -349,6 +349,12 @@ export default function Sidebar({ admin, onLogout, isOpen, onToggle, onOpen, onC
                     <span className="nav-label">Feature Flags</span>
                   </Link>
                 </li>
+                <li>
+                  <Link to="/dashboard/super-admin/trial-policy" className={isActive('/dashboard/super-admin/trial-policy')} title="Trial & Preview Policy">
+                    <FaShieldAlt />
+                    <span className="nav-label">Trial &amp; Preview</span>
+                  </Link>
+                </li>
               </ul>
             </div>
           )}

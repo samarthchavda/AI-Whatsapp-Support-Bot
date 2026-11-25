@@ -24,6 +24,7 @@ import SuperAdminIntegrationHealth from './pages/superAdmin/Operations/SuperAdmi
 import SuperAdminBillingRevenue from './pages/superAdmin/Finance/SuperAdminBillingRevenue';
 import SuperAdminAuditLogs from './pages/superAdmin/Security/SuperAdminAuditLogs';
 import SuperAdminFeatureFlags from './pages/superAdmin/Platform/SuperAdminFeatureFlags';
+import SuperAdminTrialPolicy from './pages/superAdmin/Platform/SuperAdminTrialPolicy';
 import PlanManager from './pages/superAdmin/PlanManager/PlanManager';
 import PermissionProfiles from './pages/superAdmin/PermissionProfiles/PermissionProfiles';
 import CustomerOnboardWizard from './pages/superAdmin/OnboardingWizard/CustomerOnboardWizard';
@@ -38,7 +39,7 @@ import MerchantLeads from './pages/merchant/Leads/MerchantLeads';
 import SupportCenter from './pages/merchant/SupportCenter/SupportCenter';
 
 // Access Control & Platform Module Imports
-import { EffectiveAccessProvider } from './context/EffectiveAccessContext';
+import { EffectiveAccessProvider, useEffectiveAccess } from './context/EffectiveAccessContext';
 import ProtectedFeatureRoute from './components/ProtectedFeatureRoute/ProtectedFeatureRoute';
 import { SaMerchants, SaMerchantDetail, SaPlans, SaPlanEditor, SaCoupons } from './super-admin-ui';
 
@@ -140,6 +141,39 @@ const MERCHANT_VISIBLE_PATHS = new Set([
   '/dashboard/profile',
   '/dashboard/support'
 ]);
+
+function PreviewBanner({ admin }) {
+  const access = useEffectiveAccess();
+  if (!admin || admin.role === 'super_admin' || admin.selfSignupTrial !== true) return null;
+  const expired = Boolean(admin.subscriptionEndDate && new Date(admin.subscriptionEndDate) <= new Date());
+  if (admin.subscriptionStatus === 'active' && !expired) return null;
+
+  const policy = access?.trialPolicy || {};
+  const title = policy.bannerTitle || 'Free preview:';
+  const rawMessage = policy.bannerMessage || 'Connect WhatsApp and send up to {broadcastLimit} test broadcasts. Other pages are view-only until you activate a plan.';
+  const message = String(rawMessage)
+    .replace(/\{broadcastLimit\}/g, String(policy.testBroadcastLimit ?? 2))
+    .replace(/\{recipientLimit\}/g, String(policy.testRecipientLimit ?? 5))
+    .replace(/\{trialDays\}/g, String(policy.trialDays ?? 14));
+
+  const daysLeft = admin.subscriptionEndDate
+    ? Math.max(0, Math.ceil((new Date(admin.subscriptionEndDate).getTime() - Date.now()) / (24 * 60 * 60 * 1000)))
+    : null;
+
+  return (
+    <div className="merchant-preview-banner" role="status">
+      <span>
+        {daysLeft !== null && (
+          <strong style={{ marginRight: '8px', color: daysLeft === 0 ? '#f87171' : '#34d399' }}>
+            {daysLeft === 0 ? 'Trial ended ·' : `${daysLeft}d left ·`}
+          </strong>
+        )}
+        <strong>{title}</strong> {message}
+      </span>
+      <Link to="/dashboard/billing">Choose a plan</Link>
+    </div>
+  );
+}
 
 function MerchantPageGate({ admin, children }) {
   const { pathname } = useLocation();
@@ -496,13 +530,7 @@ function App() {
                     onToggleTheme={handleToggleTheme}
                   />
 
-                  {admin?.role !== 'super_admin' && admin?.selfSignupTrial === true &&
-                    (admin.subscriptionStatus !== 'active' || (admin.subscriptionEndDate && new Date(admin.subscriptionEndDate) <= new Date())) && (
-                    <div className="merchant-preview-banner" role="status">
-                      <span><strong>Free preview:</strong> Connect WhatsApp and send up to two test broadcasts. Other pages are view-only until you activate a plan.</span>
-                      <Link to="/dashboard/billing">Choose a plan</Link>
-                    </div>
-                  )}
+                  <PreviewBanner admin={admin} />
 
                   {previewGateMessage && <div className="merchant-preview-action-gate" role="alert">
                     <span>{previewGateMessage}</span>
@@ -668,6 +696,7 @@ function App() {
                         <Route path="/super-admin/billing-revenue" element={<SuperAdminBillingRevenue />} />
                         <Route path="/super-admin/audit-logs" element={<SuperAdminAuditLogs />} />
                         <Route path="/super-admin/feature-flags" element={<SuperAdminFeatureFlags />} />
+                        <Route path="/super-admin/trial-policy" element={<SuperAdminTrialPolicy />} />
                         <Route path="/super-admin/announcements" element={<SuperAdminAnnouncements />} />
                         <Route path="/super-admin/user/:userId" element={<SaMerchantDetail />} />
                         <Route path="/super-admin/merchants/:userId" element={<SaMerchantDetail />} />

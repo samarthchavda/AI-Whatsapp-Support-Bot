@@ -4,7 +4,7 @@ const Order = require('../../models/Order');
 const Announcement = require('../../models/Announcement');
 const Broadcast = require('../../models/Broadcast');
 const { getAdminPricingPlan } = require('../../services/permissionService');
-const { isSelfServePreview, TEST_BROADCAST_LIMIT, TEST_RECIPIENT_LIMIT } = require('../../services/selfServePreview');
+const { isSelfServePreview, getTrialPolicy } = require('../../services/selfServePreview');
 
 // Get dashboard statistics
 exports.getDashboardStats = async (req, res) => {
@@ -80,6 +80,12 @@ exports.getDashboardStats = async (req, res) => {
       ? parseFloat(satisfactionAgg[0].avgSatisfaction.toFixed(2))
       : null;
 
+    const trialPolicy = await getTrialPolicy();
+    const previewActive = isSelfServePreview(req.admin);
+    const daysRemaining = req.admin.subscriptionEndDate
+      ? Math.max(0, Math.ceil((new Date(req.admin.subscriptionEndDate).getTime() - Date.now()) / (24 * 60 * 60 * 1000)))
+      : trialPolicy.trialDays;
+
     res.json({
       orders: {
         total: totalOrders,
@@ -109,11 +115,15 @@ exports.getDashboardStats = async (req, res) => {
         billingCycle: req.admin.billingCycle || 'monthly',
         subscriptionStatus: req.admin.subscriptionStatus || 'trial',
         preview: {
-          active: isSelfServePreview(req.admin),
+          active: previewActive,
           whatsappConnected: Boolean(req.admin.whatsappConnected && req.admin.whatsappAccessToken && req.admin.whatsappPhoneNumberId),
           testBroadcastsUsed: req.admin.trialBroadcastsUsed || 0,
-          testBroadcastsLimit: TEST_BROADCAST_LIMIT,
-          testRecipientsLimit: TEST_RECIPIENT_LIMIT
+          testBroadcastsLimit: trialPolicy.testBroadcastLimit,
+          testRecipientsLimit: trialPolicy.testRecipientLimit,
+          allowAiInTrial: trialPolicy.allowAiInTrial,
+          daysRemaining,
+          bannerTitle: trialPolicy.bannerTitle,
+          bannerMessage: trialPolicy.bannerMessage
         },
         periodStartedAt: req.admin.lastTokenReset || null,
         // These counters are reset together every 30 days by subscriptionService.

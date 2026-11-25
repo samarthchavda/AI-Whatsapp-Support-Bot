@@ -90,6 +90,8 @@ router.get('/ai-usage', superAdminController.getAIUsageStatus);
 router.get('/billing-revenue', superAdminController.getBillingRevenueStatus);
 router.get('/feature-flags', superAdminController.getFeatureFlags);
 router.post('/feature-flags/toggle', superAdminController.toggleFeatureFlag);
+router.get('/trial-policy', superAdminController.getTrialPolicySettings);
+router.put('/trial-policy', superAdminController.updateTrialPolicySettings);
 router.post('/users/:id/verify-whatsapp', superAdminController.verifyUserWhatsAppConnection);
 router.post('/users/:id/alert-health-offline', superAdminController.alertUserConnectionOffline);
 

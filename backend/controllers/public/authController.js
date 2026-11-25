@@ -61,8 +61,14 @@ exports.signup = async (req, res) => {
       return res.status(409).json({ success: false, error: 'An account with this email already exists. Sign in or reset your password.' });
     }
 
+    const { getTrialPolicy } = require('../../services/selfServePreview');
+    const trialPolicy = await getTrialPolicy();
     const { resolvePlanAssignment } = require('../../services/planAssignmentService');
-    const starter = await resolvePlanAssignment({ subscriptionPlan: 'starter', subscriptionStatus: 'trial' });
+    const assignedTrial = await resolvePlanAssignment({
+      subscriptionPlan: trialPolicy.defaultPlan || 'starter',
+      subscriptionStatus: 'trial',
+      trialDays: trialPolicy.trialDays
+    });
     const admin = await Admin.create({
       name,
       email,
@@ -72,12 +78,12 @@ exports.signup = async (req, res) => {
       supportEmail: email,
       role: 'admin',
       profileCompleted: false,
-      selfSignupTrial: true,
+      selfSignupTrial: Boolean(trialPolicy.enablePreviewMode),
       trialBroadcastsUsed: 0,
-      aiBotEnabled: false,
+      aiBotEnabled: Boolean(trialPolicy.allowAiInTrial),
       termsAcceptedAt: new Date(),
-      trialStartedAt: starter.subscriptionStartDate,
-      ...starter
+      trialStartedAt: assignedTrial.subscriptionStartDate,
+      ...assignedTrial
     });
 
     const { accessToken, refreshToken } = issueSessionTokens(admin, req);
@@ -87,7 +93,7 @@ exports.signup = async (req, res) => {
     auditLogService.logAction({
       action: 'merchant_signup',
       actor: { _id: admin._id, email: admin.email },
-      details: { subscriptionPlan: 'starter' },
+      details: { subscriptionPlan: assignedTrial.subscriptionPlan },
       req
     }).catch((error) => console.error('Signup audit log failed:', error));
 
@@ -835,8 +841,14 @@ exports.updateProfile = async (req, res) => {
     if (currency !== undefined) admin.currency = currency;
     if (timezone !== undefined) admin.timezone = timezone;
     if (theme !== undefined) admin.theme = theme;
-    if ((aiBotEnabled === true || aiDraftMode === true) && require('../../services/selfServePreview').isSelfServePreview(admin)) {
-      return res.status(403).json({ success: false, error: 'AI replies and drafts are available after you activate a paid plan.' });
+    if (aiBotEnabled === true || aiDraftMode === true) {
+      const { isSelfServePreview, getTrialPolicy } = require('../../services/selfServePreview');
+      if (isSelfServePreview(admin)) {
+        const trialPolicy = await getTrialPolicy();
+        if (!trialPolicy.allowAiInTrial) {
+          return res.status(403).json({ success: false, error: 'AI replies and drafts are available after you activate a paid plan.' });
+        }
+      }
     }
     if (aiBotEnabled !== undefined) admin.aiBotEnabled = aiBotEnabled;
     if (aiDraftMode !== undefined) admin.aiDraftMode = aiDraftMode;

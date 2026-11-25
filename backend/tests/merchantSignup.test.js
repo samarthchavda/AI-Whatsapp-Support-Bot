@@ -39,7 +39,7 @@ describe('Merchant self signup', () => {
 
     await signup(request({ ...validBody, subscriptionPlan: 'scale', role: 'super_admin', monthlyPrice: 0 }), res);
 
-    expect(assignment).toHaveBeenCalledWith({ subscriptionPlan: 'starter', subscriptionStatus: 'trial' });
+    expect(assignment).toHaveBeenCalledWith({ subscriptionPlan: 'starter', subscriptionStatus: 'trial', trialDays: 14 });
     expect(create).toHaveBeenCalledWith(expect.objectContaining({
       email: 'owner@example.com', role: 'admin', subscriptionPlan: 'starter',
       subscriptionStatus: 'trial', profileCompleted: false, trialStartedAt: start

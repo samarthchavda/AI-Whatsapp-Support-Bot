@@ -505,6 +505,16 @@
     "summary": "Toggle feature flag"
   },
   {
+    "method": "get",
+    "path": "/api/super-admin/trial-policy",
+    "summary": "Get trial policy settings"
+  },
+  {
+    "method": "put",
+    "path": "/api/super-admin/trial-policy",
+    "summary": "Update trial policy settings"
+  },
+  {
     "method": "post",
     "path": "/api/super-admin/users/{id}/verify-whatsapp",
     "summary": "Verify user whats app connection"

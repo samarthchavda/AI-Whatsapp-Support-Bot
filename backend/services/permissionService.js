@@ -235,6 +235,10 @@ async function getEffectiveAccessPayload(adminDoc) {
     broadcastCampaignsUsed: adminDoc.broadcastCampaignsUsed || 0
   };
 
+  const { getTrialPolicy, isSelfServePreview } = require('./selfServePreview');
+  const trialPolicy = await getTrialPolicy();
+  const previewModeActive = isSelfServePreview(adminDoc);
+
   return {
     success: true,
     data: {
@@ -243,6 +247,10 @@ async function getEffectiveAccessPayload(adminDoc) {
         email: adminDoc.email,
         name: adminDoc.name,
         role: adminDoc.role
+      },
+      trialPolicy: {
+        ...trialPolicy,
+        previewModeActive
       },
       subscription: {
         planId: plan?._id || null,

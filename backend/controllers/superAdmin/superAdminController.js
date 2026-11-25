@@ -3438,6 +3438,82 @@ exports.toggleFeatureFlag = async (req, res) => {
   }
 };
 
+// Get Self-Signup Trial & Preview Policy + live merchant counts
+exports.getTrialPolicySettings = async (req, res) => {
+  try {
+    const { getTrialPolicy, DEFAULT_TRIAL_POLICY } = require('../../services/selfServePreview');
+    const [policy, trialMerchantsCount, selfSignupCount, activePaidCount] = await Promise.all([
+      getTrialPolicy(),
+      Admin.countDocuments({ role: 'admin', subscriptionStatus: 'trial' }),
+      Admin.countDocuments({ role: 'admin', selfSignupTrial: true }),
+      Admin.countDocuments({ role: 'admin', subscriptionStatus: 'active' })
+    ]);
+
+    res.json({
+      success: true,
+      data: {
+        policy,
+        defaults: DEFAULT_TRIAL_POLICY,
+        stats: {
+          trialMerchantsCount,
+          selfSignupCount,
+          activePaidCount
+        }
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching trial policy:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch trial policy settings'
+    });
+  }
+};
+
+// Update Self-Signup Trial & Preview Policy
+exports.updateTrialPolicySettings = async (req, res) => {
+  try {
+    const {
+      TRIAL_POLICY_KEY,
+      sanitizeTrialPolicy,
+      invalidateTrialPolicyCache
+    } = require('../../services/selfServePreview');
+
+    const policy = sanitizeTrialPolicy(req.body?.policy || req.body || {});
+    await GlobalSettings.findOneAndUpdate(
+      { key: TRIAL_POLICY_KEY },
+      { key: TRIAL_POLICY_KEY, value: policy },
+      { new: true, upsert: true }
+    );
+    invalidateTrialPolicyCache();
+
+    try {
+      const { logAction } = require('../../services/auditLogService');
+      await logAction({
+        action: 'trial_policy_updated',
+        actor: req.admin,
+        target: TRIAL_POLICY_KEY,
+        details: { policy },
+        req
+      });
+    } catch (auditErr) {
+      console.error('Failed to log trial policy update:', auditErr.message);
+    }
+
+    res.json({
+      success: true,
+      data: { policy },
+      message: 'Trial & preview policy saved successfully.'
+    });
+  } catch (error) {
+    console.error('Error updating trial policy:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to save trial policy settings'
+    });
+  }
+};
+
 // Update merchant allowed pages
 exports.updateAllowedPages = async (req, res) => {
   try {

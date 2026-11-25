@@ -5,7 +5,7 @@ const fs = require('fs').promises;
 const csv = require('csv-parser');
 const { createReadStream } = require('fs');
 const Admin = require('../../models/Admin');
-const { isSelfServePreview, TEST_BROADCAST_LIMIT, TEST_RECIPIENT_LIMIT } = require('../../services/selfServePreview');
+const { isSelfServePreview, getTrialPolicy } = require('../../services/selfServePreview');
 
 const isCrmAutomationPlan = (plan) => ['crm_automation', 'crm-automation'].includes(
   String(plan || '').trim().toLowerCase()
@@ -26,6 +26,7 @@ exports.createBroadcast = async (req, res) => {
     const { title, message, scheduledFor } = req.body;
     const recipientSource = req.body.recipientSource || 'csv';
     const preview = isSelfServePreview(req.admin);
+    const trialPolicy = preview ? await getTrialPolicy() : null;
     let recipients = [];
     let csvFileName = 'Imported from CRM/Orders';
 
@@ -202,9 +203,9 @@ exports.createBroadcast = async (req, res) => {
     }
 
     // Check broadcast message quota
-    if (preview && recipients.length > TEST_RECIPIENT_LIMIT) {
+    if (preview && trialPolicy && recipients.length > trialPolicy.testRecipientLimit) {
       await removeUploadedFiles(req);
-      return res.status(403).json({ success: false, error: `Test broadcasts can have at most ${TEST_RECIPIENT_LIMIT} recipients. Activate a plan for larger audiences.` });
+      return res.status(403).json({ success: false, error: `Test broadcasts can have at most ${trialPolicy.testRecipientLimit} recipients. Activate a plan for larger audiences.` });
     }
     const maxMessages = subscriptionService.getPlanLimit(req.admin.subscriptionPlan, 'maxBroadcastMessages');
     const messagesUsed = req.admin.broadcastMessagesUsed || 0;
@@ -310,15 +311,17 @@ exports.createBroadcast = async (req, res) => {
       templateParams: finalTemplateParams
     });
 
-    if (preview) {
+    if (preview && trialPolicy) {
+      const limitCount = trialPolicy.testBroadcastLimit;
       const reserved = await Admin.findOneAndUpdate(
-        { _id: req.admin._id, selfSignupTrial: true, trialBroadcastsUsed: { $lt: TEST_BROADCAST_LIMIT } },
+        { _id: req.admin._id, selfSignupTrial: true, trialBroadcastsUsed: { $lt: limitCount } },
         { $inc: { trialBroadcastsUsed: 1 } },
         { new: true }
       );
       if (!reserved) {
         await removeUploadedFiles(req);
-        return res.status(403).json({ success: false, error: 'Your two test broadcasts are used. Activate a plan in Billing to send more.' });
+        const limitWord = limitCount === 2 ? 'two' : limitCount;
+        return res.status(403).json({ success: false, error: `Your ${limitWord} test broadcasts are used. Activate a plan in Billing to send more.` });
       }
       previewReserved = true;
     }
@@ -623,11 +626,14 @@ exports.sendBroadcastNow = async (req, res) => {
       });
     }
     if (isSelfServePreview(req.admin)) {
+      const trialPolicy = await getTrialPolicy();
+      const maxRecipients = trialPolicy.testRecipientLimit;
+      const maxBroadcasts = trialPolicy.testBroadcastLimit;
       if (!req.admin.whatsappConnected || !req.admin.whatsappAccessToken || !req.admin.whatsappPhoneNumberId) {
         return res.status(400).json({ success: false, error: 'Connect WhatsApp before sending a test broadcast.' });
       }
-      if (Math.max(broadcast.totalRecipients || 0, broadcast.recipients?.length || 0) > TEST_RECIPIENT_LIMIT) {
-        return res.status(403).json({ success: false, error: `Test broadcasts can have at most ${TEST_RECIPIENT_LIMIT} recipients.` });
+      if (Math.max(broadcast.totalRecipients || 0, broadcast.recipients?.length || 0) > maxRecipients) {
+        return res.status(403).json({ success: false, error: `Test broadcasts can have at most ${maxRecipients} recipients.` });
       }
       const Template = require('../../models/Template');
       const approved = broadcast.templateName && await Template.findOne({ adminId: req.admin._id, name: broadcast.templateName, status: 'APPROVED' });
@@ -635,12 +641,13 @@ exports.sendBroadcastNow = async (req, res) => {
         return res.status(400).json({ success: false, error: 'Choose a Meta-approved template before sending a test broadcast.' });
       }
       const reserved = await Admin.findOneAndUpdate(
-        { _id: req.admin._id, selfSignupTrial: true, trialBroadcastsUsed: { $lt: TEST_BROADCAST_LIMIT } },
+        { _id: req.admin._id, selfSignupTrial: true, trialBroadcastsUsed: { $lt: maxBroadcasts } },
         { $inc: { trialBroadcastsUsed: 1 } },
         { new: true }
       );
       if (!reserved) {
-        return res.status(403).json({ success: false, error: 'Your two test broadcasts are used. Activate a plan in Billing to send more.' });
+        const limitWord = maxBroadcasts === 2 ? 'two' : maxBroadcasts;
+        return res.status(403).json({ success: false, error: `Your ${limitWord} test broadcasts are used. Activate a plan in Billing to send more.` });
       }
       previewReserved = true;
     }

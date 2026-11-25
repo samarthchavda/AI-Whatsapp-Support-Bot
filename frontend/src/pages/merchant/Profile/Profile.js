@@ -255,22 +255,21 @@ function Profile({ admin, onUpdateAdmin }) {
   };
 
   const PLAN_LIMITS = {
-    starter: { tokens: 100000, messages: 500 },
-    professional: { tokens: 500000, messages: 2500 },
-    enterprise: { tokens: 2000000, messages: 10000 },
-    custom: { tokens: Infinity, messages: Infinity }
+    starter: { replies: 2000 },
+    growth: { replies: 5000 },
+    professional: { replies: 5000 },
+    scale: { replies: Infinity },
+    enterprise: { replies: Infinity },
+    custom: { replies: Infinity }
   };
 
   const plan = (profileData.subscriptionPlan || 'starter').toLowerCase();
   const limits = PLAN_LIMITS[plan] || PLAN_LIMITS.starter;
-  const tokenLimit = profileData.geminiTokensLimit || limits.tokens;
-  const messageLimit = limits.messages;
-  const tokensUsed = profileData.geminiTokensUsed || 0;
+  const messageLimit = limits.replies;
   const messagesProcessed = profileData.totalMessagesProcessed || 0;
-  const tokenUsagePercent = tokenLimit === Infinity ? 0 : Math.round((tokensUsed / tokenLimit) * 100);
   const messageUsagePercent = messageLimit === Infinity ? 0 : Math.round((messagesProcessed / messageLimit) * 100);
-  const isApproachingLimit = tokenUsagePercent >= 90 || messageUsagePercent >= 90;
-  const isLimitBreached = tokensUsed >= tokenLimit || messagesProcessed >= messageLimit;
+  const isApproachingLimit = messageUsagePercent >= 90;
+  const isLimitBreached = messageLimit !== Infinity && messagesProcessed >= messageLimit;
 
   if (loading) {
     return (

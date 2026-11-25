@@ -256,8 +256,9 @@
   padding: 20px;
 }
 
-.modal-content {
+.integrations-page .modal-content {
   background: var(--bg-card, #ffffff);
+  backdrop-filter: none;
   border: 1px solid var(--border-subtle, #dbe4d4);
   border-radius: 16px;
   width: 100%;
@@ -268,22 +269,23 @@
   color: var(--text-primary, #1d2a13);
 }
 
-.modal-header {
+.integrations-page .modal-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
   padding: 24px 28px;
   border-bottom: 1px solid var(--border-subtle, #dbe4d4);
+  background: var(--bg-card, #ffffff);
 }
 
-.modal-header h2 {
+.integrations-page .modal-header h2 {
   color: var(--text-primary, #1d2a13);
   font-size: 20px;
   font-weight: 700;
   margin: 0;
 }
 
-.modal-close {
+.integrations-page .modal-close {
   background: none;
   border: none;
   color: var(--text-secondary, #556447);
@@ -293,67 +295,68 @@
   transition: color 0.2s ease;
 }
 
-.modal-close:hover {
+.integrations-page .modal-close:hover {
   color: var(--text-primary, #1d2a13);
 }
 
-.modal-form {
+.integrations-page .modal-form {
   padding: 28px;
+  background: var(--bg-card, #ffffff);
 }
 
-.form-group {
+.integrations-page .form-group {
   margin-bottom: 20px;
 }
 
-.form-group label {
+.integrations-page .form-group label {
   display: block;
-  color: var(--text-primary, #F8FAFC);
+  color: var(--text-primary, #1d2a13);
   font-size: 14px;
   font-weight: 600;
   margin-bottom: 8px;
 }
 
-.form-group input {
+.integrations-page .form-group input {
   width: 100%;
   padding: 12px 14px;
-  background: var(--bg-input, #1A1D24);
-  border: 1px solid var(--border-subtle, #292C33);
+  background: var(--bg-input, #f8fafc);
+  border: 1px solid var(--border-default, #cbd5e1);
   border-radius: 10px;
-  color: var(--text-primary, #F8FAFC);
+  color: var(--text-primary, #1d2a13);
   font-size: 14px;
   transition: border-color 0.2s ease;
 }
 
-.form-group input:focus {
+.integrations-page .form-group input:focus {
   outline: none;
-  border-color: var(--brand, #28B8F2);
+  border-color: var(--brand, #3d5a22);
 }
 
-.form-group small {
+.integrations-page .form-group small {
   display: block;
-  color: var(--text-secondary, #A1A1AA);
+  color: var(--text-secondary, #556447);
   font-size: 12px;
   margin-top: 6px;
   line-height: 1.4;
 }
 
-.info-box {
-  background: var(--brand-light, rgba(40, 184, 242, 0.12));
-  border: 1px solid var(--border-subtle, #292C33);
+.integrations-page .info-box {
+  background: var(--brand-light, #eef5e4);
+  border: 1px solid var(--border-subtle, #dbe4d4);
   border-radius: 10px;
   padding: 16px;
   margin-bottom: 20px;
 }
 
-.info-box strong {
-  color: var(--brand, #28B8F2);
+.integrations-page .info-box strong {
+  color: var(--brand, #2a3d18);
   font-size: 14px;
   display: block;
   margin-bottom: 12px;
 }
 
-.info-box ol {
-  color: var(--text-secondary, #A1A1AA);
+.integrations-page .info-box ol {
+  color: var(--text-secondary, #3f4e32);
   font-size: 13px;
   line-height: 1.8;
   margin: 0;

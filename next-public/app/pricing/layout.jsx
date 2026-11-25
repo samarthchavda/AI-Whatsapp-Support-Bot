@@ -2,8 +2,8 @@ import { pageMetadata } from '../seo';
 
 export const metadata = pageMetadata({
   path: "/pricing",
-  title: "Pricing: WhatsApp AI Support, CRM & API Plans",
-  description: "Compare Kwickbot plans for WhatsApp AI support, CRM integration, the WhatsApp API and enterprise teams. Monthly or yearly billing with a 14-day free trial.",
+  title: "Pricing: E-Commerce WhatsApp AI Support Plans",
+  description: "Compare Kwickbot e-commerce plans for WhatsApp AI support — Free 14-day trial, Starter, and Growth. Monthly or yearly billing.",
   keywords: [
     "WhatsApp chatbot pricing",
     "WhatsApp Business API pricing India",

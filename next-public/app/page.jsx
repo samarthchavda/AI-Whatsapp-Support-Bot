@@ -28,7 +28,7 @@ import {
 } from 'react-icons/fa';
 import { SiWhatsapp, SiShopify, SiWoocommerce, SiMeta, SiGoogle } from 'react-icons/si';
 import { getGroundedWebsiteAnswer } from './services/websiteKnowledge';
-import { planHighlights, formatINR, sortPlans, isContactSales } from './lib/planFeatures';
+import { planHighlights, formatINR, sortPlans, isTrialPlan, isContactSales } from './lib/planFeatures';
 import BrandMark from './components/BrandMark';
 import OrderStory from './components/OrderStory';
 
@@ -215,7 +215,7 @@ export default function LandingPage() {
     return () => { cancelled = true; };
   }, []);
 
-  const homePlans = sortPlans((livePlans || []).filter((plan) => plan.category === 'kwickbot_crm' && ['starter', 'growth'].includes(String(plan.name).toLowerCase())));
+  const homePlans = sortPlans((livePlans || []).filter((plan) => plan.category === 'kwickbot_crm' && ['free_trial', 'starter', 'growth'].includes(String(plan.name).toLowerCase())));
   const [activePreview, setActivePreview] = useState('support');
   const [autoPlay, setAutoPlay] = useState(true);
 
@@ -586,7 +586,7 @@ export default function LandingPage() {
             </div>
             <div className="plan-grid" data-stagger>
               {livePlans === null ? (
-                [0, 1].map((index) => (
+                [0, 1, 2].map((index) => (
                   <div key={`home-plan-skeleton-${index}`} className="plan-card" aria-hidden="true" style={{ minHeight: 380 }}>
                     <div className="skeleton" style={{ width: '34%', height: 16 }} />
                     <div className="skeleton" style={{ width: '58%', height: 36 }} />
@@ -603,17 +603,25 @@ export default function LandingPage() {
                 </div>
               ) : homePlans.map((plan) => {
                 const { included, excluded } = planHighlights(plan);
-                const featured = Boolean(plan.isPopular);
+                const isTrial = isTrialPlan(plan);
+                const featured = Boolean(plan.isPopular) || String(plan.name).toLowerCase() === 'growth';
                 const contactSales = isContactSales(plan);
+                const trialDays = Number(plan.trialPolicy?.trialDays || plan.trialDays) || 14;
                 return (
                   <article key={plan._id || plan.name} className={`plan-card ${featured ? 'featured' : ''}`}>
                     {(featured || plan.badge) && <span className="plan-badge">{plan.badge || 'Most popular'}</span>}
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6, paddingRight: (featured || plan.badge) ? 105 : 0 }}>
                       <h3>{plan.displayName}</h3>
                       <p className="plan-desc">{plan.shortDescription || plan.detailedDescription}</p>
                     </div>
                     <div className="plan-price">
-                      {contactSales ? <strong style={{ fontSize: 32 }}>Contact sales</strong> : <><strong>{formatINR(plan.monthlyPrice, plan.currency)}</strong><span>/ month</span></>}
+                      {isTrial ? (
+                        <><strong>{formatINR(0, plan.currency)}</strong><span>/ {trialDays}-day trial</span></>
+                      ) : contactSales ? (
+                        <strong style={{ fontSize: 32 }}>Contact sales</strong>
+                      ) : (
+                        <><strong>{formatINR(plan.monthlyPrice, plan.currency)}</strong><span>/ month</span></>
+                      )}
                     </div>
                     <ul className="checklist">
                       {included.map((feature) => (
@@ -623,13 +631,15 @@ export default function LandingPage() {
                         <li key={feature} className="off"><span className="check"><FaTimes aria-hidden="true" /></span><span><span className="sr-only">Not included: </span>{feature}</span></li>
                       ))}
                     </ul>
-                    <Link href={contactSales ? '/contact' : '/signup'} className={`btn btn-block ${featured ? 'btn-pista' : 'btn-secondary'}`}>{contactSales ? 'Contact us' : 'Create account'}</Link>
+                    <Link href={contactSales ? '/contact' : '/signup'} className={`btn btn-block ${featured ? 'btn-pista' : 'btn-secondary'}`}>
+                      {contactSales ? 'Contact us' : isTrial ? 'Start free trial' : 'Create account'}
+                    </Link>
                   </article>
                 );
               })}
             </div>
             <p style={{ textAlign: 'center', marginTop: 24 }}>
-              <Link href="/pricing" className="text-link">See all plans, yearly prices and API plans <FaArrowRight aria-hidden="true" /></Link>
+              <Link href="/pricing" className="text-link">Compare plan details &amp; yearly savings <FaArrowRight aria-hidden="true" /></Link>
             </p>
           </div>
         </section>

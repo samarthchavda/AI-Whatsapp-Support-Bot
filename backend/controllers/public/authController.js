@@ -689,8 +689,12 @@ exports.logout = async (req, res) => {
 exports.getPlans = async (req, res) => {
   try {
     const PricingPlan = require('../../models/PricingPlan');
-    const plans = await PricingPlan.find({ isActive: true, isPublished: true })
-      .sort({ category: 1, displayOrder: 1 });
+    const plans = await PricingPlan.find({
+      isActive: true,
+      isPublished: true,
+      name: { $ne: 'free_trial' }
+    })
+      .sort({ category: 1, displayOrder: 1, monthlyPrice: 1 });
     
     let rzpKeyId = null;
     try {
@@ -718,19 +722,32 @@ exports.getPlans = async (req, res) => {
 exports.getPublicPlans = async (req, res) => {
   try {
     const PricingPlan = require('../../models/PricingPlan');
-    // Publish Starter and Growth for e-commerce; keep Scale off the public offer
-    // until its pricing is finalized.
-    const plans = await PricingPlan.find({
-      isActive: true,
-      isPublished: true,
-      name: { $ne: 'scale' }
-    })
-      .select('-__v -createdAt -updatedAt')
-      .sort({ category: 1, displayOrder: 1 });
+    const { getTrialPolicy } = require('../../services/selfServePreview');
+    const [plans, trialPolicy] = await Promise.all([
+      PricingPlan.find({
+        isActive: true,
+        isPublished: true,
+        name: { $ne: 'scale' }
+      })
+        .select('-__v -createdAt -updatedAt')
+        .sort({ category: 1, displayOrder: 1, monthlyPrice: 1 })
+        .lean(),
+      getTrialPolicy()
+    ]);
+
+    const enrichedPlans = plans.map((plan) => {
+      const isTrial = plan.name === 'free_trial' || (plan.trialEnabled && !plan.contactSales && Number(plan.monthlyPrice) === 0);
+      if (!isTrial) return plan;
+      return {
+        ...plan,
+        trialDays: trialPolicy.trialDays || plan.trialDays || 14,
+        trialPolicy
+      };
+    });
 
     res.json({
       success: true,
-      data: plans
+      data: enrichedPlans
     });
   } catch (error) {
     console.error('Error fetching public plans:', error);

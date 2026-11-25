@@ -3,15 +3,11 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { safeJsonStringify } from '../../utils/jsonSanitizer';
-import { planHighlights, yearlySavingPercent } from '../lib/planFeatures';
+import { planHighlights, yearlySavingPercent, sortPlans, isTrialPlan, isContactSales } from '../lib/planFeatures';
 import { FaCheck, FaTimes, FaChevronDown, FaChevronUp, FaInfoCircle } from 'react-icons/fa';
 
-const CATEGORIES = [
-  { id: 'kwickbot_crm', label: 'E-commerce' },
-  { id: 'crm_integration', label: 'Connect Your CRM' },
-  { id: 'whatsapp_api', label: 'WhatsApp API' },
-  { id: 'enterprise_custom', label: 'Enterprise' }
-];
+// Only E-commerce plans are active on public pricing right now; CRM / API / Enterprise will return later.
+const ACTIVE_ECOMMERCE_PLANS = ['free_trial', 'starter', 'growth'];
 
 const faqs = [
   {
@@ -35,7 +31,6 @@ export default function PricingPage() {
   const [openFaqIndex, setOpenFaqIndex] = useState(0);
   const [showFullComparison, setShowFullComparison] = useState(true);
   const [billingCycle, setBillingCycle] = useState('monthly'); // 'monthly' | 'yearly'
-  const [activeCategory, setActiveCategory] = useState('kwickbot_crm');
   const [plans, setPlans] = useState([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
@@ -95,9 +90,10 @@ export default function PricingPage() {
     </li>
   );
 
-  // Show only the configured e-commerce offers; Scale remains in preparation.
-  const filteredPlans = plans.filter((p) => p.category === activeCategory &&
-    (activeCategory !== 'kwickbot_crm' || ['starter', 'growth'].includes(String(p.name).toLowerCase())));
+  // Show active E-commerce offers (Free Trial, Starter, Growth) sorted cleanly.
+  const filteredPlans = sortPlans(
+    plans.filter((p) => p.category === 'kwickbot_crm' && ACTIVE_ECOMMERCE_PLANS.includes(String(p.name).toLowerCase()))
+  );
 
   const maxYearlySaving = filteredPlans.reduce((max, p) => Math.max(max, yearlySavingPercent(p)), 0);
 
@@ -130,8 +126,8 @@ export default function PricingPage() {
           <div className="container">
             <div data-reveal="up" className="section-head center">
               <span className="eyebrow">Pricing</span>
-              <h1>Transparent support &amp; integration plans</h1>
-              <p>Simple pricing for validating AI, connecting your CRM, developer APIs and enterprise operations.</p>
+              <h1>Simple e-commerce WhatsApp support plans</h1>
+              <p>Start with a free self-signup trial and upgrade to Starter or Growth whenever your store is ready.</p>
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16, marginTop: 32 }}>
@@ -142,20 +138,6 @@ export default function PricingPage() {
                 <button type="button" className={billingCycle === 'yearly' ? 'active' : ''} aria-pressed={billingCycle === 'yearly'} onClick={() => setBillingCycle('yearly')}>
                   Yearly {maxYearlySaving > 0 && <span className="save-tag">Save up to {maxYearlySaving}%</span>}
                 </button>
-              </div>
-
-              <div className="category-tabs" role="group" aria-label="Plan type">
-                {CATEGORIES.map((cat) => (
-                  <button
-                    key={cat.id}
-                    type="button"
-                    className={activeCategory === cat.id ? 'active' : ''}
-                    aria-pressed={activeCategory === cat.id}
-                    onClick={() => setActiveCategory(cat.id)}
-                  >
-                    {cat.label}
-                  </button>
-                ))}
               </div>
 
               <button type="button" className="btn btn-soft btn-sm" onClick={() => setShowFullComparison((v) => !v)} aria-expanded={showFullComparison}>
@@ -170,10 +152,10 @@ export default function PricingPage() {
           <div className="container">
             <div className="alert" style={{ background: 'var(--warn-bg)', color: 'var(--warn-ink)', maxWidth: 860, margin: '0 auto 28px' }}>
               <FaInfoCircle aria-hidden="true" style={{ flex: 'none', marginTop: 3 }} />
-              <span>Kwickbot AI support is included within each plan's stated limits. Meta bills WhatsApp message delivery separately at its current category and destination rates. Third-party CRM/Odoo fees and any listed connector maintenance fees are separate.</span>
+              <span>Kwickbot AI support is included within each plan&apos;s stated limits. Meta bills WhatsApp message delivery separately at its current category and destination rates.</span>
             </div>
 
-            <div className="plan-grid" data-stagger key={`${activeCategory}-${loading}`} aria-busy={loading}>
+            <div className="plan-grid" data-stagger key={`ecommerce-${loading}`} aria-busy={loading}>
               {loading ? (
                 [0, 1, 2].map((index) => (
                   <div key={`pricing-skeleton-${index}`} className="plan-card" aria-hidden="true" style={{ minHeight: 430 }}>
@@ -187,15 +169,20 @@ export default function PricingPage() {
                 ))
               ) : filteredPlans.length > 0 ? (
                 filteredPlans.map((plan) => {
-                  const isContactSales = plan.contactSales || plan.monthlyPrice === 0;
+                  const isTrial = isTrialPlan(plan);
+                  const contactSales = isContactSales(plan);
                   const currSymbol = getCurrencySymbol(plan.currency);
                   const highlights = planHighlights(plan);
+                  const trialDays = Number(plan.trialPolicy?.trialDays || plan.trialDays) || 14;
 
                   let priceDisplay = 'Contact sales';
                   let subtext = '';
                   let savingsText = null;
 
-                  if (!isContactSales) {
+                  if (isTrial) {
+                    priceDisplay = `${currSymbol}0`;
+                    subtext = `/ ${trialDays}-day trial`;
+                  } else if (!contactSales) {
                     if (billingCycle === 'yearly' && plan.yearlyPrice) {
                       const monthlyEquiv = Math.round(plan.yearlyPrice / 12);
                       priceDisplay = `${currSymbol}${formatMoney(plan.yearlyPrice)}`;
@@ -212,7 +199,7 @@ export default function PricingPage() {
                     }
                   }
 
-                  const isPopularCard = plan.isPopular;
+                  const isPopularCard = plan.isPopular || String(plan.name).toLowerCase() === 'growth';
 
                   return (
                     <article key={plan._id || plan.name} className={`plan-card ${isPopularCard ? 'featured' : ''}`}>
@@ -225,13 +212,18 @@ export default function PricingPage() {
 
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                         <div className="plan-price">
-                          <strong key={billingCycle} className="price-swap" style={isContactSales ? { fontSize: 32 } : undefined}>{priceDisplay}</strong>
+                          <strong key={`${billingCycle}-${plan.name}`} className="price-swap" style={contactSales ? { fontSize: 32 } : undefined}>{priceDisplay}</strong>
                           {subtext && <span>{subtext}</span>}
                         </div>
                         {savingsText && <span className="plan-note" style={{ fontWeight: 700, color: isPopularCard ? 'var(--pista)' : 'var(--leaf-strong)' }}>{savingsText}</span>}
-                        {plan.setupFee > 0 && <span className="plan-note">+ {currSymbol}{formatMoney(plan.setupFee)} one-time setup fee</span>}
-                        {plan.connectorMaintenanceFee > 0 && <span className="plan-note">+ {currSymbol}{formatMoney(plan.connectorMaintenanceFee)}/mo connector maintenance fee</span>}
-                        {plan.category === 'kwickbot_crm' && <span className="plan-note">AI support included in this plan. Meta WhatsApp message charges are separate.</span>}
+                        {isTrial ? (
+                          <span className="plan-note">Assigned automatically when you sign up. No payment or card required.</span>
+                        ) : (
+                          <>
+                            {plan.setupFee > 0 && <span className="plan-note">+ {currSymbol}{formatMoney(plan.setupFee)} one-time setup fee</span>}
+                            {plan.category === 'kwickbot_crm' && <span className="plan-note">AI support included in this plan. Meta WhatsApp message charges are separate.</span>}
+                          </>
+                        )}
                       </div>
 
                       <ul className="checklist">
@@ -243,8 +235,8 @@ export default function PricingPage() {
                         ))}
                       </ul>
 
-                      <Link href={isContactSales ? '/contact' : '/signup'} className={`btn btn-block ${isPopularCard ? 'btn-pista' : 'btn-secondary'}`}>
-                        {isContactSales ? 'Contact us' : 'Create account'}
+                      <Link href={contactSales ? '/contact' : '/signup'} className={`btn btn-block ${isPopularCard ? 'btn-pista' : 'btn-secondary'}`}>
+                        {contactSales ? 'Contact us' : isTrial ? 'Start free trial' : 'Create account'}
                       </Link>
                     </article>
                   );
@@ -254,7 +246,7 @@ export default function PricingPage() {
                   <span className="icon-chip" style={loadError ? { background: 'var(--warn-bg)', color: 'var(--warn-ink)' } : undefined}><FaInfoCircle aria-hidden="true" /></span>
                   <h3>{loadError ? 'Unable to load pricing' : 'Plans coming soon'}</h3>
                   <p style={{ maxWidth: 460 }}>
-                    {loadError || `No published ${CATEGORIES.find((category) => category.id === activeCategory)?.label || ''} plans are available right now.`}
+                    {loadError || 'No published E-commerce plans are available right now.'}
                   </p>
                   {loadError ? (
                     <button type="button" className="btn btn-primary btn-sm" onClick={fetchPublicPlans}>Retry</button>

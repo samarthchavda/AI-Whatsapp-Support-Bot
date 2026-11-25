@@ -25,7 +25,16 @@ export function yearlySavingPercent(plan) {
   return plan.yearlyPrice < full ? Math.round(((full - plan.yearlyPrice) / full) * 100) : 0;
 }
 
+export function isTrialPlan(plan) {
+  return Boolean(
+    plan &&
+    (String(plan.name).toLowerCase() === 'free_trial' ||
+      (plan.trialEnabled && !plan.contactSales && !plan.monthlyPrice))
+  );
+}
+
 export function isContactSales(plan) {
+  if (isTrialPlan(plan)) return false;
   return Boolean(plan?.contactSales) || !plan?.monthlyPrice;
 }
 
@@ -132,9 +141,47 @@ function limitLines(plan) {
   return lines;
 }
 
+function trialHighlights(plan) {
+  const tp = plan.trialPolicy || {};
+  const days = Number(tp.trialDays || plan.trialDays) || 14;
+  const maxBroadcasts = Number.isFinite(Number(tp.testBroadcastLimit)) ? Number(tp.testBroadcastLimit) : 2;
+  const maxRecipients = Number.isFinite(Number(tp.testRecipientLimit)) ? Number(tp.testRecipientLimit) : 5;
+  const aiOn = Boolean(tp.allowAiInTrial);
+  const storeOn = Boolean(tp.allowStoreConnectInTrial);
+  const kbOn = Boolean(tp.allowKnowledgeBaseInTrial);
+  const previewReadOnly = tp.allowAllPagesReadOnly !== false;
+
+  const included = [
+    `${days}-day free trial automatically assigned on signup`,
+    'No credit card or setup fee required',
+    '1 WhatsApp Business Cloud API connection'
+  ];
+
+  if (maxBroadcasts > 0) {
+    included.push(`Up to ${fmt(maxBroadcasts)} test broadcasts (max ${fmt(maxRecipients)} recipients each)`);
+  }
+  included.push('Approved WhatsApp template creation & sync');
+  if (previewReadOnly) {
+    included.push('View-only preview of Inbox, Orders & Analytics');
+  }
+  if (aiOn) included.push('AI auto-replies enabled during trial');
+  if (storeOn) included.push('Shopify / WooCommerce connection enabled in trial');
+  if (kbOn) included.push('Knowledge base PDF uploads enabled in trial');
+  if (plan.supportLevel) included.push(plan.supportLevel);
+
+  const excluded = [];
+  if (!aiOn) excluded.push('AI auto-replies (unlocks on Starter / Growth)');
+  if (!storeOn) excluded.push('Shopify & WooCommerce sync (unlocks on paid plan)');
+  if (!kbOn) excluded.push('Knowledge base PDF uploads (unlocks on paid plan)');
+  excluded.push('Full broadcasts & abandoned-cart recovery');
+
+  return { included, excluded };
+}
+
 /** @returns {{ included: string[], excluded: string[] }} */
 export function planHighlights(plan) {
   if (!plan) return { included: [], excluded: [] };
+  if (isTrialPlan(plan)) return trialHighlights(plan);
   const f = plan.features || {};
   const included = limitLines(plan);
   const excluded = [];
@@ -155,13 +202,13 @@ export function planHighlights(plan) {
   return { included, excluded };
 }
 
-/** Cheapest first; contact-sales plans last */
+/** Free trial first, cheapest paid plans next, contact-sales plans last */
 export function sortPlans(plans) {
   return [...plans].sort((a, b) => {
-    const ca = isContactSales(a) ? 1 : 0;
-    const cb = isContactSales(b) ? 1 : 0;
-    if (ca !== cb) return ca - cb;
-    return (a.monthlyPrice || 0) - (b.monthlyPrice || 0) || (a.displayOrder || 0) - (b.displayOrder || 0);
+    const ta = isTrialPlan(a) ? 0 : isContactSales(a) ? 2 : 1;
+    const tb = isTrialPlan(b) ? 0 : isContactSales(b) ? 2 : 1;
+    if (ta !== tb) return ta - tb;
+    return (a.displayOrder ?? 99) - (b.displayOrder ?? 99) || (a.monthlyPrice || 0) - (b.monthlyPrice || 0);
   });
 }
 
@@ -169,13 +216,17 @@ export function sortPlans(plans) {
 export function plansAsText(plans) {
   const groups = {};
   for (const p of sortPlans(plans || [])) (groups[p.category] = groups[p.category] || []).push(p);
-  const order = ['kwickbot_crm', 'crm_integration', 'whatsapp_api', 'enterprise_custom'];
+  const order = ['kwickbot_crm'];
   const out = [];
   for (const cat of order) {
     if (!groups[cat]) continue;
     out.push(`${CATEGORY_LABELS[cat] || cat} plans:`);
     for (const p of groups[cat]) {
-      const price = isContactSales(p) ? 'custom pricing (talk to sales)' : `${formatINR(p.monthlyPrice, p.currency)} / month`;
+      const price = isTrialPlan(p)
+        ? `Free (${p.trialDays || p.trialPolicy?.trialDays || 14}-day self-signup trial)`
+        : isContactSales(p)
+          ? 'custom pricing (talk to sales)'
+          : `${formatINR(p.monthlyPrice, p.currency)} / month`;
       const setup = p.setupFee > 0 ? ` + ${formatINR(p.setupFee, p.currency)} one-time setup` : '';
       const top = planHighlights(p).included.slice(0, 4).join('; ');
       out.push(`• ${p.displayName}: ${price}${setup}. ${top}.`);

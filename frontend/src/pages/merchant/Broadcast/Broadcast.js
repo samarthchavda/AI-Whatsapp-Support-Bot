@@ -28,9 +28,12 @@ function Broadcast() {
   const refreshPreviewAccess = async () => {
     try {
       const response = await api.get('/auth/profile');
-      setPreviewAccess(response.data?.data?.admin || {});
+      const adminObj = response.data?.data?.admin || {};
+      setPreviewAccess(adminObj);
+      return adminObj;
     } catch (error) {
       console.error('Could not refresh preview usage:', error);
+      return null;
     }
   };
 
@@ -75,8 +78,11 @@ function Broadcast() {
 
   useEffect(() => {
     fetchBroadcasts();
-    fetchApprovedTemplates();
-    refreshPreviewAccess();
+    refreshPreviewAccess().then((adminObj) => {
+      if (adminObj?.whatsappConnected) {
+        fetchApprovedTemplates();
+      }
+    });
   }, []);
 
   const fetchApprovedTemplates = async () => {

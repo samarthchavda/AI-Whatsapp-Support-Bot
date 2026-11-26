@@ -103,7 +103,7 @@ function Escalations({ admin }) {
             Handoff Escalations is Locked
           </h2>
           <p style={{ maxWidth: '550px', margin: '0 auto 24px', fontSize: '14px', color: '#cbd5e1', lineHeight: '1.6' }}>
-            Upgrade your plan to the Professional or Enterprise tier to unlock Live Chat human escalations, configure automatic sentiment takeover alerts, and manage tickets.
+            Upgrade your plan to the Growth Plan to unlock Live Chat human escalations, configure automatic sentiment takeover alerts, and manage tickets.
           </p>
           <Link to="/dashboard/billing" style={{
             display: 'inline-block',

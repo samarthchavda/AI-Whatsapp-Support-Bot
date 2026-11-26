@@ -503,7 +503,7 @@
 .checkbox-text-info strong {
   font-size: 15px;
   font-weight: 600;
-  color: #fafafa;
+  color: var(--text-primary);
 }
 
 .checkbox-text-info p {

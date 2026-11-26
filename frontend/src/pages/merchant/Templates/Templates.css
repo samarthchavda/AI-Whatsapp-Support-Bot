@@ -1126,6 +1126,7 @@ body.dark-theme .template-lang-badge code {
 .merchant-portal .meta-conn-header h4,.merchant-portal .template-name,.merchant-portal .tmpl-name-text { color: var(--text-primary); }
 .merchant-portal .meta-conn-header p,.merchant-portal .tmpl-table tbody td,.merchant-portal .tmpl-message-snippet,.merchant-portal .tmpl-date-cell,.merchant-portal .tmpl-lang-code,.merchant-portal .template-card-snippet p { color: var(--text-secondary); }
 .merchant-portal .tmpl-search-input,.merchant-portal .tmpl-filter-select,.merchant-portal .tmpl-inline-trigger-select,.merchant-portal .mapping-select { background: var(--bg-input); border-color: var(--border-default); color: var(--text-primary); }
+.merchant-portal .tmpl-search-input { padding-left: 38px; }
 .merchant-portal .tmpl-search-input::placeholder { color: var(--text-muted); opacity: 1; }
 .merchant-portal .tmpl-search-input:focus,.merchant-portal .tmpl-filter-select:focus,.merchant-portal .tmpl-inline-trigger-select:focus,.merchant-portal .tmpl-number-bar select:focus { outline: 2px solid var(--border-focus); outline-offset: 2px; box-shadow: none; }
 .merchant-portal .tmpl-view-toggle { background: var(--bg-input); border-color: var(--border-default); }

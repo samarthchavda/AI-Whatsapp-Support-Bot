@@ -650,7 +650,7 @@ function WhatsAppConnect() {
                     onChange={(e) => setWidgetPhone(e.target.value)}
                     style={{
                       width: '100%',
-                      padding: '10px 12px',
+                      padding: cloudStatus?.phoneNumber ? '10px 115px 10px 12px' : '10px 12px',
                       borderRadius: '8px',
                       border: '1px solid #d1d5db',
                       fontSize: '14px',

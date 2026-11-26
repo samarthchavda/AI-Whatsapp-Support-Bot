@@ -126,7 +126,7 @@ function Analytics({ admin }) {
             Advanced Analytics is Locked
           </h2>
           <p>
-            Upgrade your plan to the Professional or Enterprise tier to unlock real-time message volume charts, resolution ratios, and sentiment analysis for your customers.
+            Upgrade your plan to the Growth Plan to unlock real-time message volume charts, resolution ratios, and sentiment analysis for your customers.
           </p>
           <Link to="/dashboard/billing" className="btn btn-primary">
             Upgrade Subscription Plan

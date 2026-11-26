@@ -406,7 +406,7 @@ function KnowledgeBase() {
       )}
 
       {/* Upload Form */}
-      {showUploadForm && (
+      {showUploadForm && !isKnowledgeBaseLocked && (
         <div className="table-container" style={{ marginBottom: '28px' }}>
           <div className="table-header">
             <h2>Upload Knowledge Base PDF</h2>
@@ -534,9 +534,10 @@ function KnowledgeBase() {
             <button 
               className="btn btn-primary"
               onClick={() => setShowUploadForm(true)}
-              disabled={planUsage?.isLimitReached}
+              disabled={isKnowledgeBaseLocked || planUsage?.isLimitReached}
+              title={isKnowledgeBaseLocked ? 'Knowledge Base PDF uploads are locked in Free Trial' : undefined}
             >
-              Upload PDF Document
+              {isKnowledgeBaseLocked ? <><FaLock /> Locked in Free Trial</> : 'Upload PDF Document'}
             </button>
           </div>
         ) : (

@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { getOrders, updateOrder } from '../../../services/api';
-import { FaUpload, FaPlus, FaBox, FaTimes, FaBroadcastTower } from 'react-icons/fa';
+import { FaUpload, FaPlus, FaBox, FaTimes, FaBroadcastTower, FaLock } from 'react-icons/fa';
+import { useOptionalEffectiveAccess } from '../../../context/EffectiveAccessContext';
+import TrialFeatureLockBanner from '../../../components/common/TrialFeatureLockBanner';
 import './Orders.css';
 
 const API_BASE = process.env.REACT_APP_API_URL || (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' ? 'http://localhost:5001/api' : '/api');
@@ -34,6 +36,7 @@ const formatCurrency = (amount, currencyCode) => {
 };
 
 function Orders({ admin }) {
+  const { isPreviewSandbox } = useOptionalEffectiveAccess() || {};
   const plan = (admin?.subscriptionPlan || JSON.parse(localStorage.getItem('admin') || '{}')?.subscriptionPlan || 'starter').toLowerCase();
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -311,17 +314,30 @@ Bob Johnson,+1234567892,bob@example.com,Standard Item,3,149.99,shipped`;
           <button
             className="btn-secondary"
             onClick={() => setShowBulkUpload(!showBulkUpload)}
+            disabled={isPreviewSandbox}
+            title={isPreviewSandbox ? 'Bulk order upload is locked during Free Trial' : undefined}
+            style={isPreviewSandbox ? { opacity: 0.65, cursor: 'not-allowed' } : undefined}
           >
-            <FaUpload /> Bulk Upload
+            {isPreviewSandbox ? <><FaLock /> Bulk Upload</> : <><FaUpload /> Bulk Upload</>}
           </button>
           <button
             className="btn-primary"
             onClick={() => setShowCreateForm(!showCreateForm)}
+            disabled={isPreviewSandbox}
+            title={isPreviewSandbox ? 'Creating orders is locked during Free Trial' : undefined}
+            style={isPreviewSandbox ? { opacity: 0.65, cursor: 'not-allowed' } : undefined}
           >
-            {showCreateForm ? <><FaTimes /> Cancel</> : <><FaPlus /> Add Order</>}
+            {isPreviewSandbox ? <><FaLock /> Locked in Free Trial</> : (showCreateForm ? <><FaTimes /> Cancel</> : <><FaPlus /> Add Order</>)}
           </button>
         </div>
       </div>
+
+      {isPreviewSandbox && (
+        <TrialFeatureLockBanner
+          title="Orders are View-Only in Free Trial"
+          description="You can inspect the Orders dashboard during Free Trial. Activate a paid plan in Billing to add orders, upload CSV batches, or sync orders automatically from Shopify and WooCommerce."
+        />
+      )}
 
       <div className="orders-stats-row">
         <div className="orders-stat-pill">

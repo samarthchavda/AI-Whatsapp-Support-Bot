@@ -24,7 +24,9 @@ import {
   FaUserCheck,
   FaCoins,
   FaChevronDown,
-  FaChevronUp
+  FaChevronUp,
+  FaWordpress,
+  FaTruck
 } from 'react-icons/fa';
 import { SiWhatsapp, SiShopify, SiWoocommerce, SiMeta, SiGoogle } from 'react-icons/si';
 import { getGroundedWebsiteAnswer } from './services/websiteKnowledge';
@@ -161,23 +163,39 @@ const servicePaths = [
 // with a typing indicator before every AI reply ("out").
 const previewScripts = {
   support: [
-    { kind: 'in', text: 'Where is my order #ORD-1024?' },
-    { kind: 'note', icon: 'check', text: 'Order matched in the connected store' },
-    { kind: 'out', text: 'Your order has shipped. I found the latest fulfilment status and tracking reference for you.' }
+    { kind: 'in', text: 'Where is my order #ORD-1024?', time: '10:42 AM' },
+    { kind: 'note', icon: 'check', text: 'Shopify synced · Order #ORD-1024 matched' },
+    { kind: 'out', text: 'Hi Ananya, your order #ORD-1024 has shipped via BlueDart and is out for delivery today.', time: '10:42 AM' },
+    {
+      kind: 'orderCard',
+      orderId: '#ORD-1024',
+      status: 'Out for delivery',
+      item: 'Cotton Linen Kurta Set · Prepaid ₹1,899',
+      meta: 'AWB 78412093 · ETA Today by 6:00 PM'
+    }
   ],
   orders: [
-    { kind: 'in', text: 'Can I cancel this order?' },
-    { kind: 'note', icon: 'box', text: 'Current status: processing' },
-    { kind: 'out', text: 'The order is still eligible for the configured cancellation workflow. I can submit the request now.' }
+    { kind: 'in', text: 'Please cancel my order #ORD-1042.', time: '11:15 AM' },
+    { kind: 'note', icon: 'box', text: 'Status: Processing · Eligible for auto-cancel' },
+    { kind: 'out', text: 'Done — order #ORD-1042 is cancelled on your store and the refund update has been logged.', time: '11:15 AM' },
+    {
+      kind: 'orderCard',
+      orderId: '#ORD-1042',
+      status: 'Cancelled',
+      item: 'Ceramic Pour-Over Kit · ₹2,499',
+      meta: 'Refund initiated · Synced to Shopify'
+    }
   ],
   handoff: [
-    { kind: 'in', text: 'I need an agent to review my refund.' },
-    { kind: 'note', icon: 'headset', text: 'Human assistance requested' },
-    { kind: 'alert', text: 'AI paused · conversation routed to Live Chat' }
+    { kind: 'in', text: 'I received a damaged box, can a person help with exchange?', time: '12:04 PM' },
+    { kind: 'note', icon: 'headset', text: 'Human escalation triggered · AI paused' },
+    { kind: 'alert', text: 'Routed to Live Chat Inbox · Assigned to Riya S.' },
+    { kind: 'out', text: 'I have handed your chat over to our support team with your full order context.', time: '12:04 PM' }
   ],
   broadcast: [
-    { kind: 'template', label: 'Abandoned cart follow-up · Approved WhatsApp template', text: 'You left items in your cart. Complete your order when you are ready.' },
-    { kind: 'note', icon: 'check', text: 'Campaign activity stays visible' }
+    { kind: 'template', label: 'Meta Approved Template · Cart Recovery', text: 'Hi Rahul, your Linen Shirt (Size M) is still reserved. Complete checkout before stock runs out.' },
+    { kind: 'note', icon: 'check', text: 'Sent to 1,240 opted-in shoppers · 98.4% delivered' },
+    { kind: 'in', text: 'Thanks! Completing my order now.', time: '02:18 PM' }
   ]
 };
 
@@ -185,7 +203,7 @@ const integrations = [
   { icon: SiWhatsapp, label: 'WhatsApp Cloud API' },
   { icon: SiMeta, label: 'Meta Business' },
   { icon: SiShopify, label: 'Shopify' },
-  { icon: SiWoocommerce, label: 'WooCommerce' },
+  { icon: FaWordpress, label: 'WooCommerce' },
   { icon: SiGoogle, label: 'Google Gemini AI' },
   { icon: FaPlug, label: 'Odoo CRM' },
   { icon: FaCode, label: 'REST API & webhooks' }
@@ -260,12 +278,19 @@ export default function LandingPage() {
     setActivePreview(id);
   };
 
-  // Play the active preview as a conversation
-  const [shownCount, setShownCount] = useState(0);
+  // Play the active preview as a conversation (render initial tab populated immediately)
+  const [shownCount, setShownCount] = useState(previewScripts.support.length);
   const [isPreviewTyping, setIsPreviewTyping] = useState(false);
+  const isFirstPreviewRender = useRef(true);
 
   useEffect(() => {
     const items = previewScripts[activePreview];
+    if (isFirstPreviewRender.current) {
+      isFirstPreviewRender.current = false;
+      setShownCount(items.length);
+      setIsPreviewTyping(false);
+      return undefined;
+    }
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
       setShownCount(items.length);
       setIsPreviewTyping(false);
@@ -274,14 +299,14 @@ export default function LandingPage() {
     setShownCount(0);
     setIsPreviewTyping(false);
     const timers = [];
-    let t = 350;
+    let t = 220;
     items.forEach((item, index) => {
       if (item.kind === 'out') {
         timers.push(setTimeout(() => setIsPreviewTyping(true), t));
-        t += 900;
+        t += 650;
       }
       timers.push(setTimeout(() => { setIsPreviewTyping(false); setShownCount(index + 1); }, t));
-      t += 650;
+      t += 420;
     });
     return () => timers.forEach(clearTimeout);
   }, [activePreview]);
@@ -290,17 +315,46 @@ export default function LandingPage() {
 
   const renderPreviewItem = (item, index) => {
     switch (item.kind) {
-      case 'in': return <div key={index} className="bubble bubble-in seq-item">{item.text}</div>;
-      case 'out': return <div key={index} className="bubble bubble-out seq-item">{item.text}</div>;
-      case 'note': return <span key={index} className="context-note seq-item">{noteIcon(item.icon)} {item.text}</span>;
-      case 'alert': return <div key={index} className="alert-note seq-item"><FaUserCheck aria-hidden="true" /> {item.text}</div>;
-      case 'template': return (
-        <div key={index} className="template-card seq-item">
-          <span className="template-label">{item.label}</span>
-          <span>{item.text}</span>
-        </div>
-      );
-      default: return null;
+      case 'in':
+        return (
+          <div key={index} className="bubble bubble-in seq-item">
+            <span>{item.text}</span>
+            {item.time && <span className="bubble-time">{item.time}</span>}
+          </div>
+        );
+      case 'out':
+        return (
+          <div key={index} className="bubble bubble-out seq-item">
+            <span>{item.text}</span>
+            {item.time && <span className="bubble-time">{item.time}</span>}
+          </div>
+        );
+      case 'note':
+        return <span key={index} className="context-note seq-item">{noteIcon(item.icon)} {item.text}</span>;
+      case 'alert':
+        return <div key={index} className="alert-note seq-item"><FaUserCheck aria-hidden="true" /> {item.text}</div>;
+      case 'orderCard':
+        return (
+          <div key={index} className="preview-order-card seq-item">
+            <div className="preview-order-top">
+              <strong><FaTruck aria-hidden="true" /> Order {item.orderId}</strong>
+              <span className={`preview-order-status ${item.status === 'Cancelled' ? 'cancelled' : 'shipped'}`}>
+                {item.status}
+              </span>
+            </div>
+            <div className="preview-order-item">{item.item}</div>
+            <div className="preview-order-meta">{item.meta}</div>
+          </div>
+        );
+      case 'template':
+        return (
+          <div key={index} className="template-card seq-item">
+            <span className="template-label">{item.label}</span>
+            <span>{item.text}</span>
+          </div>
+        );
+      default:
+        return null;
     }
   };
 
@@ -347,28 +401,30 @@ export default function LandingPage() {
           <div className="container hero-grid">
             <div className="hero-copy">
               <span className="pill hero-fade" style={{ alignSelf: 'flex-start', '--d': '0s' }}>
-                <span className="dot" /> For Shopify &amp; WooCommerce stores
+                <span className="dot" /> Built for Shopify &amp; WooCommerce stores
               </span>
-              <h1 className="rise" aria-label="WhatsApp AI support that knows your store.">
+              <h1 className="hero-title rise" aria-label="WhatsApp AI support that knows your store.">
                 <span style={{ '--w': 0 }}>WhatsApp</span>{' '}
                 <span style={{ '--w': 1 }}>AI</span>{' '}
                 <span style={{ '--w': 2 }}>support</span>{' '}
                 <span style={{ '--w': 3 }}>that</span>{' '}
-                <span style={{ '--w': 4 }}>knows</span>{' '}
-                <span style={{ '--w': 5 }} className="highlight swipe">your store.</span>
+                <span style={{ '--w': 4 }} className="hero-accent">knows your store</span>
               </h1>
-              <p className="hero-lead hero-fade" style={{ '--d': '.45s' }}>
-                Kwickbot answers your customers on WhatsApp with AI, sends order confirmations and shipping updates automatically, and hands the chat to your team when a person is needed.
+              <p className="hero-lead hero-fade" style={{ '--d': '.32s' }}>
+                Answer customer queries automatically with Gemini AI, sync live Shopify or WooCommerce orders into every reply, and hand complex chats to your team.
               </p>
-              <div className="hero-actions hero-fade" style={{ '--d': '.6s' }}>
-                <Link href="/signup" className="btn btn-primary">Create account <FaArrowRight /></Link>
+              <div className="hero-actions hero-fade" style={{ '--d': '.44s' }}>
+                <Link href="/signup" className="btn btn-primary">Start 14-day free trial <FaArrowRight aria-hidden="true" /></Link>
                 <Link href="/pricing" className="btn btn-secondary">See pricing</Link>
               </div>
-              <div className="hero-tags hero-fade" style={{ '--d': '.75s' }}>
-                <span className="pill pill-white"><SiWhatsapp aria-hidden="true" /> WhatsApp Cloud API</span>
-                <span className="pill pill-white"><SiShopify aria-hidden="true" /> Shopify</span>
-                <span className="pill pill-white"><SiWoocommerce aria-hidden="true" /> WooCommerce</span>
-                <span className="pill pill-white"><FaBrain aria-hidden="true" /> Gemini AI</span>
+              <p className="hero-meta hero-fade" style={{ '--d': '.52s' }}>
+                14-day free trial · No credit card required · Official Meta Cloud API
+              </p>
+              <div className="hero-integrations hero-fade" style={{ '--d': '.6s' }}>
+                <span className="hero-int-item"><SiWhatsapp aria-hidden="true" /> WhatsApp Cloud API</span>
+                <span className="hero-int-item"><SiShopify aria-hidden="true" /> Shopify</span>
+                <span className="hero-int-item"><FaWordpress aria-hidden="true" /> WooCommerce</span>
+                <span className="hero-int-item"><FaBrain aria-hidden="true" /> Gemini AI</span>
               </div>
             </div>
 
@@ -378,9 +434,10 @@ export default function LandingPage() {
                   <div className="preview-head">
                     <span className="preview-avatar"><BrandMark variant="dark" className="" /></span>
                     <div className="preview-title">
-                      <strong>Commerce support workspace</strong>
-                      <span>● AI active</span>
+                      <strong>Kwickbot Inbox · Ananya Mehta</strong>
+                      <span><i className="dot" /> AI Auto-Reply · Shopify Connected</span>
                     </div>
+                    <span className="preview-status-chip">Live</span>
                   </div>
 
                   <div className="preview-tabs" role="tablist" aria-label="Kwickbot workflow preview">
@@ -395,7 +452,7 @@ export default function LandingPage() {
                           className={`preview-tab ${activePreview === tab.id ? 'active' : ''}`}
                           onClick={() => pickPreview(tab.id)}
                         >
-                          <Icon aria-hidden="true" /> {tab.label}
+                          <Icon aria-hidden="true" /> <span>{tab.label}</span>
                         </button>
                       );
                     })}
@@ -409,7 +466,10 @@ export default function LandingPage() {
                       </div>
                     )}
                   </div>
-                  <div className="preview-foot">WhatsApp Cloud API · Shopify &amp; WooCommerce · Gemini AI</div>
+                  <div className="preview-foot">
+                    <span>WhatsApp Cloud API · Gemini AI</span>
+                    <span>Synced with Shopify</span>
+                  </div>
                 </div>
               </div>
             </div>
@@ -423,7 +483,7 @@ export default function LandingPage() {
               <div className="stat"><strong>Official</strong><span>Meta WhatsApp Cloud API</span></div>
               <div className="stat"><strong>2</strong><span>Commerce platforms</span></div>
               <div className="stat"><strong>24/7</strong><span>AI availability</span></div>
-              <div className="stat accent"><strong>Live</strong><span>Human handoff</span></div>
+              <div className="stat"><strong>Live</strong><span>Human handoff</span></div>
             </div>
             <div className="marquee" style={{ marginTop: 20 }} data-reveal="fade" aria-label="Works with">
               <div className="marquee-track">

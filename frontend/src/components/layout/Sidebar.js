@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { FaHome, FaComments, FaBox, FaExclamationTriangle, FaPlug, FaSignOutAlt, FaUser, FaBrain, FaCommentDots, FaBroadcastTower, FaChartLine, FaCog, FaCrown, FaFileAlt, FaShoppingCart, FaCoins, FaHeartbeat, FaBullhorn, FaBlog, FaWhatsapp, FaShieldAlt, FaToggleOn, FaTimes, FaTags, FaUserTag, FaCode, FaUserPlus, FaShopify, FaWordpress, FaHeadset, FaChevronDown, FaChevronRight } from 'react-icons/fa';
+import { FaHome, FaComments, FaBox, FaExclamationTriangle, FaPlug, FaSignOutAlt, FaUser, FaBrain, FaCommentDots, FaBroadcastTower, FaChartLine, FaCog, FaCrown, FaFileAlt, FaShoppingCart, FaCoins, FaHeartbeat, FaBullhorn, FaBlog, FaWhatsapp, FaShieldAlt, FaToggleOn, FaTimes, FaTags, FaUserTag, FaCode, FaUserPlus, FaShopify, FaWordpress, FaHeadset, FaChevronDown, FaChevronRight, FaLock } from 'react-icons/fa';
 import { useEffectiveAccess } from '../../context/EffectiveAccessContext';
 
 export default function Sidebar({ admin, onLogout, isOpen, onToggle, onOpen, onClose }) {
   const location = useLocation();
-  const { canViewPage } = useEffectiveAccess();
+  const effectiveAccess = useEffectiveAccess() || {};
+  const { canViewPage, isStoreConnectLocked, isDeveloperApiLocked } = effectiveAccess;
   const isMerchant = Boolean(admin && admin.role !== 'super_admin');
   const isSuperAdminSettingsRoute = location.pathname.startsWith('/dashboard/super-admin/settings');
   const isSuperAdminAuditRoute = location.pathname.startsWith('/dashboard/super-admin/audit-logs');
@@ -503,18 +504,27 @@ export default function Sidebar({ admin, onLogout, isOpen, onToggle, onOpen, onC
                     <Link to="/dashboard/integrations#shopify" className={isIntegrationActive('shopify')} title="Shopify Integration">
                       <FaShopify />
                       <span className="nav-label">Shopify Integration</span>
+                      {isOpen && isStoreConnectLocked && (
+                        <FaLock aria-hidden="true" style={{ marginLeft: 'auto', fontSize: '11px', opacity: 0.72 }} />
+                      )}
                     </Link>
                   </li>
                   <li>
                     <Link to="/dashboard/integrations#woocommerce" className={isIntegrationActive('woocommerce')} title="WooCommerce Integration">
                       <FaWordpress />
                       <span className="nav-label">WooCommerce Integration</span>
+                      {isOpen && isStoreConnectLocked && (
+                        <FaLock aria-hidden="true" style={{ marginLeft: 'auto', fontSize: '11px', opacity: 0.72 }} />
+                      )}
                     </Link>
                   </li>
                   <li>
                     <Link to="/dashboard/developer" className={isActive('/dashboard/developer')} title="WhatsApp API Connection">
                       <FaCode />
                       <span className="nav-label">WhatsApp API Connection</span>
+                      {isOpen && isDeveloperApiLocked && (
+                        <FaLock aria-hidden="true" style={{ marginLeft: 'auto', fontSize: '11px', opacity: 0.72 }} />
+                      )}
                     </Link>
                   </li>
                 </ul>

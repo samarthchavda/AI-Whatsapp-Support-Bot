@@ -124,8 +124,32 @@ export function EffectiveAccessProvider({ children, admin }) {
     return accessData.usageLimits[limitKey] ?? 0;
   }, [accessData]);
 
+  const isPreviewSandbox = Boolean(
+    accessData.trialPolicy?.previewModeActive ??
+    (admin?.role !== 'super_admin' && admin?.selfSignupTrial === true && (
+      admin.subscriptionStatus !== 'active' ||
+      (admin.subscriptionEndDate && new Date(admin.subscriptionEndDate) <= new Date())
+    ))
+  );
+
+  const isSuperAdmin = Boolean(
+    (admin && admin.role === 'super_admin') ||
+    (accessData.user && accessData.user.role === 'super_admin')
+  );
+
+  const isStoreConnectLocked = !isSuperAdmin && isPreviewSandbox && accessData.trialPolicy?.allowStoreConnectInTrial !== true;
+  const isKnowledgeBaseLocked = !isSuperAdmin && isPreviewSandbox && accessData.trialPolicy?.allowKnowledgeBaseInTrial !== true;
+  const isDeveloperApiLocked = !isSuperAdmin && (
+    isPreviewSandbox ||
+    (!accessData.loading && !accessData.features?.developerApi && !accessData.features?.apiKeys)
+  );
+
   const value = {
     ...accessData,
+    isPreviewSandbox,
+    isStoreConnectLocked,
+    isKnowledgeBaseLocked,
+    isDeveloperApiLocked,
     canViewPage,
     hasPermission,
     hasFeature,
@@ -146,6 +170,10 @@ export function useEffectiveAccess() {
     throw new Error('useEffectiveAccess must be used within an EffectiveAccessProvider');
   }
   return context;
+}
+
+export function useOptionalEffectiveAccess() {
+  return useContext(EffectiveAccessContext);
 }
 
 export default EffectiveAccessContext;

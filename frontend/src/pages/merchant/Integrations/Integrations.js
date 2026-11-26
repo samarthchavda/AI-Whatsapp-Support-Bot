@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { FaShopify, FaWordpress, FaPlug, FaCheck, FaTimes, FaCopy, FaSync, FaExternalLinkAlt, FaLock } from 'react-icons/fa';
 import api from '../../../services/api';
+import { useOptionalEffectiveAccess } from '../../../context/EffectiveAccessContext';
+import TrialFeatureLockBanner from '../../../components/common/TrialFeatureLockBanner';
 import './Integrations.css';
 import ShopifyGuide from './shopify/ShopifyGuide';
 import { SHOPIFY_GUIDE_STEPS } from './shopify/guideSteps';
@@ -10,6 +12,13 @@ import { getSyncFeedback, isMountedCommerceWebhookUrl, validateShopifyStoreUrl }
 function Integrations({ admin, onUpdateAdmin }) {
   const navigate = useNavigate();
   const location = useLocation();
+  const effectiveAccess = useOptionalEffectiveAccess();
+  const isPreviewFallback = Boolean(
+    admin?.role !== 'super_admin' &&
+    admin?.selfSignupTrial === true &&
+    (admin?.subscriptionStatus !== 'active' || (admin?.subscriptionEndDate && new Date(admin.subscriptionEndDate) <= new Date()))
+  );
+  const isStoreConnectLocked = effectiveAccess ? effectiveAccess.isStoreConnectLocked : isPreviewFallback;
   const [integrations, setIntegrations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
@@ -97,6 +106,10 @@ function Integrations({ admin, onUpdateAdmin }) {
   };
 
   const handleConnect = (platform) => {
+    if (isStoreConnectLocked) {
+      navigate('/dashboard/billing');
+      return;
+    }
     setFormError('');
     setNotice(null);
     setSelectedPlatform(platform);
@@ -271,6 +284,13 @@ function Integrations({ admin, onUpdateAdmin }) {
           <p className="page-subtitle">Connect and manage your e-commerce platform integrations.</p>
         </div>
       </div>
+
+      {isStoreConnectLocked && !loading && (
+        <TrialFeatureLockBanner
+          title="Shopify & WooCommerce Integrations are Locked in Free Trial"
+          description="Connect WhatsApp and send test broadcasts during your Free Trial. Activate a paid plan in Billing to connect Shopify or WooCommerce and sync store orders."
+        />
+      )}
 
       {notice && (
         <div className={`integration-notice integration-notice-${notice.type}`} role={notice.type === 'error' ? 'alert' : 'status'}>
@@ -460,7 +480,27 @@ function Integrations({ admin, onUpdateAdmin }) {
                   </div>
                 ) : (
                   <div className="integration-disconnected">
-                    {!isProfileComplete ? (
+                    {isStoreConnectLocked ? (
+                      <>
+                        <button
+                          type="button"
+                          className="btn btn-secondary"
+                          style={{ width: '100%', opacity: 0.78, cursor: 'not-allowed', justifyContent: 'center' }}
+                          disabled
+                          title="Store connections are locked during Free Trial. Activate a paid plan in Billing."
+                        >
+                          <FaLock /> Locked in Free Trial
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => navigate('/dashboard/billing')}
+                          className="btn btn-primary"
+                          style={{ width: '100%', marginTop: '10px', justifyContent: 'center' }}
+                        >
+                          Activate Paid Plan to Connect
+                        </button>
+                      </>
+                    ) : !isProfileComplete ? (
                       <button
                         className="btn btn-primary"
                         style={{ width: '100%', opacity: 0.6, cursor: 'not-allowed' }}

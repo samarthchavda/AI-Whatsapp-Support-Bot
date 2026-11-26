@@ -1,8 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import api from '../../../services/api';
-import { FaUpload, FaTrash, FaEye, FaToggleOn, FaToggleOff, FaFileAlt, FaFilePdf, FaGlobe, FaRobot } from 'react-icons/fa';
+import { FaUpload, FaTrash, FaEye, FaToggleOn, FaToggleOff, FaFileAlt, FaFilePdf, FaGlobe, FaRobot, FaLock } from 'react-icons/fa';
+import { useOptionalEffectiveAccess } from '../../../context/EffectiveAccessContext';
+import TrialFeatureLockBanner from '../../../components/common/TrialFeatureLockBanner';
 
 function KnowledgeBase() {
+  const { isKnowledgeBaseLocked } = useOptionalEffectiveAccess() || {};
   const [knowledgeBases, setKnowledgeBases] = useState([]);
   const [planUsage, setPlanUsage] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -168,20 +171,33 @@ function KnowledgeBase() {
             onClick={() => setShowTestQuery((open) => !open)}
             aria-expanded={showTestQuery}
             aria-controls="knowledge-base-test"
+            disabled={isKnowledgeBaseLocked}
+            title={isKnowledgeBaseLocked ? 'Locked in Free Trial' : 'Test AI Knowledge'}
           >
-            <FaRobot aria-hidden="true" /> {showTestQuery ? 'Hide AI Test' : 'Test AI Knowledge'}
+            {isKnowledgeBaseLocked ? <FaLock aria-hidden="true" /> : <FaRobot aria-hidden="true" />} {showTestQuery ? 'Hide AI Test' : 'Test AI Knowledge'}
           </button>
           <button 
             className="btn btn-primary" 
             onClick={() => setShowUploadForm(!showUploadForm)}
             style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
-            disabled={planUsage?.isLimitReached}
-            title={planUsage?.isLimitReached ? `Plan limit reached (${planUsage.activePdfCount} / ${planUsage.maxKbUploads} PDFs)` : 'Upload PDF'}
+            disabled={isKnowledgeBaseLocked || planUsage?.isLimitReached}
+            title={
+              isKnowledgeBaseLocked
+                ? 'Knowledge Base PDF uploads are locked in Free Trial'
+                : (planUsage?.isLimitReached ? `Plan limit reached (${planUsage.activePdfCount} / ${planUsage.maxKbUploads} PDFs)` : 'Upload PDF')
+            }
           >
-            <FaUpload /> Upload PDF
+            {isKnowledgeBaseLocked ? <FaLock /> : <FaUpload />} {isKnowledgeBaseLocked ? 'Locked in Free Trial' : 'Upload PDF'}
           </button>
         </div>
       </div>
+
+      {isKnowledgeBaseLocked && (
+        <TrialFeatureLockBanner
+          title="AI Knowledge Base & Auto-Reply are Locked in Free Trial"
+          description="You can inspect the Knowledge Base workspace and download our FAQ template during Free Trial. Activate a paid plan in Billing to upload PDFs and enable automated WhatsApp AI replies."
+        />
+      )}
 
       {/* AI Auto-Reply Bot Master Toggle Switch Card */}
       <div style={{
@@ -227,7 +243,7 @@ function KnowledgeBase() {
         </div>
         <button
           onClick={handleToggleAiBot}
-          disabled={togglingAi}
+          disabled={togglingAi || isKnowledgeBaseLocked}
           className={`btn ${aiBotEnabled ? 'btn-danger' : 'btn-primary'}`}
           style={{
             padding: '12px 24px',
@@ -238,12 +254,14 @@ function KnowledgeBase() {
             gap: '8px',
             whiteSpace: 'nowrap',
             borderRadius: '12px',
-            cursor: 'pointer',
+            cursor: isKnowledgeBaseLocked ? 'not-allowed' : 'pointer',
+            opacity: isKnowledgeBaseLocked ? 0.65 : 1,
             boxShadow: '0 4px 12px rgba(0,0,0,0.15)'
           }}
+          title={isKnowledgeBaseLocked ? 'Locked in Free Trial' : undefined}
         >
-          {aiBotEnabled ? <FaToggleOn style={{ fontSize: '18px' }} /> : <FaToggleOff style={{ fontSize: '18px' }} />}
-          {togglingAi ? 'Updating...' : aiBotEnabled ? 'Stop AI Auto-Reply' : 'Start AI Auto-Reply'}
+          {isKnowledgeBaseLocked ? <FaLock style={{ fontSize: '16px' }} /> : (aiBotEnabled ? <FaToggleOn style={{ fontSize: '18px' }} /> : <FaToggleOff style={{ fontSize: '18px' }} />)}
+          {isKnowledgeBaseLocked ? 'Locked in Free Trial' : (togglingAi ? 'Updating...' : aiBotEnabled ? 'Stop AI Auto-Reply' : 'Start AI Auto-Reply')}
         </button>
       </div>
 

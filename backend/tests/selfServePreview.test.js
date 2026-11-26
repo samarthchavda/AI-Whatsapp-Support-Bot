@@ -15,6 +15,7 @@ const os = require('os');
 const path = require('path');
 const { addBroadcastToQueue } = require('../services/broadcastQueue');
 const { createBroadcast, sendBroadcastNow } = require('../controllers/merchant/broadcastController');
+const { getApiKey, regenerateApiKey } = require('../controllers/public/authController');
 const { isSelfServePreview, previewWriteAllowed } = require('../services/selfServePreview');
 
 const trialAdmin = (overrides = {}) => ({
@@ -122,5 +123,61 @@ describe('self-signup preview', () => {
     expect(reserve).toHaveBeenCalled();
     expect(addBroadcastToQueue).not.toHaveBeenCalled();
     expect(fs.existsSync(filePath)).toBe(false);
+  });
+
+  test('blocks API key fetch and regeneration during Free Trial preview', async () => {
+    const trialAccount = trialAdmin({ subscriptionPlan: 'growth', apiKey: null });
+    jest.spyOn(Admin, 'findById').mockResolvedValue(trialAccount);
+
+    const getRes = response();
+    await getApiKey({ admin: { _id: 'merchant-1' } }, getRes);
+    expect(getRes.status).toHaveBeenCalledWith(403);
+    expect(getRes.json.mock.calls[0][0]).toMatchObject({
+      success: false,
+      code: 'TRIAL_FEATURE_LOCKED',
+      upgradeRequired: true
+    });
+
+    const regenRes = response();
+    await regenerateApiKey({ admin: { _id: 'merchant-1' }, body: {} }, regenRes);
+    expect(regenRes.status).toHaveBeenCalledWith(403);
+    expect(regenRes.json.mock.calls[0][0]).toMatchObject({
+      success: false,
+      code: 'TRIAL_FEATURE_LOCKED',
+      upgradeRequired: true
+    });
+  });
+
+  test('blocks API key fetch on Starter plan while allowing active Growth plan', async () => {
+    jest.spyOn(Admin, 'findById').mockResolvedValueOnce({
+      _id: 'merchant-starter',
+      role: 'admin',
+      selfSignupTrial: false,
+      subscriptionStatus: 'active',
+      subscriptionPlan: 'starter',
+      apiKey: null
+    });
+    const starterRes = response();
+    await getApiKey({ admin: { _id: 'merchant-starter' } }, starterRes);
+    expect(starterRes.status).toHaveBeenCalledWith(403);
+    expect(starterRes.json.mock.calls[0][0]).toMatchObject({
+      success: false,
+      code: 'PLAN_UPGRADE_REQUIRED'
+    });
+
+    jest.spyOn(Admin, 'findById').mockResolvedValueOnce({
+      _id: 'merchant-growth',
+      role: 'admin',
+      selfSignupTrial: false,
+      subscriptionStatus: 'active',
+      subscriptionPlan: 'growth',
+      apiKey: 'kw_live_existing_key'
+    });
+    const growthRes = response();
+    await getApiKey({ admin: { _id: 'merchant-growth' } }, growthRes);
+    expect(growthRes.json).toHaveBeenCalledWith({
+      success: true,
+      apiKey: 'kw_live_existing_key'
+    });
   });
 });

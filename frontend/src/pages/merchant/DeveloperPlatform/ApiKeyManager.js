@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { Link } from 'react-router-dom';
 import { 
   FaKey, 
   FaCopy, 
@@ -12,12 +13,15 @@ import {
   FaLock
 } from 'react-icons/fa';
 import { getApiKey, regenerateApiKey } from '../../../services/api';
+import { useOptionalEffectiveAccess } from '../../../context/EffectiveAccessContext';
+import TrialFeatureLockBanner from '../../../components/common/TrialFeatureLockBanner';
 import './DeveloperPlatform.css';
 import './PlatformDashboard.css';
 import './DeveloperTheme.css';
 import DeveloperBackLink from './DeveloperBackLink';
 
 function ApiKeyManager() {
+  const { isDeveloperApiLocked, isPreviewSandbox } = useOptionalEffectiveAccess() || {};
   const [apiKey, setApiKey] = useState('Loading...');
   const [showKey, setShowKey] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -27,7 +31,12 @@ function ApiKeyManager() {
   const [customKeyInput, setCustomKeyInput] = useState('');
   const [rotating, setRotating] = useState(false);
 
-  const fetchKey = async () => {
+  const fetchKey = useCallback(async () => {
+    if (isDeveloperApiLocked) {
+      setLoading(false);
+      setError(null);
+      return;
+    }
     try {
       setLoading(true);
       setError(null);
@@ -42,11 +51,11 @@ function ApiKeyManager() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [isDeveloperApiLocked]);
 
   useEffect(() => {
     fetchKey();
-  }, []);
+  }, [fetchKey]);
 
   const handleCopy = () => {
     if (!apiKey || apiKey === 'Loading...') return;
@@ -92,7 +101,18 @@ function ApiKeyManager() {
         </div>
       </div>
 
-      {error && (
+      {isDeveloperApiLocked && (
+        <TrialFeatureLockBanner
+          title={isPreviewSandbox ? 'API Keys are Locked in Free Trial' : 'API Keys Require the Growth Plan'}
+          description={
+            isPreviewSandbox
+              ? 'Generating, revealing, or rotating production API secret keys is locked during Free Trial. Activate the Growth Plan in Billing to integrate your backend via REST API.'
+              : 'Your current plan does not include REST API keys. Upgrade to the Growth Plan in Billing to generate and manage your API secret key.'
+          }
+        />
+      )}
+
+      {error && !isDeveloperApiLocked && (
         <div style={{
           background: 'rgba(239, 68, 68, 0.1)',
           border: '1px solid rgba(239, 68, 68, 0.3)',
@@ -115,35 +135,63 @@ function ApiKeyManager() {
             <h2>Live Production Secret Key</h2>
             <p>Use this Bearer token in the <code>Authorization</code> header of your API requests</p>
           </div>
-          <button 
-            className="quick-action-btn primary"
-            onClick={() => setShowRotateModal(true)}
-          >
-            <FaSync /> Regenerate Key
-          </button>
+          {isDeveloperApiLocked ? (
+            <Link to="/dashboard/billing" className="quick-action-btn primary" style={{ textDecoration: 'none' }}>
+              <FaLock /> Locked · Upgrade to Growth
+            </Link>
+          ) : (
+            <button 
+              className="quick-action-btn primary"
+              onClick={() => setShowRotateModal(true)}
+            >
+              <FaSync /> Regenerate Key
+            </button>
+          )}
         </div>
 
-        <div className="api-key-display-row">
-          <div className="api-key-value-box">
-            {loading ? 'Fetching secret key...' : (showKey ? apiKey : '••••••••••••••••••••••••••••••••••••••••••••••••')}
+        {isDeveloperApiLocked ? (
+          <div style={{
+            padding: '20px',
+            borderRadius: '12px',
+            border: '1px dashed rgba(217, 119, 6, 0.45)',
+            background: 'rgba(217, 119, 6, 0.06)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            flexWrap: 'wrap',
+            gap: '12px'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', fontWeight: 600, color: 'var(--text-primary, #101828)' }}>
+              <FaLock style={{ color: '#d97706' }} />
+              <span>kw_live_•••••••••••••••••••••••••••••••• (Locked until Growth Plan is active)</span>
+            </div>
+            <Link to="/dashboard/billing" className="quick-action-btn" style={{ textDecoration: 'none' }}>
+              Go to Billing
+            </Link>
           </div>
-          <div style={{ display: 'flex', gap: '8px' }}>
-            <button 
-              className="quick-action-btn"
-              onClick={() => setShowKey(!showKey)}
-              title={showKey ? 'Hide key' : 'Reveal key'}
-            >
-              {showKey ? <FaEyeSlash /> : <FaEye />} {showKey ? 'Hide' : 'Reveal'}
-            </button>
-            <button 
-              className="quick-action-btn"
-              onClick={handleCopy}
-              title="Copy to clipboard"
-            >
-              {copied ? <FaCheck style={{ color: '#16a36a' }} /> : <FaCopy />} {copied ? 'Copied' : 'Copy'}
-            </button>
+        ) : (
+          <div className="api-key-display-row">
+            <div className="api-key-value-box">
+              {loading ? 'Fetching secret key...' : (showKey ? apiKey : '••••••••••••••••••••••••••••••••••••••••••••••••')}
+            </div>
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <button 
+                className="quick-action-btn"
+                onClick={() => setShowKey(!showKey)}
+                title={showKey ? 'Hide key' : 'Reveal key'}
+              >
+                {showKey ? <FaEyeSlash /> : <FaEye />} {showKey ? 'Hide' : 'Reveal'}
+              </button>
+              <button 
+                className="quick-action-btn"
+                onClick={handleCopy}
+                title="Copy to clipboard"
+              >
+                {copied ? <FaCheck style={{ color: '#16a36a' }} /> : <FaCopy />} {copied ? 'Copied' : 'Copy'}
+              </button>
+            </div>
           </div>
-        </div>
+        )}
 
         <div style={{ marginTop: '20px' }}>
           <h4 style={{ fontSize: '14px', fontWeight: '700', marginBottom: '8px' }}>Usage in HTTP Requests</h4>

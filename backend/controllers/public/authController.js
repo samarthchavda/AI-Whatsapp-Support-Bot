@@ -1535,6 +1535,35 @@ Best regards,
   }
 };
 
+async function checkDeveloperApiAccess(admin) {
+  if (admin.role === 'super_admin') return { allowed: true };
+
+  const { isSelfServePreview } = require('../../services/selfServePreview');
+  if (isSelfServePreview(admin)) {
+    return {
+      allowed: false,
+      code: 'TRIAL_FEATURE_LOCKED',
+      error: 'API keys are locked during Free Trial. Activate the Growth Plan in Billing to generate API keys.'
+    };
+  }
+
+  const subscriptionService = require('../../services/subscriptionService');
+  const [hasDeveloperApi, hasApiKeys] = await Promise.all([
+    subscriptionService.isFeatureAllowedDynamic(admin.subscriptionPlan, 'developerApi'),
+    subscriptionService.isFeatureAllowedDynamic(admin.subscriptionPlan, 'apiKeys')
+  ]);
+
+  if (!hasDeveloperApi && !hasApiKeys) {
+    return {
+      allowed: false,
+      code: 'PLAN_UPGRADE_REQUIRED',
+      error: 'API keys are not included in your current plan. Upgrade to the Growth Plan in Billing to unlock API access.'
+    };
+  }
+
+  return { allowed: true };
+}
+
 // Get Merchant API Key
 exports.getApiKey = async (req, res) => {
   try {
@@ -1542,6 +1571,16 @@ exports.getApiKey = async (req, res) => {
     const admin = await Admin.findById(req.admin._id);
     if (!admin) {
       return res.status(404).json({ success: false, error: 'Merchant not found' });
+    }
+
+    const access = await checkDeveloperApiAccess(admin);
+    if (!access.allowed) {
+      return res.status(403).json({
+        success: false,
+        code: access.code,
+        upgradeRequired: true,
+        error: access.error
+      });
     }
 
     if (!admin.apiKey) {
@@ -1566,6 +1605,16 @@ exports.regenerateApiKey = async (req, res) => {
     const admin = await Admin.findById(req.admin._id);
     if (!admin) {
       return res.status(404).json({ success: false, error: 'Merchant not found' });
+    }
+
+    const access = await checkDeveloperApiAccess(admin);
+    if (!access.allowed) {
+      return res.status(403).json({
+        success: false,
+        code: access.code,
+        upgradeRequired: true,
+        error: access.error
+      });
     }
 
     const { customKey } = req.body;

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { Link } from 'react-router-dom';
 import { 
   FaPlug, 
   FaPlus, 
@@ -10,7 +11,8 @@ import {
   FaShieldAlt, 
   FaExclamationTriangle,
   FaTimes,
-  FaCheckCircle
+  FaCheckCircle,
+  FaLock
 } from 'react-icons/fa';
 import { 
   getDeveloperWebhooks, 
@@ -19,6 +21,8 @@ import {
   testDeveloperWebhook, 
   deleteDeveloperWebhook 
 } from '../../../services/api';
+import { useOptionalEffectiveAccess } from '../../../context/EffectiveAccessContext';
+import TrialFeatureLockBanner from '../../../components/common/TrialFeatureLockBanner';
 import './DeveloperPlatform.css';
 import './PlatformDashboard.css';
 import './DeveloperTheme.css';
@@ -35,6 +39,7 @@ const AVAILABLE_EVENTS = [
 ];
 
 function WebhookConfig() {
+  const { isDeveloperApiLocked, isPreviewSandbox } = useOptionalEffectiveAccess() || {};
   const [webhooks, setWebhooks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -54,6 +59,11 @@ function WebhookConfig() {
   const [formError, setFormError] = useState(null);
 
   const fetchWebhooks = useCallback(async () => {
+    if (isDeveloperApiLocked) {
+      setLoading(false);
+      setError(null);
+      return;
+    }
     try {
       setLoading(true);
       setError(null);
@@ -68,7 +78,7 @@ function WebhookConfig() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [isDeveloperApiLocked]);
 
   useEffect(() => {
     fetchWebhooks();
@@ -194,18 +204,35 @@ function WebhookConfig() {
               <p>Configure HTTPS endpoints to receive signed real-time events whenever WhatsApp messages, replies, and status updates occur.</p>
             </div>
             <div style={{ display: 'flex', gap: '10px' }}>
-              <button className="quick-action-btn" onClick={fetchWebhooks} disabled={loading}>
+              <button className="quick-action-btn" onClick={fetchWebhooks} disabled={loading || isDeveloperApiLocked}>
                 <FaSync className={loading ? 'spin' : ''} /> Refresh
               </button>
-              <button className="quick-action-btn primary" onClick={() => setShowAddModal(true)}>
-                <FaPlus /> Add Webhook Endpoint
+              <button
+                className="quick-action-btn primary"
+                onClick={() => setShowAddModal(true)}
+                disabled={isDeveloperApiLocked}
+                style={isDeveloperApiLocked ? { opacity: 0.65, cursor: 'not-allowed' } : undefined}
+                title={isDeveloperApiLocked ? 'Locked until Growth Plan is active' : 'Add Webhook Endpoint'}
+              >
+                {isDeveloperApiLocked ? <FaLock /> : <FaPlus />} {isDeveloperApiLocked ? 'Locked in Free Trial' : 'Add Webhook Endpoint'}
               </button>
             </div>
           </div>
         </div>
       </div>
 
-      {error && (
+      {isDeveloperApiLocked && (
+        <TrialFeatureLockBanner
+          title={isPreviewSandbox ? 'Outbound Webhooks are Locked in Free Trial' : 'Outbound Webhooks Require the Growth Plan'}
+          description={
+            isPreviewSandbox
+              ? 'Registering HTTPS webhook endpoints and receiving signed real-time events is locked during Free Trial. Activate the Growth Plan in Billing to enable webhooks.'
+              : 'Your current plan does not include outbound developer webhooks. Upgrade to the Growth Plan in Billing to configure endpoints.'
+          }
+        />
+      )}
+
+      {error && !isDeveloperApiLocked && (
         <div style={{
           background: 'rgba(239, 68, 68, 0.1)',
           border: '1px solid rgba(239, 68, 68, 0.3)',
@@ -227,6 +254,15 @@ function WebhookConfig() {
           <div style={{ padding: '48px', textAlign: 'center' }}>
             <div className="spinner" style={{ margin: '0 auto 12px' }}></div>
             <span style={{ color: 'var(--text-secondary, #667085)' }}>Loading configured webhooks...</span>
+          </div>
+        ) : isDeveloperApiLocked ? (
+          <div className="empty-state-card">
+            <FaLock className="empty-state-icon" style={{ color: '#d97706' }} />
+            <h4>Outbound Webhooks Locked</h4>
+            <p>Upgrade to the Growth Plan to register HTTPS webhook URLs, inspect HMAC signatures, and receive live WhatsApp delivery and order events.</p>
+            <Link to="/dashboard/billing" className="quick-action-btn primary" style={{ textDecoration: 'none' }}>
+              <FaLock /> Activate Growth Plan in Billing
+            </Link>
           </div>
         ) : webhooks.length === 0 ? (
           <div className="empty-state-card">

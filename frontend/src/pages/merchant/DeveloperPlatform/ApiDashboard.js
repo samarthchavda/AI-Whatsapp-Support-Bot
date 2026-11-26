@@ -10,22 +10,28 @@ import {
   FaChartLine, 
   FaArrowRight, 
   FaSync,
-  FaCheckCircle
+  FaCheckCircle,
+  FaLock
 } from 'react-icons/fa';
 import { getDeveloperUsage, getDeveloperWebhooks } from '../../../services/api';
 import { useEffectiveAccess } from '../../../context/EffectiveAccessContext';
+import TrialFeatureLockBanner from '../../../components/common/TrialFeatureLockBanner';
 import './DeveloperPlatform.css';
 import './PlatformDashboard.css';
 import './DeveloperTheme.css';
 
 function ApiDashboard() {
-  const { usageLimits, getUsageLimit } = useEffectiveAccess();
+  const { usageLimits, getUsageLimit, isDeveloperApiLocked, isPreviewSandbox } = useEffectiveAccess();
   const [usage, setUsage] = useState(null);
   const [webhooksCount, setWebhooksCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
   const fetchSummary = async () => {
+    if (isDeveloperApiLocked) {
+      setLoading(false);
+      return;
+    }
     try {
       setLoading(true);
       setError(null);
@@ -49,7 +55,7 @@ function ApiDashboard() {
 
   useEffect(() => {
     fetchSummary();
-  }, []);
+  }, [isDeveloperApiLocked]);
 
   const totalRequests = usage?.currentPeriod?.totalRequests || 0;
   const successfulRequests = usage?.currentPeriod?.successfulRequests || 0;
@@ -72,14 +78,25 @@ function ApiDashboard() {
               <h1>WhatsApp API Connection</h1>
               <p>Manage API keys, webhooks, documentation, request logs, and usage from one place.</p>
             </div>
-            <button className="quick-action-btn" onClick={fetchSummary} disabled={loading}>
+            <button className="quick-action-btn" onClick={fetchSummary} disabled={loading || isDeveloperApiLocked}>
               <FaSync className={loading ? 'spin' : ''} /> Refresh
             </button>
           </div>
         </div>
       </div>
 
-      {error && (
+      {isDeveloperApiLocked && (
+        <TrialFeatureLockBanner
+          title={isPreviewSandbox ? 'WhatsApp Developer API, Keys & Webhooks are Locked in Free Trial' : 'WhatsApp Developer API Requires the Growth Plan'}
+          description={
+            isPreviewSandbox
+              ? 'You can preview the Developer API workspace during Free Trial. Activate the Growth Plan in Billing to generate API keys, configure outbound webhooks, and send REST API requests.'
+              : 'REST API keys and outbound webhooks are included in the Growth Plan. Upgrade in Billing to unlock WhatsApp Developer API access.'
+          }
+        />
+      )}
+
+      {error && !isDeveloperApiLocked && (
         <div style={{
           background: 'rgba(239, 68, 68, 0.1)',
           border: '1px solid rgba(239, 68, 68, 0.3)',
@@ -103,8 +120,10 @@ function ApiDashboard() {
           </div>
           <div className="stat-info">
             <span className="stat-label">Monthly API Requests</span>
-            <span className="stat-val">{totalRequests.toLocaleString()}</span>
-            <span className="stat-sub">Quota: {monthlyApiLimit.toLocaleString()} ({usagePercent}%)</span>
+            <span className="stat-val">{isDeveloperApiLocked ? 'Locked' : totalRequests.toLocaleString()}</span>
+            <span className="stat-sub">
+              {isDeveloperApiLocked ? 'Growth Plan required' : `Quota: ${monthlyApiLimit.toLocaleString()} (${usagePercent}%)`}
+            </span>
           </div>
         </div>
 
@@ -114,8 +133,10 @@ function ApiDashboard() {
           </div>
           <div className="stat-info">
             <span className="stat-label">Success Rate</span>
-            <span className="stat-val">{successRate}%</span>
-            <span className="stat-sub">{successfulRequests.toLocaleString()} successful calls</span>
+            <span className="stat-val">{isDeveloperApiLocked ? 'Locked' : `${successRate}%`}</span>
+            <span className="stat-sub">
+              {isDeveloperApiLocked ? 'Upgrade to unlock API calls' : `${successfulRequests.toLocaleString()} successful calls`}
+            </span>
           </div>
         </div>
 
@@ -125,8 +146,10 @@ function ApiDashboard() {
           </div>
           <div className="stat-info">
             <span className="stat-label">Active Webhooks</span>
-            <span className="stat-val">{webhooksCount}</span>
-            <span className="stat-sub">Configured HTTP listener endpoints</span>
+            <span className="stat-val">{isDeveloperApiLocked ? 'Locked' : webhooksCount}</span>
+            <span className="stat-sub">
+              {isDeveloperApiLocked ? 'Locked in Free Trial' : 'Configured HTTP listener endpoints'}
+            </span>
           </div>
         </div>
 
@@ -136,7 +159,7 @@ function ApiDashboard() {
           </div>
           <div className="stat-info">
             <span className="stat-label">Failed Requests</span>
-            <span className="stat-val">{failedRequests.toLocaleString()}</span>
+            <span className="stat-val">{isDeveloperApiLocked ? '—' : failedRequests.toLocaleString()}</span>
             <span className="stat-sub">Client 4xx & Server 5xx</span>
           </div>
         </div>
@@ -148,10 +171,17 @@ function ApiDashboard() {
           <div className="dev-nav-icon blue">
             <FaKey />
           </div>
-          <h3>API Secret Keys</h3>
+          <h3>
+            API Secret Keys{' '}
+            {isDeveloperApiLocked && (
+              <span style={{ fontSize: '11px', color: '#d97706', marginLeft: '6px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                <FaLock /> Locked
+              </span>
+            )}
+          </h3>
           <p>Generate, reveal, rotate, and manage Bearer tokens for authenticating your server requests.</p>
           <span className="dev-nav-link-text">
-            Manage Keys <FaArrowRight />
+            {isDeveloperApiLocked ? 'Locked · View Plan Requirement' : 'Manage Keys'} <FaArrowRight />
           </span>
         </Link>
 
@@ -170,10 +200,17 @@ function ApiDashboard() {
           <div className="dev-nav-icon purple">
             <FaPlug />
           </div>
-          <h3>Webhook Subscriptions</h3>
+          <h3>
+            Webhook Subscriptions{' '}
+            {isDeveloperApiLocked && (
+              <span style={{ fontSize: '11px', color: '#d97706', marginLeft: '6px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                <FaLock /> Locked
+              </span>
+            )}
+          </h3>
           <p>Register HTTPS callback URLs with HMAC SHA-256 signatures to receive real-time delivery and message events.</p>
           <span className="dev-nav-link-text">
-            Configure Webhooks <FaArrowRight />
+            {isDeveloperApiLocked ? 'Locked · View Plan Requirement' : 'Configure Webhooks'} <FaArrowRight />
           </span>
         </Link>
 

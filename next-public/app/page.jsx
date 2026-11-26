@@ -25,8 +25,7 @@ import {
   FaCoins,
   FaChevronDown,
   FaChevronUp,
-  FaWordpress,
-  FaTruck
+  FaWordpress
 } from 'react-icons/fa';
 import { SiWhatsapp, SiShopify, SiWoocommerce, SiMeta, SiGoogle } from 'react-icons/si';
 import { getGroundedWebsiteAnswer } from './services/websiteKnowledge';
@@ -159,46 +158,6 @@ const servicePaths = [
   }
 ];
 
-// Each preview plays as a short conversation: items appear in order,
-// with a typing indicator before every AI reply ("out").
-const previewScripts = {
-  support: [
-    { kind: 'in', text: 'Where is my order #ORD-1024?', time: '10:42 AM' },
-    { kind: 'note', icon: 'check', text: 'Shopify synced · Order #ORD-1024 matched' },
-    { kind: 'out', text: 'Hi Ananya, your order #ORD-1024 has shipped via BlueDart and is out for delivery today.', time: '10:42 AM' },
-    {
-      kind: 'orderCard',
-      orderId: '#ORD-1024',
-      status: 'Out for delivery',
-      item: 'Cotton Linen Kurta Set · Prepaid ₹1,899',
-      meta: 'AWB 78412093 · ETA Today by 6:00 PM'
-    }
-  ],
-  orders: [
-    { kind: 'in', text: 'Please cancel my order #ORD-1042.', time: '11:15 AM' },
-    { kind: 'note', icon: 'box', text: 'Status: Processing · Eligible for auto-cancel' },
-    { kind: 'out', text: 'Done — order #ORD-1042 is cancelled on your store and the refund update has been logged.', time: '11:15 AM' },
-    {
-      kind: 'orderCard',
-      orderId: '#ORD-1042',
-      status: 'Cancelled',
-      item: 'Ceramic Pour-Over Kit · ₹2,499',
-      meta: 'Refund initiated · Synced to Shopify'
-    }
-  ],
-  handoff: [
-    { kind: 'in', text: 'I received a damaged box, can a person help with exchange?', time: '12:04 PM' },
-    { kind: 'note', icon: 'headset', text: 'Human escalation triggered · AI paused' },
-    { kind: 'alert', text: 'Routed to Live Chat Inbox · Assigned to Riya S.' },
-    { kind: 'out', text: 'I have handed your chat over to our support team with your full order context.', time: '12:04 PM' }
-  ],
-  broadcast: [
-    { kind: 'template', label: 'Meta Approved Template · Cart Recovery', text: 'Hi Rahul, your Linen Shirt (Size M) is still reserved. Complete checkout before stock runs out.' },
-    { kind: 'note', icon: 'check', text: 'Sent to 1,240 opted-in shoppers · 98.4% delivered' },
-    { kind: 'in', text: 'Thanks! Completing my order now.', time: '02:18 PM' }
-  ]
-};
-
 const integrations = [
   { icon: SiWhatsapp, label: 'WhatsApp Cloud API' },
   { icon: SiMeta, label: 'Meta Business' },
@@ -207,13 +166,6 @@ const integrations = [
   { icon: SiGoogle, label: 'Google Gemini AI' },
   { icon: FaPlug, label: 'Odoo CRM' },
   { icon: FaCode, label: 'REST API & webhooks' }
-];
-
-const previewTabs = [
-  { id: 'support', label: 'Support', icon: FaComments },
-  { id: 'orders', label: 'Orders', icon: FaBox },
-  { id: 'handoff', label: 'Handoff', icon: FaHeadset },
-  { id: 'broadcast', label: 'Campaign', icon: FaBroadcastTower }
 ];
 
 export default function LandingPage() {
@@ -234,8 +186,6 @@ export default function LandingPage() {
   }, []);
 
   const homePlans = sortPlans((livePlans || []).filter((plan) => plan.category === 'kwickbot_crm' && ['free_trial', 'starter', 'growth'].includes(String(plan.name).toLowerCase())));
-  const [activePreview, setActivePreview] = useState('support');
-  const [autoPlay, setAutoPlay] = useState(true);
 
   const WELCOME_MESSAGE = "Hi! I'm the Kwickbot AI assistant. I can help you understand Kwickbot's features, setup process, integrations, and pricing. What would you like to know?";
 
@@ -258,105 +208,6 @@ export default function LandingPage() {
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [chatMessages, isTyping]);
-
-
-  // Rotate the product preview until the visitor picks a tab themselves
-  useEffect(() => {
-    if (!autoPlay) return undefined;
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return undefined;
-
-    const order = previewTabs.map((tab) => tab.id);
-    const interval = window.setInterval(() => {
-      setActivePreview((current) => order[(order.indexOf(current) + 1) % order.length]);
-    }, 6500);
-
-    return () => window.clearInterval(interval);
-  }, [autoPlay]);
-
-  const pickPreview = (id) => {
-    setAutoPlay(false);
-    setActivePreview(id);
-  };
-
-  // Play the active preview as a conversation (render initial tab populated immediately)
-  const [shownCount, setShownCount] = useState(previewScripts.support.length);
-  const [isPreviewTyping, setIsPreviewTyping] = useState(false);
-  const isFirstPreviewRender = useRef(true);
-
-  useEffect(() => {
-    const items = previewScripts[activePreview];
-    if (isFirstPreviewRender.current) {
-      isFirstPreviewRender.current = false;
-      setShownCount(items.length);
-      setIsPreviewTyping(false);
-      return undefined;
-    }
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-      setShownCount(items.length);
-      setIsPreviewTyping(false);
-      return undefined;
-    }
-    setShownCount(0);
-    setIsPreviewTyping(false);
-    const timers = [];
-    let t = 220;
-    items.forEach((item, index) => {
-      if (item.kind === 'out') {
-        timers.push(setTimeout(() => setIsPreviewTyping(true), t));
-        t += 650;
-      }
-      timers.push(setTimeout(() => { setIsPreviewTyping(false); setShownCount(index + 1); }, t));
-      t += 420;
-    });
-    return () => timers.forEach(clearTimeout);
-  }, [activePreview]);
-
-  const noteIcon = (name) => (name === 'box' ? <FaBox aria-hidden="true" /> : name === 'headset' ? <FaHeadset aria-hidden="true" /> : <FaCheck aria-hidden="true" />);
-
-  const renderPreviewItem = (item, index) => {
-    switch (item.kind) {
-      case 'in':
-        return (
-          <div key={index} className="bubble bubble-in seq-item">
-            <span>{item.text}</span>
-            {item.time && <span className="bubble-time">{item.time}</span>}
-          </div>
-        );
-      case 'out':
-        return (
-          <div key={index} className="bubble bubble-out seq-item">
-            <span>{item.text}</span>
-            {item.time && <span className="bubble-time">{item.time}</span>}
-          </div>
-        );
-      case 'note':
-        return <span key={index} className="context-note seq-item">{noteIcon(item.icon)} {item.text}</span>;
-      case 'alert':
-        return <div key={index} className="alert-note seq-item"><FaUserCheck aria-hidden="true" /> {item.text}</div>;
-      case 'orderCard':
-        return (
-          <div key={index} className="preview-order-card seq-item">
-            <div className="preview-order-top">
-              <strong><FaTruck aria-hidden="true" /> Order {item.orderId}</strong>
-              <span className={`preview-order-status ${item.status === 'Cancelled' ? 'cancelled' : 'shipped'}`}>
-                {item.status}
-              </span>
-            </div>
-            <div className="preview-order-item">{item.item}</div>
-            <div className="preview-order-meta">{item.meta}</div>
-          </div>
-        );
-      case 'template':
-        return (
-          <div key={index} className="template-card seq-item">
-            <span className="template-label">{item.label}</span>
-            <span>{item.text}</span>
-          </div>
-        );
-      default:
-        return null;
-    }
-  };
 
   const sendQuery = (queryText) => {
     const trimmed = queryText.trim();
@@ -397,10 +248,10 @@ export default function LandingPage() {
 
       <main id="top">
         {/* HERO */}
-        <section className="hero">
-          <div className="container hero-grid">
-            <div className="hero-copy">
-              <span className="pill hero-fade" style={{ alignSelf: 'flex-start', '--d': '0s' }}>
+        <section className="hero hero-centered">
+          <div className="container">
+            <div className="hero-copy hero-center">
+              <span className="pill hero-fade" style={{ '--d': '0s' }}>
                 <span className="dot" /> Built for Shopify &amp; WooCommerce stores
               </span>
               <h1 className="hero-title rise" aria-label="WhatsApp AI support that knows your store.">
@@ -425,52 +276,6 @@ export default function LandingPage() {
                 <span className="hero-int-item"><SiShopify aria-hidden="true" /> Shopify</span>
                 <span className="hero-int-item"><FaWordpress aria-hidden="true" /> WooCommerce</span>
                 <span className="hero-int-item"><FaBrain aria-hidden="true" /> Gemini AI</span>
-              </div>
-            </div>
-
-            <div className="hero-visual">
-              <div className="preview-frame">
-                <div className="preview-card">
-                  <div className="preview-head">
-                    <span className="preview-avatar"><BrandMark variant="dark" className="" /></span>
-                    <div className="preview-title">
-                      <strong>Kwickbot Inbox · Ananya Mehta</strong>
-                      <span><i className="dot" /> AI Auto-Reply · Shopify Connected</span>
-                    </div>
-                    <span className="preview-status-chip">Live</span>
-                  </div>
-
-                  <div className="preview-tabs" role="tablist" aria-label="Kwickbot workflow preview">
-                    {previewTabs.map((tab) => {
-                      const Icon = tab.icon;
-                      return (
-                        <button
-                          key={tab.id}
-                          type="button"
-                          role="tab"
-                          aria-selected={activePreview === tab.id}
-                          className={`preview-tab ${activePreview === tab.id ? 'active' : ''}`}
-                          onClick={() => pickPreview(tab.id)}
-                        >
-                          <Icon aria-hidden="true" /> <span>{tab.label}</span>
-                        </button>
-                      );
-                    })}
-                  </div>
-
-                  <div className="preview-body" key={activePreview} role="tabpanel" aria-live="polite">
-                    {previewScripts[activePreview].slice(0, shownCount).map(renderPreviewItem)}
-                    {isPreviewTyping && (
-                      <div className="typing-bubble seq-item" aria-label="Kwickbot is typing">
-                        <span className="typing"><i /><i /><i /></span>
-                      </div>
-                    )}
-                  </div>
-                  <div className="preview-foot">
-                    <span>WhatsApp Cloud API · Gemini AI</span>
-                    <span>Synced with Shopify</span>
-                  </div>
-                </div>
               </div>
             </div>
           </div>

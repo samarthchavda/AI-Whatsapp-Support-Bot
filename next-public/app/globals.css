@@ -260,6 +260,29 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0
 .hero-tags { display: flex; flex-wrap: wrap; gap: 8px; }
 .hero-visual { min-width: 0; }
 
+.hero-centered { padding: 64px 0 8px; }
+.hero-center {
+  max-width: 780px;
+  margin: 0 auto;
+  text-align: center;
+  align-items: center;
+  gap: 22px;
+}
+.hero-centered h1, .hero-centered .hero-title {
+  font-size: clamp(38px, 5.4vw, 64px);
+  line-height: 1.08;
+  letter-spacing: -0.04em;
+}
+.hero-centered .hero-lead { max-width: 610px; margin: 0 auto; font-size: 18px; }
+.hero-centered .hero-actions { justify-content: center; }
+.hero-centered .hero-integrations {
+  justify-content: center;
+  width: 100%;
+  max-width: 680px;
+  padding-top: 18px;
+  margin-top: 6px;
+}
+
 @media (max-width: 960px) {
   .hero-grid { grid-template-columns: minmax(0, 1fr); gap: 36px; }
 }

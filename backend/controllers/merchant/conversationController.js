@@ -74,7 +74,10 @@ exports.getAllConversations = async (req, res) => {
   try {
     const { page = 1, limit = 10, status, escalated } = req.query;
     
-    let query = { admin: req.admin._id }; // Filter by logged-in admin
+    let query = {
+      admin: req.admin._id, // Filter by logged-in admin
+      'messages.0': { $exists: true } // Only show conversations with actual chat history, not synced phonebook contacts
+    };
     
     if (status) {
       query.status = status;
@@ -216,7 +219,10 @@ exports.updateConversationStatus = async (req, res) => {
 // Get conversation statistics
 exports.getConversationStats = async (req, res) => {
   try {
-    const adminFilter = { admin: req.admin._id };
+    const adminFilter = {
+      admin: req.admin._id,
+      'messages.0': { $exists: true }
+    };
     
     const total = await Conversation.countDocuments(adminFilter);
     const active = await Conversation.countDocuments({ ...adminFilter, status: 'active' });

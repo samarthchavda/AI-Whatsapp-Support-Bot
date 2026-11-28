@@ -20,6 +20,7 @@ export const FEATURE_GROUPS = [
       ['knowledgeBase', 'Knowledge base'],
       ['humanHandoff', 'Hand-off to a person'],
       ['whatsappConnection', 'WhatsApp connection'],
+      ['whatsappContactSync', 'Automatic WhatsApp Business App contacts'],
       ['dashboardAccess', 'Dashboard']
     ]
   },

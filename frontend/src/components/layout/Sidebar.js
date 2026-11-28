@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { FaHome, FaComments, FaBox, FaExclamationTriangle, FaPlug, FaSignOutAlt, FaUser, FaBrain, FaCommentDots, FaBroadcastTower, FaChartLine, FaCog, FaCrown, FaFileAlt, FaShoppingCart, FaCoins, FaHeartbeat, FaBullhorn, FaBlog, FaWhatsapp, FaShieldAlt, FaToggleOn, FaTimes, FaTags, FaUserTag, FaCode, FaUserPlus, FaShopify, FaWordpress, FaHeadset, FaChevronDown, FaChevronRight, FaLock } from 'react-icons/fa';
+import { FaHome, FaComments, FaBox, FaExclamationTriangle, FaPlug, FaSignOutAlt, FaUser, FaBrain, FaCommentDots, FaBroadcastTower, FaChartLine, FaCog, FaCrown, FaFileAlt, FaShoppingCart, FaCoins, FaHeartbeat, FaBullhorn, FaBlog, FaWhatsapp, FaShieldAlt, FaToggleOn, FaTimes, FaTags, FaUserTag, FaCode, FaUserPlus, FaShopify, FaWordpress, FaHeadset, FaChevronDown, FaChevronRight, FaLock, FaAddressBook } from 'react-icons/fa';
 import { useEffectiveAccess } from '../../context/EffectiveAccessContext';
 
 export default function Sidebar({ admin, onLogout, isOpen, onToggle, onOpen, onClose }) {
@@ -37,6 +37,9 @@ export default function Sidebar({ admin, onLogout, isOpen, onToggle, onOpen, onC
     return canViewPage(key);
   };
   const canUseTemplates = isPageAllowed('templates') || isPageAllowed('whatsapp-templates');
+  const isGrowthContacts = ['growth', 'professional', 'pro'].includes(String(admin?.subscriptionPlan || '').toLowerCase()) &&
+    admin?.subscriptionStatus === 'active' &&
+    (!admin.subscriptionEndDate || new Date(admin.subscriptionEndDate) > new Date());
 
   return (
     <div
@@ -377,7 +380,7 @@ export default function Sidebar({ admin, onLogout, isOpen, onToggle, onOpen, onC
               </div>
 
               {/* Daily support work */}
-              {(isPageAllowed('live_chat') || isPageAllowed('conversations') || isPageAllowed('live-chat') || isPageAllowed('escalations')) && (
+              {(isPageAllowed('live_chat') || isPageAllowed('conversations') || isPageAllowed('live-chat') || isPageAllowed('escalations') || (isGrowthContacts && isPageAllowed('contacts'))) && (
                 <div className="nav-section">
                   {isOpen && <div className="nav-section-title">Inbox</div>}
                   <ul className="nav-links">
@@ -389,6 +392,12 @@ export default function Sidebar({ admin, onLogout, isOpen, onToggle, onOpen, onC
                         </Link>
                       </li>
                     )}
+                    {isGrowthContacts && isPageAllowed('contacts') && <li>
+                      <Link to="/dashboard/contacts" className={isActive('/dashboard/contacts')} title="Contacts">
+                        <FaAddressBook />
+                        <span className="nav-label">Contacts</span>
+                      </Link>
+                    </li>}
                     {isPageAllowed('escalations') && (
                       <li>
                         <Link to="/dashboard/escalations" className={isActive('/dashboard/escalations')} title="Escalations">

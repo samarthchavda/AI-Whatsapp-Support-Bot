@@ -17,6 +17,7 @@ const conversationSchema = new mongoose.Schema({
     required: true
   },
   channelPhoneNumberId: { type: String, default: null },
+  syncedFromWhatsAppApp: { type: Boolean, default: false },
   messages: [{
     role: {
       type: String,

@@ -445,9 +445,10 @@ exports.handleEmbeddedSignup = async (req, res) => {
       console.error('⚠️ Webhook subscription warning (non-blocking):', subErr.response?.data || subErr.message);
     }
 
-    // 7. Trigger Coexistence Data Sync (Contacts & Message History)
+    // 7. Coexistence can sync the Business App address book for active Growth merchants.
     if (isCoexistence) {
-      try {
+      const { canUseGrowthContactSync } = require('../../services/growthContactSync');
+      if (canUseGrowthContactSync(admin)) try {
         console.log(`🔄 Triggering Coexistence SMB App Data sync for Phone Number ID: ${phoneNumberId}...`);
         const contactSyncRes = await axios.post(
           `https://graph.facebook.com/v25.0/${phoneNumberId}/smb_app_data`,
@@ -455,7 +456,10 @@ exports.handleEmbeddedSignup = async (req, res) => {
           { headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' } }
         );
         console.log('✅ Coexistence contacts sync initiated, request_id:', contactSyncRes.data?.request_id);
-
+      } catch (syncErr) {
+        console.warn('⚠️ Coexistence contact sync notice (non-blocking):', syncErr.response?.data || syncErr.message);
+      }
+      try {
         const historySyncRes = await axios.post(
           `https://graph.facebook.com/v25.0/${phoneNumberId}/smb_app_data`,
           { messaging_product: 'whatsapp', sync_type: 'history' },
@@ -463,7 +467,7 @@ exports.handleEmbeddedSignup = async (req, res) => {
         );
         console.log('✅ Coexistence history sync initiated, request_id:', historySyncRes.data?.request_id);
       } catch (syncErr) {
-        console.warn('⚠️ Coexistence sync notice (non-blocking):', syncErr.response?.data || syncErr.message);
+        console.warn('⚠️ Coexistence history sync notice (non-blocking):', syncErr.response?.data || syncErr.message);
       }
     }
 

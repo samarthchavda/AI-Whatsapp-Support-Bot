@@ -36,6 +36,7 @@ import AbandonedCarts from './pages/merchant/AbandonedCarts/AbandonedCarts';
 import SuperAdminBlog from './pages/superAdmin/Blog/SuperAdminBlog';
 import Products from './pages/merchant/Products/Products';
 import MerchantLeads from './pages/merchant/Leads/MerchantLeads';
+import Contacts from './pages/merchant/Contacts/Contacts';
 import SupportCenter from './pages/merchant/SupportCenter/SupportCenter';
 
 // Access Control & Platform Module Imports
@@ -119,6 +120,7 @@ const MERCHANT_VISIBLE_PATHS = new Set([
   '/dashboard',
   '/dashboard/live-chat',
   '/dashboard/conversations',
+  '/dashboard/contacts',
   '/dashboard/templates',
   '/dashboard/broadcast',
   '/dashboard/knowledge-base',
@@ -694,6 +696,7 @@ function App() {
                       } 
                     />
                     <Route path="/conversations" element={<Conversations />} />
+                    <Route path="/contacts" element={<ProtectedFeatureRoute pageKey="contacts" title="WhatsApp Contacts" requiredFeature="Growth Plan"><Contacts admin={admin} /></ProtectedFeatureRoute>} />
                     <Route path="/live-chat" element={<LiveChat admin={admin} />} />
                     <Route 
                       path="/orders" 

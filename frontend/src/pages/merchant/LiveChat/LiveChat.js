@@ -63,7 +63,9 @@ function LiveChat() {
     try {
       setLoading(true);
       const response = await getConversations({ limit: 100 });
-      const list = response.data.conversations || [];
+      const list = (response.data.conversations || []).filter(
+        (conv) => Array.isArray(conv.messages) && conv.messages.length > 0
+      );
       const sorted = [...list].sort(
         (a, b) => new Date(b.updatedAt || b.createdAt) - new Date(a.updatedAt || a.createdAt)
       );
@@ -229,8 +231,8 @@ function LiveChat() {
 
   const filteredConversations = conversations.filter((conv) => {
     const matchesSearch =
-      conv.customerName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      conv.customerPhone.includes(searchQuery);
+      (conv.customerName || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (conv.customerPhone || '').includes(searchQuery);
     const matchesStatus =
       statusFilter === 'all' ||
       (statusFilter === 'active' && conv.status === 'active') ||

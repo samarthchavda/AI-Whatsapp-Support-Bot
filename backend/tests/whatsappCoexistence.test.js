@@ -209,7 +209,9 @@ describe('WhatsApp Coexistence Integration Tests', () => {
     const mockAdmin = {
       _id: 'admin_123',
       whatsappPhoneNumberId: '106540352242922',
-      whatsappConnected: true
+      whatsappConnected: true,
+      subscriptionPlan: 'growth',
+      subscriptionStatus: 'active'
     };
     mockAdminFind.mockResolvedValue([mockAdmin]);
     mockAdminFindOne.mockResolvedValue(mockAdmin);
@@ -255,8 +257,29 @@ describe('WhatsApp Coexistence Integration Tests', () => {
     expect(mockConversationCreate).toHaveBeenCalledWith(expect.objectContaining({
       admin: 'admin_123',
       customerPhone: '16505559876',
-      customerName: 'Pablo Morales'
+      customerName: 'Pablo Morales',
+      syncedFromWhatsAppApp: true
     }));
+  });
+
+  test('does not import Business App contacts for Starter merchants', async () => {
+    const mockAdmin = {
+      _id: 'admin_starter',
+      whatsappPhoneNumberId: '106540352242922',
+      whatsappConnected: true,
+      subscriptionPlan: 'starter',
+      subscriptionStatus: 'active'
+    };
+    mockAdminFind.mockResolvedValue([mockAdmin]);
+    const res = makeResponse();
+    await handleWebhook({ method: 'POST', body: { object: 'whatsapp_business_account', entry: [{
+      id: 'waba-1', changes: [{ field: 'smb_app_state_sync', value: {
+        metadata: { phone_number_id: '106540352242922' },
+        state_sync: [{ type: 'contact', action: 'add', contact: { phone_number: '16505559876', full_name: 'Pablo Morales' } }]
+      } }]
+    }] } }, res);
+    expect(res.json).toHaveBeenCalledWith({ success: true, count: 0 });
+    expect(mockConversationCreate).not.toHaveBeenCalled();
   });
 
   test('4. Handles message edit event and updates existing conversation message', async () => {

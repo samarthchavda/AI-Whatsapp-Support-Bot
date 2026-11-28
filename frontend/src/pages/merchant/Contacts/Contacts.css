@@ -1,0 +1,26 @@
+.contacts-page { padding-bottom: 48px; }
+.contacts-heading { display: flex; justify-content: space-between; align-items: flex-start; gap: 20px; margin-bottom: 24px; }
+.contacts-heading .btn { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; }
+.contacts-actions { display: flex; align-items: center; justify-content: flex-end; flex-wrap: wrap; gap: 10px; }
+.contacts-info { padding: 16px 20px; margin-bottom: 22px; border: 1px solid var(--border-default); border-radius: 12px; background: var(--bg-card); color: var(--text-secondary); line-height: 1.5; }
+.contacts-toolbar { display: flex; align-items: center; gap: 14px; padding: 18px; margin-bottom: 20px; border: 1px solid var(--border-default); border-radius: 14px; background: var(--bg-card); }
+.contacts-toolbar label { display: inline-flex; align-items: center; gap: 8px; color: var(--text-primary); font-weight: 600; white-space: nowrap; }
+.contacts-toolbar input { flex: 1; min-width: 0; min-height: 44px; padding: 10px 14px; border: 1px solid var(--border-default); border-radius: 10px; color: var(--text-primary); background: var(--bg-input); }
+.contacts-toolbar span { color: var(--text-secondary); white-space: nowrap; }
+.contacts-list { overflow: hidden; border: 1px solid var(--border-default); border-radius: 14px; background: var(--bg-card); }
+.contacts-row { display: grid; grid-template-columns: 48px minmax(160px, 1fr) minmax(160px, 220px) 110px; align-items: center; gap: 16px; min-height: 82px; padding: 16px 20px; color: var(--text-primary); }
+.contacts-row + .contacts-row { border-top: 1px solid var(--border-default); }
+.contacts-avatar { display: grid; place-items: center; width: 44px; height: 44px; border-radius: 50%; background: var(--brand-light); color: var(--brand); font-weight: 700; }
+.contacts-identity { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.contacts-identity strong, .contacts-identity span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.contacts-identity span, .contacts-row time { color: var(--text-secondary); }
+.contacts-source { justify-self: start; padding: 6px 10px; border-radius: 999px; background: var(--brand-light); color: var(--brand); font-size: 13px; font-weight: 600; }
+.contacts-error { padding: 14px 18px; margin-bottom: 18px; border: 1px solid var(--danger); border-radius: 10px; color: var(--danger); }
+.contacts-notice { padding: 14px 18px; margin-bottom: 18px; border: 1px solid var(--border-default); border-radius: 10px; background: var(--brand-light); color: var(--text-primary); }
+.contacts-empty { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; min-height: 260px; padding: 32px; text-align: center; border: 1px solid var(--border-default); border-radius: 14px; background: var(--bg-card); color: var(--text-secondary); }
+.contacts-empty svg { font-size: 32px; color: var(--brand); }
+.contacts-empty h1, .contacts-empty h2 { margin: 0; color: var(--text-primary); }
+.contacts-empty p { max-width: 600px; margin: 0 0 8px; }
+.contacts-pagination { display: flex; align-items: center; justify-content: flex-end; gap: 12px; margin-top: 18px; }
+.contacts-pagination .btn { min-height: 44px; }
+@media (max-width: 700px) { .contacts-heading, .contacts-toolbar { flex-wrap: wrap; } .contacts-toolbar input { flex-basis: 100%; order: 2; } .contacts-row { grid-template-columns: 44px minmax(0, 1fr); gap: 8px 12px; } .contacts-source { grid-column: 2; } .contacts-row time { grid-column: 2; } }

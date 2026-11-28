@@ -41,6 +41,7 @@ export function isContactSales(plan) {
 // Feature flags shown per category, in display order: [flag, label]
 const FLAG_LINES = {
   kwickbot_crm: [
+    ['whatsappContactSync', 'Automatic WhatsApp Business App contact sync'],
     ['liveChat', 'Live chat inbox for your team'],
     ['escalations', 'Automatic escalation to your team'],
     ['scheduledBroadcasts', 'Scheduled broadcasts'],

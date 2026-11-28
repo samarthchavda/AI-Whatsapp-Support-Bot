@@ -198,23 +198,33 @@ exports.handleWebhook = async (req, res) => {
       // 3. Handle Coexistence smb_app_state_sync (contacts synced from WhatsApp Business app)
       if (changes.field === 'smb_app_state_sync' || webhookValue.state_sync) {
         const syncList = webhookValue.state_sync || [];
+        const { canUseGrowthContactSync } = require('../../services/growthContactSync');
+        if (!canUseGrowthContactSync(matchedAdmin)) {
+          res.status(200).json({ success: true, count: 0 });
+          return;
+        }
         console.log(`👥 [SMB State Sync] Processing ${syncList.length} contact updates for Admin: ${matchedAdmin._id}`);
         for (const item of syncList) {
           if (item.type === 'contact' && item.contact && item.action !== 'remove') {
-            const cPhone = item.contact.phone_number || item.contact.wa_id;
+            const rawPhone = String(item.contact.phone_number || item.contact.wa_id || '');
+            const cPhone = rawPhone.replace(/\D/g, '');
             const cName = item.contact.full_name || item.contact.first_name || cPhone;
-            if (cPhone) {
-              let conv = await Conversation.findOne({ admin: matchedAdmin._id, customerPhone: cPhone });
+            if (cPhone.length >= 7 && cPhone.length <= 15) {
+              let conv = await Conversation.findOne({ admin: matchedAdmin._id, customerPhone: { $in: [cPhone, `+${cPhone}`, rawPhone] } });
               if (!conv) {
                 await Conversation.create({
                   admin: matchedAdmin._id,
                   customerPhone: cPhone,
                   customerName: cName,
+                  channelPhoneNumberId: incomingPhoneNumberId,
+                  syncedFromWhatsAppApp: true,
                   messages: []
                 });
                 console.log(`👤 [Coexistence] Contact synced from WhatsApp Business app: ${cName} (${cPhone})`);
-              } else if (cName && conv.customerName === conv.customerPhone) {
-                conv.customerName = cName;
+              } else {
+                if (cName && (conv.customerName === conv.customerPhone || conv.customerName === 'Customer')) conv.customerName = cName;
+                conv.syncedFromWhatsAppApp = true;
+                if (!conv.channelPhoneNumberId) conv.channelPhoneNumberId = incomingPhoneNumberId;
                 await conv.save();
               }
             }
@@ -232,8 +242,10 @@ exports.handleWebhook = async (req, res) => {
           const threads = historyItem.threads || [];
           for (const thread of threads) {
             const customerPhone = thread.id || thread.context?.wa_id;
+            const threadMessages = thread.messages || [];
             if (!customerPhone) continue;
             let conv = await Conversation.findOne({ admin: matchedAdmin._id, customerPhone });
+            if (!conv && threadMessages.length === 0) continue;
             if (!conv) {
               conv = new Conversation({
                 admin: matchedAdmin._id,
@@ -242,7 +254,6 @@ exports.handleWebhook = async (req, res) => {
                 messages: []
               });
             }
-            const threadMessages = thread.messages || [];
             for (const m of threadMessages) {
               const mId = m.id;
               if (!mId || conv.messages.some(existing => existing.messageId === mId)) continue;

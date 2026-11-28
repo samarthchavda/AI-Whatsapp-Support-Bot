@@ -73,6 +73,7 @@ const PLAN_DEFINITIONS = {
       liveChat: true,
       knowledgeBase: true,
       integrations: true,
+      whatsappContactSync: true,
       prioritySupport: true
     }
   },

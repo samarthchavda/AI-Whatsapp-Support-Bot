@@ -11,12 +11,12 @@ jest.mock('../../context/EffectiveAccessContext', () => ({
 
 beforeEach(() => mockCanViewPage.mockReturnValue(true));
 
-function MerchantSidebarHarness({ initialPath = '/dashboard' }) {
+function MerchantSidebarHarness({ initialPath = '/dashboard', plan = 'starter', subscriptionStatus = 'active' }) {
   const [open, setOpen] = useState(false);
   return (
     <MemoryRouter initialEntries={[initialPath]} future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
       <Sidebar
-        admin={{ role: 'merchant', name: 'Test Merchant', email: 'merchant@example.test' }}
+        admin={{ role: 'merchant', name: 'Test Merchant', email: 'merchant@example.test', subscriptionPlan: plan, subscriptionStatus }}
         isOpen={open}
         onOpen={() => setOpen(true)}
         onClose={() => setOpen(false)}
@@ -95,6 +95,17 @@ test('shared Knowledge Base and Orders pages appear without advanced plan module
   expect(screen.getByRole('link', { name: /Orders/i })).toHaveAttribute('href', '/dashboard/orders');
   expect(screen.queryByRole('link', { name: /Analytics/i })).not.toBeInTheDocument();
   expect(screen.queryByRole('link', { name: /Abandoned Carts/i })).not.toBeInTheDocument();
+});
+
+test('Contacts navigation is exclusive to an active Growth plan', () => {
+  const starter = render(<MerchantSidebarHarness plan="starter" />);
+  expect(screen.queryByRole('link', { name: 'Contacts' })).not.toBeInTheDocument();
+  starter.unmount();
+  const growth = render(<MerchantSidebarHarness plan="growth" />);
+  expect(screen.getByRole('link', { name: 'Contacts' })).toHaveAttribute('href', '/dashboard/contacts');
+  growth.unmount();
+  render(<MerchantSidebarHarness plan="scale" />);
+  expect(screen.queryByRole('link', { name: 'Contacts' })).not.toBeInTheDocument();
 });
 
 test('developer tools stay inside the WhatsApp API Connection hub', () => {

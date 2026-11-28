@@ -17,7 +17,7 @@ const PERMISSION_PROFILES = {
     ]
   },
   growth: {
-    pages: ['dashboard', 'conversations', 'knowledge-base', 'broadcast', 'analytics', 'abandoned_carts', 'abandoned-carts', 'escalations', 'templates', 'integrations', 'orders', 'api-dashboard', 'api-keys', 'api-documentation', 'webhook-configuration', 'api-logs', 'api-usage', 'profile', 'billing'],
+    pages: ['dashboard', 'conversations', 'contacts', 'knowledge-base', 'broadcast', 'analytics', 'abandoned_carts', 'abandoned-carts', 'escalations', 'templates', 'integrations', 'orders', 'api-dashboard', 'api-keys', 'api-documentation', 'webhook-configuration', 'api-logs', 'api-usage', 'profile', 'billing'],
     permissions: [
       CANONICAL_PERMISSIONS.USAGE_VIEW,
       CANONICAL_PERMISSIONS.BILLING_VIEW,

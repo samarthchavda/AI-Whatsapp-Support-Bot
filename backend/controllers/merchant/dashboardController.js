@@ -10,6 +10,7 @@ const { isSelfServePreview, getTrialPolicy } = require('../../services/selfServe
 exports.getDashboardStats = async (req, res) => {
   try {
     const adminQuery = { admin: req.admin._id };
+    const chatQuery = { ...adminQuery, 'messages.0': { $exists: true } };
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
@@ -36,10 +37,10 @@ exports.getDashboardStats = async (req, res) => {
       Order.countDocuments({ ...adminQuery, status: 'pending' }),
       Order.countDocuments({ ...adminQuery, status: 'shipped' }),
       Order.countDocuments({ ...adminQuery, status: 'delivered' }),
-      Conversation.countDocuments(adminQuery),
-      Conversation.countDocuments({ ...adminQuery, status: 'active' }),
-      Conversation.countDocuments({ ...adminQuery, escalated: true }),
-      Conversation.countDocuments({ ...adminQuery, status: 'resolved' }),
+      Conversation.countDocuments(chatQuery),
+      Conversation.countDocuments({ ...chatQuery, status: 'active' }),
+      Conversation.countDocuments({ ...chatQuery, escalated: true }),
+      Conversation.countDocuments({ ...chatQuery, status: 'resolved' }),
       Escalation.countDocuments(adminQuery),
       Escalation.countDocuments({ ...adminQuery, status: 'pending' }),
       Escalation.countDocuments({ 
@@ -47,7 +48,7 @@ exports.getDashboardStats = async (req, res) => {
         status: { $in: ['pending', 'in_progress'] }, 
         priority: 'urgent' 
       }),
-      Conversation.find(adminQuery)
+      Conversation.find(chatQuery)
         .sort({ updatedAt: -1 })
         .limit(5)
         .select('customerName customerPhone status updatedAt escalated messages')

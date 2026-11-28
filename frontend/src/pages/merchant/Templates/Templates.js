@@ -33,6 +33,10 @@ function Templates({ admin }) {
   const [connections, setConnections] = useState([]);
   const [selectedPhoneNumberId, setSelectedPhoneNumberId] = useState('');
   const selectedPhoneRef = useRef('');
+  const autoSyncAttemptedRef = useRef(new Set());
+  const [connectionsLoading, setConnectionsLoading] = useState(true);
+  const [connectionError, setConnectionError] = useState(false);
+  const [connectionRefreshKey, setConnectionRefreshKey] = useState(0);
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -49,15 +53,56 @@ function Templates({ admin }) {
   const [viewMode, setViewMode] = useState('table'); // 'table' (Image 2 style) or 'grid'
 
   useEffect(() => {
-    api.get('/whatsapp/connections').then((response) => {
-      const list = response.data?.data || [];
-      setConnections(list);
-      selectedPhoneRef.current = list[0]?.phoneNumberId || '';
-      setSelectedPhoneNumberId(selectedPhoneRef.current);
-      if (!list.length) setLoading(false);
-    }).catch(() => setLoading(false));
     fetchIntegrations();
+    const refresh = (hideTemplates = true) => {
+      if (hideTemplates) setConnectionsLoading(true);
+      setConnectionRefreshKey((current) => current + 1);
+    };
+    const onVisibilityChange = () => {
+      if (document.visibilityState === 'visible') refresh();
+    };
+    window.addEventListener('focus', refresh);
+    document.addEventListener('visibilitychange', onVisibilityChange);
+    const interval = window.setInterval(() => refresh(false), 30000);
+    return () => {
+      window.removeEventListener('focus', refresh);
+      document.removeEventListener('visibilitychange', onVisibilityChange);
+      window.clearInterval(interval);
+    };
   }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    api.get('/whatsapp/connections').then((response) => {
+      if (cancelled) return;
+      const list = response.data?.data || [];
+      const selected = list.some((connection) => connection.phoneNumberId === selectedPhoneRef.current)
+        ? selectedPhoneRef.current : (list[0]?.phoneNumberId || '');
+      setConnections(list);
+      setConnectionError(false);
+      if (selected !== selectedPhoneRef.current) {
+        setTemplates([]);
+        setPreviewTemplate(null);
+        setShowCreateModal(false);
+      }
+      selectedPhoneRef.current = selected;
+      setSelectedPhoneNumberId(selected);
+      if (!selected) setLoading(false);
+    }).catch(() => {
+      if (cancelled) return;
+      setConnectionError(true);
+      setConnections([]);
+      selectedPhoneRef.current = '';
+      setSelectedPhoneNumberId('');
+      setTemplates([]);
+      setPreviewTemplate(null);
+      setShowCreateModal(false);
+      setLoading(false);
+    }).finally(() => {
+      if (!cancelled) setConnectionsLoading(false);
+    });
+    return () => { cancelled = true; };
+  }, [connectionRefreshKey]);
 
   useEffect(() => {
     if (selectedPhoneNumberId) fetchTemplates(selectedPhoneNumberId);
@@ -78,13 +123,28 @@ function Templates({ admin }) {
   };
 
   const fetchTemplates = async (phoneNumberId = selectedPhoneNumberId) => {
+    if (!phoneNumberId) return;
     try {
       setLoading(true);
       const response = await api.get('/whatsapp/templates', { params: { phoneNumberId } });
-      if (selectedPhoneRef.current === phoneNumberId) setTemplates(response.data.data || []);
+      let list = response.data?.data || [];
+      if (!autoSyncAttemptedRef.current.has(phoneNumberId)) {
+        autoSyncAttemptedRef.current.add(phoneNumberId);
+        if (!list.length && selectedPhoneRef.current === phoneNumberId) {
+          try {
+            await api.post('/whatsapp/templates/sync', { phoneNumberId });
+            const synced = await api.get('/whatsapp/templates', { params: { phoneNumberId } });
+            list = synced.data?.data || [];
+          } catch (syncError) {
+            console.warn('Could not automatically sync Meta templates:', syncError);
+          }
+        }
+      }
+      if (selectedPhoneRef.current === phoneNumberId) setTemplates(list);
     } catch (error) {
       if (selectedPhoneRef.current === phoneNumberId) {
         console.error('Error fetching templates:', error);
+        setTemplates([]);
         alert('Failed to retrieve templates');
       }
     } finally {
@@ -93,6 +153,7 @@ function Templates({ admin }) {
   };
 
   const handleSync = async () => {
+    if (!selectedPhoneNumberId) return;
     try {
       setSyncing(true);
       const response = await api.post('/whatsapp/templates/sync', { phoneNumberId: selectedPhoneNumberId });
@@ -191,6 +252,10 @@ function Templates({ admin }) {
   const handleCreateTemplate = async (event) => {
     event.preventDefault();
     setCreateError('');
+    if (!selectedPhoneNumberId) {
+      setCreateError('Connect WhatsApp before creating a template.');
+      return;
+    }
     if (!draft.name || !draft.body) {
       setCreateError('Template name and body text are required.');
       return;
@@ -320,12 +385,24 @@ function Templates({ admin }) {
           <h1 className="page-title">Message Templates</h1>
           <p className="page-subtitle">Create templates, submit them to Meta, and track approval status.</p>
         </div>
-        <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+        {!connectionsLoading && !connectionError && selectedPhoneNumberId && <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
           <button onClick={openCreateModal} disabled={!selectedPhoneNumberId} className="btn btn-primary" style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', fontWeight: '600' }}>
             <FaPlus /> Create Template
           </button>
-        </div>
+        </div>}
       </div>
+
+      {connectionsLoading || connectionError || !selectedPhoneNumberId ? (
+        <div className="empty-state" role="status">
+          {connectionsLoading ? (
+            <><FaSpinner className="spinning" /><h3>Checking WhatsApp connection</h3></>
+          ) : connectionError ? (
+            <><FaExclamationCircle /><h3>Could not check WhatsApp connection</h3><p>Try again to load your connected numbers and templates.</p><button className="btn btn-secondary" onClick={() => { setConnectionsLoading(true); setConnectionRefreshKey((current) => current + 1); }}>Retry</button></>
+          ) : (
+            <><FaWhatsapp /><h3>Connect WhatsApp to view templates</h3><p>Your templates will appear here after you connect a WhatsApp number.</p><Link className="btn btn-primary" to="/dashboard/whatsapp-connect">Connect WhatsApp</Link></>
+          )}
+        </div>
+      ) : <>
 
       {isPreview && (
         <div className="tmpl-preview-note" role="status">
@@ -815,6 +892,7 @@ function Templates({ admin }) {
           </form>
         </div>
       )}
+      </>}
     </div>
   );
 }

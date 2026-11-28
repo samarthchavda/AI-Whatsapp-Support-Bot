@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import api from '../../../services/api';
 import { Link } from 'react-router-dom';
 import { getAbandonedCarts, getOrders } from '../../../services/api';
@@ -18,6 +18,11 @@ function Broadcast() {
   const [previewImageFileUrl, setPreviewImageFileUrl] = useState('');
   const [selectedTemplate, setSelectedTemplate] = useState(null);
   const [syncingTemplates, setSyncingTemplates] = useState(false);
+  const [whatsappConnectionStatus, setWhatsappConnectionStatus] = useState('checking');
+  const connectionCheckIdRef = useRef(0);
+  const connectedRef = useRef(false);
+  const autoSyncAttemptedRef = useRef(false);
+  const refreshConnectionRef = useRef(null);
   const [previewAccess, setPreviewAccess] = useState(() => {
     try { return JSON.parse(localStorage.getItem('admin') || '{}'); } catch { return {}; }
   });
@@ -78,31 +83,110 @@ function Broadcast() {
 
   useEffect(() => {
     fetchBroadcasts();
-    refreshPreviewAccess().then((adminObj) => {
-      if (adminObj?.whatsappConnected) {
-        fetchApprovedTemplates();
-      }
-    });
+    refreshConnectionRef.current(true);
+    const onFocus = () => refreshConnectionRef.current(true);
+    const onVisibilityChange = () => {
+      if (document.visibilityState === 'visible') refreshConnectionRef.current(true);
+    };
+    window.addEventListener('focus', onFocus);
+    document.addEventListener('visibilitychange', onVisibilityChange);
+    const interval = window.setInterval(() => refreshConnectionRef.current(false), 30000);
+    return () => {
+      connectionCheckIdRef.current += 1;
+      window.removeEventListener('focus', onFocus);
+      document.removeEventListener('visibilitychange', onVisibilityChange);
+      window.clearInterval(interval);
+    };
   }, []);
 
-  const fetchApprovedTemplates = async () => {
+  const clearTemplates = () => {
+    connectedRef.current = false;
+    autoSyncAttemptedRef.current = false;
+    setApprovedTemplates([]);
+    setSelectedTemplate(null);
+    setShowCreateForm(false);
+  };
+
+  const refreshWhatsAppConnection = async (showChecking) => {
+    const checkId = ++connectionCheckIdRef.current;
+    if (showChecking) {
+      setWhatsappConnectionStatus('checking');
+      connectedRef.current = false;
+    }
+    let adminObj;
+    let connections;
+    try {
+      const [profile, connectionResponse] = await Promise.all([
+        refreshPreviewAccess(),
+        api.get('/whatsapp/connections')
+      ]);
+      adminObj = profile;
+      connections = connectionResponse.data?.data || [];
+    } catch (error) {
+      if (checkId !== connectionCheckIdRef.current) return;
+      clearTemplates();
+      setWhatsappConnectionStatus('error');
+      return;
+    }
+    if (checkId !== connectionCheckIdRef.current) return;
+    if (!adminObj) {
+      clearTemplates();
+      setWhatsappConnectionStatus('error');
+      return;
+    }
+    if (!adminObj.whatsappConnected || !connections.length) {
+      clearTemplates();
+      setWhatsappConnectionStatus('disconnected');
+      return;
+    }
+    connectedRef.current = true;
+    await fetchApprovedTemplates(checkId);
+    if (checkId === connectionCheckIdRef.current && connectedRef.current) {
+      setWhatsappConnectionStatus('connected');
+    }
+  };
+  refreshConnectionRef.current = refreshWhatsAppConnection;
+
+  const fetchApprovedTemplates = async (checkId = connectionCheckIdRef.current, allowAutoSync = true) => {
+    if (!connectedRef.current) return;
     try {
       const res = await api.get('/whatsapp/templates');
+      if (checkId !== connectionCheckIdRef.current || !connectedRef.current) return;
       if (res.data.success) {
-        const approved = (res.data.data || []).filter(t => t.status === 'APPROVED');
-        setApprovedTemplates(approved);
+        let approved = (res.data.data || []).filter(t => t.status === 'APPROVED');
+        if (allowAutoSync && !approved.length && !autoSyncAttemptedRef.current) {
+          autoSyncAttemptedRef.current = true;
+          try {
+            await api.post('/whatsapp/templates/sync');
+            if (checkId !== connectionCheckIdRef.current || !connectedRef.current) return;
+            const synced = await api.get('/whatsapp/templates');
+            approved = (synced.data?.data || []).filter(t => t.status === 'APPROVED');
+          } catch (syncError) {
+            console.warn('Could not automatically sync broadcast templates:', syncError);
+          }
+        }
+        if (checkId === connectionCheckIdRef.current && connectedRef.current) {
+          setApprovedTemplates(approved);
+          setSelectedTemplate((current) => current && !approved.some(t => t._id === current._id) ? null : current);
+        }
       }
     } catch (err) {
-      // silent
+      if (checkId === connectionCheckIdRef.current) {
+        setApprovedTemplates([]);
+        setSelectedTemplate(null);
+      }
     }
   };
 
   const handleSyncTemplates = async () => {
+    if (!connectedRef.current) return;
+    const checkId = connectionCheckIdRef.current;
     try {
       setSyncingTemplates(true);
       const res = await api.post('/whatsapp/templates/sync');
+      if (checkId !== connectionCheckIdRef.current || !connectedRef.current) return;
       if (res.data.success) {
-        await fetchApprovedTemplates();
+        await fetchApprovedTemplates(checkId, false);
         alert('Templates successfully synced from Meta API! ✅');
       }
     } catch (err) {
@@ -166,6 +250,10 @@ function Broadcast() {
 
   const handleCreateBroadcast = async (e) => {
     e.preventDefault();
+    if (!connectedRef.current) {
+      alert('Connect WhatsApp before creating a broadcast.');
+      return;
+    }
     if (isPreview && !selectedTemplate) {
       alert('Select a Meta-approved template before sending a test broadcast.');
       return;
@@ -287,7 +375,7 @@ function Broadcast() {
           </a>
           <button 
             className="btn btn-primary" 
-            disabled={isPreview && (testsLeft === 0 || !previewAccess.whatsappConnected)}
+            disabled={whatsappConnectionStatus !== 'connected' || (isPreview && testsLeft === 0)}
             onClick={() => {
               if (showCreateForm) {
                 setShowCreateForm(false);
@@ -306,12 +394,21 @@ function Broadcast() {
       {isPreview && <div className="broadcast-preview-note" role="status">
         <strong>{testsLeft} of 2 test broadcasts left</strong>
         <span>Connect WhatsApp, select a Meta-approved template and upload a CSV with up to 5 contacts. Test sends count toward this one-time allowance. Meta message charges are separate.</span>
-        {!previewAccess.whatsappConnected && <Link to="/dashboard/whatsapp-connect">Connect WhatsApp</Link>}
         {testsLeft === 0 && <Link to="/dashboard/billing">Choose a plan to send more</Link>}
       </div>}
 
+      {whatsappConnectionStatus === 'disconnected' && <div className="broadcast-preview-note" role="status">
+        <strong>Connect WhatsApp to use broadcast templates</strong>
+        <span>Your campaign history is available below. Connect a number to create or send a broadcast.</span>
+        <Link to="/dashboard/whatsapp-connect">Connect WhatsApp</Link>
+      </div>}
+      {whatsappConnectionStatus === 'error' && <div className="broadcast-preview-note" role="status">
+        <strong>Could not check WhatsApp connection</strong>
+        <button type="button" className="btn btn-secondary" onClick={() => refreshWhatsAppConnection(true)}>Retry</button>
+      </div>}
+
       {/* Create Broadcast Form */}
-      {showCreateForm && (
+      {showCreateForm && whatsappConnectionStatus === 'connected' && (
         <div className="table-container" style={{ marginBottom: '28px', background: 'var(--brand-light)', overflowX: 'hidden' }}>
           <div className="table-header" style={{ background: 'linear-gradient(135deg, var(--brand-light), var(--bg-card))' }}>
             <h2>📤 Create New Broadcast</h2>
@@ -391,7 +488,7 @@ function Broadcast() {
                   <button
                     type="button"
                     onClick={handleSyncTemplates}
-                    disabled={syncingTemplates}
+                    disabled={syncingTemplates || whatsappConnectionStatus !== 'connected'}
                     style={{
                       background: 'var(--brand-light)',
                       border: '1px solid var(--border-default)',
@@ -736,7 +833,7 @@ function Broadcast() {
             <p style={{ fontSize: '14px', marginBottom: '20px' }}>Create your first WhatsApp campaign to engage your customers.</p>
             <button 
               className="btn btn-primary"
-              disabled={isPreview && (testsLeft === 0 || !previewAccess.whatsappConnected)}
+              disabled={whatsappConnectionStatus !== 'connected' || (isPreview && testsLeft === 0)}
               onClick={() => setShowCreateForm(true)}
             >
               Create Broadcast
@@ -809,7 +906,7 @@ function Broadcast() {
                         <FaEye /> Log
                       </button>
 
-                      {!isCrmAutomationPlan && !isPreview && (
+                      {!isCrmAutomationPlan && !isPreview && whatsappConnectionStatus === 'connected' && (
                         <button
                           onClick={() => handleReuseBroadcast(broadcast)}
                           className="btn btn-secondary"
@@ -822,7 +919,7 @@ function Broadcast() {
 
                       {(broadcast.status === 'draft' || broadcast.status === 'scheduled') && (
                         <button
-                          disabled={isPreview && (testsLeft === 0 || !previewAccess.whatsappConnected)}
+                          disabled={whatsappConnectionStatus !== 'connected' || (isPreview && testsLeft === 0)}
                           onClick={() => handleSendNow(broadcast._id)}
                           className="btn btn-primary"
                           style={{ fontSize: '11px', padding: '5px 8px' }}

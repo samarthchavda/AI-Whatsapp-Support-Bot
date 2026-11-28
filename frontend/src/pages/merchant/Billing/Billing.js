@@ -912,6 +912,9 @@ function Billing() {
                     <FaCheck style={{ color: '#1677FF' }} />{' '}
                     {waLimit === -1 ? 'Unlimited WhatsApp Numbers' : waLimit === 1 ? '1 Active WhatsApp Number' : `Up to ${waLimit} WhatsApp Numbers`}
                   </li>
+                  {features.whatsappContactSync && <li>
+                    <FaCheck style={{ color: '#1677FF' }} /> Automatic WhatsApp Business App contact sync
+                  </li>}
                   <li>
                     <FaCheck style={{ color: '#1677FF' }} />{' '}
                     {storeLimit === -1 ? 'Unlimited Shopify / WooCommerce Stores' : `${storeLimit} ${storeLimit === 1 ? 'Store' : 'Stores'} (Shopify / WooCommerce)`}

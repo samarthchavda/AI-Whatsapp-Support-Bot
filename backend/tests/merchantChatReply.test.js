@@ -1,9 +1,19 @@
-jest.mock('../models/Conversation', () => ({ findOne: jest.fn() }));
+jest.mock('../models/Conversation', () => ({
+  findOne: jest.fn(),
+  find: jest.fn(),
+  countDocuments: jest.fn(),
+  aggregate: jest.fn()
+}));
 jest.mock('../services/whatsappCloudAPI', () => ({ sendMessage: jest.fn() }));
 
 const Conversation = require('../models/Conversation');
 const whatsappCloudAPI = require('../services/whatsappCloudAPI');
-const { sendAdminMessage, getMessageMedia } = require('../controllers/merchant/conversationController');
+const {
+  sendAdminMessage,
+  getMessageMedia,
+  getAllConversations,
+  getConversationStats
+} = require('../controllers/merchant/conversationController');
 
 const makeResponse = () => {
   const res = { status: jest.fn(), json: jest.fn() };
@@ -47,5 +57,40 @@ describe('live chat manual replies', () => {
     await getMessageMedia({ admin, params: { id: 'someone-elses-chat', messageId: 'message-1' } }, res);
     expect(Conversation.findOne).toHaveBeenCalledWith({ _id: 'someone-elses-chat', admin: 'merchant-1' });
     expect(res.status).toHaveBeenCalledWith(404);
+  });
+
+  test('excludes contact-only synced records without messages from live chat list and stats', async () => {
+    const chain = {
+      sort: jest.fn(),
+      limit: jest.fn(),
+      skip: jest.fn(),
+      lean: jest.fn(),
+      exec: jest.fn().mockResolvedValue([{ _id: 'chat-1', messages: [{ role: 'user', content: 'Hi' }] }])
+    };
+    chain.sort.mockReturnValue(chain);
+    chain.limit.mockReturnValue(chain);
+    chain.skip.mockReturnValue(chain);
+    chain.lean.mockReturnValue(chain);
+    Conversation.find.mockReturnValue(chain);
+    Conversation.countDocuments.mockResolvedValue(1);
+    Conversation.aggregate.mockResolvedValue([]);
+
+    const listRes = makeResponse();
+    await getAllConversations({ admin, query: { limit: '100' } }, listRes);
+    expect(Conversation.find).toHaveBeenCalledWith({
+      admin: 'merchant-1',
+      'messages.0': { $exists: true }
+    });
+    expect(Conversation.countDocuments).toHaveBeenCalledWith({
+      admin: 'merchant-1',
+      'messages.0': { $exists: true }
+    });
+
+    const statsRes = makeResponse();
+    await getConversationStats({ admin }, statsRes);
+    expect(Conversation.countDocuments).toHaveBeenCalledWith({
+      admin: 'merchant-1',
+      'messages.0': { $exists: true }
+    });
   });
 });

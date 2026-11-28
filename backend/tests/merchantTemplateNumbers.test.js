@@ -38,4 +38,19 @@ describe('templates by connected WhatsApp number', () => {
     expect(res.status).toHaveBeenCalledWith(400);
     expect(Template.find).not.toHaveBeenCalled();
   });
+
+  test('returns no templates after all WhatsApp numbers are disconnected', async () => {
+    const disconnectedAdmin = {
+      ...admin,
+      whatsappConnected: false,
+      whatsappConnections: [],
+      whatsappPhoneNumberId: null,
+      whatsappAccessToken: null,
+      whatsappBusinessAccountId: null
+    };
+    const res = response();
+    await getTemplates({ admin: disconnectedAdmin, query: {} }, res);
+    expect(res.json).toHaveBeenCalledWith({ success: true, data: [] });
+    expect(Template.find).not.toHaveBeenCalled();
+  });
 });

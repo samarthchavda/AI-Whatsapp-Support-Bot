@@ -46,9 +46,9 @@ describe('Merchant dashboard usage and tenant scope', () => {
 
     expect(res.status).not.toHaveBeenCalled();
     expect(Order.countDocuments).toHaveBeenCalledWith({ admin: 'merchant-a' });
-    expect(Conversation.countDocuments).toHaveBeenCalledWith({ admin: 'merchant-a' });
+    expect(Conversation.countDocuments).toHaveBeenCalledWith({ admin: 'merchant-a', 'messages.0': { $exists: true } });
     expect(Escalation.countDocuments).toHaveBeenCalledWith({ admin: 'merchant-a' });
-    expect(Conversation.find).toHaveBeenCalledWith({ admin: 'merchant-a' });
+    expect(Conversation.find).toHaveBeenCalledWith({ admin: 'merchant-a', 'messages.0': { $exists: true } });
     expect(Escalation.find).toHaveBeenCalledWith({ admin: 'merchant-a' });
     expect(Broadcast.find).toHaveBeenCalledWith({ admin: 'merchant-a' });
     for (const [pipeline] of Conversation.aggregate.mock.calls) {

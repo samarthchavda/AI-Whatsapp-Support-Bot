@@ -14,7 +14,8 @@ exports.getConversationsPerDay = async (req, res) => {
       {
         $match: {
           admin: req.admin._id,
-          createdAt: { $gte: daysAgo }
+          createdAt: { $gte: daysAgo },
+          'messages.0': { $exists: true }
         }
       },
       {
@@ -79,7 +80,7 @@ exports.getResolutionRate = async (req, res) => {
     };
     
     const [totalConversations, escalatedConversations] = await Promise.all([
-      Conversation.countDocuments(adminQuery),
+      Conversation.countDocuments({ ...adminQuery, 'messages.0': { $exists: true } }),
       Escalation.countDocuments(adminQuery)
     ]);
     
@@ -113,7 +114,7 @@ exports.getResolutionRate = async (req, res) => {
 exports.getSentimentAnalysis = async (req, res) => {
   try {
     // Get last 100 messages from conversations
-    const conversations = await Conversation.find({ admin: req.admin._id })
+    const conversations = await Conversation.find({ admin: req.admin._id, 'messages.0': { $exists: true } })
       .sort({ updatedAt: -1 })
       .limit(50)
       .select('messages')
@@ -241,13 +242,14 @@ exports.getDashboardStats = async (req, res) => {
       activeEscalations,
       todayConversations
     ] = await Promise.all([
-      Conversation.countDocuments(adminQuery),
+      Conversation.countDocuments({ ...adminQuery, 'messages.0': { $exists: true } }),
       Order.countDocuments(adminQuery),
       Escalation.countDocuments(adminQuery),
       Order.countDocuments({ ...adminQuery, status: 'pending' }),
       Escalation.countDocuments({ ...adminQuery, status: 'open' }),
       Conversation.countDocuments({
         ...adminQuery,
+        'messages.0': { $exists: true },
         createdAt: { $gte: today }
       })
     ]);

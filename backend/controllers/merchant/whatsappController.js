@@ -20,15 +20,18 @@ const templateScope = (admin, credentials) => ({
     : { businessAccountId: credentials.businessAccountId })
 });
 
-exports.getTemplateConnections = async (req, res) => {
-  const admin = req.admin;
+const listTemplateConnections = (admin) => {
   const connections = (admin.whatsappConnections || [])
     .filter(connection => connection.isActive !== false && connection.phoneNumberId && connection.businessAccountId && connection.accessToken)
     .map(connection => ({ phoneNumberId: connection.phoneNumberId, businessAccountId: connection.businessAccountId, displayPhoneNumber: connection.displayPhoneNumber || connection.phoneNumberId }));
   if (admin.whatsappConnected && admin.whatsappPhoneNumberId && admin.whatsappAccessToken && admin.whatsappBusinessAccountId && !connections.some(connection => String(connection.phoneNumberId) === String(admin.whatsappPhoneNumberId))) {
     connections.unshift({ phoneNumberId: admin.whatsappPhoneNumberId, businessAccountId: admin.whatsappBusinessAccountId, displayPhoneNumber: admin.whatsappDisplayPhoneNumber || admin.whatsappPhoneNumberId });
   }
-  res.json({ success: true, data: connections });
+  return connections;
+};
+
+exports.getTemplateConnections = async (req, res) => {
+  res.json({ success: true, data: listTemplateConnections(req.admin) });
 };
 
 exports.getCostAnalytics = async (req, res) => {
@@ -114,6 +117,9 @@ const buildTemplateComponents = ({ header, body, footer, buttons, variableSample
 // Get all templates for the current admin
 exports.getTemplates = async (req, res) => {
   try {
+    if (!listTemplateConnections(req.admin).length) {
+      return res.json({ success: true, data: [] });
+    }
     const credentials = templateConnection(req.admin, req.query.phoneNumberId);
     if (!credentials) return res.status(400).json({ success: false, error: 'Select a connected WhatsApp number.' });
     const templates = await Template.find(templateScope(req.admin, credentials)).sort({ name: 1 });

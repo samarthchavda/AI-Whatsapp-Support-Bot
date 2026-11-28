@@ -113,6 +113,7 @@ const pricingPlanSchema = new mongoose.Schema({
     internalInvoices: { type: Boolean, default: false },
     internalLeads: { type: Boolean, default: false },
     whatsappConnection: { type: Boolean, default: true },
+    whatsappContactSync: { type: Boolean, default: false },
     customWebhooks: { type: Boolean, default: false },
     developerApi: { type: Boolean, default: false },
     apiKeys: { type: Boolean, default: false },

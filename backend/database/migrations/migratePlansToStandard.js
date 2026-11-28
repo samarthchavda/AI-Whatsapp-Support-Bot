@@ -84,11 +84,11 @@ const defaultPlans = [
   },
   {
     name: 'growth',
-    configurationVersion: 1,
+    configurationVersion: 2,
     slug: 'growth',
     displayName: 'Growth',
     shortDescription: 'Unlimited AI support and broadcasts for growing e-commerce stores.',
-    detailedDescription: 'Three WhatsApp numbers, two Shopify or WooCommerce stores, abandoned cart recovery, order confirmation templates, analytics and CRM-ready APIs.',
+    detailedDescription: 'Three WhatsApp numbers, automatic WhatsApp Business App contact sync, two Shopify or WooCommerce stores, abandoned cart recovery, order confirmation templates, analytics and CRM-ready APIs.',
     category: 'kwickbot_crm',
     currency: 'INR',
     monthlyPrice: 2499,
@@ -106,7 +106,7 @@ const defaultPlans = [
     isPublished: true,
     allowedBillingCycles: ['monthly', 'yearly'],
     permissionProfile: 'growth',
-    allowedPages: ['dashboard', 'conversations', 'knowledge-base', 'broadcast', 'analytics', 'abandoned_carts', 'abandoned-carts', 'escalations', 'templates', 'integrations', 'orders', 'api-dashboard', 'api-keys', 'api-documentation', 'webhook-configuration', 'api-logs', 'api-usage', 'profile', 'billing'],
+    allowedPages: ['dashboard', 'conversations', 'contacts', 'knowledge-base', 'broadcast', 'analytics', 'abandoned_carts', 'abandoned-carts', 'escalations', 'templates', 'integrations', 'orders', 'api-dashboard', 'api-keys', 'api-documentation', 'webhook-configuration', 'api-logs', 'api-usage', 'profile', 'billing'],
     features: {
       dashboardAccess: true,
       conversations: true,
@@ -114,6 +114,7 @@ const defaultPlans = [
       internalInvoices: false,
       internalLeads: true,
       whatsappConnection: true,
+      whatsappContactSync: true,
       customWebhooks: true,
       developerApi: true,
       apiKeys: true,
@@ -719,6 +720,14 @@ async function runMigration(options = {}) {
             'maxBroadcastMessages', 'maxApiKeys', 'geminiTokensPerMonth'
           ]) existing.usageLimits[key] = planData.usageLimits[key];
           existing.configurationVersion = 1;
+          needsSave = true;
+        }
+
+        if (planData.name === 'growth' && (existing.configurationVersion || 0) < 2) {
+          existing.features.whatsappContactSync = true;
+          existing.allowedPages = [...new Set([...(existing.allowedPages || []), 'contacts'])];
+          existing.detailedDescription = planData.detailedDescription;
+          existing.configurationVersion = 2;
           needsSave = true;
         }
 

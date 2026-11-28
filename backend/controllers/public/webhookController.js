@@ -79,15 +79,32 @@ exports.handleWebhook = async (req, res) => {
 
     // Handle incoming messages
     if (body.object === 'whatsapp_business_account') {
-      const entry = body.entry?.[0];
-      if (!entry) {
+      const entries = Array.isArray(body.entry) ? body.entry : [];
+      if (!entries.length) {
         return res.status(200).json({ success: true });
       }
-      const changes = entry.changes?.[0];
-      if (!changes) {
+      const allChanges = entries.flatMap((entry) =>
+        (Array.isArray(entry?.changes) ? entry.changes : []).map((changes) => ({ entry, changes }))
+      );
+      if (!allChanges.length) {
         return res.status(200).json({ success: true });
       }
-      const webhookValue = changes.value;
+      let lastResponse = { status: 200, body: { success: true } };
+      for (const { entry, changes } of allChanges) {
+        lastResponse = await processWebhookChange(entry, changes);
+      }
+      return res.status(lastResponse.status).json(lastResponse.body);
+    } else {
+      res.status(400).json({ error: 'Invalid webhook object' });
+    }
+  } catch (error) {
+    console.error('Webhook error:', error);
+    res.status(500).json({ error: error.message });
+  }
+};
+
+async function processWebhookChange(entry, changes) {
+  const webhookValue = changes.value || {};
 
       // 1. Handle Coexistence account_update webhook (PARTNER_REMOVED, ACCOUNT_OFFBOARDED, ACCOUNT_RECONNECTED)
       if (changes.field === 'account_update') {
@@ -156,8 +173,7 @@ exports.handleWebhook = async (req, res) => {
             }
           }
         }
-        res.status(200).json({ success: true, event: eventType });
-        return;
+        return { status: 200, body: { success: true, event: eventType } };
       }
 
       // Extract customer name safely
@@ -169,8 +185,7 @@ exports.handleWebhook = async (req, res) => {
 
       if (!incomingPhoneNumberId) {
         console.warn('🔒 [SECURITY] Webhook payload missing phone_number_id metadata. Fail-closed: skipping AI processing.');
-        res.status(200).json({ success: true, message: 'Missing phone_number_id metadata' });
-        return;
+        return { status: 200, body: { success: true, message: 'Missing phone_number_id metadata' } };
       }
 
       // Find the corresponding admin account strictly by receiving phone number ID across all accounts
@@ -209,8 +224,7 @@ exports.handleWebhook = async (req, res) => {
       if (!matchedAdmin) {
         const reason = matchingAdmins.length > 1 ? 'Ambiguous recipient connection' : 'Unrecognized recipient connection';
         console.warn(`🔒 [SECURITY] ${reason} (${incomingPhoneNumberId}). Fail-closed: skipping AI processing.`);
-        res.status(200).json({ success: true, message: reason });
-        return;
+        return { status: 200, body: { success: true, message: reason } };
       }
 
       // 2. Handle Coexistence smb_message_echoes (messages sent by merchant from WhatsApp Business app)
@@ -220,8 +234,7 @@ exports.handleWebhook = async (req, res) => {
         for (const echo of echoes) {
           await handleSmbMessageEcho(echo, matchedAdmin, incomingPhoneNumberId);
         }
-        res.status(200).json({ success: true, count: echoes.length });
-        return;
+        return { status: 200, body: { success: true, count: echoes.length } };
       }
 
       // 3. Handle Coexistence smb_app_state_sync (contacts synced from WhatsApp Business app)
@@ -229,8 +242,7 @@ exports.handleWebhook = async (req, res) => {
         const syncList = webhookValue.state_sync || [];
         const { canUseGrowthContactSync } = require('../../services/growthContactSync');
         if (!canUseGrowthContactSync(matchedAdmin)) {
-          res.status(200).json({ success: true, count: 0 });
-          return;
+          return { status: 200, body: { success: true, count: 0 } };
         }
         console.log(`👥 [SMB State Sync] Processing ${syncList.length} contact updates for Admin: ${matchedAdmin._id}`);
         for (const item of syncList) {
@@ -259,8 +271,7 @@ exports.handleWebhook = async (req, res) => {
             }
           }
         }
-        res.status(200).json({ success: true, count: syncList.length });
-        return;
+        return { status: 200, body: { success: true, count: syncList.length } };
       }
 
       // 4. Handle Coexistence history (chat history synced from WhatsApp Business app)
@@ -358,8 +369,7 @@ exports.handleWebhook = async (req, res) => {
             : global.io;
           target.emit('new_message', { syncedThreads });
         }
-        res.status(200).json({ success: true, syncedThreads });
-        return;
+        return { status: 200, body: { success: true, syncedThreads } };
       }
 
       // Handle messages
@@ -395,15 +405,8 @@ exports.handleWebhook = async (req, res) => {
       }
 
       // Mark webhook as received
-      res.status(200).json({ success: true });
-    } else {
-      res.status(400).json({ error: 'Invalid webhook object' });
-    }
-  } catch (error) {
-    console.error('Webhook error:', error);
-    res.status(500).json({ error: error.message });
-  }
-};
+      return { status: 200, body: { success: true } };
+}
 
 // Process incoming message
 async function handleIncomingMessage(message, contactName, matchedAdmin, requestContext) {

@@ -134,6 +134,7 @@ export const getConversationById = (id) => api.get(`/conversations/${id}`);
 export const getConversationsByPhone = (phone) => api.get(`/conversations/phone/${phone}`);
 export const updateConversation = (id, data) => api.patch(`/conversations/${id}`, data);
 export const sendConversationMessage = (data) => api.post('/conversations/send-message', data);
+export const syncChatHistory = (data = {}) => api.post('/conversations/sync-history', data);
 
 // Super Admin
 export const getSuperAdminUsers = () => api.get('/super-admin/users');

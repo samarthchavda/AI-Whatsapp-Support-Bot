@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { FaPaperPlane, FaRobot, FaUser, FaCircle, FaSearch, FaPhone, FaCommentDots, FaPaperclip, FaSmile, FaDownload, FaFileAlt, FaTimes } from 'react-icons/fa';
+import { FaPaperPlane, FaRobot, FaUser, FaCircle, FaSearch, FaPhone, FaCommentDots, FaPaperclip, FaSmile, FaDownload, FaFileAlt, FaTimes, FaSync } from 'react-icons/fa';
 import io from 'socket.io-client';
 import api from '../../../services/api';
-import { getConversations, getConversationById, getConversationsByPhone, sendConversationMessage, updateConversation } from '../../../services/api';
+import { getConversations, getConversationById, getConversationsByPhone, sendConversationMessage, updateConversation, syncChatHistory } from '../../../services/api';
 import './LiveChat.css';
 
 const SOCKET_URL = process.env.REACT_APP_API_URL?.replace('/api', '') || (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' ? 'http://localhost:5001' : window.location.origin);
@@ -50,6 +50,9 @@ function LiveChat() {
   const [attachment, setAttachment] = useState(null);
   const [showEmojis, setShowEmojis] = useState(false);
   const [sendError, setSendError] = useState('');
+  const [syncingHistory, setSyncingHistory] = useState(false);
+  const [syncNotice, setSyncNotice] = useState('');
+  const [syncError, setSyncError] = useState('');
   const messagesEndRef = useRef(null);
   const fileInputRef = useRef(null);
 
@@ -135,6 +138,21 @@ function LiveChat() {
       setMessages(conv.messages);
     }
     fetchMessages(conv);
+  };
+
+  const handleSyncHistory = async () => {
+    try {
+      setSyncingHistory(true);
+      setSyncNotice('');
+      setSyncError('');
+      const response = await syncChatHistory();
+      setSyncNotice(response.data?.message || 'Chat history sync started. Past chats will appear shortly.');
+      await fetchConversations();
+    } catch (error) {
+      setSyncError(error.response?.data?.error || 'Could not start chat history sync. Please try again.');
+    } finally {
+      setSyncingHistory(false);
+    }
   };
 
   const toggleBotPause = async () => {
@@ -253,10 +271,25 @@ function LiveChat() {
             {activeCount} active · {escalatedCount} escalated · {conversations.length} total
           </p>
         </div>
-        <div className="retention-notice" title="Only Kwickbot records are removed. WhatsApp chat history is not changed.">
-          <FaCircle /> Privacy mode · chats are deleted 24h after last activity
+        <div className="live-chat-header-actions">
+          <button
+            type="button"
+            className="sync-history-btn"
+            onClick={handleSyncHistory}
+            disabled={syncingHistory}
+            title="Request chat history from your connected WhatsApp Business App"
+          >
+            <FaSync className={syncingHistory ? 'spin-icon' : ''} aria-hidden="true" />
+            <span>{syncingHistory ? 'Syncing chats…' : 'Sync Chat History'}</span>
+          </button>
+          <div className="retention-notice" title="Only Kwickbot records are removed. WhatsApp chat history is not changed.">
+            <FaCircle /> Privacy mode · chats are deleted 24h after last activity
+          </div>
         </div>
       </div>
+
+      {syncNotice && <div className="live-chat-sync-banner success" role="status">{syncNotice}</div>}
+      {syncError && <div className="live-chat-sync-banner error" role="alert">{syncError}</div>}
 
       <div className="live-chat-container">
         <div className="conversations-sidebar">

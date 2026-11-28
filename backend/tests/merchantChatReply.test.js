@@ -1,3 +1,4 @@
+jest.mock('axios', () => ({ get: jest.fn(), post: jest.fn() }));
 jest.mock('../models/Conversation', () => ({
   findOne: jest.fn(),
   find: jest.fn(),
@@ -6,13 +7,15 @@ jest.mock('../models/Conversation', () => ({
 }));
 jest.mock('../services/whatsappCloudAPI', () => ({ sendMessage: jest.fn() }));
 
+const axios = require('axios');
 const Conversation = require('../models/Conversation');
 const whatsappCloudAPI = require('../services/whatsappCloudAPI');
 const {
   sendAdminMessage,
   getMessageMedia,
   getAllConversations,
-  getConversationStats
+  getConversationStats,
+  syncChatHistory
 } = require('../controllers/merchant/conversationController');
 
 const makeResponse = () => {
@@ -92,5 +95,41 @@ describe('live chat manual replies', () => {
       admin: 'merchant-1',
       'messages.0': { $exists: true }
     });
+  });
+
+  test('starts chat history sync for Business App coexistence numbers and explains Meta sync limits', async () => {
+    axios.get.mockResolvedValue({ data: { is_on_biz_app: true } });
+    axios.post.mockResolvedValue({ data: { request_id: 'hist-1' } });
+    const res = makeResponse();
+    await syncChatHistory({
+      admin: {
+        ...admin,
+        whatsappBusinessAccountId: 'waba-1',
+        whatsappConnections: [{ phoneNumberId: 'phone-2', businessAccountId: 'waba-1', accessToken: 'merchant-token', isActive: true }]
+      },
+      body: { phoneNumberId: 'phone-2' }
+    }, res);
+    expect(res.status).toHaveBeenCalledWith(202);
+    expect(axios.post).toHaveBeenCalledWith(
+      expect.stringContaining('/phone-2/smb_app_data'),
+      { messaging_product: 'whatsapp', sync_type: 'history' },
+      expect.anything()
+    );
+
+    axios.post.mockImplementation(async (url) => {
+      if (url.includes('/smb_app_data')) {
+        const err = new Error('Sync limit');
+        err.response = { data: { error: { error_subcode: 2593107, message: 'Synchronization Request Limit Exceeded' } } };
+        throw err;
+      }
+      return { data: { success: true } };
+    });
+    const limitRes = makeResponse();
+    await syncChatHistory({ admin, body: {} }, limitRes);
+    expect(limitRes.status).toHaveBeenCalledWith(502);
+    expect(limitRes.json).toHaveBeenCalledWith(expect.objectContaining({
+      success: false,
+      error: expect.stringMatching(/Disconnect and reconnect/i)
+    }));
   });
 });

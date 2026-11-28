@@ -41,6 +41,32 @@ router.get('/stats', verifyToken, conversationController.getConversationStats);
 
 /**
  * @openapi
+ * /api/conversations/sync-history:
+ *   post:
+ *     tags:
+ *       - WhatsApp Live Conversations
+ *     summary: Trigger WhatsApp Business App (Coexistence) chat history sync
+ *     security:
+ *       - BearerAuth: []
+ *     requestBody:
+ *       required: false
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               phoneNumberId:
+ *                 type: string
+ *     responses:
+ *       202:
+ *         description: Chat history sync requested from Meta
+ *       409:
+ *         description: Business App coexistence connection required
+ */
+router.post('/sync-history', verifyToken, conversationController.syncChatHistory);
+
+/**
+ * @openapi
  * /api/conversations/send-message:
  *   post:
  *     tags:

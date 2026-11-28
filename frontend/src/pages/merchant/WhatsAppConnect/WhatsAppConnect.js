@@ -338,6 +338,9 @@ function WhatsAppConnect() {
   const [cloudError, setCloudError] = useState(null);
   const [actionLoading, setActionLoading] = useState(false);
   const [disconnectingPhoneId, setDisconnectingPhoneId] = useState(null);
+  const [syncingHistoryPhoneId, setSyncingHistoryPhoneId] = useState(null);
+  const [historySyncNotice, setHistorySyncNotice] = useState('');
+  const [historySyncError, setHistorySyncError] = useState('');
 
   // Widget Customizer States
   const [widgetPhone, setWidgetPhone] = useState('');
@@ -463,6 +466,33 @@ function WhatsAppConnect() {
     }
   };
 
+  const handleSyncHistory = async (phoneNumberId) => {
+    try {
+      setSyncingHistoryPhoneId(phoneNumberId || 'all');
+      setHistorySyncNotice('');
+      setHistorySyncError('');
+      const token = localStorage.getItem('token') || localStorage.getItem('accessToken');
+      const response = await fetch(`${BASE_URL}/api/conversations/sync-history`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ phoneNumberId })
+      });
+      const result = await response.json().catch(() => ({}));
+      if (response.ok && result.success) {
+        setHistorySyncNotice(result.message || 'Chat history sync started. Past chats will appear in Live Chat shortly.');
+      } else {
+        setHistorySyncError(result.error || 'Could not start chat history sync.');
+      }
+    } catch (err) {
+      setHistorySyncError('Could not start chat history sync. Please try again.');
+    } finally {
+      setSyncingHistoryPhoneId(null);
+    }
+  };
+
   const handleConnectCloud = async () => {
     try {
       setActionLoading(true);
@@ -584,9 +614,13 @@ function WhatsAppConnect() {
           error={cloudError}
           embeddedLoading={embeddedLoading}
           disconnectingPhoneId={disconnectingPhoneId}
+          syncingHistoryPhoneId={syncingHistoryPhoneId}
+          historySyncNotice={historySyncNotice}
+          historySyncError={historySyncError}
           reconnecting={actionLoading}
           onConnectBusinessApp={() => handleLaunchEmbeddedSignup('coexistence')}
           onConnectCloudApi={() => handleLaunchEmbeddedSignup('cloudapi')}
+          onSyncHistory={handleSyncHistory}
           onDisconnect={handleDisconnectCloud}
           onReconnect={handleConnectCloud}
           onRetry={fetchCloudStatus}

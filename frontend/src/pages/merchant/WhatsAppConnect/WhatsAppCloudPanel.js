@@ -1,5 +1,5 @@
 import React from 'react';
-import { FaArrowRight, FaCheckCircle, FaCopy, FaExternalLinkAlt, FaPlug, FaServer, FaWhatsapp } from 'react-icons/fa';
+import { FaArrowRight, FaCheckCircle, FaCopy, FaExternalLinkAlt, FaPlug, FaServer, FaSync, FaWhatsapp } from 'react-icons/fa';
 
 export default function WhatsAppCloudPanel({
   status,
@@ -7,9 +7,13 @@ export default function WhatsAppCloudPanel({
   error,
   embeddedLoading,
   disconnectingPhoneId,
+  syncingHistoryPhoneId,
+  historySyncNotice,
+  historySyncError,
   reconnecting,
   onConnectBusinessApp,
   onConnectCloudApi,
+  onSyncHistory,
   onDisconnect,
   onReconnect,
   onRetry,
@@ -96,6 +100,9 @@ export default function WhatsAppCloudPanel({
           <button type="button" className="wa-text-action" onClick={onRetry}>Refresh</button>
         </div>
 
+        {historySyncNotice && <div className="wa-sync-notice" role="status">{historySyncNotice}</div>}
+        {historySyncError && <div className="wa-connect-error wa-sync-error" role="alert"><span>{historySyncError}</span></div>}
+
         {loading ? (
           <p className="wa-connection-empty" role="status">Loading WhatsApp numbers…</p>
         ) : connections.length === 0 ? (
@@ -117,6 +124,17 @@ export default function WhatsAppCloudPanel({
                   <small>Phone ID: {connection.phoneNumberId}{connection.businessAccountId ? ` · WABA ID: ${connection.businessAccountId}` : ''}</small>
                 </div>
                 <div className="wa-number-actions">
+                  {connection.isActive && onSyncHistory && (
+                    <button
+                      type="button"
+                      className="wa-sync-action"
+                      onClick={() => onSyncHistory(connection.phoneNumberId)}
+                      disabled={Boolean(syncingHistoryPhoneId) || Boolean(disconnectingPhoneId) || reconnecting}
+                      aria-label={`Sync chat history for ${connection.displayPhoneNumber || connection.phoneNumberId}`}
+                    >
+                      <FaSync aria-hidden="true" /> {syncingHistoryPhoneId === connection.phoneNumberId ? 'Syncing…' : 'Sync chat history'}
+                    </button>
+                  )}
                   {!connection.isActive && connection.isPrimary && (
                     <button type="button" className="wa-reconnect-action" onClick={onReconnect} disabled={reconnecting || Boolean(disconnectingPhoneId)}>
                       {reconnecting ? 'Reconnecting…' : 'Reconnect'}
@@ -126,7 +144,7 @@ export default function WhatsAppCloudPanel({
                     type="button"
                     className="wa-disconnect-action"
                     onClick={() => onDisconnect(connection.phoneNumberId)}
-                    disabled={Boolean(disconnectingPhoneId) || reconnecting}
+                    disabled={Boolean(disconnectingPhoneId) || reconnecting || syncingHistoryPhoneId === connection.phoneNumberId}
                     aria-label={`Disconnect ${connection.displayPhoneNumber || connection.phoneNumberId}`}
                   >
                     {disconnectingPhoneId === connection.phoneNumberId ? 'Disconnecting…' : 'Disconnect'}

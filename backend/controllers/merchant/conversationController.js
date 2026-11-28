@@ -4,6 +4,114 @@ const axios = require('axios');
 const { getReceivingWhatsappCredentials } = require('../../services/whatsappConnectionLimit');
 const whatsappCloudAPI = require('../../services/whatsappCloudAPI');
 
+const explainMetaHistoryError = (error) => {
+  const metaErr = error?.response?.data?.error;
+  const code = metaErr?.error_subcode || metaErr?.code;
+  const rawMessage = String(metaErr?.message || error?.message || '');
+  if (code === 2593107 || /limit|already|duplicate|exceeded/i.test(rawMessage)) {
+    return 'Meta allows one chat history sync within 24 hours of onboarding. Disconnect and reconnect your Business App number (and allow "Share chat history" on your phone) to trigger a fresh sync.';
+  }
+  if (code === 2593109 || /declined|opt.?out|permission|share/i.test(rawMessage)) {
+    return 'Chat history sharing was not enabled on the WhatsApp Business app. Disconnect, reconnect the Business App number, and approve "Share chat history" on your phone.';
+  }
+  return rawMessage || 'Could not start chat history sync. Check your WhatsApp Business App connection and try again.';
+};
+
+exports.syncChatHistory = async (req, res) => {
+  const admin = req.admin;
+  if (!admin) {
+    return res.status(401).json({ success: false, error: 'Authentication required.' });
+  }
+
+  const requestedPhoneId = req.body?.phoneNumberId ? String(req.body.phoneNumberId).trim() : null;
+  const phoneIds = new Set(
+    (admin.whatsappConnections || [])
+      .filter(connection => connection.isActive !== false && connection.phoneNumberId)
+      .map(connection => String(connection.phoneNumberId))
+  );
+  if (admin.whatsappConnected && admin.whatsappPhoneNumberId) {
+    phoneIds.add(String(admin.whatsappPhoneNumberId));
+  }
+
+  const targets = requestedPhoneId
+    ? [...phoneIds].filter(id => id === requestedPhoneId)
+    : [...phoneIds];
+
+  if (!targets.length) {
+    return res.status(409).json({
+      success: false,
+      error: requestedPhoneId
+        ? 'The selected WhatsApp number is not connected.'
+        : 'Connect a WhatsApp Business App number before syncing chat history.'
+    });
+  }
+
+  let started = 0;
+  let incompatible = 0;
+  let failed = 0;
+  let lastError = '';
+
+  for (const phoneId of targets) {
+    const credentials = getReceivingWhatsappCredentials(admin, phoneId);
+    if (!credentials?.accessToken) {
+      failed += 1;
+      lastError = 'WhatsApp access token is missing for the selected number.';
+      continue;
+    }
+
+    const headers = { Authorization: `Bearer ${credentials.accessToken}` };
+    try {
+      const { data } = await axios.get(`https://graph.facebook.com/v25.0/${phoneId}`, {
+        params: { fields: 'is_on_biz_app' },
+        headers,
+        timeout: 10000
+      });
+      if (data?.is_on_biz_app !== true) {
+        incompatible += 1;
+        continue;
+      }
+
+      if (credentials.businessAccountId) {
+        await axios.post(
+          `https://graph.facebook.com/v25.0/${credentials.businessAccountId}/subscribed_apps`,
+          {},
+          { params: { access_token: credentials.accessToken }, timeout: 10000 }
+        ).catch(() => {});
+      }
+
+      await axios.post(
+        `https://graph.facebook.com/v25.0/${phoneId}/smb_app_data`,
+        { messaging_product: 'whatsapp', sync_type: 'history' },
+        { headers: { ...headers, 'Content-Type': 'application/json' }, timeout: 10000 }
+      );
+      started += 1;
+    } catch (error) {
+      failed += 1;
+      lastError = explainMetaHistoryError(error);
+      console.warn('Could not start Business App chat history sync:', error.response?.data?.error?.message || error.message);
+    }
+  }
+
+  if (!started) {
+    return res.status(failed ? 502 : 409).json({
+      success: false,
+      error: failed
+        ? lastError
+        : 'Chat history sync is only available for numbers connected via WhatsApp Business App (Coexistence).',
+      incompatible,
+      failed
+    });
+  }
+
+  return res.status(202).json({
+    success: true,
+    message: `Chat history sync started for ${started} WhatsApp Business App number${started === 1 ? '' : 's'}. Past chats will appear here once Meta sends the history chunks.`,
+    started,
+    incompatible,
+    failed
+  });
+};
+
 const mediaKind = (mime = '') => {
   if (/^image\/(jpeg|png|webp)$/.test(mime)) return 'image';
   if (/^video\/mp4$/.test(mime)) return 'video';

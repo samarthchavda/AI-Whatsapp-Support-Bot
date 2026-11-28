@@ -1,8 +1,8 @@
 import React from 'react';
-import { render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import LiveChat from './LiveChat';
-import { getConversations, getConversationById } from '../../../services/api';
+import { getConversations, getConversationById, syncChatHistory } from '../../../services/api';
 
 jest.mock('socket.io-client', () => () => ({
   on: jest.fn(),
@@ -16,7 +16,8 @@ jest.mock('../../../services/api', () => ({
   getConversationById: jest.fn(),
   getConversationsByPhone: jest.fn(),
   sendConversationMessage: jest.fn(),
-  updateConversation: jest.fn()
+  updateConversation: jest.fn(),
+  syncChatHistory: jest.fn()
 }));
 
 beforeEach(() => {
@@ -54,4 +55,17 @@ test('renders only conversations with chat history and ignores contact-only reco
   });
   expect(screen.queryByText('Phonebook Contact')).not.toBeInTheDocument();
   expect(screen.getByText('1 active · 0 escalated · 1 total')).toBeInTheDocument();
+});
+
+test('allows triggering WhatsApp Business App chat history sync from Live Chat', async () => {
+  getConversations.mockResolvedValue({ data: { conversations: [] } });
+  syncChatHistory.mockResolvedValue({ data: { success: true, message: 'Chat history sync started.' } });
+
+  render(<LiveChat />);
+
+  const syncButton = await screen.findByRole('button', { name: /Sync Chat History/i });
+  fireEvent.click(syncButton);
+
+  await waitFor(() => expect(syncChatHistory).toHaveBeenCalledTimes(1));
+  expect(await screen.findByText('Chat history sync started.')).toBeInTheDocument();
 });

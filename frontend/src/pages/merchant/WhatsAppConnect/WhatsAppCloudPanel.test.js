@@ -6,6 +6,7 @@ import WhatsAppCloudPanel from './WhatsAppCloudPanel';
 const handlers = {
   onConnectBusinessApp: jest.fn(),
   onConnectCloudApi: jest.fn(),
+  onSyncHistory: jest.fn(),
   onDisconnect: jest.fn(),
   onReconnect: jest.fn(),
   onRetry: jest.fn(),
@@ -32,6 +33,8 @@ test('shows both numbers and disconnects only the selected phone', () => {
   expect(screen.getByText('+91 111')).toBeInTheDocument();
   expect(screen.getByText('+91 222')).toBeInTheDocument();
   expect(screen.getByText('2 / 3')).toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: 'Sync chat history for +91 111' }));
+  expect(handlers.onSyncHistory).toHaveBeenCalledWith('phone-a');
   fireEvent.click(screen.getByRole('button', { name: 'Disconnect +91 222' }));
   expect(handlers.onDisconnect).toHaveBeenCalledWith('phone-b');
   expect(handlers.onConnectBusinessApp).not.toHaveBeenCalled();

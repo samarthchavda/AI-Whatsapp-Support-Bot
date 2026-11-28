@@ -408,4 +408,85 @@ describe('WhatsApp Coexistence Integration Tests', () => {
     expect(mockConv.messages[0].role).toBe('user');
     expect(mockConv.save).toHaveBeenCalled();
   });
+
+  test('6. Handles Meta peer_recipient_id, message_echoes, from_me, and uppercase/played history statuses', async () => {
+    const mockAdmin = {
+      _id: 'admin_123',
+      whatsappPhoneNumberId: '106540352242922',
+      whatsappConnected: true,
+      role: 'merchant'
+    };
+    mockAdminFind.mockResolvedValue([mockAdmin]);
+
+    const mockConv = new MockConversation({
+      admin: 'admin_123',
+      customerPhone: '919876543210',
+      customerName: 'Riya Shah',
+      syncedFromWhatsAppApp: true,
+      messages: []
+    });
+    mockConversationFindOne.mockResolvedValue(mockConv);
+
+    const req = {
+      method: 'POST',
+      body: {
+        object: 'whatsapp_business_account',
+        entry: [{
+          id: '102290129340398',
+          changes: [{
+            field: 'history',
+            value: {
+              messaging_product: 'whatsapp',
+              metadata: { phone_number_id: '106540352242922' },
+              history: [{
+                metadata: { phase: 1, chunk_order: 1, progress: 50 },
+                threads: [{
+                  peer_recipient_id: '919876543210',
+                  messages: [
+                    {
+                      id: 'wamid.H_IN_1',
+                      from: '919876543210',
+                      timestamp: '1739230900',
+                      type: 'audio',
+                      audio: { id: 'media-1', mime_type: 'audio/ogg' },
+                      history_context: { from_me: false, status: 'PLAYED' }
+                    },
+                    {
+                      id: 'wamid.H_OUT_FROM_ME',
+                      from: '919876543210',
+                      timestamp: '1739230920',
+                      type: 'text',
+                      text: { body: 'Outbound via from_me' },
+                      history_context: { from_me: true, status: 'READ' }
+                    }
+                  ],
+                  message_echoes: [
+                    {
+                      id: 'wamid.H_ECHO_1',
+                      from: '106540352242922',
+                      timestamp: '1739230940',
+                      type: 'text',
+                      text: { body: 'Echo reply from app' },
+                      history_context: { status: 'DELIVERED' }
+                    }
+                  ]
+                }]
+              }]
+            }
+          }]
+        }]
+      }
+    };
+    const res = makeResponse();
+
+    await handleWebhook(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(200);
+    expect(mockConv.channelPhoneNumberId).toBe('106540352242922');
+    expect(mockConv.messages).toHaveLength(3);
+    expect(mockConv.messages[0]).toMatchObject({ role: 'user', status: 'read', messageId: 'wamid.H_IN_1' });
+    expect(mockConv.messages[1]).toMatchObject({ role: 'assistant', status: 'read', content: 'Outbound via from_me' });
+    expect(mockConv.messages[2]).toMatchObject({ role: 'assistant', status: 'delivered', content: 'Echo reply from app' });
+    expect(mockConv.save).toHaveBeenCalled();
+  });
 });

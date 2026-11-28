@@ -7,6 +7,35 @@ const webhookRelayService = require('../../services/webhookRelayService');
 // Simple in-memory deduplication set for incoming message IDs
 const processedMessageIds = new Set();
 
+const normalizeHistoryStatus = (rawStatus) => {
+  const status = String(rawStatus || '').trim().toLowerCase();
+  if (status === 'sent' || status === 'pending') return 'sent';
+  if (status === 'delivered') return 'delivered';
+  if (status === 'read' || status === 'played') return 'read';
+  if (status === 'failed' || status === 'error') return 'failed';
+  return 'read';
+};
+
+const extractHistoryContent = (m) => {
+  if (m.text?.body) return m.text.body;
+  if (m.button?.text) return m.button.text;
+  if (m.interactive?.button_reply?.title) return m.interactive.button_reply.title;
+  if (m.interactive?.list_reply?.title) return m.interactive.list_reply.title;
+  if (['image', 'video', 'audio', 'document', 'sticker'].includes(m.type)) {
+    const media = m[m.type] || {};
+    return `[${m.type}] ${media.caption || media.filename || 'Attachment received'}`;
+  }
+  return m.type ? `[${String(m.type).toUpperCase()}]` : '';
+};
+
+const findConversationByPhone = async (adminId, rawPhone) => {
+  const raw = String(rawPhone || '').trim();
+  const digits = raw.replace(/\D/g, '');
+  const candidates = [...new Set([raw, digits, digits ? `+${digits}` : ''].filter(Boolean))];
+  if (!candidates.length) return null;
+  return Conversation.findOne({ admin: adminId, customerPhone: { $in: candidates } });
+};
+
 
 // Webhook for receiving WhatsApp messages (WhatsApp Cloud API)
 exports.handleWebhook = async (req, res) => {
@@ -189,7 +218,7 @@ exports.handleWebhook = async (req, res) => {
         const echoes = webhookValue.message_echoes || [];
         console.log(`📱 [SMB Echoes] Processing ${echoes.length} message echo(s) for Admin: ${matchedAdmin._id}`);
         for (const echo of echoes) {
-          await handleSmbMessageEcho(echo, matchedAdmin);
+          await handleSmbMessageEcho(echo, matchedAdmin, incomingPhoneNumberId);
         }
         res.status(200).json({ success: true, count: echoes.length });
         return;
@@ -238,43 +267,98 @@ exports.handleWebhook = async (req, res) => {
       if (changes.field === 'history' || webhookValue.history) {
         const historyList = webhookValue.history || [];
         console.log(`📜 [Coexistence History] Processing history sync for Admin: ${matchedAdmin._id}`);
+        let syncedThreads = 0;
         for (const historyItem of historyList) {
+          if (Array.isArray(historyItem.errors) && historyItem.errors.length > 0) {
+            console.warn(`⚠️ [Coexistence History] Meta reported history sync error(s) for Admin ${matchedAdmin._id}:`, JSON.stringify(historyItem.errors));
+          }
           const threads = historyItem.threads || [];
           for (const thread of threads) {
-            const customerPhone = thread.id || thread.context?.wa_id;
-            const threadMessages = thread.messages || [];
-            if (!customerPhone) continue;
-            let conv = await Conversation.findOne({ admin: matchedAdmin._id, customerPhone });
-            if (!conv && threadMessages.length === 0) continue;
-            if (!conv) {
-              conv = new Conversation({
-                admin: matchedAdmin._id,
-                customerPhone,
-                customerName: thread.context?.username || customerPhone,
-                messages: []
-              });
+            try {
+              const rawCustomerPhone = thread.peer_recipient_id || thread.id || thread.context?.wa_id;
+              const normalizedPhone = String(rawCustomerPhone || '').replace(/\D/g, '');
+              const customerPhone = normalizedPhone || String(rawCustomerPhone || '').trim();
+              if (!customerPhone) continue;
+
+              const inboundMessages = (thread.messages || []).map((m) => ({ ...m, _forceEcho: false }));
+              const echoMessages = (thread.message_echoes || []).map((m) => ({ ...m, _forceEcho: true }));
+              const threadMessages = [...inboundMessages, ...echoMessages];
+
+              let conv = await findConversationByPhone(matchedAdmin._id, rawCustomerPhone);
+              if (!conv && threadMessages.length === 0) continue;
+              if (!conv) {
+                conv = new Conversation({
+                  admin: matchedAdmin._id,
+                  customerPhone,
+                  customerName: thread.context?.username || customerPhone,
+                  channelPhoneNumberId: incomingPhoneNumberId,
+                  syncedFromWhatsAppApp: true,
+                  messages: []
+                });
+              } else {
+                if (!conv.channelPhoneNumberId) conv.channelPhoneNumberId = incomingPhoneNumberId;
+                conv.syncedFromWhatsAppApp = true;
+                if (thread.context?.username && (conv.customerName === conv.customerPhone || conv.customerName === 'Customer')) {
+                  conv.customerName = thread.context.username;
+                }
+              }
+
+              let addedCount = 0;
+              for (const m of threadMessages) {
+                const mId = m.id;
+                if (!mId || conv.messages.some(existing => existing.messageId === mId)) continue;
+                const fromDigits = String(m.from || '').replace(/\D/g, '');
+                const isUser = m._forceEcho
+                  ? false
+                  : (typeof m.history_context?.from_me === 'boolean'
+                    ? !m.history_context.from_me
+                    : (m.from === rawCustomerPhone || (normalizedPhone && fromDigits === normalizedPhone)));
+                const textContent = extractHistoryContent(m);
+                const msgMedia = ['image', 'video', 'audio', 'document', 'sticker'].includes(m.type) && m[m.type]?.id
+                  ? {
+                      id: m[m.type].id,
+                      type: m.type,
+                      mimeType: m[m.type].mime_type,
+                      filename: m[m.type].filename,
+                      caption: m[m.type].caption
+                    }
+                  : undefined;
+
+                conv.messages.push({
+                  role: isUser ? 'user' : 'assistant',
+                  content: textContent,
+                  ...(msgMedia ? { media: msgMedia } : {}),
+                  messageId: mId,
+                  timestamp: m.timestamp ? new Date(parseInt(m.timestamp, 10) * 1000) : new Date(),
+                  status: normalizeHistoryStatus(m.history_context?.status)
+                });
+                addedCount += 1;
+              }
+              if (addedCount === 0 && !conv.isNew) continue;
+              conv.messages.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+              if (conv.messages.length > 0) {
+                conv.lastMessageAt = conv.messages[conv.messages.length - 1].timestamp;
+              }
+              await conv.save();
+              syncedThreads += 1;
+              if (global.io) {
+                const target = typeof global.io.to === 'function'
+                  ? global.io.to(`merchant:${matchedAdmin._id}`).to('super_admin_room')
+                  : global.io;
+                target.emit('conversation_updated', conv);
+              }
+            } catch (threadErr) {
+              console.error('⚠️ [Coexistence History] Failed saving history thread:', threadErr.message);
             }
-            for (const m of threadMessages) {
-              const mId = m.id;
-              if (!mId || conv.messages.some(existing => existing.messageId === mId)) continue;
-              const isUser = m.from === customerPhone;
-              const textContent = m.text?.body || (m.type ? `[${m.type.toUpperCase()}]` : '');
-              conv.messages.push({
-                role: isUser ? 'user' : 'assistant',
-                content: textContent,
-                messageId: mId,
-                timestamp: m.timestamp ? new Date(parseInt(m.timestamp, 10) * 1000) : new Date(),
-                status: m.history_context?.status || 'read'
-              });
-            }
-            conv.messages.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
-            if (conv.messages.length > 0) {
-              conv.lastMessageAt = conv.messages[conv.messages.length - 1].timestamp;
-            }
-            await conv.save();
           }
         }
-        res.status(200).json({ success: true });
+        if (global.io && syncedThreads > 0) {
+          const target = typeof global.io.to === 'function'
+            ? global.io.to(`merchant:${matchedAdmin._id}`).to('super_admin_room')
+            : global.io;
+          target.emit('new_message', { syncedThreads });
+        }
+        res.status(200).json({ success: true, syncedThreads });
         return;
       }
 
@@ -938,9 +1022,10 @@ exports.saveCredentials = async (req, res) => {
 };
 
 // Handle Coexistence SMB Message Echoes (messages sent by merchant from WhatsApp Business app)
-async function handleSmbMessageEcho(echo, matchedAdmin) {
+async function handleSmbMessageEcho(echo, matchedAdmin, incomingPhoneNumberId = null) {
   try {
-    const customerPhone = echo.to;
+    const rawCustomerPhone = echo.to;
+    const customerPhone = String(rawCustomerPhone || '').replace(/\D/g, '') || rawCustomerPhone;
     const messageId = echo.id;
     if (!customerPhone || !messageId) return;
 
@@ -950,18 +1035,18 @@ async function handleSmbMessageEcho(echo, matchedAdmin) {
     const echoText = echo.text?.body || (echo.type ? `[${echo.type.toUpperCase()}] sent from mobile app` : '');
     console.log(`📱 [SMB Echo] Merchant ${matchedAdmin._id} sent message to ${customerPhone}: "${echoText}"`);
 
-    let conversation = await Conversation.findOne({
-      admin: matchedAdmin._id,
-      customerPhone
-    });
+    let conversation = await findConversationByPhone(matchedAdmin._id, rawCustomerPhone);
 
     if (!conversation) {
       conversation = new Conversation({
         admin: matchedAdmin._id,
         customerPhone,
         customerName: customerPhone,
+        ...(incomingPhoneNumberId ? { channelPhoneNumberId: incomingPhoneNumberId } : {}),
         messages: []
       });
+    } else if (incomingPhoneNumberId && !conversation.channelPhoneNumberId) {
+      conversation.channelPhoneNumberId = incomingPhoneNumberId;
     }
 
     const isDuplicate = conversation.messages.some(m => m.messageId === messageId);
